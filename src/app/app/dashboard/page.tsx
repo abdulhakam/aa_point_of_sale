@@ -1,22 +1,8 @@
 "use client";
+import { Card, Text, SimpleGrid, UnstyledButton, Group, useMantineTheme, Grid } from "@mantine/core";
 import {
-  Card,
-  Text,
-  SimpleGrid,
-  UnstyledButton,
-  Anchor,
-  Group,
-  useMantineTheme,
-  Container,
-} from "@mantine/core";
-import {
-  IconShoppingCart,
-  IconBuildingStore,
   IconReport,
-  IconCashBanknote,
   IconUser,
-  IconBuildingWarehouse,
-  IconListCheck,
   IconTag,
   IconBriefcase,
   IconTrolley,
@@ -33,27 +19,26 @@ const mockdata = [
   { title: "Sales", icon: IconShoppingBag, color: "orange" },
 ];
 
-
 export default function ActionsGrid() {
   const theme = useMantineTheme();
 
   const items = mockdata.map((item) => (
-    <UnstyledButton key={item.title} className={classes.item}>
-      <item.icon color={theme.colors[item.color][6]} size='4rem' />
-      <Text size='s' mt={7}>
-        {item.title}
-      </Text>
-    </UnstyledButton>
+    <Grid.Col span="auto" key={item.title}>
+      <UnstyledButton className={classes.item}>
+        <item.icon color={theme.colors[item.color][6]} size='4rem' />
+        <Text size='s' mt={7}>
+          {item.title}
+        </Text>
+      </UnstyledButton>
+    </Grid.Col>
   ));
 
   return (
     <Card className={classes.card} radius={"md"} withBorder>
-      <Group justify='space-between'>
-        <Text className={classes.title}>Dashboard</Text>
-      </Group>
-      <div style={{height:'100vh', display:'grid', placeItems:'center', columns:3}}>
-        <SimpleGrid cols={3}>{items}</SimpleGrid>
-      </div>
+      <Text className={classes.title}>Dashboard</Text>
+      <Grid justify='center' align='center'>
+        {items}
+      </Grid>
     </Card>
   );
 }

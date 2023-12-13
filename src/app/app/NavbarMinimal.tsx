@@ -69,7 +69,6 @@ export default function NavbarMinimal() {
       </div>
 
       <Stack justify="center" gap={0}>
-        <NavbarLink icon={IconSwitchHorizontal} label="Change account" />
         <NavbarLink icon={IconLogout} label="Logout" onClick={logout} />
       </Stack>
     </nav>

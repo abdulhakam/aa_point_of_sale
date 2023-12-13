@@ -34,7 +34,7 @@ export const useDate = (): ReturnDate => {
   const day = today.toLocaleDateString(locale, { weekday: "long" });
   const date = `${day}, ${today.toLocaleDateString(locale, { day:'numeric',month:'short', year:'numeric' })}\n\n`;
 
-  const time = today.toLocaleTimeString(locale, { hour: "numeric", hour12: true, minute: "numeric",second:'2-digit' });
+  const time = today.toLocaleTimeString(locale, { hour: "numeric", hour12: true, minute: "numeric"});
 
   return {
     date,
