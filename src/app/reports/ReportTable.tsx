@@ -1,7 +1,8 @@
+"use client";
 import { Table, UnstyledButton, Group, Text, Center, rem } from "@mantine/core";
 import { IconSelector, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import classes from "./table.module.css";
-
+import { useState } from "react";
 
 interface ThProps {
   children: React.ReactNode;
@@ -28,8 +29,29 @@ function Th({ children, reversed, sorted, onSort }: ThProps) {
   );
 }
 
-export default function ReportTable(props:any) {
-const sortedData = props.data
+function sortData(data: any[], payload: { sortBy: keyof any | null; reversed: boolean; search: string }) {
+  const { sortBy } = payload;
+  return [...data].sort((a, b) => {
+    if (payload.reversed) {
+      return b[sortBy].localeCompare(a[sortBy]);
+    }
+
+    return a[sortBy].localeCompare(b[sortBy]);
+  });
+}
+
+
+export default function ReportTable(props: any) {
+  const [sortedData, setSortedData] = useState(props.data);
+  const [sortBy, setSortBy] = useState<keyof any | null>(null);
+  const [reverseSortDirection, setReverseSortDirection] = useState(false);
+  const setSorting = (field: keyof any) => {
+    const reversed = field === sortBy ? !reverseSortDirection : false;
+    setReverseSortDirection(reversed);
+    setSortBy(field);
+    setSortedData(sortData(props.data, { sortBy: field, reversed }));
+  };
+
   const rows = sortedData.map((row) => (
     <Table.Tr key={row.id}>
       {Object.keys(props.tableStructure).map((key) => (
@@ -45,9 +67,9 @@ const sortedData = props.data
             {Object.keys(props.tableStructure).map((key) => (
               <Th
                 key={`tabhead-${key}`}
-                sorted={props.sortBy === `${key}`}
-                reversed={props.reverseSortDirection}
-                onSort={() => props.setSorting(`${key}`)}
+                sorted={sortBy === `${key}`}
+                reversed={reverseSortDirection}
+                onSort={() => setSorting(`${key}`)}
               >
                 {`${props.tableStructure[key]}`}
               </Th>
