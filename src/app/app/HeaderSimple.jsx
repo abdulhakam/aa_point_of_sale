@@ -11,12 +11,7 @@ const links = [
   { link: "/community", label: "Community" },
 ];
 
-interface ReturnDate {
-  time: string;
-  date: string;
-}
-
-export const useDate = (): ReturnDate => {
+export const useDate = () => {
   const locale = "en";
 
   const [today, setDate] = React.useState(new Date()); // Save the current date to be able to trigger an update
@@ -42,19 +37,21 @@ export const useDate = (): ReturnDate => {
   };
 };
 
-const TimeDisplay = () => {
+const TimeDisplay = (secondsEnabled=false) => {
   const { date, time } = useDate();
-
+  if (secondsEnabled ===true){
+    return <div><span>{date},{new Date().toLocaleTimeString('en',{hour: "numeric", hour12:true,minute:'numeric',second:'numeric'})}</span></div>
+  }
   return (
     <div>
       <span>
-        {date}, {time}
+        {`${date}, ${time}`}
       </span>
     </div>
   );
 };
 
-export default function HeaderSimple() {
+export default function HeaderSimple(props) {
   return (
     <header className={classes.header}>
       <Container fluid className={classes.inner}>

@@ -18,6 +18,7 @@ import {
 } from '@tabler/icons-react';
 import classes from './NavbarMinimal.module.css';
 import { useUserAuthContext } from '../context/AuthContext';
+import { usePathname, useRouter } from 'next/navigation';
 interface NavbarLinkProps {
   icon: typeof IconHome2;
   label: string;
@@ -36,6 +37,7 @@ function NavbarLink({ icon: Icon, label, active, onClick }: NavbarLinkProps) {
 }
 
 const mockdata = [
+  { icon: IconGauge, label: 'Dashboard' },
   { icon: IconUser, label: 'Customers' },
   { icon: IconTag, label: 'Items' },
   { icon: IconBriefcase, label: 'Suppliers' },
@@ -44,15 +46,16 @@ const mockdata = [
   { icon: IconShoppingBag, label: 'Sales' },
 ];
 
-export default function NavbarMinimal() {
-  const [active, setActive] = useState(2);
+export default function NavbarMinimal(props) {
+  const pathname = usePathname().split('/').pop()
+  const router = useRouter()
   const {logout} = useUserAuthContext()
-  const links = mockdata.map((link, index) => (
+  const links = mockdata.map((link) => (
     <NavbarLink
       {...link}
       key={link.label}
-      active={index === active}
-      onClick={() => setActive(index)}
+      active={link.label.toLowerCase() === pathname}
+      onClick={()=>router.push(`/app/${link.label.toLowerCase()}`)}
     />
   ));
 

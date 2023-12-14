@@ -4,14 +4,7 @@ import { IconSelector, IconChevronDown, IconChevronUp } from "@tabler/icons-reac
 import classes from "./table.module.css";
 import { useState } from "react";
 
-interface ThProps {
-  children: React.ReactNode;
-  reversed: boolean;
-  sorted: boolean;
-  onSort(): void;
-}
-
-function Th({ children, reversed, sorted, onSort }: ThProps) {
+function Th({ children, reversed, sorted, onSort }) {
   const Icon = sorted ? (reversed ? IconChevronUp : IconChevronDown) : IconSelector;
   return (
     <Table.Th className={classes.th}>
@@ -29,7 +22,7 @@ function Th({ children, reversed, sorted, onSort }: ThProps) {
   );
 }
 
-function sortData(data: any[], payload: { sortBy: keyof any | null; reversed: boolean; search: string }) {
+function sortData(data, payload) {
   const { sortBy } = payload;
   return [...data].sort((a, b) => {
     if (payload.reversed) {
@@ -40,21 +33,40 @@ function sortData(data: any[], payload: { sortBy: keyof any | null; reversed: bo
   });
 }
 
+function dataProcessor({ data: data, expand: expanded }) {
+  const updatedArray = data.map((obj) => {
+    const replaceProps = expanded.filter((prop) => obj.hasOwnProperty(prop) && obj.expand[prop]);
+    return {
+      ...obj,
+      ...replaceProps.reduce(
+        (acc, prop) => ({
+          ...acc,
+          [prop]: obj.expand[prop].name,
+        }),
+        {}
+      ),
+    };
+  });
+  return updatedArray;
+}
 
-export default function ReportTable(props: any) {
-  const [sortedData, setSortedData] = useState(props.data);
-  const [sortBy, setSortBy] = useState<keyof any | null>(null);
+export default function ReportTable(props) {
+  const structure = props.tableStructure;
+  const properData =
+    props.expanded.length > 0 ? dataProcessor({ data: props.data, expand: props.expanded }) : props.data;
+  const [sortedData, setSortedData] = useState(properData);
+  const [sortBy, setSortBy] = useState(null);
   const [reverseSortDirection, setReverseSortDirection] = useState(false);
-  const setSorting = (field: keyof any) => {
+  const setSorting = (field) => {
     const reversed = field === sortBy ? !reverseSortDirection : false;
     setReverseSortDirection(reversed);
     setSortBy(field);
-    setSortedData(sortData(props.data, { sortBy: field, reversed }));
+    setSortedData(sortData(properData, { sortBy: field, reversed }));
   };
 
   const rows = sortedData.map((row) => (
     <Table.Tr key={row.id}>
-      {Object.keys(props.tableStructure).map((key) => (
+      {Object.keys(structure).map((key) => (
         <Table.Td key={`${row[key]}-${row.id}`}>{`${row[key]}`}</Table.Td>
       ))}
     </Table.Tr>
@@ -64,14 +76,14 @@ export default function ReportTable(props: any) {
       <Table horizontalSpacing='md' verticalSpacing='xs' miw={700} layout='fixed'>
         <Table.Tbody>
           <Table.Tr>
-            {Object.keys(props.tableStructure).map((key) => (
+            {Object.keys(structure).map((key) => (
               <Th
                 key={`tabhead-${key}`}
                 sorted={sortBy === `${key}`}
                 reversed={reverseSortDirection}
                 onSort={() => setSorting(`${key}`)}
               >
-                {`${props.tableStructure[key]}`}
+                {`${structure[key]}`}
               </Th>
             ))}
           </Table.Tr>
@@ -81,7 +93,7 @@ export default function ReportTable(props: any) {
             rows
           ) : (
             <Table.Tr>
-              <Table.Td colSpan={Object.keys(props.tableStructure).length}>
+              <Table.Td colSpan={Object.keys(structure).length}>
                 <Text fw={500} ta='center'>
                   Nothing found
                 </Text>

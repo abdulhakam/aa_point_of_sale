@@ -22,6 +22,6 @@
       "@/*": ["./src/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/app/customers/CustomerView.jsx", "src/app/app/HeaderSimple.jsx", "src/app/auth/page.jsx", "src/app/reports/ReportTable.jsx", "src/app/api/customers.js"],
   "exclude": ["node_modules"]
 }

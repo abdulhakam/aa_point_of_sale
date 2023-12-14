@@ -6,7 +6,7 @@ import pb from './pocketbase'
 export default function Home() {
   const { logout } = useUserAuthContext();
   const router = useRouter();
-  !pb.authStore.isValid ? router.push("/auth") : "";
+  !pb.authStore.isValid ? router.push("/auth") : router.push("./app/dashboard");
   return (
     <>
       <h1>you are logged in</h1>

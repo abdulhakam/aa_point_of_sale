@@ -5,10 +5,12 @@ import { useUserAuthContext } from "../context/AuthContext";
 import React, { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-export default function AuthenticationForm() {
+import pb from "../pocketbase";
+export default function AuthenticationForm(props) {
+  const router = useRouter()
+  pb.authStore.isValid?router.push('/app/dashboard'):null
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useUserAuthContext();
-  const router = useRouter()
   const {
     mutate: loginPB,
     error,
@@ -28,7 +30,7 @@ export default function AuthenticationForm() {
       password: (val) => (val.length < 5 ? "Password should include at least 5 characters" : null),
     },
   });
-  const submitFunction=(data: any)=> {
+  const submitFunction=(data)=> {
     loginPB({ email: data.email, password: data.password });
   }
   return (

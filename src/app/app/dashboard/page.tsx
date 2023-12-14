@@ -9,22 +9,23 @@ import {
   IconShoppingBag,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
+import { useRouter } from "next/navigation";
 
 const mockdata = [
-  { title: "Customers", icon: IconUser, color: "cyan" },
-  { title: "Items", icon: IconTag, color: "yellow" },
-  { title: "Suppliers", icon: IconBriefcase, color: "blue" },
-  { title: "Reports", icon: IconReport, color: "pink" },
-  { title: "Recievings", icon: IconTrolley, color: "green" },
-  { title: "Sales", icon: IconShoppingBag, color: "orange" },
+  { title: "Customers", icon: IconUser, color: "cyan", target:"customers"},
+  { title: "Items", icon: IconTag, color: "yellow", target:"items"},
+  { title: "Suppliers", icon: IconBriefcase, color: "blue", target:"suppliers"},
+  { title: "Reports", icon: IconReport, color: "pink", target:"reports"},
+  { title: "Recievings", icon: IconTrolley, color: "green", target:"recievings"},
+  { title: "Sales", icon: IconShoppingBag, color: "orange", target:"sales"},
 ];
 
-export default function ActionsGrid() {
+export default function ActionsGrid(props) {
   const theme = useMantineTheme();
-
+  const router = useRouter()
   const items = mockdata.map((item) => (
     <Grid.Col span="auto" key={item.title}>
-      <UnstyledButton className={classes.item}>
+      <UnstyledButton onClick={()=>router.push(`/app/${item.target}`)} className={classes.item}>
         <item.icon color={theme.colors[item.color][6]} size='4rem' />
         <Text size='s' mt={7}>
           {item.title}

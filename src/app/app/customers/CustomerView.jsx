@@ -3,9 +3,9 @@ import { useDisclosure } from "@mantine/hooks";
 import { Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createCustomer, deleteCustomer } from "./customers";
+import { createCustomer, deleteCustomer } from "../../api/customers";
 
-export function CustomerViewModal(props: { data: Customer }) {
+export function CustomerViewModal(props) {
   const [opened, { open, close }] = useDisclosure(false);
   const data = props.data;
   const queryClient = useQueryClient()
@@ -41,7 +41,7 @@ export function CustomerViewModal(props: { data: Customer }) {
   );
 }
 
-export function CustomerEditModal(props: { data: Customer }) {
+export function CustomerEditModal(props) {
   const [opened, { open, close }] = useDisclosure(false);
   const data = props.data;
   const form = useForm({
@@ -77,13 +77,11 @@ export function CustomerEditModal(props: { data: Customer }) {
   );
 }
 
-import { Customer } from "./customers";
-
-export function CreateCustomerModal() {
+export function CreateCustomerModal(props) {
   const [opened, { open, close }] = useDisclosure(false);
   const queryClient = useQueryClient();
   const newCustomer = useMutation({
-    mutationFn: (data: Customer) => createCustomer(data),
+    mutationFn: (data) => createCustomer(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       form.reset();

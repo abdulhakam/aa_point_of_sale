@@ -2,10 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ViewTable } from "./ViewTable";
-import { listCustomers } from "../customers/customers";
+import { listCustomers } from "../api/customers";
 
 const tableStructure = {id:"", name: "Name", phone: "Phone Number", address: "Address" , area: "Area"};
-export default function Test() {
+export default function Test(props) {
   const customers = useQuery({ queryKey: ["customers"], queryFn: listCustomers });
   const { data, isLoading, isError, error, isSuccess } = customers;
   return (
