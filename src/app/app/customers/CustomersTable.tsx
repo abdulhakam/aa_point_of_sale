@@ -1,14 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Table, ScrollArea, UnstyledButton, Group, Text, Center, TextInput, rem, keys, Button } from "@mantine/core";
 import { IconSelector, IconChevronDown, IconChevronUp, IconSearch } from "@tabler/icons-react";
 import classes from "./TableSort.module.css";
 import { CustomerViewModal } from "./CustomerView";
-
-interface RowData {
-  name: string;
-  number: string;
-  address: string;
-}
+import { Customer } from "./customers";
 
 interface ThProps {
   children: React.ReactNode;
@@ -35,7 +30,7 @@ function Th({ children, reversed, sorted, onSort }: ThProps) {
   );
 }
 
-function filterData(data: RowData[], search: string) {
+function filterData(data: Customer[], search: string) {
   const query = search.toLowerCase().trim();
   return data.filter((item) =>
     keys(data[0]).some((key) => item[key].toString().toLowerCase().includes(query))
@@ -43,8 +38,8 @@ function filterData(data: RowData[], search: string) {
 }
 
 function sortData(
-  data: RowData[],
-  payload: { sortBy: keyof RowData | null; reversed: boolean; search: string }
+  data: Customer[],
+  payload: { sortBy: keyof Customer | null; reversed: boolean; search: string }
 ) {
   const { sortBy } = payload;
 
@@ -64,36 +59,35 @@ function sortData(
   );
 }
 
-export default function CustomersTable(props: any) {
-  console.log(props.data);
-  const data = props.data;
+export default function CustomersTable(props: {data:Customer[]}) {
+  const [sortedData, setSortedData] = useState(props.data);
+  useEffect(()=>{setSortedData(props.data)},[props.data])
   const [search, setSearch] = useState("");
-  const [sortedData, setSortedData] = useState(data);
-  const [sortBy, setSortBy] = useState<keyof RowData | null>(null);
+  const [sortBy, setSortBy] = useState<keyof Customer | null>(null);
   const [reverseSortDirection, setReverseSortDirection] = useState(false);
-
-  const setSorting = (field: keyof RowData) => {
+  const setSorting = (field: keyof Customer) => {
     const reversed = field === sortBy ? !reverseSortDirection : false;
     setReverseSortDirection(reversed);
     setSortBy(field);
-    setSortedData(sortData(data, { sortBy: field, reversed, search }));
+    setSortedData(sortData(sortedData, { sortBy: field, reversed, search }));
   };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = event.currentTarget;
     setSearch(value);
-    setSortedData(sortData(data, { sortBy, reversed: reverseSortDirection, search: value }));
+    setSortedData(sortData(sortedData, { sortBy, reversed: reverseSortDirection, search: value }));
   };
-
+  console.log(sortedData)
   const rows = sortedData.map((row: any) => (
-    <Table.Tr key={row.name}>
+    <Table.Tr key={row.id}>
+      <Table.Td>{row.id}</Table.Td>
       <Table.Td>{row.name}</Table.Td>
       <Table.Td>{row.address}</Table.Td>
-      <Table.Td>{row.number}</Table.Td>
+      <Table.Td>{row.phone}</Table.Td>
       <Table.Td><CustomerViewModal data={row}/></Table.Td>
     </Table.Tr>
   ));
-
+  if (sortedData.length>0){
   return (
     <ScrollArea>
       <TextInput
@@ -106,6 +100,9 @@ export default function CustomersTable(props: any) {
       <Table horizontalSpacing='md' verticalSpacing='xs' miw={700} layout='fixed'>
         <Table.Tbody>
           <Table.Tr>
+          <Th sorted={sortBy === "id"} reversed={reverseSortDirection} onSort={() => setSorting("id")}>
+              id
+            </Th>
             <Th sorted={sortBy === "name"} reversed={reverseSortDirection} onSort={() => setSorting("name")}>
               Name
             </Th>
@@ -117,9 +114,9 @@ export default function CustomersTable(props: any) {
               Address
             </Th>
             <Th
-              sorted={sortBy === "number"}
+              sorted={sortBy === "phone"}
               reversed={reverseSortDirection}
-              onSort={() => setSorting("number")}
+              onSort={() => setSorting("phone")}
             >
               Phone
             </Th>
@@ -130,7 +127,7 @@ export default function CustomersTable(props: any) {
             rows
           ) : (
             <Table.Tr>
-              <Table.Td colSpan={Object.keys(data[0]).length}>
+              <Table.Td colSpan={Object.keys(sortedData[0]).length}>
                 <Text fw={500} ta='center'>
                   Nothing found
                 </Text>
@@ -140,7 +137,8 @@ export default function CustomersTable(props: any) {
         </Table.Tbody>
       </Table>
     </ScrollArea>
-  );
+  );}
+  else {return <h1>No Data Available</h1>}
 }
 
 

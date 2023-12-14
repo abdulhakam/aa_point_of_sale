@@ -4,7 +4,6 @@ import { TextInput, PasswordInput, Text, Paper, Group, Button, Stack, Alert } fr
 import { useUserAuthContext } from "../context/AuthContext";
 import React, { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import pb from "../pocketbase";
 import { useRouter } from "next/navigation";
 export default function AuthenticationForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +28,7 @@ export default function AuthenticationForm() {
       password: (val) => (val.length < 5 ? "Password should include at least 5 characters" : null),
     },
   });
-  function submitFunction(data: any) {
+  const submitFunction=(data: any)=> {
     loginPB({ email: data.email, password: data.password });
   }
   return (
@@ -40,7 +39,6 @@ export default function AuthenticationForm() {
         </Text>
         <form onSubmit={form.onSubmit(submitFunction)}>
           {isError && <Alert color='red'>{error.message}</Alert>}
-          {pb.authStore.isValid && <Alert color='green'>Logged in as {pb.authStore.model.username}</Alert>}
           <Stack>
             <TextInput
               required
