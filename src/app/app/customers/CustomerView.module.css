@@ -1,0 +1,8 @@
+.tableRow:hover{
+  background: lightgray;
+}
+
+.input:disabled {
+  color: black;
+  background: white;
+}

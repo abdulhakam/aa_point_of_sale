@@ -33,21 +33,14 @@ function sortData(data, payload) {
   });
 }
 
-function dataProcessor({ data: data, expand: expanded }) {
-  const updatedArray = data.map((obj) => {
-    const replaceProps = expanded.filter((prop) => obj.hasOwnProperty(prop) && obj.expand[prop]);
-    return {
-      ...obj,
-      ...replaceProps.reduce(
-        (acc, prop) => ({
-          ...acc,
-          [prop]: obj.expand[prop].name,
-        }),
-        {}
-      ),
-    };
+function dataProcessor({ data, expand }) {
+  return data.map((obj) => {
+    const expandedProps = Object.entries(obj.expand || {})
+      .filter(([prop, value]) => expand.includes(prop) && value && value.name)
+      .reduce((acc, [prop, value]) => ({ ...acc, [prop]: value.name }), {});
+
+    return { ...obj, ...expandedProps };
   });
-  return updatedArray;
 }
 
 export default function ReportTable(props) {

@@ -1,12 +1,21 @@
-"use client";
+'use client'
 import { useRouter } from "next/navigation";
 import { useUserAuthContext } from "./context/AuthContext";
 import { Button } from "@mantine/core";
-import pb from './pocketbase'
+import pb from "./pocketbase";
+import { useEffect } from "react";
 export default function Home() {
   const { logout } = useUserAuthContext();
   const router = useRouter();
-  !pb.authStore.isValid ? router.push("/auth") : router.push("./app/dashboard");
+  useEffect(() => {
+  () => {
+    if (pb.authStore.isValid) {
+      router.push("/auth");
+    } else {
+      router.push("/app/dashboard");
+    }
+  };
+},[]);
   return (
     <>
       <h1>you are logged in</h1>

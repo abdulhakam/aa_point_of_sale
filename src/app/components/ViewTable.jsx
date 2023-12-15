@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { Table, ScrollArea, UnstyledButton, Group, Text, Center, TextInput, rem, keys } from "@mantine/core";
 import { IconSelector, IconChevronDown, IconChevronUp, IconSearch } from "@tabler/icons-react";
 import classes from "./table.module.css";
-import { CustomerViewModal } from "../app/customers/CustomerView";
-
+import { CustomerInfoModal } from "../app/customers/CustomerView";
 
 function Th({ children, reversed, sorted, onSort }) {
   const Icon = sorted ? (reversed ? IconChevronUp : IconChevronDown) : IconSelector;
@@ -28,10 +27,7 @@ function filterData(data, search) {
   return data.filter((item) => keys(data[0]).some((key) => item[key].toLowerCase().includes(query)));
 }
 
-function sortData(
-  data,
-  payload
-) {
+function sortData(data, payload) {
   const { sortBy } = payload;
 
   if (!sortBy) {
@@ -50,76 +46,70 @@ function sortData(
   );
 }
 
-function dataProcessor({ data: data, expand: expanded }) {
-  console.log(data)
-  const updatedArray = data.map((obj) => {
-    const replaceProps = expanded.filter((prop) => obj.hasOwnProperty(prop) && obj.expand[prop]);
-    return {
-      ...obj,
-      ...replaceProps.reduce(
-        (acc, prop) => ({
-          ...acc,
-          [prop]: obj.expand[prop].name,
-        }),
-        {}
-      ),
-    };
+function dataProcessor({ data, expand }) {
+  return data.map((obj) => {
+    const expandedProps = Object.entries(obj.expand || {})
+      .filter(([prop, value]) => expand.includes(prop) && value && value.name)
+      .reduce((acc, [prop, value]) => ({ ...acc, [prop]: value.name, [`${prop}id`]: value.id }), {});
+
+    const { expand: _, ...newObj } = obj;       // this line removes the expand property from the object
+
+    return { ...newObj, ...expandedProps };
   });
-  return updatedArray;
 }
 
 export function ViewTable(props) {
-  
   const [sortedData, setSortedData] = useState([]);
-  useEffect(() => {
-    setSortedData(props.expanded.length > 0 ? dataProcessor({ data: props.data, expand: props.expanded }) : props.data);
-  }, [props.data,props.expanded]);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState(null);
-  const [reverseSortDirection, setReverseSortDirection] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ field: null, reversed: false });
+  useEffect(() => {
+    const updatedData =
+      props.expanded.length > 0 ? dataProcessor({ data: props.data, expand: props.expanded }) : props.data;
+    updateSortedData(updatedData);
+  }, [props.data, props.expanded]);
+
+  const updateSortedData = (data) => {
+    setSortedData(sortData(data, { sortBy: sortConfig.field, reversed: sortConfig.reversed, search }));
+  };
 
   const setSorting = (field) => {
-    const reversed = field === sortBy ? !reverseSortDirection : false;
-    setReverseSortDirection(reversed);
-    setSortBy(field);
-    setSortedData(sortData(sortedData, { sortBy: field, reversed, search }));
+    const reversed = field === sortConfig.field ? !sortConfig.reversed : false;
+    setSortConfig({ field, reversed });
+    updateSortedData(sortedData);
   };
 
   const handleSearchChange = (event) => {
     const { value } = event.currentTarget;
     setSearch(value);
-    setSortedData(sortData(sortedData, { sortBy, reversed: reverseSortDirection, search: value }));
+    updateSortedData(sortedData);
   };
-  
-  const properData = sortedData.map((row) => {
-    return Object.fromEntries(
-      Object.entries(row).filter(([key, value]) => Object.keys(props.tableStructure).includes(key))
-    );
-  });
-  const rows = properData.map((row) => (
-    <Table.Tr key={row.id}>
-      {Object.keys(props.tableStructure).map((key) => {
-        if (key !== 'id'){                                                                         // remove this condition to enable viewing of ids
-        return (
-          <>
-            <Table.Td key={`${row[key]}-${row.id}`}>{`${row[key]}`}</Table.Td>
-          </>
-        );}
-      })}
-      <CustomerViewModal key={`edi${row.id}`} data={row} />
-    </Table.Tr>
-  ));
-  const tableHeaders = Object.keys(props.tableStructure).map((key) => (
-    <Th
-      key={`tabhead-${key}`}
-      sorted={sortBy === `${key}`}
-      reversed={reverseSortDirection}
-      onSort={() => setSorting(`${key}`)}
-    >
-      {`${props.tableStructure[key]}`}
-    </Th>
-  ));
-  tableHeaders.shift();
+
+  const renderTableHeaders = Object.keys(props.tableStructure).map(
+    (key) =>
+      key !== "id" && (
+        <Th
+          key={`tabhead-${key}`}
+          sorted={sortConfig.field === key}
+          reversed={sortConfig.reversed}
+          onSort={() => setSorting(key)}
+        >
+          {props.tableStructure[key]}
+        </Th>
+      )
+  );
+
+  const renderRows = () =>
+    properData.map((row) => (
+      <CustomerInfoModal key={`edi${row.id}`} data={row}>
+        {Object.keys(props.tableStructure).map((key) => {
+          return key !== "id" && <Table.Td key={`${row[key]}-${row.id}`}>{`${row[key]}`}</Table.Td>;
+        })}
+      </CustomerInfoModal>
+    ));
+  const properData = sortedData.map((row) =>
+    Object.fromEntries(Object.entries(row).filter(([key]) => Object.keys(props.tableStructure).includes(key)))
+  );
+
   return (
     <ScrollArea>
       <TextInput
@@ -131,11 +121,11 @@ export function ViewTable(props) {
       />
       <Table horizontalSpacing='md' verticalSpacing='xs' miw={700} layout='fixed'>
         <Table.Tbody>
-          <Table.Tr>{tableHeaders}</Table.Tr>
+          <Table.Tr>{renderTableHeaders}</Table.Tr>
         </Table.Tbody>
         <Table.Tbody>
-          {rows.length > 0 ? (
-            rows
+          {properData.length > 0 ? (
+            renderRows()
           ) : (
             <Table.Tr>
               <Table.Td colSpan={Object.keys(props.tableStructure).length}>
