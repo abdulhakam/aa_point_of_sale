@@ -57,13 +57,14 @@ function dataProcessor({ data }) {
 }
 
 export function ViewTable(props) {
+
   const [sortedData, setSortedData] = useState([]);
   const [search, setSearch] = useState("");
   const [sortConfig, setSortConfig] = useState({ field: null, reversed: false });
-
+  
   useEffect(() => {
     const updatedData =
-      props.expanded.length > 0 ? dataProcessor({ data: props.data }) : props.data;
+      props.expanded?.length > 0 ? dataProcessor({ data: props.data }) : props.data;
     updateSortedData(updatedData);
   }, [props.data, props.expanded]);
 

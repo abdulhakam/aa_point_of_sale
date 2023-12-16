@@ -12,23 +12,12 @@ import pb from "../pocketbase";
 export async function createArea(data) {
   return await pb.collection("areas").create(data);
 }
-export async function viewArea(data,expandFields) {
-  await pb.collection('areas').getOne(data.id, {
-    expand: expandFields,
-})
-}
 export async function listAreas() {
   return await pb.collection('areas').getFullList({
     sort: '-created',
 });
 }
-export async function searchArea(page=1,resultsPerPage=50,filter='') {
-  await pb.collection('areas').getList(page, resultsPerPage, {
-    filter: filter,
-})
-}
 export async function updateArea(data) {
-  const newData = {name:data.name,phone:data.phone,address:data.address,area:data.area}
   await pb.collection('areas').update('RECORD_ID', data)
 }
 export async function deleteArea(data) {

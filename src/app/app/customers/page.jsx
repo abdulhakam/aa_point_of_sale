@@ -11,8 +11,6 @@ const tableStructure = { id: "id", name: "Name", phone: "Phone Number", address:
 export default function CustomersPage(props) {
   const customers = useQuery({ queryKey: ["customers"], queryFn: listCustomers });
   const areaQuery = useQuery({ queryKey: ["areas"], queryFn: listAreas });
-
-  
   const { data, isLoading, isError, error, isSuccess, isRefetching } = customers;
   return (
     <>

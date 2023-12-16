@@ -20,7 +20,6 @@ export async function searchCustomer(page=1,resultsPerPage=50,filter='') {
 })
 }
 export async function updateCustomer(data) {
-  console.log(data)
   const newData = {name:data.name,phone:data.phone,address:data.address,area:data.area}
   await pb.collection('customers').update(data.id, newData)
 }
