@@ -2,8 +2,10 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { listItems } from "../api/items";
+import {listItemCategories} from '../api/itemCategories.js'
 import TableGenerator from "./TableGenerator";
 import { FormGenerator } from "./FormGenerator";
+import { useState } from "react";
 
 const tableStructure = {
   name: "Name",
@@ -23,21 +25,22 @@ const formStructure = {
     type: "select",
     label: "Category",
     data: [
-      { value: "value 1", label: "label 1" },
-      { value: "value 3", label: "label 3" },
-      { value: "value 2", label: "label 2" },
+      //directly acquired query data from useQuery
     ],
   },
 };
+//TODO: REMOVE THE PROP DRILLING FOR FORM STRUCTURE
 export default function Test(props) {
-  const customers = useQuery({ queryKey: ["items"], queryFn: listItems });
-  const { data, isLoading, isError, error, isSuccess } = customers;
+  const items = useQuery({ queryKey: ["items"], queryFn: listItems });
+  const categories = useQuery({queryKey:["categories"],queryFn: listItemCategories})
+  const completeStructure = {...formStructure,category:{type:"select",label:"Category",data:categories.data}}
+  const { data, isLoading, isError, error, isSuccess } = items;
   return (
     <>
-      <FormGenerator formStructure={formStructure} />
+      {categories.isSuccess && <FormGenerator formStructure={completeStructure} />}
       {isLoading && <h1>Loading</h1>}
       {isError && <h1>{error.message}</h1>}
-      {isSuccess && <TableGenerator data={data} tableStructure={tableStructure} />}
+      {isSuccess && <TableGenerator data={data} formStructure={completeStructure} tableStructure={tableStructure} />}
     </>
   );
 }

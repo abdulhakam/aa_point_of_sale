@@ -3,7 +3,7 @@ import { useState } from 'react';
 import InfoViewGenerator from './InfoViewGenerator';
 import { Table,Input } from '@mantine/core';
 
-const TableGenerator = ({ data, tableStructure, selectables=[] }) => {
+const TableGenerator = ({ data, tableStructure, formStructure }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('');
 
@@ -44,7 +44,7 @@ const TableGenerator = ({ data, tableStructure, selectables=[] }) => {
           {sortedData.map((item, index) => (
             <Table.Tr key={index}>
               {Object.keys(tableStructure).map((key) => (
-                <InfoViewGenerator tableStructure={tableStructure} data={item} clickable key={key}>
+                <InfoViewGenerator formStructure={formStructure} tableStructure={tableStructure} data={item} clickable key={key}>
                   {item.expand && item.expand[key]
                     ? item.expand[key].name || item.expand[key].value || '-------'
                     : item[key] || '-------'}

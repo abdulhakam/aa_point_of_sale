@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Modal, Button, Container, Grid, Input, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { FormGenerator } from "./FormGenerator";
 
 const InfoViewGenerator = (props) => {
   const [opened, { open, close }] = useDisclosure(false);
@@ -27,7 +28,7 @@ const InfoViewGenerator = (props) => {
               </Grid.Col>
             </Grid>
           ))}
-          <InfoEditor tableStructure={props.tableStructure} data={props.data}></InfoEditor>
+          <FormGenerator formStructure={props.formStructure} data={props.data}/>
         </Container>
       </Modal>
       <Table.Td onClick={props.clickable ? open : null}>{props.children}</Table.Td>

@@ -1,28 +1,28 @@
 import pb from "../pocketbase";
 
 
-export async function createItem(data) {
-  return await pb.collection("items").create(data);
+export async function createItemCategory(data) {
+  return await pb.collection("categories").create(data);
 }
-export async function viewItem(data,expandFields) {
-  await pb.collection('items').getOne(data.id, {
+export async function viewItemCategory(data,expandFields) {
+  await pb.collection('categories').getOne(data.id, {
     expand: expandFields,
 })
 }
-export async function listItems() {
-  return await pb.collection("items").getFullList({
-    sort: "+name",expand:'qty.qty,category'
+export async function listItemCategories() {
+  return await pb.collection("categories").getFullList({
+    sort: "+name"
   });
 }
-export async function searchItem(page=1,resultsPerPage=50,filter='') {
-  await pb.collection('items').getList(page, resultsPerPage, {
+export async function searchItemCategory(page=1,resultsPerPage=50,filter='') {
+  await pb.collection('categories').getList(page, resultsPerPage, {
     filter: filter,
 })
 }
-export async function updateItem(data) {
+export async function updateItemCategory(data) {
   const newData = {name:data.name,phone:data.phone,address:data.address,area:data.area}
-  await pb.collection('items').update(data.id, newData)
+  await pb.collection('categories').update(data.id, newData)
 }
-export async function deleteItem(data) {
-  return await pb.collection('items').delete(data.id);
+export async function deleteItemCategory(data) {
+  return await pb.collection('categories').delete(data.id);
 }

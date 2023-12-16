@@ -7,6 +7,7 @@ import {
   Select,
   Checkbox,
   Text,
+  ComboboxData,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
@@ -57,11 +58,12 @@ export const FormGenerator = (props) => {
           />
         );
       case "select":
+        
         return (
           <Select
             label={field.label}
             {...form.getInputProps(key)} // Use getInputProps instead of manually managing events
-            data={field.data}
+            data={field.data.map(dat=>({value:dat.id,label:dat.name}))}
           />
         );
       default:
