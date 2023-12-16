@@ -3,7 +3,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { createCustomer, deleteCustomer } from "../../api/customers";
+import { createCustomer, deleteCustomer, updateCustomer } from "../../api/customers";
 import { useState } from "react";
 import classes from "./CustomerView.module.css";
 import { listAreas } from "@/app/api/areas";
@@ -14,34 +14,70 @@ export function CustomerInfoModal(props) {
   const [editingState, setEditingState] = useState(false);
   const areas = useQuery({ queryKey: ["areas"], queryFn: listAreas });
   const [opened, { open, close }] = useDisclosure(false);
+  const queryClient = useQueryClient();
+  const editCustomer = useMutation({
+    mutationFn: (data)=>updateCustomer(data),
+    onSuccess: (succ)=>queryClient.invalidateQueries({queryKey:["customers"]}),
+  });
+
   const form = useForm({
     initialValues: {
       name: props.data.name,
       phone: props.data.phone,
       address: props.data.address,
-      area: props.data.area,
+      area: props.data.area.id,
     },
   });
-
   const handleSubmit = (values) => {
-    console.log(values);
-    // Add logic here to submit the form data (e.g., call an API)
-    close(); // Close the modal after submission
+    editCustomer.mutate({...values,id:props.data.id})
+    setEditingState(false); // Close the modal after submission
   };
 
   return (
     <>
       {areas.isSuccess && (
-        <Modal opened={opened} onClose={() => { form.reset(); close(); }} title={editingState ? "Edit Customer Info" : "Customer Info"}>
+        <Modal
+          opened={opened}
+          onClose={() => {
+            form.reset();
+            close();
+          }}
+          title={editingState ? "Edit Customer Info" : "Customer Info"}
+        >
           <form onSubmit={form.onSubmit(handleSubmit)}>
-            <TextInput disabled={!editingState} required label='Name' placeholder='' {...form.getInputProps("name")} />
-            <TextInput disabled={!editingState} label='Phone' placeholder='' {...form.getInputProps("phone")} />
-            <TextInput disabled={!editingState} label='Address' placeholder='' {...form.getInputProps("address")} />
-            <Select
+            <TextInput
+              classNames={{ input: classes.input }}
+              size='lg'
               disabled={!editingState}
+              required
+              label='Name'
+              placeholder=''
+              {...form.getInputProps("name")}
+            />
+            <TextInput
+              classNames={{ input: classes.input }}
+              size='lg'
+              disabled={!editingState}
+              label='Phone'
+              placeholder=''
+              {...form.getInputProps("phone")}
+            />
+            <TextInput
+              classNames={{ input: classes.input }}
+              size='lg'
+              disabled={!editingState}
+              label='Address'
+              placeholder=''
+              {...form.getInputProps("address")}
+            />
+            <Select
+              classNames={{ input: classes.input }}
+              size='lg'
+              disabled={!editingState}
+              rightSection=' '
               label='Area'
               placeholder='Choose'
-              data={areas.data.map((area) => area.name)}
+              data={areas.data.map((area) => ({ label: area.name, value: area.id }))}
               searchable
               {...form.getInputProps("area")}
             />
@@ -49,7 +85,15 @@ export function CustomerInfoModal(props) {
             <Group justify='flex-end' mt='md'>
               {editingState ? (
                 <>
-                  <Button onClick={() => { setEditingState((current) => !current); form.reset(); }}>Cancel</Button>
+                  <Button color="red">Delete</Button>
+                  <Button
+                    onClick={() => {
+                      setEditingState((current) => !current);
+                      form.reset();
+                    }}
+                  >
+                    Cancel
+                  </Button>
                   <Button type='submit'>Submit</Button>
                 </>
               ) : (
@@ -65,7 +109,6 @@ export function CustomerInfoModal(props) {
     </>
   );
 }
-
 
 export function CreateCustomerModal(props) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -86,9 +129,8 @@ export function CreateCustomerModal(props) {
       address: "",
       area: "",
     },
-    
   });
-  const handleSubmit=(values) => {
+  const handleSubmit = (values) => {
     const mutationValues = {
       name: values.name,
       phone: values.phone,
@@ -96,7 +138,7 @@ export function CreateCustomerModal(props) {
       area: areas.find((area) => area.name === values.area).id,
     };
     newCustomer.mutate(mutationValues);
-  }
+  };
   return (
     <>
       <Modal opened={opened} onClose={close} title='Create a New Customer' centered>

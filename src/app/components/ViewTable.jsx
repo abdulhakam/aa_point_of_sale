@@ -46,15 +46,13 @@ function sortData(data, payload) {
   );
 }
 
-function dataProcessor({ data, expand }) {
+function dataProcessor({ data }) {
   return data.map((obj) => {
     const expandedProps = Object.entries(obj.expand || {})
-      .filter(([prop, value]) => expand.includes(prop) && value && value.name)
-      .reduce((acc, [prop, value]) => ({ ...acc, [prop]: value.name, [`${prop}id`]: value.id }), {});
+      .filter(([prop, value]) => value && value.name)
+      .reduce((acc, [prop, value]) => ({ ...acc, [prop]: value }), {});
 
-    const { expand: _, ...newObj } = obj;       // this line removes the expand property from the object
-
-    return { ...newObj, ...expandedProps };
+    return { ...obj, ...expandedProps };
   });
 }
 
@@ -62,9 +60,10 @@ export function ViewTable(props) {
   const [sortedData, setSortedData] = useState([]);
   const [search, setSearch] = useState("");
   const [sortConfig, setSortConfig] = useState({ field: null, reversed: false });
+
   useEffect(() => {
     const updatedData =
-      props.expanded.length > 0 ? dataProcessor({ data: props.data, expand: props.expanded }) : props.data;
+      props.expanded.length > 0 ? dataProcessor({ data: props.data }) : props.data;
     updateSortedData(updatedData);
   }, [props.data, props.expanded]);
 
@@ -100,9 +99,15 @@ export function ViewTable(props) {
 
   const renderRows = () =>
     properData.map((row) => (
-      <CustomerInfoModal key={`edi${row.id}`} data={row}>
+      <CustomerInfoModal key={`tablerow-${row.id}`} data={row}>
         {Object.keys(props.tableStructure).map((key) => {
-          return key !== "id" && <Table.Td key={`${row[key]}-${row.id}`}>{`${row[key]}`}</Table.Td>;
+          return (
+            key !== "id" && (
+              <Table.Td key={`${row[key]}-${row.id}`}>
+                {typeof row[key] !== "object" ? `${row[key]}` : `${row[key].name}`}
+              </Table.Td>
+            )
+          );
         })}
       </CustomerInfoModal>
     ));
