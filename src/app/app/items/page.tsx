@@ -1,10 +1,10 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { listItems } from "../api/items";
-import { listItemCategories } from "../api/itemCategories.js";
-import TableGenerator from "./TableGenerator";
-import { FormGenerator } from "./FormGenerator";
+import { listItems } from "../../api/items";
+import { listItemCategories } from "../../api/itemCategories.js";
+import TableGenerator from "../../components/TableGenerator";
+import { FormGenerator } from "../../components/FormGenerator";
 
 const tableStructure = {
   name: "Name",
@@ -29,7 +29,7 @@ const formStructure = {
     ],
   },
 };
-
+const formSubmitHandler = {}   //TODO: this could be sent to FormGenerator that will either create or edit item according to form state
 function quantitesCalc(qty, boxSize) {
   const box = Number(BigInt(qty) / BigInt(boxSize));
   const piece = qty % boxSize;

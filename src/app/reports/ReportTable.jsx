@@ -25,19 +25,27 @@ function Th({ children, reversed, sorted, onSort }) {
 function sortData(data, payload) {
   const { sortBy } = payload;
   return [...data].sort((a, b) => {
-    if (payload.reversed) {
-      return b[sortBy].localeCompare(a[sortBy]);
-    }
+    const valueA = a[sortBy];
+    const valueB = b[sortBy];
 
-    return a[sortBy].localeCompare(b[sortBy]);
+    if (typeof valueA === 'number' && typeof valueB === 'number') {
+      // Numeric comparison
+      return payload.reversed ? valueB - valueA : valueA - valueB;
+    } else {
+      // String comparison
+      const stringValueA = String(valueA);
+      const stringValueB = String(valueB);
+      return payload.reversed ? stringValueB.localeCompare(stringValueA) : stringValueA.localeCompare(stringValueB);
+    }
   });
 }
 
 function dataProcessor({ data, expand }) {
   return data.map((obj) => {
     const expandedProps = Object.entries(obj.expand || {})
-      .filter(([prop, value]) => expand.includes(prop) && value && value.name)
-      .reduce((acc, [prop, value]) => ({ ...acc, [prop]: value.name }), {});
+      .filter(([prop, value]) => expand.includes(prop) && value && (value.name||value.value))
+      .reduce((acc, [prop, val]) => ({ ...acc, [prop]: val.name||val.value }), {});
+      console.log({...obj,...expandedProps})
 
     return { ...obj, ...expandedProps };
   });

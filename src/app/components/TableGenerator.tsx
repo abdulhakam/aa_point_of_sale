@@ -1,8 +1,11 @@
-// components/TableGenerator.js
 import { useState } from 'react';
 import InfoViewGenerator from './InfoViewGenerator';
 import { Table,Input } from '@mantine/core';
 
+/*TODO: IMPORTANT look for a solution in TableGenerator and FormGenerator
+that shall handle multiple chioces for multiple items sold by a single 
+supplier.
+*/
 const TableGenerator = (props) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState('')

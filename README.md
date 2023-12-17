@@ -1,3 +1,17 @@
+# A POINT OF SALE USING POCKETBASE AND NEXT.JS
+## Why PocketBase?
+- It is small.
+- It is lightweight.
+- It has it own static server so nextjs static exports shall work fine.
+- It will be easy to migrate from if requirements need a more powerful DataBase.
+- it is similar to firebase.
+
+## Why nextjs?
+- It is fast.
+- It is superfast (compared to react).
+- It is much easier to maintain than React.
+- It is popular.
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
