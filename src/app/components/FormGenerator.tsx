@@ -1,22 +1,27 @@
 import React from "react";
-import {
-  Modal,
-  Button,
-  Container,
-  Input,
-  Select,
-  Checkbox,
-  Text,
-  ComboboxData,
-} from "@mantine/core";
+import { Modal, Button, Container, Input, Select, Checkbox, Text, ComboboxData } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useForm } from "@mantine/form";
+function dataModifier(data, formStructure) {
+  if(data && data.expand)
+  {
+    const modifiedData = data ? { ...data } : {}; // Create a copy to avoid mutation
 
+    for (const key in formStructure) {
+      if (formStructure[key].type !== "select" && key in data && key in data.expand) {
+        modifiedData[key] = data.expand[key].value;
+      }
+    }
+
+    return modifiedData;
+  }else return {};}
 export const FormGenerator = (props) => {
+  const newData = dataModifier(props.data,props.formStructure)
   const [opened, { open, close }] = useDisclosure(false);
   const form = useForm({
-    initialValues: props.data || {}, // Set initial values based on props.data
+    initialValues: newData || {}, // Set initial values based on props.data
   });
+  
 
   const submitHandler = (values) => {
     // Implement your submission logic here using form.values
@@ -45,7 +50,7 @@ export const FormGenerator = (props) => {
         return (
           <Input.Wrapper label={field.label}>
             <Input
-              type="number"
+              type='number'
               {...form.getInputProps(key)} // Use getInputProps instead of manually managing events
             />
           </Input.Wrapper>
@@ -58,12 +63,11 @@ export const FormGenerator = (props) => {
           />
         );
       case "select":
-        
         return (
           <Select
             label={field.label}
             {...form.getInputProps(key)} // Use getInputProps instead of manually managing events
-            data={field.data.map(dat=>({value:dat.id,label:dat.name}))}
+            data={field.data}
           />
         );
       default:
@@ -73,22 +77,28 @@ export const FormGenerator = (props) => {
 
   return (
     <>
-      <Modal title={props.data?"Edit Details":"Create New"} size="lg" centered opened={opened} onClose={close}>
-        <Container size="md">
+      <Modal
+        title={props.data ? "Edit Details" : "Create New"}
+        size='lg'
+        centered
+        opened={opened}
+        onClose={close}
+      >
+        <Container size='md'>
           <form onSubmit={form.onSubmit(props.data ? submitHandler : createHandler)}>
             {props.formStructure &&
               Object.keys(props.formStructure).map((key) => {
                 const field = props.formStructure[key];
                 return formBuilder(key, field);
               })}
-            <Button mt="md" type="submit">
+            <Button mt='md' type='submit'>
               {props.data ? "Submit" : "Create"}
             </Button>
           </form>
         </Container>
       </Modal>
-      <Button m="md" onClick={open}>
-        {props.data?"Edit":"New"}
+      <Button m='md' onClick={open}>
+        {props.data ? "Edit" : "New"}
       </Button>
     </>
   );

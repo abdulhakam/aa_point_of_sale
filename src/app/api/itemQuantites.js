@@ -11,7 +11,7 @@ export async function viewItem(data,expandFields) {
 }
 export async function listItems() {
   return await pb.collection("items").getFullList({
-    sort: "+name",expand:'qty.qty,category'
+    sort: "+name",expand:'qty,category'
   });
 }
 export async function searchItem(page=1,resultsPerPage=50,filter='') {

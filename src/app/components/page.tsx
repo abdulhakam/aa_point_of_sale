@@ -2,10 +2,9 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { listItems } from "../api/items";
-import {listItemCategories} from '../api/itemCategories.js'
+import { listItemCategories } from "../api/itemCategories.js";
 import TableGenerator from "./TableGenerator";
 import { FormGenerator } from "./FormGenerator";
-import { useState } from "react";
 
 const tableStructure = {
   name: "Name",
@@ -15,6 +14,7 @@ const tableStructure = {
   box_size_qty: "Box Size",
   category: "Category",
 };
+
 const formStructure = {
   name: { type: "text", label: "Name" },
   cost_price: { type: "number", label: "CP" },
@@ -29,18 +29,57 @@ const formStructure = {
     ],
   },
 };
-//TODO: REMOVE THE PROP DRILLING FOR FORM STRUCTURE
+
+function quantitesCalc(qty, boxSize) {
+  const box = Number(BigInt(qty) / BigInt(boxSize));
+  const piece = qty % boxSize;
+  return `${box} ${box === 1 ? "box" : "boxes"} ${piece} ${piece === 1 ? "piece" : "pieces"} `;
+}
 export default function Test(props) {
   const items = useQuery({ queryKey: ["items"], queryFn: listItems });
-  const categories = useQuery({queryKey:["categories"],queryFn: listItemCategories})
-  const completeStructure = {...formStructure,category:{type:"select",label:"Category",data:categories.data}}
-  const { data, isLoading, isError, error, isSuccess } = items;
-  return (
-    <>
-      {categories.isSuccess && <FormGenerator formStructure={completeStructure} />}
-      {isLoading && <h1>Loading</h1>}
-      {isError && <h1>{error.message}</h1>}
-      {isSuccess && <TableGenerator data={data} formStructure={completeStructure} tableStructure={tableStructure} />}
-    </>
-  );
+  const categories = useQuery({ queryKey: ["categories"], queryFn: listItemCategories });
+
+  if (items.isSuccess && categories.isSuccess) {
+    const modifiedTableData = items.data.map((item) => {
+      const mdata = {
+        ...item,
+        expand: {
+          ...item.expand,
+          qty: {
+            ...item.expand.qty,
+            name: `${item.expand.qty.value} (${quantitesCalc(item.expand.qty.value, item.box_size_qty)})`,
+          },
+        },
+      };
+      return mdata;
+    });
+
+    const completeFormStructureData = {
+      ...formStructure,
+      category: {
+        type: "select",
+        label: "Category",
+        data: categories.data.map((dat) => ({ value: dat.id, label: dat.name })),
+      },
+    };
+    return (
+      <>
+        <FormGenerator formStructure={completeFormStructureData} />
+        <TableGenerator
+          data={modifiedTableData}
+          formStructure={completeFormStructureData}
+          tableStructure={tableStructure}
+        />
+      </>
+    );
+  } else if (items.isLoading || categories.isLoading) {
+    return <h1>Loading</h1>;
+  } else if (items.isError || categories.isError) {
+    return <h2>{items.error.message || categories.error.message}</h2>;
+  } else
+    return (
+      <>
+        <h1>What is happening?</h1>
+      </>
+    );
 }

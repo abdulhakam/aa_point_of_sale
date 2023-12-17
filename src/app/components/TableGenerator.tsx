@@ -3,11 +3,10 @@ import { useState } from 'react';
 import InfoViewGenerator from './InfoViewGenerator';
 import { Table,Input } from '@mantine/core';
 
-const TableGenerator = ({ data, tableStructure, formStructure }) => {
+const TableGenerator = (props) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortKey, setSortKey] = useState('');
-
-  const filteredData = data.filter((item) =>
+  const [sortKey, setSortKey] = useState('')
+  const filteredData = props.data.filter((item) =>
     Object.values(item).some(
       (value) =>
         typeof value === 'string' && value.toLowerCase().includes(searchTerm.toLowerCase())
@@ -17,7 +16,6 @@ const TableGenerator = ({ data, tableStructure, formStructure }) => {
   const sortedData = sortKey
     ? [...filteredData].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : -1))
     : filteredData;
-
   const handleSort = (key) => {
     setSortKey(key);
   };
@@ -33,7 +31,7 @@ const TableGenerator = ({ data, tableStructure, formStructure }) => {
       <Table>
         <Table.Thead>
           <Table.Tr>
-            {Object.entries(tableStructure).map(([key, value]) => (
+            {Object.entries(props.tableStructure).map(([key, value]) => (
               <Table.Th key={key} onClick={() => handleSort(key)}>
                 <>{value}</>
               </Table.Th>
@@ -43,8 +41,8 @@ const TableGenerator = ({ data, tableStructure, formStructure }) => {
         <Table.Tbody>
           {sortedData.map((item, index) => (
             <Table.Tr key={index}>
-              {Object.keys(tableStructure).map((key) => (
-                <InfoViewGenerator formStructure={formStructure} tableStructure={tableStructure} data={item} clickable key={key}>
+              {Object.keys(props.tableStructure).map((key) => (
+                <InfoViewGenerator formStructure={props.formStructure} tableStructure={props.tableStructure} data={item} clickable key={key}>
                   {item.expand && item.expand[key]
                     ? item.expand[key].name || item.expand[key].value || '-------'
                     : item[key] || '-------'}
