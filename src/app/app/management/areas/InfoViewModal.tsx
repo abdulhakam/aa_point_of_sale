@@ -1,3 +1,4 @@
+import FormGenerator from "@/app/components/FormGenerator";
 import { Button, Modal, Table } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
@@ -10,7 +11,7 @@ export default function InfoViewModal(props) {
   return (
     <>
       <Modal centered opened={opened} onClose={close}>
-        <FormGenerator formStructure={props.formStructure}/>
+        <FormGenerator formStructure={formStructure}/>
       </Modal>
       {props.component === "button" ? (
         <Button onClick={open}>{props.children}</Button>
@@ -22,43 +23,43 @@ export default function InfoViewModal(props) {
 }
 
 
-const FormGenerator = ({ formStructure }) => {
-  const form = useForm({
-    initialValues: formStructure.items.reduce((acc, item) => {
-      acc[item.name] = item.defaultValue;
-      return acc;
-    }, {}),
-  });
+// const FormGenerator = ({ formStructure }) => {
+//   const form = useForm({
+//     initialValues: formStructure.items.reduce((acc, item) => {
+//       acc[item.name] = item.defaultValue;
+//       return acc;
+//     }, {}),
+//   });
  
-  console.log(form)
-  const handleSubmit = () => {
-    // Handle form submission here
-    console.log('Form submitted with values:', form.values);
-  };
+//   console.log(form)
+//   const handleSubmit = () => {
+//     // Handle form submission here
+//     console.log('Form submitted with values:', form.values);
+//   };
 
-  return (
-    <form onSubmit={form.onSubmit(handleSubmit)}>
-      {formStructure.items.map((item) => (
-        // Render form fields based on the item type
-        <div key={item.name}>
-          <label htmlFor={item.name}>{item.label}</label>
-          {item.type === 'number' ? (
-            <input
-              type="number"
-              id={item.name}
-              {...form.getInputProps(item.name)}
-            />
-          ) : (
-            <input
-              type="text"
-              id={item.name}
-              {...form.getInputProps(item.name)}
-            />
-          )}
-        </div>
-      ))}
+//   return (
+//     <form onSubmit={form.onSubmit(handleSubmit)}>
+//       {formStructure.items.map((item) => (
+//         // Render form fields based on the item type
+//         <div key={item.name}>
+//           <label htmlFor={item.name}>{item.label}</label>
+//           {item.type === 'number' ? (
+//             <input
+//               type="number"
+//               id={item.name}
+//               {...form.getInputProps(item.name)}
+//             />
+//           ) : (
+//             <input
+//               type="text"
+//               id={item.name}
+//               {...form.getInputProps(item.name)}
+//             />
+//           )}
+//         </div>
+//       ))}
 
-      <button type="submit">Submit</button>
-    </form>
-  );
-};
+//       <button type="submit">Submit</button>
+//     </form>
+//   );
+// };

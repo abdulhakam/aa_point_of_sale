@@ -1,32 +1,46 @@
 "use client";
 import { useAreas } from "@/app/api/areas";
-import { DataTable, DataTableColumn } from "mantine-datatable";
-import InfoViewModal from "./InfoViewModal";
-
+import { DataTableColumn } from "mantine-datatable";
+import DataViewTable from "./DataViewTable";
+import { useState } from "react";
+import { Button, Group, Modal, TextInput } from "@mantine/core";
+import { areaFormStructure } from "@/app/api/areas";
+import FormGenerator from "@/app/components/FormGenerator";
+import { useDisclosure } from "@mantine/hooks";
 // { name: "id", label: "ID", type: "autocomplete", collection: "areas" },
-const formStructure = {
-  items: [
-    { name: "id", label: "ID", type: "number", defaultValue: 6711003 },
-    { name: "name", label: "NAME", type: "text", defaultValue: "testing name String" },
-    { name: "created", label: "CREATED", type: "text", defaultValue: "testing date String" },
-  ],
-};
 const tableStructure: DataTableColumn[] = [
-  { accessor: "id", title: "Identity", sortable: true },
-  { accessor: "name" },
-  { accessor: "created" },
+  { accessor: "id", hidden: true },
+  { accessor: "name", sortable: true },
+  { accessor: "created", sortable: true },
 ];
+
 export default function Areas() {
+  const [opened, { open, close }] = useDisclosure(false);
+  const [search, setSearch] = useState("");
   const areas = useAreas();
   return (
     <>
-      <InfoViewModal formStructure={formStructure} component='button'>
-        Show Test modal
-      </InfoViewModal>
+      <Group align='end'>
+        <TextInput
+          style={{ width: "10rem" }}
+          label='Search'
+          onChange={(value) => setSearch(value.target.value)}
+          value={search}
+        />
+        <Modal opened={opened} onClose={close} title="Authentication">
+        <FormGenerator editable formStructure={areaFormStructure} />
+      </Modal>
+        <Button onClick={open}> Add New </Button>
+      </Group>
       {areas.isLoading && <h1>Loading...</h1>}
       {areas.isError && <h2>{areas.error.message}</h2>}
       {areas.isSuccess && (
-        <DataTable withTableBorder withColumnBorders columns={tableStructure} records={areas.data} />
+        <DataViewTable
+          filter={[{ key: "", value: search }]}
+          columns={tableStructure}
+          formStructure={areaFormStructure}
+          data={areas.data}
+        />
       )}
     </>
   );
