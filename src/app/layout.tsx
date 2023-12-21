@@ -2,7 +2,9 @@
 // All packages except `@mantine/hooks` require styles imports
 import { ColorSchemeScript } from '@mantine/core';
 import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
 import Providers from './providers';
+import FetchingIndicator from './components/global/apiCallIndicator/fetchingIndicator';
 
 
 export const metadata = {
@@ -21,7 +23,7 @@ export default function RootLayout({
         <ColorSchemeScript />
       </head>
       <body>
-        <Providers>{children}</Providers>
+        <Providers><FetchingIndicator/>{children}</Providers>
       </body>
     </html>
   );

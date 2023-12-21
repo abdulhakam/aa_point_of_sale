@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { listItems } from "../../api/items";
-import { listItemCategories } from "../../api/itemCategories.js";
+import { listItemCategories } from "../../api/categories.js";
 import TableGenerator from "../../components/TableGenerator";
 import { FormGenerator } from "../../components/FormGenerator";
 

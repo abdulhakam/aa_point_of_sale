@@ -6,11 +6,11 @@
 import { useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { MantineProvider } from "@mantine/core";
 import { UserAuthContextProvider } from "./context/AuthContext";
+import RouteProtector from "./routeProtector";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -19,8 +19,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,
-            refetchOnWindowFocus:false,
-            refetchOnMount:false,
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
             // refetchOnReconnect:"always",
           },
         },
@@ -28,10 +28,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <MantineProvider>
+    <MantineProvider defaultColorScheme="auto">
       <UserAuthContextProvider>
-        <QueryClientProvider client={queryClient}>{children}<ReactQueryDevtools initialIsOpen={false} /></QueryClientProvider>
-      </UserAuthContextProvider>
+          <QueryClientProvider client={queryClient}>
+            {children}
+            <ReactQueryDevtools initialIsOpen={false} />
+          </QueryClientProvider>
+        </UserAuthContextProvider>
     </MantineProvider>
   );
 }

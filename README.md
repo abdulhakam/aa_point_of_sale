@@ -12,11 +12,24 @@
 - It is much easier to maintain than React.
 - It is popular.
 
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
 
-First, run the development server:
+1. download pocketbase.
+2. run `pocketbase.exe`.
+3. goto this address `http://127.0.0.1:8090/_/` in terminal, `Ctrl` + clicking on it should work.
+3. create an admin account.
+4. import data, that would include all tables too. it is easy.
+5. close pocketbase.
+6. copy `pb_public` to where the `pocketbase.exe` is located
+7. run pocketbase again.
+8. go to this address `http://127.0.0.1:8090`.
+9. log in with `admin` and `1234567890`.
+10. for subsequernt runs just run pocketbase and go to this address `http://127.0.0.1:8090`.
+
+-------------------------------------------------------------------------------
+This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+run the development server:
 
 ```bash
 npm run dev

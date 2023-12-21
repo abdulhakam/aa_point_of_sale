@@ -7,6 +7,7 @@ import {
   IconBriefcase,
   IconTrolley,
   IconShoppingBag,
+  IconSettings,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
@@ -18,6 +19,7 @@ const mockdata = [
   { title: "Reports", icon: IconReport, color: "pink", target:"reports"},
   { title: "Recievings", icon: IconTrolley, color: "green", target:"recievings"},
   { title: "Sales", icon: IconShoppingBag, color: "orange", target:"sales"},
+  { title: "Management", icon: IconSettings, color: "lime", target:"management"},
 ];
 
 export default function ActionsGrid(props) {

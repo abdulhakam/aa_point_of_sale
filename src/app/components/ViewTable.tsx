@@ -1,3 +1,4 @@
+'use client'
 import { useEffect, useState } from "react";
 import { Table, ScrollArea, UnstyledButton, Group, Text, Center, TextInput, rem, keys } from "@mantine/core";
 import { IconSelector, IconChevronDown, IconChevronUp, IconSearch } from "@tabler/icons-react";
@@ -57,14 +58,12 @@ function dataProcessor({ data }) {
 }
 
 export function ViewTable(props) {
-
   const [sortedData, setSortedData] = useState([]);
   const [search, setSearch] = useState("");
   const [sortConfig, setSortConfig] = useState({ field: null, reversed: false });
-  
+
   useEffect(() => {
-    const updatedData =
-      props.expanded?.length > 0 ? dataProcessor({ data: props.data }) : props.data;
+    const updatedData = props.expanded?.length > 0 ? dataProcessor({ data: props.data }) : props.data;
     updateSortedData(updatedData);
   }, [props.data, props.expanded]);
 
@@ -98,13 +97,16 @@ export function ViewTable(props) {
       )
   );
 
+  const properData = sortedData.map((row) =>
+    Object.fromEntries(Object.entries(row).filter(([key]) => Object.keys(props.tableStructure).includes(key)))
+  );
   const renderRows = () =>
     properData.map((row) => (
       <CustomerInfoModal key={`tablerow-${row.id}`} data={row}>
         {Object.keys(props.tableStructure).map((key) => {
           return (
             key !== "id" && (
-              <Table.Td key={`${row[key]}-${row.id}`}>
+              <Table.Td key={`${[key]}-${row.id}`}>
                 {typeof row[key] !== "object" ? `${row[key]}` : `${row[key].name}`}
               </Table.Td>
             )
@@ -112,9 +114,6 @@ export function ViewTable(props) {
         })}
       </CustomerInfoModal>
     ));
-  const properData = sortedData.map((row) =>
-    Object.fromEntries(Object.entries(row).filter(([key]) => Object.keys(props.tableStructure).includes(key)))
-  );
 
   return (
     <ScrollArea>

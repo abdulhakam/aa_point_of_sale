@@ -44,6 +44,7 @@ const mockdata = [
   { icon: IconReport, label: 'Reports' },
   { icon: IconTrolley, label: 'Recievings' },
   { icon: IconShoppingBag, label: 'Sales' },
+  { icon: IconSettings,label: 'Management' }
 ];
 
 export default function NavbarMinimal(props) {

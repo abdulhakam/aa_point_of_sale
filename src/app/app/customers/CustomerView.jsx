@@ -3,12 +3,10 @@ import { useDisclosure } from "@mantine/hooks";
 import { Modal } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
-import { createCustomer, deleteCustomer, updateCustomer } from "../../api/customers";
+import { createParty, deleteParty, updateParty } from "../../api/parties";
 import { useState } from "react";
 import classes from "./CustomerView.module.css";
 import { listAreas } from "@/app/api/areas";
-
-// ... (imports remain unchanged)
 
 export function CustomerInfoModal(props) {
   const [editingState, setEditingState] = useState(false);
@@ -16,20 +14,22 @@ export function CustomerInfoModal(props) {
   const [opened, { open, close }] = useDisclosure(false);
   const queryClient = useQueryClient();
   const editCustomer = useMutation({
-    mutationFn: (data)=>updateCustomer(data),
-    onSuccess: (succ)=>queryClient.invalidateQueries({queryKey:["customers"]}),
+    mutationFn: (data) => updateParty(data),
+    onSuccess: (succ) => queryClient.invalidateQueries({ queryKey: ["customers"] }),
   });
 
   const form = useForm({
     initialValues: {
+      id: props.data.id,
       name: props.data.name,
       phone: props.data.phone,
       address: props.data.address,
       area: props.data.area.id,
+      type: props.data.type,
     },
   });
   const handleSubmit = (values) => {
-    editCustomer.mutate({...values,id:props.data.id})
+    editCustomer.mutate({ ...values, id: props.data.id });
     setEditingState(false); // Close the modal after submission
   };
 
@@ -45,6 +45,24 @@ export function CustomerInfoModal(props) {
           title={editingState ? "Edit Customer Info" : "Customer Info"}
         >
           <form onSubmit={form.onSubmit(handleSubmit)}>
+            <TextInput
+              classNames={{ input: classes.input }}
+              size='lg'
+              disabled={!editingState}
+              label='id'
+              {...form.getInputProps("id")}
+            />
+            <Select
+              classNames={{ input: classes.input }}
+              size='lg'
+              disabled={!editingState}
+              rightSection=' '
+              label='Area'
+              placeholder='Choose'
+              data={["supplier", "customer", "both"]}
+              searchable
+              {...form.getInputProps("type")}
+            />
             <TextInput
               classNames={{ input: classes.input }}
               size='lg'
@@ -85,7 +103,7 @@ export function CustomerInfoModal(props) {
             <Group justify='flex-end' mt='md'>
               {editingState ? (
                 <>
-                  <Button color="red">Delete</Button>
+                  <Button color='red'>Delete</Button>
                   <Button
                     onClick={() => {
                       setEditingState((current) => !current);
@@ -115,7 +133,7 @@ export function CreateCustomerModal(props) {
   const areas = props.areas.map((area) => ({ name: area.name, id: area.id }));
   const queryClient = useQueryClient();
   const newCustomer = useMutation({
-    mutationFn: (data) => createCustomer(data),
+    mutationFn: (data) => createParty(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       form.reset();
