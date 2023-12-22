@@ -92,11 +92,23 @@ export default function DataViewTable(props) {
         withColumnBorders
         records={records}
         columns={columns}
+        defaultColumnRender={(row, _, accessor) => {
+          return row.hasOwnProperty("expand")
+            ? row.expand.hasOwnProperty(accessor)
+              ? row.expand[accessor].name || row.expand[accessor].value
+              : row[accessor]
+            : row[accessor];
+        }}
         sortStatus={sortStatus}
         onSortStatusChange={setSortStatus}
       />
-      <Modal opened={opened} onClose={close} title='Authentication'>
-        <FormGenerator editable={formEditing} formStructure={props.formStructure} data={formData} />
+      <Modal centered size={"auto"} opened={opened} onClose={close}>
+        <FormGenerator
+          close={close}
+          editable={formEditing}
+          formStructure={props.formStructure}
+          data={formData}
+        />
       </Modal>
     </>
   );
@@ -114,6 +126,47 @@ function filterData(filters = [], data = []) {
             return field.toLowerCase().includes(value.toLowerCase());
           } else if (typeof field === "number" && !isNaN(value)) {
             return field === Number(value);
+          }
+          return false;
+        });
+      } else if (typeof item[key] === "string" && typeof value === "string") {
+        return item[key].toLowerCase().includes(value.toLowerCase());
+      } else if (typeof item[key] === "number" && !isNaN(value)) {
+        return item[key] === Number(value);
+      }
+
+      return false;
+    });
+  });
+}
+
+function newFilter(filters = [], data = []) {
+  function getExpandedValue(item, property) {
+    return item.hasOwnProperty("expand")
+      ? item.expand.hasOwnProperty(property)
+        ? item.expand[property].name || item.expand[property].value
+        : item[property]
+      : item[property];
+  }
+
+  const allfilters = data.filter((item) => {
+    return filters.every((filter) => {
+      const { key, value } = filter;
+
+      if (key === "") {
+        // If key is empty, search in all fields
+        return Object.values(item).some((field) => {
+          if (typeof field === "string") {
+            return field.toLowerCase().includes(value.toLowerCase());
+          } else if (typeof field === "number" && !isNaN(value)) {
+            return field === Number(value);
+          } else if (item.hasOwnProperty("expand")) {
+            const keyes = Object.keys(item);
+            keyes.map((keynam) => {
+              if (item.expand.hasOwnProperty(keynam))
+                item.expand[keynam].name || value === item.expand[keynam].value
+              else value === item[keynam];
+            });
           }
           return false;
         });

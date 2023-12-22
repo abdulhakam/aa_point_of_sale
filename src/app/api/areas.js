@@ -25,7 +25,7 @@ export const areaFormStructure = {
   fields: {
     created: { type: "datetime", baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
     updated: { type: "datetime", baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },
-    id: { type: "autocomplete", baseProps: { label: "id", readOnly: true, data: [], variant: "unstyled" } },
+    id: { type: "autocomplete", baseProps: { label: "id", readOnly: true, variant: "unstyled" } },
     name: { type: "text", baseProps: { label: "Name" } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
@@ -38,10 +38,10 @@ export const areaFormStructure = {
 
 export const exampleFormStructure = {
   fields: {
-    id: { type: "autocomplete", default: null, baseProps: { label: "id", data: [] } },
-    created: { type: "datetime", default: null, baseProps: { label: "Created" } },
+    id: { type: "autocomplete", default: undefined, baseProps: { label: "id", data: [] } },
+    created: { type: "datetime", default: undefined, baseProps: { label: "Created" } },
     name: { type: "text", default: "", baseProps: { label: "Name" } },
-    updated: { type: "datetime", default: null, baseProps: { label: "Updated" } },
+    updated: { type: "datetime", default: undefined, baseProps: { label: "Updated" } },
     isActive: { type: "checkbox", default: false, baseProps: { label: "Is Active" } },
     role: {
       type: "select",
@@ -51,5 +51,8 @@ export const exampleFormStructure = {
     isSwitch: { type: "switch", default: true, baseProps: { label: "A big Switch" } },
   },
   onCreate: (data) => createArea(data),
-  onEdit: (data) => updateArea(data),
+  onUpdate: (data) => updateArea(data),
+  onDelete: (data) => {
+    updateArea({ ...data, deleted: true });
+  },
 };

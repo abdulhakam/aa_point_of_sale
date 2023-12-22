@@ -1,85 +1,60 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { listItems } from "../../api/items";
-import { listItemCategories } from "../../api/categories.js";
-import TableGenerator from "../../components/TableGenerator";
-import { FormGenerator } from "../../components/FormGenerator";
+import { itemsFormStructure, useItems } from "../../api/items";
+import { DataTableColumn } from "mantine-datatable";
+import DataViewTable from "@/app/components/DataViewTable";
+import { useEffect, useState } from "react";
+import { Button, Group, Modal, TextInput } from "@mantine/core";
+import FormGenerator from "@/app/components/FormGenerator";
+import { useDisclosure } from "@mantine/hooks";
+import { useIsFetching, useIsMutating, useQueryClient } from "@tanstack/react-query";
 
-const tableStructure = {
-  name: "Name",
-  cost_price: "CP",
-  sale_price: "SP",
-  qty: "Quantity",
-  box_size_qty: "Box Size",
-  category: "Category",
-};
+const tableStructure: DataTableColumn[] = [
+  { accessor: "id", hidden: true },
+  { accessor: "name", sortable: true },
+  { accessor: "cost_price", sortable: true },
+  { accessor: "sale_price", sortable: true },
+  { accessor: "qty", sortable: true },
+  { accessor: "box_size_qty", sortable: true },
+  { accessor: "category", sortable: true },
+];
 
-const formStructure = {
-  name: { type: "text", label: "Name" },
-  cost_price: { type: "number", label: "CP" },
-  sale_price: { type: "number", label: "SP" },
-  qty: { type: "number", label: "Quantity" },
-  box_size_qty: { type: "number", label: "Box Size" },
-  category: {
-    type: "select",
-    label: "Category",
-    data: [
-      //directly acquired query data from useQuery
-    ],
-  },
-};
-const formSubmitHandler = {}   //TODO: this could be sent to FormGenerator that will either create or edit item according to form state
-function quantitesCalc(qty, boxSize) {
-  const box = Number(BigInt(qty) / BigInt(boxSize));
-  const piece = qty % boxSize;
-  return `${box} ${box === 1 ? "box" : "boxes"} ${piece} ${piece === 1 ? "piece" : "pieces"} `;
-}
-export default function Test(props) {
-  const items = useQuery({ queryKey: ["items"], queryFn: listItems });
-  const categories = useQuery({ queryKey: ["categories"], queryFn: listItemCategories });
+export default function Items() {
+  const [opened, { open, close }] = useDisclosure(false);
+  const categories = useQueryClient().getQueryData(["categories"]) as [];
+  const formStructure = { ...itemsFormStructure };
+  const qty = useQueryClient().getQueryData(["items_qty"]);
+  formStructure.fields.category.baseProps.data = categories?.map((cat) => ({
+    value: cat.id,
+    label: cat.name,
+  }));
+  const [search, setSearch] = useState("");
+  const items = useItems();
 
-  if (items.isSuccess && categories.isSuccess) {
-    const modifiedTableData = items.data.map((item) => {
-      const mdata = {
-        ...item,
-        expand: {
-          ...item.expand,
-          qty: {
-            ...item.expand.qty,
-            name: `${item.expand.qty.value} (${quantitesCalc(item.expand.qty.value, item.box_size_qty)})`,
-          },
-        },
-      };
-      return mdata;
-    });
-
-    const completeFormStructureData = {
-      ...formStructure,
-      category: {
-        type: "select",
-        label: "Category",
-        data: categories.data.map((dat) => ({ value: dat.id, label: dat.name })),
-      },
-    };
-    return (
-      <>
-        <FormGenerator formStructure={completeFormStructureData} />
-        <TableGenerator
-          data={modifiedTableData}
-          formStructure={completeFormStructureData}
-          tableStructure={tableStructure}
+  return (
+    <>
+      <Group align='end'>
+        <TextInput
+          style={{ width: "10rem" }}
+          label='Search'
+          onChange={(value) => setSearch(value.target.value)}
+          value={search}
         />
-      </>
-    );
-  } else if (items.isLoading || categories.isLoading) {
-    return <h1>Loading</h1>;
-  } else if (items.isError || categories.isError) {
-    return <h2>{items.error.message || categories.error.message}</h2>;
-  } else
-    return (
-      <>
-        <h1>What is happening?</h1>
-      </>
-    );
+        <Modal centered size={'auto'} opened={opened} onClose={close} title='Authentication'>
+          <FormGenerator close={close} editable formStructure={itemsFormStructure} />
+        </Modal>
+        <Button onClick={open}> Add New </Button>
+      </Group>
+      {items.isLoading && <h1>Loading...</h1>}
+      {items.isError && <h2>{items.error.message}</h2>}
+      {items.isSuccess && (
+        <DataViewTable
+          filter={[{ key: "", value: search }]}
+          columns={tableStructure}
+          formStructure={itemsFormStructure}
+          data={items.data}
+        />
+      )}
+    </>
+  );
 }

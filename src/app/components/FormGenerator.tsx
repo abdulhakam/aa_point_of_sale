@@ -14,7 +14,9 @@ import {
   Autocomplete,
   Flex,
   Group,
+  Grid,
 } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
@@ -25,12 +27,14 @@ export default function FormGenerator(props) {
     mutationFn: props.formStructure.onCreate,
     onSuccess: () => {
       queryClient.invalidateQueries(props.formStructure.queryKey);
+      props.close()
     },
   });
   const updateMutation = useMutation({
     mutationFn: props.formStructure.onUpdate,
     onSuccess: () => {
       queryClient.invalidateQueries(props.formStructure.queryKey);
+      props.close()
     },
   });
   const form = useForm(
@@ -61,12 +65,13 @@ export default function FormGenerator(props) {
     delete data.created;
     delete data.updated;
     delete data.deleted;
+    console.log(data);
     if (props.data) {
       updateMutation.mutate(data);
-      close()
+      close();
     } else {
       createMutation.mutate(data);
-      close()
+      close();
     }
   };
 
@@ -77,9 +82,9 @@ export default function FormGenerator(props) {
           return (
             <TextInput
               m={"sm"}
+              style={{width:'12rem'}}
               variant={props.editable ? "default" : "unstyled"}
               readOnly={!props.editable}
-              // defaultValue={data[key]}
               key={`${key}-input-${field.name}`}
               {...field.baseProps}
               {...form.getInputProps(key)}
@@ -89,9 +94,9 @@ export default function FormGenerator(props) {
           return (
             <NumberInput
               m={"sm"}
+              style={{width:'12rem'}}
               variant={props.editable ? "default" : "unstyled"}
               readOnly={!props.editable}
-              // defaultValue={data[key]}
               key={`${key}-input-${field.name}`}
               {...field.baseProps}
               {...form.getInputProps(key)}
@@ -101,9 +106,9 @@ export default function FormGenerator(props) {
           return (
             <DateTimePicker
               m={"sm"}
+              style={{width:'12rem'}}
               variant={props.editable ? "default" : "unstyled"}
               readOnly={!props.editable}
-              // defaultValue={new Date(data[key])}
               key={`${key}-input-${field.name}`}
               {...field.baseProps}
               {...form.getInputProps(key)}
@@ -113,9 +118,9 @@ export default function FormGenerator(props) {
           return (
             <Checkbox
               m={"sm"}
+              style={{width:'12rem'}}
               variant={props.editable ? "default" : "unstyled"}
               readOnly={!props.editable}
-              // defaultValue={data[key]}
               key={`${key}-input-${field.name}`}
               {...field.baseProps}
               {...form.getInputProps(key)}
@@ -125,9 +130,9 @@ export default function FormGenerator(props) {
           return (
             <Switch
               m={"sm"}
+              style={{width:'12rem'}}
               variant={props.editable ? "default" : "unstyled"}
               disabled={!props.editable}
-              // defaultValue={data[key]}
               key={`${key}-input-${field.name}`}
               {...field.baseProps}
               {...form.getInputProps(key)}
@@ -137,9 +142,9 @@ export default function FormGenerator(props) {
           return (
             <Autocomplete
               m={"sm"}
+              style={{width:'12rem'}}
               variant={props.editable ? "default" : "unstyled"}
               readOnly={!props.editable}
-              // defaultValue={data[key]}
               key={`${key}-input-${field.name}`}
               {...field.baseProps}
               {...form.getInputProps(key)}
@@ -148,10 +153,10 @@ export default function FormGenerator(props) {
         case "select":
           return (
             <Select
+            style={{width:'12rem'}}
               m={"sm"}
               variant={props.editable ? "default" : "unstyled"}
               readOnly={!props.editable}
-              // defaultValue={data[key]}
               key={`${key}-input-${field.name}`}
               {...field.baseProps}
               {...form.getInputProps(key)}
@@ -164,18 +169,22 @@ export default function FormGenerator(props) {
   };
 
   return (
-    <Group>
+    <Container>
       <form onSubmit={form.onSubmit(submitHandler)}>
-        {props.formStructure.fields &&
-          Object.keys(props.formStructure.fields).map((key) => {
-            const field = props.formStructure.fields[key];
-            return formBuilder(key, field);
-          })}
-          {props.editable?
-        <Button mt='md' type='submit'>
-          {props.data ? "Submit" : "Create"}
-        </Button>:null}
+        <Grid style={{width:'40rem'}}>
+          {props.formStructure.fields &&
+            Object.keys(props.formStructure.fields).map((key) => {
+              const field = props.formStructure.fields[key];
+              return formBuilder(key, field);
+            })}
+          {props.editable ? (
+            <Button mt='md' type='submit'>
+              {props.data ? "Submit" : "Create"}
+            </Button>
+          ) : null}
+        </Grid>
       </form>
-    </Group>
+    </Container>
   );
 }
+

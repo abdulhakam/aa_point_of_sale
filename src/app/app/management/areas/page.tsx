@@ -1,13 +1,13 @@
 "use client";
 import { useAreas } from "@/app/api/areas";
 import { DataTableColumn } from "mantine-datatable";
-import DataViewTable from "./DataViewTable";
+import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
 import { Button, Group, Modal, TextInput } from "@mantine/core";
 import { areaFormStructure } from "@/app/api/areas";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
-// { name: "id", label: "ID", type: "autocomplete", collection: "areas" },
+
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
   { accessor: "name", sortable: true },
