@@ -68,10 +68,8 @@ export default function FormGenerator(props) {
     console.log(data);
     if (props.data) {
       updateMutation.mutate(data);
-      close();
     } else {
       createMutation.mutate(data);
-      close();
     }
   };
 

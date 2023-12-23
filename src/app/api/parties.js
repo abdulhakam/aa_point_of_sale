@@ -32,7 +32,28 @@ export const useParties = () => {
     allParties,
     customers: allParties? allParties.filter((party) => party.type === "customer" || party.type === "both"):[],
     suppliers: allParties? allParties.filter((party) => party.type === "supplier" || party.type === "both"):[],
+    isLoading:parties.isLoading,
     status:parties.status,
     error:parties.error,
   }
+};
+
+
+export const partyFormStructure = {
+  fields: {
+    id: { type: "autocomplete", default: undefined, baseProps: { label: "id", data: [] } },
+    created: { type: "datetime", default: undefined, baseProps: { label: "Created" } },
+    updated: { type: "datetime", default: undefined, baseProps: { label: "Updated" } },
+    name: { type: "text", default: "", baseProps: { label: "Name" } },
+    type: { type:'select', default:undefined,baseProps:{label:'Type',data:['customer','supplier','both']}},
+    area: {type:'select', default:undefined,baseProps:{label:'Area',searchable:true,data:[]}},
+    phone: { type: "text", default: undefined, baseProps: { label: "Phone" } },
+    address: { type: "text", default: undefined, baseProps: { label: "Address" } },
+    deleted: { type: 'switch', default:false, baseProps:{label:'deleted'}}
+  },
+  onCreate: (data) => createParty(data),
+  onUpdate: (data) => updateParty(data),
+  onDelete: (data) => {
+    updateParty({ ...data, deleted: true });
+  },
 };
