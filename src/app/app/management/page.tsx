@@ -8,7 +8,7 @@ export default function ManagementPage(){
     <>
     <h1>Manage</h1>
     <Button onClick={()=>router.push('management/areas')} variant={"subtle"}>areas</Button>
-    <Button variant={"subtle"}>bookers</Button>
+    <Button onClick={()=>router.push('management/bookers')} variant={"subtle"}>bookers</Button>
     <Button variant={"subtle"}>categories</Button>
     </>
   )

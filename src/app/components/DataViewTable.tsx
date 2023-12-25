@@ -113,32 +113,32 @@ export default function DataViewTable(props) {
     </>
   );
 }
+//TODO: tobe removed in near future code cleanups
+// function filterData(filters = [], data = []) {
+//   return data.filter((item) => {
+//     return filters.every((filter) => {
+//       const { key, value } = filter;
 
-function filterData(filters = [], data = []) {
-  return data.filter((item) => {
-    return filters.every((filter) => {
-      const { key, value } = filter;
+//       if (key === "") {
+//         // If key is empty, search in all fields
+//         return Object.values(item).some((field) => {
+//           if (typeof field === "string") {
+//             return field.toLowerCase().includes(value.toLowerCase());
+//           } else if (typeof field === "number" && !isNaN(value)) {
+//             return field === Number(value);
+//           }
+//           return false;
+//         });
+//       } else if (typeof item[key] === "string" && typeof value === "string") {
+//         return item[key].toLowerCase().includes(value.toLowerCase());
+//       } else if (typeof item[key] === "number" && !isNaN(value)) {
+//         return item[key] === Number(value);
+//       }
 
-      if (key === "") {
-        // If key is empty, search in all fields
-        return Object.values(item).some((field) => {
-          if (typeof field === "string") {
-            return field.toLowerCase().includes(value.toLowerCase());
-          } else if (typeof field === "number" && !isNaN(value)) {
-            return field === Number(value);
-          }
-          return false;
-        });
-      } else if (typeof item[key] === "string" && typeof value === "string") {
-        return item[key].toLowerCase().includes(value.toLowerCase());
-      } else if (typeof item[key] === "number" && !isNaN(value)) {
-        return item[key] === Number(value);
-      }
-
-      return false;
-    });
-  });
-}
+//       return false;
+//     });
+//   });
+// }
 
 function newFilter(filters = [], data = []) {
   function getExpandedValue(item, property) {

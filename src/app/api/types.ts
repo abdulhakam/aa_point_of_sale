@@ -62,3 +62,12 @@ export interface Category {
   name: string;
   deleted: boolean;
 }
+
+export interface OrderBooker {
+  created: Date;
+  updated: Date;
+  id: string;
+  name: string;
+  phone: string;
+  deleted: boolean;
+}

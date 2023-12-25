@@ -37,14 +37,14 @@ function NavbarLink({ icon: Icon, label, active, onClick }: NavbarLinkProps) {
 }
 
 const mockdata = [
-  { icon: IconGauge, label: 'Dashboard' },
-  { icon: IconUser, label: 'Customers' },
-  { icon: IconTag, label: 'Items' },
-  { icon: IconBriefcase, label: 'Suppliers' },
-  { icon: IconReport, label: 'Reports' },
-  { icon: IconTrolley, label: 'Recievings' },
-  { icon: IconShoppingBag, label: 'Sales' },
-  { icon: IconSettings,label: 'Management' }
+  { icon: IconGauge, label: 'Dashboard',target:'dashboard' },
+  { icon: IconUser, label: 'Customers', target:'parties/customers' },
+  { icon: IconTag, label: 'Items', target:'items' },
+  { icon: IconBriefcase, label: 'Suppliers', target:'parties/suppliers' },
+  { icon: IconReport, label: 'Reports', target:'reports' },
+  { icon: IconTrolley, label: 'Recievings', target:'recievings' },
+  { icon: IconShoppingBag, label: 'Sales', target:'sales' },
+  { icon: IconSettings,label: 'Management', target:'management' }
 ];
 
 export default function NavbarMinimal(props) {
@@ -56,7 +56,7 @@ export default function NavbarMinimal(props) {
       {...link}
       key={link.label}
       active={link.label.toLowerCase() === pathname}
-      onClick={()=>router.push(`/app/${link.label.toLowerCase()}`)}
+      onClick={()=>router.push(`/app/${link.target}`)}
     />
   ));
 

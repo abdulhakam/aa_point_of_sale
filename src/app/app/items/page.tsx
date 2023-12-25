@@ -1,6 +1,6 @@
 "use client";
 
-import { itemsFormStructure, useItems } from "../../api/items";
+import { itemFormStructure, useItems } from "../../api/items";
 import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
 import {  useState } from "react";
@@ -23,7 +23,7 @@ const tableStructure: DataTableColumn[] = [
 export default function Items() {
   const [opened, { open, close }] = useDisclosure(false);
   const categories = useQueryClient().getQueryData(["categories"]) as RecordModel;
-  const formStructure = { ...itemsFormStructure };
+  const formStructure = { ...itemFormStructure };
   formStructure.fields.category.baseProps.data = categories?.map((cat) => ({
     value: cat.id,
     label: cat.name,
@@ -41,7 +41,7 @@ export default function Items() {
           value={search}
         />
         <Modal centered size={'auto'} opened={opened} onClose={close} title='Authentication'>
-          <FormGenerator close={close} editable formStructure={itemsFormStructure} />
+          <FormGenerator close={close} editable formStructure={itemFormStructure} />
         </Modal>
         <Button onClick={open}> Add New </Button>
       </Group>
@@ -51,7 +51,7 @@ export default function Items() {
         <DataViewTable
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          formStructure={itemsFormStructure}
+          formStructure={itemFormStructure}
           data={items.data}
         />
       )}

@@ -13,9 +13,9 @@ import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
 
 const mockdata = [
-  { title: "Customers", icon: IconUser, color: "cyan", target:"customers"},
+  { title: "Customers", icon: IconUser, color: "cyan", target:"parties/customers"},
   { title: "Items", icon: IconTag, color: "yellow", target:"items"},
-  { title: "Suppliers", icon: IconBriefcase, color: "blue", target:"suppliers"},
+  { title: "Suppliers", icon: IconBriefcase, color: "blue", target:"parties/suppliers"},
   { title: "Reports", icon: IconReport, color: "pink", target:"reports"},
   { title: "Recievings", icon: IconTrolley, color: "green", target:"recievings"},
   { title: "Sales", icon: IconShoppingBag, color: "orange", target:"sales"},

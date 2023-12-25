@@ -18,7 +18,7 @@ export async function deleteCategory(data) {
   return await pb.collection('categories').delete(data.id);
 }
 
-export const areaFormStructure: FormStructure<Category> = {
+export const categoryFormStructure: FormStructure<Category> = {
   fields: {
     created: { type: "datetime", baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
     updated: { type: "datetime", baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },

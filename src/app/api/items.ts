@@ -40,7 +40,7 @@ export function useItems() {
   return useQuery({ queryKey: ["items"], queryFn: listItems });
 }
 
-export const itemsFormStructure: FormStructure<Item> = {
+export const itemFormStructure: FormStructure<Item> = {
   fields: {
     created: { type: "datetime", default: undefined, baseProps: { label: "Created" } },
     updated: { type: "datetime", default: undefined, baseProps: { label: "Updated" } },
