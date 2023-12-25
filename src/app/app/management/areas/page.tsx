@@ -27,7 +27,7 @@ export default function Areas() {
           onChange={(value) => setSearch(value.target.value)}
           value={search}
         />
-        <Modal opened={opened} onClose={close} title="Authentication">
+        <Modal opened={opened} onClose={close} title="Create">
         <FormGenerator editable formStructure={areaFormStructure} />
       </Modal>
         <Button onClick={open}> Add New </Button>

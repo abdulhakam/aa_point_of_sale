@@ -8,6 +8,7 @@ import { Button, Group, Modal, TextInput } from "@mantine/core";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
 import {  useQueryClient } from "@tanstack/react-query";
+import { RecordModel } from "pocketbase";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
@@ -21,9 +22,8 @@ const tableStructure: DataTableColumn[] = [
 
 export default function Items() {
   const [opened, { open, close }] = useDisclosure(false);
-  const categories = useQueryClient().getQueryData(["categories"]) as [];
+  const categories = useQueryClient().getQueryData(["categories"]) as RecordModel;
   const formStructure = { ...itemsFormStructure };
-  const qty = useQueryClient().getQueryData(["items_qty"]);
   formStructure.fields.category.baseProps.data = categories?.map((cat) => ({
     value: cat.id,
     label: cat.name,

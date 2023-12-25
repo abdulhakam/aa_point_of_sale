@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
+import { FormStructure, Party } from "./types";
 export const createParty = async (data) => {
   const exampleData = {
     id: "pty000000000000",
@@ -16,7 +17,7 @@ export const createParty = async (data) => {
 
 export async function getParties() {
   return await pb.collection("parties").getFullList({
-    sort: "-created",
+    sort: "-created",expand:'area'
   });
 }
 export const updateParty = async (data) => {
@@ -39,7 +40,7 @@ export const useParties = () => {
 };
 
 
-export const partyFormStructure = {
+export const partyFormStructure: FormStructure<Party> = {
   fields: {
     id: { type: "autocomplete", default: undefined, baseProps: { label: "id", data: [] } },
     created: { type: "datetime", default: undefined, baseProps: { label: "Created" } },

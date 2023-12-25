@@ -78,12 +78,12 @@ export default function DataViewTable(props) {
   const [sortStatus, setSortStatus] = useState({
     columnAccessor: "name",
     direction: "asc",
-  });
+  } as DataTableSortStatus);
   const [records, setRecords] = useState(sortBy(props.data, "name"));
   useEffect(() => {
-    const data = sortBy(filterData(props.filter ? props.filter : [], props.data), sortStatus.columnAccessor);
+    const data = sortBy(newFilter(props.filter ? props.filter : [], props.data), sortStatus.columnAccessor);
     setRecords(sortStatus.direction === "desc" ? data.reverse() : data);
-  }, [sortStatus, props.filter]);
+  }, [sortStatus, props.filter, props.data]);
 
   return (
     <>
@@ -149,34 +149,33 @@ function newFilter(filters = [], data = []) {
       : item[property];
   }
 
-  const allfilters = data.filter((item) => {
+  return data.filter((item) => {
     return filters.every((filter) => {
       const { key, value } = filter;
 
       if (key === "") {
         // If key is empty, search in all fields
-        return Object.values(item).some((field) => {
-          if (typeof field === "string") {
-            return field.toLowerCase().includes(value.toLowerCase());
-          } else if (typeof field === "number" && !isNaN(value)) {
-            return field === Number(value);
-          } else if (item.hasOwnProperty("expand")) {
-            const keyes = Object.keys(item);
-            keyes.map((keynam) => {
-              if (item.expand.hasOwnProperty(keynam))
-                item.expand[keynam].name || value === item.expand[keynam].value
-              else value === item[keynam];
-            });
+        return Object.keys(item).some((property) => {
+          const expandedValue = getExpandedValue(item, property);
+
+          if (typeof expandedValue === "string") {
+            return expandedValue.toLowerCase().includes(value.toLowerCase());
+          } else if (typeof expandedValue === "number" && !isNaN(value)) {
+            return expandedValue === Number(value);
           }
           return false;
         });
-      } else if (typeof item[key] === "string" && typeof value === "string") {
-        return item[key].toLowerCase().includes(value.toLowerCase());
-      } else if (typeof item[key] === "number" && !isNaN(value)) {
-        return item[key] === Number(value);
-      }
+      } else {
+        const expandedValue = getExpandedValue(item, key);
 
-      return false;
+        if (typeof expandedValue === "string" && typeof value === "string") {
+          return expandedValue.toLowerCase().includes(value.toLowerCase());
+        } else if (typeof expandedValue === "number" && !isNaN(value)) {
+          return expandedValue === Number(value);
+        }
+        return false;
+      }
     });
   });
 }
+

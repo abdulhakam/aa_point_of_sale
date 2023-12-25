@@ -1,13 +1,8 @@
 "use client";
-import { Card, Text, SimpleGrid, UnstyledButton, Group, useMantineTheme, Grid } from "@mantine/core";
+import { Card, Text, UnstyledButton, useMantineTheme, Grid } from "@mantine/core";
 import {
-  IconReport,
   IconUser,
-  IconTag,
   IconBriefcase,
-  IconTrolley,
-  IconShoppingBag,
-  IconSettings,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
 import { useRouter } from "next/navigation";

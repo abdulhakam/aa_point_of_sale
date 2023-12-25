@@ -8,6 +8,7 @@ import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
 import {  useQueryClient } from "@tanstack/react-query";
 import { partyFormStructure, useParties } from "@/app/api/parties";
+import { RecordModel } from "pocketbase";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
@@ -21,7 +22,7 @@ const tableStructure: DataTableColumn[] = [
 
 export default function Items() {
   const [opened, { open, close }] = useDisclosure(false);
-  const areas = useQueryClient().getQueryData(["areas"]);
+  const areas = useQueryClient().getQueryData(["areas"]) as RecordModel;
   const formStructure = { ...partyFormStructure };
   formStructure.fields.type.baseProps.data=['customer','both'];
   formStructure.fields.type.default='customer';

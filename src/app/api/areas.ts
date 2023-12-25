@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
+import { FormStructure, Area } from "./types";
 
 export function useAreas() {
   return useQuery({ queryKey: ["areas"], queryFn: listAreas });
@@ -21,7 +22,7 @@ export async function deleteArea(data) {
   return await pb.collection("areas").delete(data.id);
 }
 
-export const areaFormStructure = {
+export const areaFormStructure: FormStructure<Area> = {
   fields: {
     created: { type: "datetime", baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
     updated: { type: "datetime", baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },

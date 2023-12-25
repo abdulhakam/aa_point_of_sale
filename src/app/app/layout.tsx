@@ -4,7 +4,7 @@ import { useQueries } from "@tanstack/react-query";
 import HeaderSimple from "./HeaderSimple";
 import NavbarMinimal from "./NavbarMinimal";
 import { listAreas } from "../api/areas";
-import { listItemCategories } from "../api/categories";
+import { listCategories } from "../api/categories";
 import { listAllInvoices } from "../api/invoices";
 import { listItems } from "../api/items";
 import { listOrderBookers } from "../api/order_bookers"
@@ -15,11 +15,12 @@ import { allPayments } from "../api/payments"
 import { getAllPermissions } from '../api/permissions'
 import { allTransactions } from '../api/transactions'
 import { listUsers } from '../api/users'
+import {rowCounter} from '../api/row_counter'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   useQueries({
     queries: [{ queryKey: ['areas'], queryFn: listAreas},
-    { queryKey: ['categories'], queryFn: listItemCategories},
+    { queryKey: ['categories'], queryFn: listCategories},
     { queryKey: ['invoices'], queryFn: listAllInvoices },
     { queryKey: ['items'], queryFn: listItems },
     { queryKey: ['order_bookers'], queryFn: listOrderBookers },
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     { queryKey: ['permissions'], queryFn: getAllPermissions },
     { queryKey: ['transactions'], queryFn: allTransactions },
     { queryKey: ['users'], queryFn: listUsers },
+    { queryKey: ['row_counts'], queryFn:rowCounter}
   ]
   })
   return (

@@ -16,7 +16,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import idGenerator from "@/app/components/functions/idGenerator";
-import { getUser } from "@/app/api/aa_users";
+import { getUser } from "@/app/api/users";
 import { useTime } from "@/app/hooks/useTime";
 import { useInvoices } from "@/app/api/invoices";
 import { checkError, checkLoading, checkSuccess, getError } from "@/app/api/statusCheck";

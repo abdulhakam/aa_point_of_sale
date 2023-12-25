@@ -1,5 +1,5 @@
 "use client";
-import { getUser } from "@/app/api/aa_users";
+import { getUser } from "@/app/api/users";
 import { useInvoices } from "@/app/api/invoices";
 import { useParties } from "@/app/api/parties";
 import { checkError, checkLoading, checkSuccess, getError } from "@/app/api/statusCheck";

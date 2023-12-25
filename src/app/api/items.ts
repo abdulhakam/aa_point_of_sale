@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
+import { FormStructure, Item } from "./types";
 
 export async function createItem(data) {
   return await pb.collection("items").create(data);
@@ -39,7 +40,7 @@ export function useItems() {
   return useQuery({ queryKey: ["items"], queryFn: listItems });
 }
 
-export const itemsFormStructure = {
+export const itemsFormStructure: FormStructure<Item> = {
   fields: {
     created: { type: "datetime", default: undefined, baseProps: { label: "Created" } },
     updated: { type: "datetime", default: undefined, baseProps: { label: "Updated" } },
