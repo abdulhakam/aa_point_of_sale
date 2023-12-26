@@ -71,3 +71,33 @@ export interface OrderBooker {
   phone: string;
   deleted: boolean;
 }
+
+export interface Invoice {
+  created: Date;
+  updated: Date;
+  id: string;
+  invoice_maker: string;
+  party: string;
+  type: "purchase" | "sale";
+  transactions: string[];
+  total: number;
+  discount_1: number;
+  discount_2: number;
+  total_after_discount: number;
+  description: string;
+  deleted: boolean;
+}
+
+export interface Transaction {
+  created: Date;
+  updated: Date;
+  id: string;
+  invoice: string;
+  item: string;
+  qty: number;
+  price: number;
+  discount_1: number;
+  discount_2: number;
+  total: number;
+  deleted: boolean;
+}
