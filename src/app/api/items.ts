@@ -37,7 +37,8 @@ export async function deleteItem(data) {
 }
 
 export function useItems() {
-  return useQuery({ queryKey: ["items"], queryFn: listItems });
+  const {data,status,isLoading,error}=useQuery({ queryKey: ["items"], queryFn: listItems });
+  return {data,status,isLoading,error}
 }
 
 export const itemFormStructure: FormStructure<Item> = {

@@ -3,7 +3,7 @@ export const checkSuccess = (arr = []) => {
 };
 
 export const checkLoading = (arr = []) => {
-  return arr.filter((q) => q.status === "pending").length > 0 ;
+  return arr.filter((q) => q.isLoading).length > 0 ;
 };
 
 export const checkError = (arr = []) => {

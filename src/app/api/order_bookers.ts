@@ -6,7 +6,8 @@ export async function createOrderBooker(data) {
   return await pb.collection("order_bookers").create(data);
 }
 export function useOrderBookers() {
-  return useQuery({ queryKey: ["areas"], queryFn: listOrderBookers });
+  const {data,isLoading,status,error} =  useQuery({ queryKey: ["areas"], queryFn: listOrderBookers })
+  return {data,isLoading,status,error}
 }
 export async function updateOrderBooker(data){
   const rid = data.id

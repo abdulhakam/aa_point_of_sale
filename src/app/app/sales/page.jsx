@@ -21,7 +21,7 @@ export default function InvoiceMaker() {
   const parties = useParties();
   const transactions = useTransactions().data;
   const user = useQuery({
-    queryKey: ["user", pb.authStore.model.id],
+    queryKey: ["user", pb.authStore?.model?.id],
     queryFn: async () => await getUser(pb.authStore.model.id),
   });
   const qc = useQueryClient();

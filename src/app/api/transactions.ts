@@ -3,7 +3,8 @@ import pb from "../pocketbase";
 import { FormStructure, Transaction } from "./types";
 export const allTransactions = async () =>
   await pb.collection("transactions").getFullList({
-    sort: "-created",expand:'item'
+    sort: "-created",
+    expand: "item",
   });
 
 export function useTransactions() {
@@ -57,16 +58,14 @@ export const transactionFormStructure: FormStructure<Transaction> = {
     item: { type: "select", baseProps: { label: "Item", data: [] } },
     price: { type: "number", baseProps: { label: "price" } },
     qty: { type: "number", baseProps: { label: "qty" } },
-    discount_1: { type: "number", baseProps: { label: "total" } },
-    discount_2: { type: "number", baseProps: { label: "total" } },
+    discount_1: { type: "number", baseProps: { label: "discount_1" } },
+    discount_2: { type: "number", baseProps: { label: "discount_2" } },
     total: { type: "number", baseProps: { label: "Total", readOnly: true } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
   onCreate: (data) => {
     createTransaction(data);
   },
-  onUpdate: (data) => {
-    updateTransaction(data);
-  },
+  onUpdate: updateTransaction,
   onDelete: (data) => deleteTransaction(data.id),
 };

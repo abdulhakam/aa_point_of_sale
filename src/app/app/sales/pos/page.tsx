@@ -10,6 +10,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { RecordModel } from "pocketbase";
 import InvoiceMakerForm from "./InvoiceForm";
+import { useParties } from "@/app/api/parties";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
@@ -24,7 +25,7 @@ const tableStructure: DataTableColumn[] = [
 export default function Invoices() {
   // const [opened, { open, close }] = useDisclosure(false);
   const users = useQueryClient().getQueryData(["users"]) as RecordModel[];
-  const formStructure = { ...invoiceFormStructure };
+  const parties = useParties()
   const invoices = useInvoices();
 
   if (invoices.isLoading) {

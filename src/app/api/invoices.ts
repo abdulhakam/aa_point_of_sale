@@ -2,13 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
 import { FormStructure, Invoice } from "./types";
 
-export async function getInvoice(invNo){
-  return await pb.collection('invoices').getOne(invNo)
+export async function getInvoice(invNo) {
+  return await pb.collection("invoices").getOne(invNo);
 }
 
 export async function listAllInvoices() {
   return await pb.collection("invoices").getFullList({
-    sort: "-created",expand:"party,transactions"
+    sort: "-created",
+    expand: "party,transactions",
   });
 }
 export function useInvoices() {
@@ -60,8 +61,8 @@ export async function updateInvoice(data) {
   return await pb.collection("invoices").update(data.id, ndata);
 }
 
-export async function deleteInvoice(rid){
-  return await pb.collection('invoices').delete('RECORD_ID');
+export async function deleteInvoice(rid) {
+  return await pb.collection("invoices").delete("RECORD_ID");
 }
 
 export const invoiceFormStructure: FormStructure<Invoice> = {
@@ -83,8 +84,6 @@ export const invoiceFormStructure: FormStructure<Invoice> = {
   onCreate: (data) => {
     createInvoice(data);
   },
-  onUpdate: (data) => {
-    updateInvoice(data);
-  },
+  onUpdate: updateInvoice,
   onDelete: (data) => deleteInvoice(data.id),
 };
