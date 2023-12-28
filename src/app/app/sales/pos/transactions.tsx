@@ -6,48 +6,43 @@ import { Button, Group, Modal, TextInput } from "@mantine/core";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
 import { transactionFormStructure, useTransactions } from "@/app/api/transactions";
+import useCRUD from "@/app/api/unifiedAPI";
+import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
+import { useQueryClient } from "@tanstack/react-query";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
-  { accessor: "invoice", sortable: true },
-  { accessor: "item", sortable: true },
-  { accessor: "qty", sortable: true },
-  { accessor: "price", sortable: true },
-  { accessor: "discount_1", sortable: true },
-  { accessor: "discount_2", sortable: true },
-  { accessor: "total", sortable: true },
+  { accessor: "invoice", hidden: true },
+  { accessor: "count",width: "4%", title: "#", sortable: true },
+  { accessor: "item", width: "50%", sortable: false },
+  { accessor: "qty", width: "8%", sortable: false },
+  { accessor: "price", width: "10%", sortable: false },
+  { accessor: "discount_1", width: "8%", sortable: false },
+  { accessor: "discount_2", width: "8%", sortable: false },
+  { accessor: "total", width: "10%", sortable: false },
 ];
 
-export default function Transactions(props) {
-  const [opened, { open, close }] = useDisclosure(false);
-  const transactions = useTransactions();
-  return (
-    <>
-      <Group align='end'>
-        <Modal size={"auto"} opened={opened} onClose={close} title='Add'>
-          <FormGenerator
-            editable
-            formStructure={{
-              ...transactionFormStructure,
-              fields: {
-                ...transactionFormStructure.fields,
-                invoice: { ...transactionFormStructure.fields.invoice, default: props.invoice },
-              },
-            }}
-          />
-        </Modal>
-        <Button onClick={open}> Add New </Button>
-      </Group>
-      {transactions.isLoading && <h1>Loading...</h1>}
-      {transactions.status === "error" && <h2>{transactions.error.message}</h2>}
-      {transactions.status === "success" && (
+export default function Transactions({ invoice }) {
+  const queryClient = useQueryClient()
+  queryClient.invalidateQueries({ queryKey: ['transaction_view'] })
+  const transactions = useCRUD().fullList({
+    collection: "transaction_view",
+    expand: "item",
+    filter: `invoice="${invoice}"`,
+  });
+  const dataWithCount = transactions.data?.map(((tr,index)=>({...tr,count:index+1})))
+  const queries = [transactions];
+  if (checkSuccess(queries)) {
+    return (
+      <>
         <DataViewTable
-          filter={[{ key: "invoice", value: props.invoice || "pos000000000001" }]}
+          filter={[{ key: "invoice", value: invoice }]}
           columns={tableStructure}
           formStructure={transactionFormStructure}
-          data={transactions.data}
+          data={dataWithCount}
+          emptyState={<>new transaction form goes here</>}
         />
-      )}
-    </>
-  );
+      </>
+    );
+  } else return <StatusCheck check={queries} />;
 }

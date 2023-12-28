@@ -17,49 +17,11 @@ export default function DataViewTable(props) {
     mutationFn: props.formStructure.onDelete,
     onSuccess: () => {
       queryClient.invalidateQueries(props.formStructure.queryKey);
+      close()
     },
   });
   const [formData, setFormData] = useState({});
   const [formEditing, setFormEditing] = useState(false);
-  const columns = !props.report
-    ? [
-        ...props.columns,
-        {
-          accessor: "actions",
-          title: "Actions",
-          width: "6rem",
-          textAlign: "right",
-          render: (data) => (
-            <Group gap={4} justify='right' wrap='nowrap'>
-              <ActionIcon
-                size='sm'
-                variant='subtle'
-                color='green'
-                onClick={() => showModal({ data, action: "view" })}
-              >
-                <IconEye size={16} />
-              </ActionIcon>
-              <ActionIcon
-                size='sm'
-                variant='subtle'
-                color='blue'
-                onClick={() => showModal({ data, action: "edit" })}
-              >
-                <IconEdit size={16} />
-              </ActionIcon>
-              <ActionIcon
-                size='sm'
-                variant='subtle'
-                color='red'
-                onClick={() => showModal({ data, action: "delete" })}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Group>
-          ),
-        },
-      ]
-    : props.columns;
   function showModal({ data, action }) {
     if (action === "view") {
       setFormData(data);
@@ -88,10 +50,11 @@ export default function DataViewTable(props) {
   return (
     <>
       <DataTable
+      style={{border:'1px solid lightgray',borderRadius:'5px'}}
         withTableBorder
         withColumnBorders
         records={records}
-        columns={columns}
+        columns={props.columns}
         defaultColumnRender={(row, _, accessor) => {
           return row.hasOwnProperty("expand")
             ? row.expand.hasOwnProperty(accessor)
@@ -101,6 +64,7 @@ export default function DataViewTable(props) {
         }}
         sortStatus={sortStatus}
         onSortStatusChange={setSortStatus}
+        {...props}
       />
       <Modal centered size={"auto"} opened={opened} onClose={close}>
         <FormGenerator

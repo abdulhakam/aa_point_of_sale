@@ -1,6 +1,6 @@
 // Define a generic type for the field object
 export type Field<T> = {
-  type: string;
+  type: 'autocomplete'|'datetime'|'text'|'number'|'checkbox'|'switch'|'select';
   default?: T;
   baseProps: {
     label: string;
@@ -18,12 +18,20 @@ export type FormStructure<T> = {
     [K in keyof T]: Field<T[K]>;
   };
   onCreate: (data: T) => void;
-  onUpdate: (data: T) => Promise<any>;
+  onUpdate: (data: T) => Promise<any>|void;
   onDelete: (data: T) => void;
 };
 
+
+export interface CollectionItem {
+  id: string;
+  created: Date;
+  updated: Date;
+  // collectionID: string;
+  // collectionName:string;
+}
 // Define interfaces for the specific objects
-export interface Party {
+export interface Party extends CollectionItem {
   id: string;
   created: Date;
   updated: Date;
@@ -35,7 +43,7 @@ export interface Party {
   deleted: boolean;
 }
 
-export interface Item {
+export interface Item extends CollectionItem {
   created: Date;
   updated: Date;
   id: string;
@@ -47,7 +55,7 @@ export interface Item {
   category: string;
 }
 
-export interface Area {
+export interface Area extends CollectionItem {
   created: Date;
   updated: Date;
   id: string;
@@ -55,7 +63,7 @@ export interface Area {
   deleted: boolean;
 }
 
-export interface Category {
+export interface Category extends CollectionItem {
   created: Date;
   updated: Date;
   id: string;
@@ -63,7 +71,7 @@ export interface Category {
   deleted: boolean;
 }
 
-export interface OrderBooker {
+export interface OrderBooker extends CollectionItem {
   created: Date;
   updated: Date;
   id: string;
@@ -72,7 +80,7 @@ export interface OrderBooker {
   deleted: boolean;
 }
 
-export interface Invoice {
+export interface Invoice extends CollectionItem {
   created: Date;
   updated: Date;
   id: string;
@@ -88,7 +96,7 @@ export interface Invoice {
   deleted: boolean;
 }
 
-export interface Transaction {
+export interface Transaction extends CollectionItem {
   created: Date;
   updated: Date;
   id: string;

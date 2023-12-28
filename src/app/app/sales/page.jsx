@@ -2,23 +2,27 @@
 import pb from "@/app/pocketbase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParties } from "@/app/api/parties";
-import { listItems } from "@/app/api/items";
-import { Box, Button, Group, NumberInput, Select, TableData, Text } from "@mantine/core";
+import { Box, Button, Group, NumberInput, Select, Text } from "@mantine/core";
+import { useTime } from "@/app/hooks/useTime";
+import { useEffect, useState } from "react";
+import { TransactionForm } from "./TransactionForm";
+import TransactionTable from "./TransactionTable";
+import { checkError, checkLoading, checkSuccess, getError } from "@/app/api/StatusCheck";
+import { invoiceFormStructure, useInvoices, createInvoice } from "@/app/api/invoices";
 import idGenerator from "@/app/components/functions/idGenerator";
 import { getUser } from "@/app/api/users";
-import { useTime } from "@/app/hooks/useTime";
-import { invoiceFormStructure, useInvoices } from "@/app/api/invoices";
-import { checkError, checkLoading, checkSuccess, getError } from "@/app/api/statusCheck";
-import { TransactionForm } from "./TransactionForm";
-import { useEffect, useState } from "react";
-import { createInvoice } from "@/app/api/invoices";
-import TransactionTable from "./TransactionTable";
 import { useTransactions } from "@/app/api/transactions";
-import { Invoice } from "@/app/api/types";
-export default function InvoiceMaker() {
-  const items = useQuery({ queryKey: ["items"], queryFn: listItems });
-  const invoices = useInvoices();
-  const parties = useParties();
+import useCRUD, { getFullList } from "@/app/api/unifiedAPI";
+export default function InvoiceMaker(props) {
+  const items = useCRUD().fullList({ collection: "items", expand: "category" });
+  const saleInvoices = useCRUD().fullList({
+    collection: "invoices",
+    expand: "party,transactions",
+    filter: 'type="sale"',
+    queryKey: "saleinvoices",
+  });
+  const customers = useCRUD().fullList({ collection: "invoices", filter: 'type="customer"||type="both"' });
+  console.log(customers.data)
   const transactions = useTransactions().data;
   const user = useQuery({
     queryKey: ["user", pb.authStore?.model?.id],
@@ -38,28 +42,26 @@ export default function InvoiceMaker() {
     onSuccess: () => {
       setInvoiceEditing(false);
       qc.invalidateQueries({ queryKey: ["invoices"] });
-      setParty('pty000000000000');
-      setInvoiceNo('new')
+      setParty("pty000000000000");
+      setInvoiceNo("new");
     },
   });
-
-  const saleInvoices = invoices.saleInvoices;
   const [party, setParty] = useState("pty000000000000");
   const [invoiceNo, setInvoiceNo] = useState("new");
   const [invoiceEditing, setInvoiceEditing] = useState(false);
   const records = transactions?.filter((tr) => tr.invoice === invoiceNo);
 
-  const invoiceData = invoices?.allInvoices?.find((inv) => inv.id === invoiceNo);
+  const invoiceData = saleInvoices?.data?.find((inv) => inv.id === invoiceNo);
 
   const tot = records?.reduce((acc, currval) => acc + currval.total, 0);
   const [total, setTotal] = useState(tot);
   const [disc_1, setDisc_1] = useState(0);
   const [disc_2, setDisc_2] = useState(0);
   const [tAD, setTAD] = useState(0);
-  const isError = checkError([items, invoices, parties, user]);
-  const isLoading = checkLoading([items, invoices, parties, user]);
-  const isSuccess = checkSuccess([items, invoices, parties, user]);
-  const error = getError([items, invoices, parties, user]);
+  const isError = checkError([items, saleInvoices, customers, user]);
+  const isLoading = checkLoading([items, saleInvoices, customers, user]);
+  const isSuccess = checkSuccess([items, saleInvoices, customers, user]);
+  const error = getError([items, saleInvoices, customers, user]);
 
   useEffect(() => {
     setTotal(tot);
@@ -89,7 +91,7 @@ export default function InvoiceMaker() {
       total_after_discount: tAD,
       description: "",
     };
-    updateInvoice.mutate(data)
+    updateInvoice.mutate(data);
   }
   return (
     <>
@@ -112,12 +114,12 @@ export default function InvoiceMaker() {
                 name='invoiceNo'
                 variant='filled'
                 style={{ width: "11rem" }}
-                data={[...saleInvoices.map((inv) => inv.id), "new"]}
+                data={[...saleInvoices.data.map((inv) => inv.id), "new"]}
                 defaultValue={"new"}
                 onChange={(v) => setInvoiceNo(v)}
                 value={invoiceNo}
               />
-              {invoiceNo !== "new" ? <Button onClick={() => setInvoiceEditing(true)}>Edit</Button> : null}
+              {invoiceNo !== "new" && !invoiceEditing ? <Button onClick={() => setInvoiceEditing(true)}>Edit</Button> : null}
             </Group>
             <Group>
               <Text span>Customer:</Text>
@@ -129,14 +131,14 @@ export default function InvoiceMaker() {
                 variant='unstyled'
                 value={party}
                 onChange={(value) => setParty(value)}
-                data={parties.customers.map((c) => ({ value: c.id, label: c.name }))}
+                data={customers.data.map((c) => ({ value: c.id, label: c.name }))}
               />
             </Group>
             <Text mr={"xl"}>Invoice Maker:{` ${user.data.name}`}</Text>
           </Group>
-          <Group align="end">
+          <Group align='end'>
             <NumberInput readOnly label={"Total"} value={total} />
-            <NumberInput onChange={(v) => setDisc_1(Number(v))} label={"Disc_1"} value={disc_1} />
+            <NumberInput on onChange={(v) => setDisc_1(Number(v))} label={"Disc_1"} value={disc_1} />
             <NumberInput onChange={(v) => setDisc_2(Number(v))} label={"Disc_2"} value={disc_2} />
             <NumberInput readOnly label={"Total After Discount"} value={tAD} />
             {!invoiceEditing ? (

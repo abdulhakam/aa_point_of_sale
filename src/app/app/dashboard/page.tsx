@@ -11,6 +11,8 @@ import {
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { getFullList } from "@/app/api/unifiedAPI";
 
 const mockdata = [
   { title: "Customers", icon: IconUser, color: "cyan", target:"parties/customers"},

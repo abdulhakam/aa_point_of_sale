@@ -1,45 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
 import { FormStructure, Item } from "./types";
-
-export async function createItem(data) {
-  return await pb.collection("items").create(data);
-}
-export async function viewItem(data, expandFields) {
-  await pb.collection("items").getOne(data.id, {
-    expand: expandFields,
-  });
-}
-export async function listItems() {
-  return await pb.collection("items").getFullList({
-    sort: "+name",
-    expand: "qty,category",
-  });
-}
-export async function searchItem(page = 1, resultsPerPage = 50, filter = "") {
-  await pb.collection("items").getList(page, resultsPerPage, {
-    filter: filter,
-  });
-}
-export async function updateItem(data) {
-  const newData = {
-    name: data.name,
-    cost_price: data.cost_price,
-    sale_price: data.sale_price,
-    box_size_qty: data.box_size_qty,
-    qty: data.qty,
-    category: data.category,
-  };
-  await pb.collection("items").update(data.id, newData);
-}
-export async function deleteItem(data) {
-  return await pb.collection("items").delete(data.id);
-}
-
-export function useItems() {
-  const {data,status,isLoading,error}=useQuery({ queryKey: ["items"], queryFn: listItems });
-  return {data,status,isLoading,error}
-}
+import { createRecord, deleteRecord, updateRecord } from "./unifiedAPI";
 
 export const itemFormStructure: FormStructure<Item> = {
   fields: {
@@ -53,9 +15,7 @@ export const itemFormStructure: FormStructure<Item> = {
     qty: { type: "number", default: 0, baseProps: { label: "Qty" } },
     category: { type: "select", default: "", baseProps: { label: "Category", searchable: true, data: [] } },
   },
-  onCreate: (data) => createItem(data),
-  onUpdate: (data) => updateItem(data),
-  onDelete: (data) => {
-    updateItem({ ...data, deleted: true });
-  },
+  onCreate: (data) => {},
+  onUpdate: (data) => {},
+  onDelete: (data) => {},
 };

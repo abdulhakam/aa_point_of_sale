@@ -7,7 +7,7 @@ export async function getInvoice(invNo) {
 }
 
 export async function listAllInvoices() {
-  return await pb.collection("invoices").getFullList({
+  return await pb.collection("invoice_view").getFullList({
     sort: "-created",
     expand: "party,transactions",
   });

@@ -1,20 +1,21 @@
 "use client";
 
-import { itemFormStructure, useItems } from "../../api/items";
+import { itemFormStructure } from "../../api/items";
 import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
 import {  useState } from "react";
 import { Button, Group, Modal, TextInput } from "@mantine/core";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
-import {  useQueryClient } from "@tanstack/react-query";
+import {  useQuery, useQueryClient } from "@tanstack/react-query";
 import { RecordModel } from "pocketbase";
+import useCRUD from "@/app/api/unifiedAPI";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
   { accessor: "name", sortable: true },
-  { accessor: "cost_price", sortable: true },
-  { accessor: "sale_price", sortable: true },
+  { accessor: "cost_price"},
+  { accessor: "sale_price"},
   { accessor: "qty", sortable: true },
   { accessor: "box_size_qty", sortable: true },
   { accessor: "category", sortable: true },
@@ -22,15 +23,15 @@ const tableStructure: DataTableColumn[] = [
 
 export default function Items() {
   const [opened, { open, close }] = useDisclosure(false);
-  const categories = useQueryClient().getQueryData(["categories"]) as RecordModel;
-  const formStructure = { ...itemFormStructure };
+  const categories = useQueryClient().getQueryData(["categories"]) as RecordModel[];
+  const formStructure = { ...itemFormStructure,queryKey:'items' };
+  console.log(categories)
   formStructure.fields.category.baseProps.data = categories?.map((cat) => ({
     value: cat.id,
     label: cat.name,
   }));
   const [search, setSearch] = useState("");
-  const items = useItems();
-
+  const items = useCRUD().fullList({collection:'items',expand:'category'})
   return (
     <>
       <Group align='end'>
