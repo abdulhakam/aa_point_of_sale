@@ -1,22 +1,16 @@
 import React from "react";
 import {
-  Modal,
   Button,
   Container,
-  Input,
   Select,
   Checkbox,
   Text,
-  ComboboxData,
   TextInput,
   NumberInput,
   Switch,
   Autocomplete,
-  Flex,
-  Group,
   Grid,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
@@ -64,8 +58,7 @@ export default function FormGenerator(props) {
     let data = { ...values };
     delete data.created;
     delete data.updated;
-    delete data.deleted;
-    console.log(data);
+    delete data.deleted; 
     if (props.data) {
       updateMutation.mutate(data);
     } else {

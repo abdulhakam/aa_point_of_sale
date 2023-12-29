@@ -1,7 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
 import { FormStructure, Item } from "./types";
-import { createRecord, deleteRecord, updateRecord } from "./unifiedAPI";
 
 export const itemFormStructure: FormStructure<Item> = {
   fields: {
@@ -15,7 +13,8 @@ export const itemFormStructure: FormStructure<Item> = {
     qty: { type: "number", default: 0, baseProps: { label: "Qty" } },
     category: { type: "select", default: "", baseProps: { label: "Category", searchable: true, data: [] } },
   },
-  onCreate: (data) => {},
-  onUpdate: (data) => {},
-  onDelete: (data) => {},
+  collectionName:'items',
+  onCreate: (data) => {pb.collection('items').create(data)},
+  onUpdate: (data) => {pb.collection('items').update(data.id,data)},
+  onDelete: (data) => {pb.collection('items').delete(data.id)},
 };

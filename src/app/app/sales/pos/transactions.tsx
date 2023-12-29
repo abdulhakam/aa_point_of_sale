@@ -6,7 +6,7 @@ import { Button, Group, Modal, TextInput } from "@mantine/core";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
 import { transactionFormStructure, useTransactions } from "@/app/api/transactions";
-import useCRUD from "@/app/api/unifiedAPI";
+import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import { useQueryClient } from "@tanstack/react-query";
 

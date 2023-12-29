@@ -12,7 +12,7 @@ import {
 import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getFullList } from "@/app/api/unifiedAPI";
+import { getFullList } from "@/app/api/useAPI";
 
 const mockdata = [
   { title: "Customers", icon: IconUser, color: "cyan", target:"parties/customers"},
