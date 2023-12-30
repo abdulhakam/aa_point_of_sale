@@ -1,7 +1,7 @@
 "use client";
 
 import { DataTableColumn } from "mantine-datatable";
-import InvoiceForm from "./InvoiceForm";
+import InvoiceForm from "../InvoiceForm";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },

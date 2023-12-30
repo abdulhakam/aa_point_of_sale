@@ -46,19 +46,20 @@ export default function InvoiceForm(props) {
       invoiceForm.setValues({
         discount_1: invoice.discount_1,
         discount_2: invoice.discount_2,
-        total: invoice.total,
-        total_after_discount: invoice.final_total,
         party: invoice.party,
       });
     }
   }
   function invoiceCreator() {
     const data = {
-      id: idGenerator(invoices.data.filter((inv) => inv.type === props.type).length + 1, props.type==='sale'?"pos":'pop'),
+      id: idGenerator(
+        invoices.data.filter((inv) => inv.type === props.type).length + 1,
+        props.type === "sale" ? "pos" : "pop"
+      ),
       invoice_maker: user.data.id,
       party: invoiceForm.values.party,
       transactions: [],
-      type: props.type==="sale"?'sale':'purchase',
+      type: props.type === "sale" ? "sale" : "purchase",
     };
     invoiceForm.setFieldValue("invoiceNo", data.id);
     newInvoice.mutate({ collection: "invoices", data: data });
@@ -73,19 +74,22 @@ export default function InvoiceForm(props) {
     updateInvoice.mutate({ collection: "invoices", recordID: invoiceForm.values.invoiceNo, data: data });
   }
   const invoice = invoices.data?.find((inv) => inv.id === invoiceForm.values.invoiceNo);
-  const final_total=()=>{
-    if(invoice.discount_1!==invoiceForm.values.discount_1||invoice.discount_2!==invoiceForm.values.discount_2){
-      return invoice.total-invoiceForm.values.discount_1-invoiceForm.values.discount_2
-    }else{
-      return invoice.final_total
+  const final_total = () => {
+    if (
+      invoice.discount_1 !== invoiceForm.values.discount_1 ||
+      invoice.discount_2 !== invoiceForm.values.discount_2
+    ) {
+      return invoice.total - invoiceForm.values.discount_1 - invoiceForm.values.discount_2;
+    } else {
+      return invoice.final_total;
     }
-  }
+  };
   const queries = [invoices, parties, user, items];
   if (checkSuccess(queries)) {
     return (
       <>
         <Modal opened={opened} onClose={close} title='Confirm Invoice?'>
-          {/* TODO: add confirmation if required. */}
+          {/* TODO: add Payment modal here. */}
         </Modal>
         <Text size='xl' fw={600}>
           {String(props.type).toUpperCase()} INVOICE
@@ -196,7 +200,7 @@ export default function InvoiceForm(props) {
         <Stack>
           {editing ? (
             <>
-              <TransactionForm items={items.data} invoice={invoiceForm.values.invoiceNo} />
+              <TransactionForm type={props.type} items={items.data} invoice={invoiceForm.values.invoiceNo} />
               <Transactions invoice={invoiceForm.values.invoiceNo} />
             </>
           ) : (

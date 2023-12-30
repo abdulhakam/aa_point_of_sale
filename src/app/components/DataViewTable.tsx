@@ -19,7 +19,7 @@ export default function DataViewTable(props) {
   const remove = useMutation({
     mutationFn: crud.remove,
     onSuccess: (data, vars) => {
-      qc.invalidateQueries({queryKey:[vars.collection]});
+      qc.invalidateQueries({ queryKey: [vars.collection] });
     },
   });
 
@@ -34,7 +34,7 @@ export default function DataViewTable(props) {
   }, [sortStatus, props.filter, props.data]);
   const rowActions: DataTableColumn = {
     accessor: "actions",
-    width:'6rem',
+    width: "6rem",
     title: "Row actions",
     render: (data) => (
       <Group gap={2} justify='right' wrap='nowrap'>
@@ -87,7 +87,7 @@ export default function DataViewTable(props) {
         break;
     }
   };
-  const columns = [...props.columns, rowActions];
+  const columns = props.report ? [...props.columns] : [...props.columns, rowActions];
   return (
     <>
       <DataTable
@@ -107,8 +107,19 @@ export default function DataViewTable(props) {
         sortStatus={sortStatus}
         onSortStatusChange={setSortStatus}
       />
-      <Modal centered size={"auto"} opened={opened} onClose={close} title={(editable)?'Edit Info':'View Info'}>
-        <FormGenerator close={close} editable={editable} data={formData} formStructure={props.formstructure} />
+      <Modal
+        centered
+        size={"auto"}
+        opened={opened}
+        onClose={close}
+        title={editable ? "Edit Info" : "View Info"}
+      >
+        <FormGenerator
+          close={close}
+          editable={editable}
+          data={formData}
+          formStructure={props.formstructure}
+        />
       </Modal>
     </>
   );

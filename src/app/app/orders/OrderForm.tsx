@@ -3,9 +3,9 @@ import { Button, Select, NumberInput, Flex } from "@mantine/core";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-export function TransactionForm(props) {
+export function OrderForm(props) {
   const qc = useQueryClient();
-  const addTransaction = useMutation({
+  const addOrder = useMutation({
     mutationFn: crud.create,
     onSuccess: () => {
       qc.invalidateQueries();
@@ -28,15 +28,15 @@ export function TransactionForm(props) {
   function submitHandler(e) {
     e.preventDefault(e);
     const data = {
-      invoice: props.invoice,
+      order_sheet: props.orderSheet,
       item: item,
       qty: qty,
       price: itemPrice,
       discount_1: disc_1,
       discount_2: disc_2,
     };
-    addTransaction.mutate({
-      collection: "transactions",
+    addOrder.mutate({
+      collection: "orders",
       data,
     });
   }
@@ -48,7 +48,7 @@ export function TransactionForm(props) {
   }
   return (
     <form onSubmit={submitHandler}>
-      <Flex my='xl' align={"end"}>
+      <Flex my='xs' align={"end"}>
         <Select
           required
           style={{ width: "47%" }}
@@ -64,7 +64,7 @@ export function TransactionForm(props) {
         <NumberInput
           style={{ width: "11%" }}
           label='Price'
-          readOnly
+          readOnly={props.type==='sale'?true:false}
           value={itemPrice}
           onChange={(v) => {
             setItemPrice(Number(v));

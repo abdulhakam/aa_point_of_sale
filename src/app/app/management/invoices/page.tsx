@@ -33,6 +33,7 @@ export default function Invoices() {
       {invoices.status === "error" && <h2>{invoices.error.message}</h2>}
       {invoices.status === "success" && (
         <DataViewTable
+        report
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
           formStructure={invoiceFormStructure}
