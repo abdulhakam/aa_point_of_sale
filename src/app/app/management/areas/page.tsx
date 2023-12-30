@@ -27,18 +27,18 @@ export default function Areas() {
           onChange={(value) => setSearch(value.target.value)}
           value={search}
         />
-        <Modal opened={opened} onClose={close} title="Create">
-        <FormGenerator editable formStructure={areaFormStructure} />
-      </Modal>
+        <Modal opened={opened} onClose={close} title='Create'>
+          <FormGenerator editable />
+        </Modal>
         <Button onClick={open}> Add New </Button>
       </Group>
       {areas.isLoading && <h1>Loading...</h1>}
       {areas.isError && <h2>{areas.error.message}</h2>}
       {areas.isSuccess && (
         <DataViewTable
+          formStructure={areaFormStructure}
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          formStructure={areaFormStructure}
           data={areas.data}
         />
       )}

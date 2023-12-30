@@ -1,39 +1,34 @@
 import React from "react";
 import {
-  Modal,
   Button,
   Container,
-  Input,
   Select,
   Checkbox,
   Text,
-  ComboboxData,
   TextInput,
   NumberInput,
   Switch,
   Autocomplete,
-  Flex,
-  Group,
   Grid,
 } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
+import { crud } from "../api/useAPI";
 
 export default function FormGenerator(props) {
   const queryClient = useQueryClient();
   const createMutation = useMutation({
-    mutationFn: props.formStructure.onCreate,
+    mutationFn: crud.create,
     onSuccess: () => {
-      queryClient.invalidateQueries(props.formStructure.queryKey);
+      queryClient.invalidateQueries();
       props.close()
     },
   });
   const updateMutation = useMutation({
     mutationFn: props.formStructure.onUpdate,
     onSuccess: () => {
-      queryClient.invalidateQueries(props.formStructure.queryKey);
+      queryClient.invalidateQueries();
       props.close()
     },
   });
@@ -64,12 +59,11 @@ export default function FormGenerator(props) {
     let data = { ...values };
     delete data.created;
     delete data.updated;
-    delete data.deleted;
-    console.log(data);
+    delete data.deleted; 
     if (props.data) {
       updateMutation.mutate(data);
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate({collection:props.formStructure.collectionName,data:data});
     }
   };
 

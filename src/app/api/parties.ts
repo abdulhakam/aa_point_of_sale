@@ -52,6 +52,7 @@ export const partyFormStructure: FormStructure<Party> = {
     address: { type: "text", default: undefined, baseProps: { label: "Address" } },
     deleted: { type: 'switch', default:false, baseProps:{label:'deleted'}}
   },
+  collectionName:'parties',
   onCreate: (data) => createParty(data),
   onUpdate: (data) => updateParty(data),
   onDelete: (data) => {

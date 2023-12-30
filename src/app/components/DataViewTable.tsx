@@ -1,97 +1,102 @@
 "use client";
 
-import { DataTable, type DataTableSortStatus } from "mantine-datatable";
+import { DataTable, DataTableColumn, type DataTableSortStatus } from "mantine-datatable";
 import sortBy from "lodash.sortBy";
 import { useEffect, useState } from "react";
-import { ActionIcon, Box, Group, Modal } from "@mantine/core";
-
-import { IconEye, IconEdit, IconTrash } from "@tabler/icons-react";
+import dataFilter from "./functions/dataFilter";
+import { ActionIcon, Group, Modal } from "@mantine/core";
+import { IconEdit, IconEye, IconTrash } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
-import FormGenerator from "@/app/components/FormGenerator";
+import FormGenerator from "./FormGenerator";
+import { crud } from "../api/useAPI";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function DataViewTable(props) {
+  const qc = useQueryClient();
   const [opened, { open, close }] = useDisclosure(false);
-  const queryClient = useQueryClient();
-  const deleteEntry = useMutation({
-    mutationFn: props.formStructure.onDelete,
-    onSuccess: () => {
-      queryClient.invalidateQueries(props.formStructure.queryKey);
+  const [formData, setFormData] = useState();
+  const [editable, setEditable] = useState(false);
+  const remove = useMutation({
+    mutationFn: crud.remove,
+    onSuccess: (data, vars) => {
+      qc.invalidateQueries({ queryKey: [vars.collection] });
     },
   });
-  const [formData, setFormData] = useState({});
-  const [formEditing, setFormEditing] = useState(false);
-  const columns = !props.report
-    ? [
-        ...props.columns,
-        {
-          accessor: "actions",
-          title: "Actions",
-          width: "6rem",
-          textAlign: "right",
-          render: (data) => (
-            <Group gap={4} justify='right' wrap='nowrap'>
-              <ActionIcon
-                size='sm'
-                variant='subtle'
-                color='green'
-                onClick={() => showModal({ data, action: "view" })}
-              >
-                <IconEye size={16} />
-              </ActionIcon>
-              <ActionIcon
-                size='sm'
-                variant='subtle'
-                color='blue'
-                onClick={() => showModal({ data, action: "edit" })}
-              >
-                <IconEdit size={16} />
-              </ActionIcon>
-              <ActionIcon
-                size='sm'
-                variant='subtle'
-                color='red'
-                onClick={() => showModal({ data, action: "delete" })}
-              >
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Group>
-          ),
-        },
-      ]
-    : props.columns;
-  function showModal({ data, action }) {
-    if (action === "view") {
-      setFormData(data);
-      setFormEditing(false);
-      open();
-    }
-    if (action === "edit") {
-      setFormData(data);
-      setFormEditing(true);
-      open();
-    }
-    if (action === "delete") {
-      deleteEntry.mutate(data);
-    }
-  }
+
   const [sortStatus, setSortStatus] = useState({
     columnAccessor: "name",
     direction: "asc",
   } as DataTableSortStatus);
   const [records, setRecords] = useState(sortBy(props.data, "name"));
   useEffect(() => {
-    const data = sortBy(newFilter(props.filter ? props.filter : [], props.data), sortStatus.columnAccessor);
+    const data = sortBy(dataFilter(props.filter ? props.filter : [], props.data), sortStatus.columnAccessor);
     setRecords(sortStatus.direction === "desc" ? data.reverse() : data);
   }, [sortStatus, props.filter, props.data]);
-
+  const rowActions: DataTableColumn = {
+    accessor: "actions",
+    width: "6rem",
+    title: "Row actions",
+    render: (data) => (
+      <Group gap={2} justify='right' wrap='nowrap'>
+        <ActionIcon
+          size='sm'
+          variant='subtle'
+          color='green'
+          onClick={() => showModal({ data, action: "view" })}
+        >
+          <IconEye size={16} />
+        </ActionIcon>
+        <ActionIcon
+          size='sm'
+          variant='subtle'
+          color='blue'
+          onClick={() => showModal({ data, action: "edit" })}
+        >
+          <IconEdit size={16} />
+        </ActionIcon>
+        <ActionIcon
+          size='sm'
+          variant='subtle'
+          color='red'
+          onClick={() => showModal({ data, action: "delete" })}
+        >
+          <IconTrash size={16} />
+        </ActionIcon>
+      </Group>
+    ),
+  };
+  const showModal = ({ data, action = "view" }) => {
+    switch (action) {
+      case "view":
+        open();
+        setFormData(data);
+        setEditable(false);
+        break;
+      case "edit":
+        open();
+        setFormData(data);
+        setEditable(true);
+        break;
+      case "delete":
+        remove.mutate({ collection: props.formstructure.collectionName, recordID: data.id });
+        break;
+      default:
+        open();
+        setFormData(data);
+        setEditable(false);
+        break;
+    }
+  };
+  const columns = props.report ? [...props.columns] : [...props.columns, rowActions];
   return (
     <>
       <DataTable
+        style={{ border: "1px solid lightgray", borderRadius: "3px" }}
         withTableBorder
         withColumnBorders
         records={records}
         columns={columns}
+        emptyState={<></>}
         defaultColumnRender={(row, _, accessor) => {
           return row.hasOwnProperty("expand")
             ? row.expand.hasOwnProperty(accessor)
@@ -102,80 +107,20 @@ export default function DataViewTable(props) {
         sortStatus={sortStatus}
         onSortStatusChange={setSortStatus}
       />
-      <Modal centered size={"auto"} opened={opened} onClose={close}>
+      <Modal
+        centered
+        size={"auto"}
+        opened={opened}
+        onClose={close}
+        title={editable ? "Edit Info" : "View Info"}
+      >
         <FormGenerator
           close={close}
-          editable={formEditing}
-          formStructure={props.formStructure}
+          editable={editable}
           data={formData}
+          formStructure={props.formstructure}
         />
       </Modal>
     </>
   );
 }
-//TODO: tobe removed in near future code cleanups
-// function filterData(filters = [], data = []) {
-//   return data.filter((item) => {
-//     return filters.every((filter) => {
-//       const { key, value } = filter;
-
-//       if (key === "") {
-//         // If key is empty, search in all fields
-//         return Object.values(item).some((field) => {
-//           if (typeof field === "string") {
-//             return field.toLowerCase().includes(value.toLowerCase());
-//           } else if (typeof field === "number" && !isNaN(value)) {
-//             return field === Number(value);
-//           }
-//           return false;
-//         });
-//       } else if (typeof item[key] === "string" && typeof value === "string") {
-//         return item[key].toLowerCase().includes(value.toLowerCase());
-//       } else if (typeof item[key] === "number" && !isNaN(value)) {
-//         return item[key] === Number(value);
-//       }
-
-//       return false;
-//     });
-//   });
-// }
-
-function newFilter(filters = [], data = []) {
-  function getExpandedValue(item, property) {
-    return item.hasOwnProperty("expand")
-      ? item.expand.hasOwnProperty(property)
-        ? item.expand[property].name || item.expand[property].value
-        : item[property]
-      : item[property];
-  }
-
-  return data.filter((item) => {
-    return filters.every((filter) => {
-      const { key, value } = filter;
-
-      if (key === "") {
-        // If key is empty, search in all fields
-        return Object.keys(item).some((property) => {
-          const expandedValue = getExpandedValue(item, property);
-
-          if (typeof expandedValue === "string") {
-            return expandedValue.toLowerCase().includes(value.toLowerCase());
-          } else if (typeof expandedValue === "number" && !isNaN(value)) {
-            return expandedValue === Number(value);
-          }
-          return false;
-        });
-      } else {
-        const expandedValue = getExpandedValue(item, key);
-
-        if (typeof expandedValue === "string" && typeof value === "string") {
-          return expandedValue.toLowerCase().includes(value.toLowerCase());
-        } else if (typeof expandedValue === "number" && !isNaN(value)) {
-          return expandedValue === Number(value);
-        }
-        return false;
-      }
-    });
-  });
-}
-

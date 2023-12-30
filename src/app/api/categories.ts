@@ -26,6 +26,7 @@ export const categoryFormStructure: FormStructure<Category> = {
     name: { type: "text", baseProps: { label: "Name" } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
+  collectionName:'categories',
   onCreate: (data) => createCategory(data),
   onUpdate: (data) => updateCategory(data),
   onDelete: (data) => {
