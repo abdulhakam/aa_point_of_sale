@@ -8,8 +8,8 @@ import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
 
 const mockdata = [
-  { title: "Purchase", icon: IconTag, color: "pink", target: "orders/purchase" },
-  { title: "Sale", icon: IconReport, color: "lime", target: "orders/sales" },
+  { title: "Purchase", icon: IconTag, color: "pink", target: "invoices/purchase" },
+  { title: "Sale", icon: IconReport, color: "lime", target: "invoices/sales" },
 ];
 
 export default function ActionsGrid(props) {
@@ -28,7 +28,7 @@ export default function ActionsGrid(props) {
 
   return (
     <Card className={classes.card} radius={"md"} withBorder>
-      <Text className={classes.title}>ORDERS</Text>
+      <Text className={classes.title}>INVOICES</Text>
       <Grid justify='flex-start' align='center'>
         {items}
       </Grid>

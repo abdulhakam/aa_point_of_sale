@@ -28,8 +28,7 @@ export default function Items() {
   formStructure.fields.category.baseProps.data = categories.data?.map((cat) => ({
     value: cat.id,
     label: cat.name,
-  }));
-  console.log(formStructure.fields.category.baseProps)
+  }))
   const [search, setSearch] = useState("");
   const items = useCRUD().fullList({ collection: "items", expand: "category" });
   return (

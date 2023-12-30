@@ -1,6 +1,6 @@
 // Define a generic type for the field object
 export type Field<T> = {
-  type: 'autocomplete'|'datetime'|'text'|'number'|'checkbox'|'switch'|'select';
+  type: "autocomplete" | "datetime" | "text" | "number" | "checkbox" | "switch" | "select";
   default?: T;
   baseProps: {
     label: string;
@@ -18,12 +18,11 @@ export type FormStructure<T> = {
     [K in keyof T]: Field<T[K]>;
   };
   collectionName: string;
-  collectionView?:string;
+  collectionView?: string;
   onCreate: (data: T) => void;
-  onUpdate: (data: T) => Promise<any>|void;
+  onUpdate: (data: T) => Promise<any> | void;
   onDelete: (data: T) => void;
 };
-
 
 export interface CollectionItem {
   id: string;
@@ -109,5 +108,18 @@ export interface Transaction extends CollectionItem {
   discount_1: number;
   discount_2: number;
   total: number;
+  deleted: boolean;
+}
+
+export interface Payment extends CollectionItem {
+  id: string;
+  created: Date;
+  updated: Date;
+  invoice: string;
+  party: string;
+  type: "recieving" | "sending";
+  amount: number;
+  paid:Boolean;
+  description:string;
   deleted: boolean;
 }
