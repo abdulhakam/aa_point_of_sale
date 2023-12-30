@@ -30,6 +30,7 @@ export const areaFormStructure: FormStructure<Area> = {
     name: { type: "text", baseProps: { label: "Name" } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
+  collectionName:'areas',
   onCreate: (data) => createArea(data),
   onUpdate: (data) => updateArea(data),
   onDelete: (data) => {

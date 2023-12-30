@@ -30,7 +30,7 @@ export const orderBookerFormStructure: FormStructure<OrderBooker> = {
       name: { type: "text", baseProps: { label: "Name" } },
       phone: { type: "text", baseProps: { label: "Phone" } },
       deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
-    },
+    },collectionName:'order_bookers',
     onCreate: (data) => createOrderBooker(data),
     onUpdate: (data) => updateOrderBooker(data),
     onDelete: (data) => {

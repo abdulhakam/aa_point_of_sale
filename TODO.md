@@ -3,3 +3,4 @@
 - a `.bat` and `.sh` file for easier startings.
 - finish create and edit functions for everything.
 - instead using one api call to get all records from pocketbase, use one call for each element, 10000 items, 10000 calls, it will be inefficient but always latest data.
+- add AppShell which can be disabled.

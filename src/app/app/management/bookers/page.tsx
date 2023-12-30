@@ -5,7 +5,8 @@ import { useState } from "react";
 import { Button, Group, Modal, TextInput } from "@mantine/core";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
-import { orderBookerFormStructure, useOrderBookers } from "@/app/api/order_bookers";
+import { orderBookerFormStructure } from "@/app/api/order_bookers";
+import useCRUD from "@/app/api/useAPI";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
@@ -17,7 +18,7 @@ const tableStructure: DataTableColumn[] = [
 export default function OrderBookers() {
   const [opened, { open, close }] = useDisclosure(false);
   const [search, setSearch] = useState("");
-  const orderBookers = useOrderBookers();
+  const order_bookers = useCRUD().fullList({collection:'order_bookers'})
   return (
     <>
       <Group align='end'>
@@ -32,14 +33,14 @@ export default function OrderBookers() {
       </Modal>
         <Button onClick={open}> Add New </Button>
       </Group>
-      {orderBookers.isLoading && <h1>Loading...</h1>}
-      {orderBookers.isError && <h2>{orderBookers.error.message}</h2>}
-      {orderBookers.isSuccess && (
+      {order_bookers.isLoading && <h1>Loading...</h1>}
+      {order_bookers.status==='error' && <h2>{order_bookers.error.message}</h2>}
+      {order_bookers.status==='success' && (
         <DataViewTable
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
           formStructure={orderBookerFormStructure}
-          data={orderBookers.data}
+          data={order_bookers.data}
         />
       )}
     </>

@@ -15,6 +15,8 @@ import {
   IconReport,
   IconTrolley,
   IconShoppingBag,
+  IconDashboard,
+  IconCoinEuro,
 } from '@tabler/icons-react';
 import classes from './NavbarMinimal.module.css';
 import { useUserAuthContext } from '../context/AuthContext';
@@ -37,14 +39,16 @@ function NavbarLink({ icon: Icon, label, active, onClick }: NavbarLinkProps) {
 }
 
 const mockdata = [
-  { icon: IconGauge, label: 'Dashboard',target:'dashboard' },
-  { icon: IconUser, label: 'Customers', target:'parties/customers' },
-  { icon: IconTag, label: 'Items', target:'items' },
-  { icon: IconBriefcase, label: 'Suppliers', target:'parties/suppliers' },
-  { icon: IconReport, label: 'Reports', target:'reports' },
-  { icon: IconTrolley, label: 'Recievings', target:'recievings' },
-  { icon: IconShoppingBag, label: 'Sales', target:'sales' },
-  { icon: IconSettings,label: 'Management', target:'management' }
+  { label: "Dashboard", icon: IconDashboard, target:"/dashboard"},
+  { label: "Customers", icon: IconUser, target:"parties/customers"},
+  { label: "Items", icon: IconTag,  target:"items"},
+  { label: "Suppliers", icon: IconBriefcase, target:"parties/suppliers"},
+  { label: "Reports", icon: IconReport, target:"reports"},
+  { label: "Orders", icon: IconTrolley, target:"orders"},
+  { label: "Sales", icon: IconShoppingBag,  target:"invoices/sales"},
+  { label: "Purchases", icon: IconShoppingBag, target:"invoices/purchase"},
+  { label: "Payments", icon: IconCoinEuro, target:"payments"},
+  { label: "Management", icon: IconSettings, target:"management"},
 ];
 
 export default function NavbarMinimal(props) {

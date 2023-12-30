@@ -2,9 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
 import { FormStructure, Transaction } from "./types";
 export const allTransactions = async () =>
-  await pb.collection("transactions").getFullList({
-    sort: "-created",
-    expand: "item",
+  await pb.collection("transaction_view").getFullList({
+    sort: "-created",expand:'item'
   });
 
 export function useTransactions() {
@@ -23,7 +22,6 @@ export async function createTransaction(data) {
     qty: data.qty,
     discount_1: data.discount_1,
     discount_2: data.discount_2,
-    total: data.total,
     deleted: false,
   };
 
@@ -38,7 +36,6 @@ export async function updateTransaction(data) {
     qty: data.qty,
     discount_1: data.discount_1,
     discount_2: data.discount_2,
-    total: data.total,
     deleted: false,
   };
 
@@ -63,6 +60,7 @@ export const transactionFormStructure: FormStructure<Transaction> = {
     total: { type: "number", baseProps: { label: "Total", readOnly: true } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
+  collectionName:'transactions',
   onCreate: (data) => {
     createTransaction(data);
   },

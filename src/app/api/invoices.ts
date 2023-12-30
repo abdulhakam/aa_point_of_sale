@@ -7,7 +7,7 @@ export async function getInvoice(invNo) {
 }
 
 export async function listAllInvoices() {
-  return await pb.collection("invoices").getFullList({
+  return await pb.collection("invoice_view").getFullList({
     sort: "-created",
     expand: "party,transactions",
   });
@@ -81,6 +81,7 @@ export const invoiceFormStructure: FormStructure<Invoice> = {
     description: { type: "text", baseProps: { label: "User", readOnly: true } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
+  collectionName:'invoices',
   onCreate: (data) => {
     createInvoice(data);
   },

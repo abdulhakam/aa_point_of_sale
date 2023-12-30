@@ -18,7 +18,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // staleTime: 60 * 1000,
+            staleTime: 1000,
             refetchOnWindowFocus: false,
             refetchOnMount: false,
           },
@@ -27,7 +27,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <MantineProvider defaultColorScheme="auto">
+    <MantineProvider defaultColorScheme="light">
       <UserAuthContextProvider>
           <QueryClientProvider client={queryClient}>
             {children}
