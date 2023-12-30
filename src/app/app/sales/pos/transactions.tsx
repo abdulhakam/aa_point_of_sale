@@ -24,7 +24,7 @@ const tableStructure: DataTableColumn[] = [
 
 export default function Transactions({ invoice }) {
   const queryClient = useQueryClient()
-  queryClient.invalidateQueries({ queryKey: ['transaction_view'] })
+  queryClient.invalidateQueries()
   const transactions = useCRUD().fullList({
     collection: "transaction_view",
     expand: "item",
@@ -38,7 +38,7 @@ export default function Transactions({ invoice }) {
         <DataViewTable
           filter={[{ key: "invoice", value: invoice }]}
           columns={tableStructure}
-          formStructure={transactionFormStructure}
+          formstructure={transactionFormStructure}
           data={dataWithCount}
           emptyState={<>new transaction form goes here</>}
         />

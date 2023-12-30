@@ -8,7 +8,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <Flex justify={'stretch'}>
       <NavbarMinimal />
-      <Container w={'100%'} fluid style={{border:'1px solid darkgray'}}>
+      <Container w={'100%'} fluid>
         <HeaderSimple />
         {children}
       </Container>

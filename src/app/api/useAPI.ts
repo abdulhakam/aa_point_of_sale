@@ -1,6 +1,27 @@
 import pb from "@/app/pocketbase";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+export const crud = {
+  create: async ({ collection, data }) => await pb.collection(collection).create(data),
+  read: async ({ collection, recordID, expand = "" }) =>
+    await pb.collection(collection).getOne(recordID, {
+      expand: expand,
+    }),
+  update: async ({ collection, data, recordID }) => {
+    await pb.collection(collection).update(recordID, data);
+  },
+  remove: async ({ collection, recordID }) => {
+    await pb.collection(collection).delete(recordID);
+  },
+  listall: async ({ collection, expand = "", filter = "", sort = "-created"}) => {
+    await pb.collection(collection).getFullList({
+      sort: sort,
+      expand: expand,
+      filter: filter,
+    });
+  },
+};
+
 /////////////////////////CREATE///////////////////////////////////
 export const useCreate = ({ collection, data }) => {
   const qc = useQueryClient();
@@ -10,14 +31,15 @@ export const useCreate = ({ collection, data }) => {
   });
 };
 /////////////////////////READ/////////////////////////////////////
-export const useRead = ({ collection, recordID, expand = "" }) =>
-  {return useQuery({
+export const useRead = ({ collection, recordID, expand = "" }) => {
+  return useQuery({
     queryKey: [collection, recordID],
     queryFn: async () =>
       await pb.collection(collection).getOne(recordID, {
         expand: expand,
       }),
-  });}
+  });
+};
 /////////////////////////UPDATE///////////////////////////////////
 export const useUpdate = ({ collection, data, recordID }) => {
   const qc = useQueryClient();
@@ -35,7 +57,13 @@ export const useDelete = ({ collection, recordID }) => {
   });
 };
 /////////////////////////FULL LIST ///////////////////////////////
-export function useFullList({ collection, expand = "", filter = "", sort = "-created" ,queryKey=collection}) {
+export function useFullList({
+  collection,
+  expand = "",
+  filter = "",
+  sort = "-created",
+  queryKey = collection,
+}) {
   return useQuery({
     queryKey: [queryKey, expand, filter],
     queryFn: async () =>

@@ -14,20 +14,21 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { DateTimePicker } from "@mantine/dates";
 import { useForm } from "@mantine/form";
+import { crud } from "../api/useAPI";
 
 export default function FormGenerator(props) {
   const queryClient = useQueryClient();
   const createMutation = useMutation({
-    mutationFn: props.formStructure.onCreate,
+    mutationFn: crud.create,
     onSuccess: () => {
-      queryClient.invalidateQueries(props.formStructure.queryKey);
+      queryClient.invalidateQueries();
       props.close()
     },
   });
   const updateMutation = useMutation({
     mutationFn: props.formStructure.onUpdate,
     onSuccess: () => {
-      queryClient.invalidateQueries(props.formStructure.queryKey);
+      queryClient.invalidateQueries();
       props.close()
     },
   });
@@ -62,7 +63,7 @@ export default function FormGenerator(props) {
     if (props.data) {
       updateMutation.mutate(data);
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate({collection:props.formStructure.collectionName,data:data});
     }
   };
 

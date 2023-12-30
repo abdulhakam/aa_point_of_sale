@@ -81,6 +81,7 @@ export const invoiceFormStructure: FormStructure<Invoice> = {
     description: { type: "text", baseProps: { label: "User", readOnly: true } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
+  collectionName:'invoices',
   onCreate: (data) => {
     createInvoice(data);
   },

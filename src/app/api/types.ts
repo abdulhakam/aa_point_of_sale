@@ -17,7 +17,8 @@ export type FormStructure<T> = {
   fields: {
     [K in keyof T]: Field<T[K]>;
   };
-  collectionName?: string;
+  collectionName: string;
+  collectionView?:string;
   onCreate: (data: T) => void;
   onUpdate: (data: T) => Promise<any>|void;
   onDelete: (data: T) => void;

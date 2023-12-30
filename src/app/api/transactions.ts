@@ -60,6 +60,7 @@ export const transactionFormStructure: FormStructure<Transaction> = {
     total: { type: "number", baseProps: { label: "Total", readOnly: true } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
+  collectionName:'transactions',
   onCreate: (data) => {
     createTransaction(data);
   },

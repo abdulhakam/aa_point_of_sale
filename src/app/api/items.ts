@@ -14,6 +14,7 @@ export const itemFormStructure: FormStructure<Item> = {
     category: { type: "select", default: "", baseProps: { label: "Category", searchable: true, data: [] } },
   },
   collectionName:'items',
+  collectionView:'items',
   onCreate: (data) => {pb.collection('items').create(data)},
   onUpdate: (data) => {pb.collection('items').update(data.id,data)},
   onDelete: (data) => {pb.collection('items').delete(data.id)},

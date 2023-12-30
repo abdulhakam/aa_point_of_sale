@@ -23,12 +23,13 @@ const tableStructure: DataTableColumn[] = [
 
 export default function Items() {
   const [opened, { open, close }] = useDisclosure(false);
-  const categories = useQueryClient().getQueryData(["categories"]) as RecordModel[];
-  // const formStructure = { ...itemFormStructure,queryKey:'items' };
-  // formStructure.fields.category.baseProps.data = categories?.map((cat) => ({
-  //   value: cat.id,
-  //   label: cat.name,
-  // }));
+  const categories = useCRUD().fullList({collection:'categories'})
+  const formStructure = { ...itemFormStructure,queryKey:'items' };
+  formStructure.fields.category.baseProps.data = categories.data?.map((cat) => ({
+    value: cat.id,
+    label: cat.name,
+  }));
+  console.log(formStructure.fields.category.baseProps)
   const [search, setSearch] = useState("");
   const items = useCRUD().fullList({ collection: "items", expand: "category" });
   return (
@@ -41,7 +42,7 @@ export default function Items() {
           value={search}
         />
         <Modal centered size={"auto"} opened={opened} onClose={close} title='Create New'>
-          <FormGenerator close={close} editable formStructure={itemFormStructure} />
+          <FormGenerator close={close} editable formStructure={formStructure} />
         </Modal>
         <Button onClick={open}> Add New </Button>
       </Group>
@@ -50,7 +51,7 @@ export default function Items() {
       {items.isSuccess && (
         <DataViewTable
           filter={[{ key: "", value: search }]}
-          formstructure={itemFormStructure}
+          formstructure={formStructure}
           columns={tableStructure}
           data={items.data}
         />
