@@ -21,7 +21,7 @@
 3. create an admin account.
 4. import data, that would include all tables too. it is easy.
 5. close pocketbase.
-6. copy `pb_public` to where the `pocketbase.exe` is located
+6. copy `pb_public` to where the `pocketbase.exe` is located **currently not uploaded**.
 7. run pocketbase again.
 8. go to this address `http://127.0.0.1:8090`.
 9. log in with `admin` and `1234567890`.
