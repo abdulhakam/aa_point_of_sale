@@ -27,10 +27,13 @@ export default function Payments() {
   const payments = useCRUD().fullList({ collection: "payments_view" });
   const invoices = useCRUD().fullList({ collection: "invoices" });
   const parties = useCRUD().fullList({ collection: "parties" });
-  const formStructure = {...paymentFormStructure}
-  formStructure.fields.invoice.baseProps.data=invoices.data?.map(inv=>inv.id)
-  formStructure.fields.party.baseProps.data=parties.data?.map(pty=>({value:pty.id,label:pty.name}))
-  const queries = [payments,invoices,parties];
+  const formStructure = { ...paymentFormStructure };
+  formStructure.fields.invoice.baseProps.data = invoices.data?.map((inv) => inv.id);
+  formStructure.fields.party.baseProps.data = parties.data?.map((pty) => ({
+    value: pty.id,
+    label: pty.name,
+  }));
+  const queries = [payments, invoices, parties];
   if (checkSuccess(queries)) {
     return (
       <>
@@ -41,7 +44,7 @@ export default function Payments() {
             onChange={(value) => setSearch(value.target.value)}
             value={search}
           />
-          <Modal centered size={'auto'} opened={opened} onClose={close} title='Create'>
+          <Modal centered size={"auto"} opened={opened} onClose={close} title='Create'>
             <FormGenerator formStructure={paymentFormStructure} editable />
           </Modal>
           <Button onClick={open}> Add New </Button>
@@ -50,7 +53,10 @@ export default function Payments() {
           formstructure={paymentFormStructure}
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          data={payments.data}
+          data={payments.data?.map((pmnt) => ({
+            ...pmnt,
+            expand: { party: { ...parties.data?.find((pty) => pty.id === pmnt.party) } },
+          }))}
         />
       </>
     );

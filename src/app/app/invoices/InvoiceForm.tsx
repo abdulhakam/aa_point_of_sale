@@ -28,8 +28,13 @@ export default function InvoiceForm(props) {
   });
   const items = useCRUD().fullList({ collection: "items" });
   const user = useCRUD().read({ collection: "users", recordID: pb.authStore.model.id });
-  const newInvoice = useMutation({ mutationFn: crud.create, onSuccess: () => qc.invalidateQueries() });
-  const updateInvoice = useMutation({ mutationFn: crud.update, onSuccess: () => qc.invalidateQueries() });
+  const newInvoice = useMutation({
+    mutationFn: crud.create,
+    onSuccess: () => {
+      paymentCreator();
+    },
+  });
+  const updateInvoice = useMutation({ mutationFn: crud.update, onSuccess: () => {qc.invalidateQueries(); paymentPayer() }});
   const invoiceForm = useForm({
     initialValues: {
       invoiceNo: "new",
@@ -40,6 +45,7 @@ export default function InvoiceForm(props) {
       description: "",
     },
   });
+  const newPayment = useMutation({ mutationFn: crud.create, onSuccess: () => qc.invalidateQueries() });
   function getInvoiceData(value) {
     if (value !== "new") {
       const invoice = invoices.data.find((inv) => inv.id === value);
@@ -48,6 +54,37 @@ export default function InvoiceForm(props) {
         discount_2: invoice.discount_2,
         party: invoice.party,
       });
+    }
+  }
+  const [paidAmount, setPaidAmount] = useState(0);
+  function paymentCreator() {
+    const iid = idGenerator(
+      invoices.data.filter((inv) => inv.type === props.type).length + 1,
+      props.type === "sale" ? "pos" : "pop"
+    );
+    const data = {
+      id: iid,
+      invoice: iid,
+      party: invoiceForm.values.party,
+      type: props.type === "sale" ? "recieving" : "sending",
+      description: "Invoice Created",
+      amount: 0,
+      paid: false,
+    };
+    newPayment.mutate({ collection: "payments", data });
+  }
+  function paymentPayer() {
+    const data = {
+      party: invoiceForm.values.party,
+      type: props.type === "sale" ? "recieving" : "sending",
+      amount: paidAmount,
+      description: "payment",
+      paid: true,
+    };
+    console.log(data.amount)
+    if (paidAmount > 0) {
+      console.log("Paying")
+      newPayment.mutate({ collection: "payments", data });
     }
   }
   function invoiceCreator() {
@@ -71,15 +108,15 @@ export default function InvoiceForm(props) {
       discount_2: invoiceForm.values.discount_2,
       description: invoiceForm.values.description,
     };
-    updateInvoice.mutate({ collection: "invoices", recordID: invoiceForm.values.invoiceNo, data: data });
+    updateInvoice.mutate({ collection: "invoices", recordID: invoiceForm.values.invoiceNo, data: data })
   }
   const invoice = invoices.data?.find((inv) => inv.id === invoiceForm.values.invoiceNo);
   const final_total = () => {
     if (
-      invoice.discount_1 !== invoiceForm.values.discount_1 ||
-      invoice.discount_2 !== invoiceForm.values.discount_2
+      invoice?.discount_1 !== invoiceForm.values.discount_1 ||
+      invoice?.discount_2 !== invoiceForm.values.discount_2
     ) {
-      return invoice.total - invoiceForm.values.discount_1 - invoiceForm.values.discount_2;
+      return invoice?.total - invoiceForm.values.discount_1 - invoiceForm.values.discount_2;
     } else {
       return invoice.final_total;
     }
@@ -88,8 +125,19 @@ export default function InvoiceForm(props) {
   if (checkSuccess(queries)) {
     return (
       <>
-        <Modal opened={opened} onClose={close} title='Confirm Invoice?'>
-          {/* TODO: add Payment modal here. */}
+        <Modal opened={opened} centered onClose={close} title='Confirm Invoice?'>
+          <NumberInput readOnly label='TOTAL for invoice' value={final_total()} />
+          <NumberInput onChange={(v) => setPaidAmount(Number(v))} label='Paid Amount' value={paidAmount} />
+          <Group mt={"md"} justify='end'>
+            <Button
+              onClick={() => {
+                setEditing(false);
+                invComplete();
+              }}
+            >
+              OK
+            </Button>
+          </Group>
         </Modal>
         <Text size='xl' fw={600}>
           {String(props.type).toUpperCase()} INVOICE
@@ -149,7 +197,13 @@ export default function InvoiceForm(props) {
                 </>
               )}
               {!editing && invoiceForm.values.invoiceNo === "new" && (
-                <Button onClick={() => invoiceCreator()}>Create</Button>
+                <Button
+                  onClick={() => {
+                    invoiceCreator();
+                  }}
+                >
+                  Create
+                </Button>
               )}
             </Group>
             {editing && (
@@ -175,9 +229,8 @@ export default function InvoiceForm(props) {
                 />
                 <Button
                   onClick={() => {
-                    setEditing(false);
-                    invComplete();
-                    // TODO: add payment modal
+                    open();
+                    // setPaidAmount(final_total());
                   }}
                 >
                   Commit
