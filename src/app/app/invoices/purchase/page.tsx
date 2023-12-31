@@ -1,4 +1,4 @@
-"use Client";
+'use Client'
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD, { crud } from "@/app/api/useAPI";
 import pb from "@/app/pocketbase";
