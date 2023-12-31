@@ -36,7 +36,7 @@ export default function Invoices() {
         report
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          formStructure={invoiceFormStructure}
+          formstructure={invoiceFormStructure}
           data={invoices.data}
         />
       )}

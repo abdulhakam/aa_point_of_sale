@@ -9,6 +9,7 @@ import { useDisclosure } from "@mantine/hooks";
 import {  useQueryClient } from "@tanstack/react-query";
 import { partyFormStructure, useParties } from "@/app/api/parties";
 import { RecordModel } from "pocketbase";
+import useCRUD from "@/app/api/useAPI";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
@@ -22,11 +23,11 @@ const tableStructure: DataTableColumn[] = [
 
 export default function Items() {
   const [opened, { open, close }] = useDisclosure(false);
-  const areas = useQueryClient().getQueryData(["areas"]) as RecordModel;
+  const areas = useCRUD().fullList({collection:'areas'});
   const formStructure = { ...partyFormStructure };
   formStructure.fields.type.baseProps.data=['supplier','both'];
   formStructure.fields.type.default='supplier';
-  formStructure.fields.area.baseProps.data = areas?.map((cat) => ({
+  formStructure.fields.area.baseProps.data = areas.data?.map((cat) => ({
     value: cat.id,
     label: cat.name,
   }));
@@ -53,7 +54,7 @@ export default function Items() {
         <DataViewTable
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          formStructure={partyFormStructure}
+          formstructure={partyFormStructure}
           data={parties.suppliers}
         />
       )}

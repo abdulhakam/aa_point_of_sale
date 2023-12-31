@@ -1,6 +1,8 @@
 "use client";
 import { Card, Text,  UnstyledButton,  useMantineTheme, Grid } from "@mantine/core";
 import {
+  IconPrinter,
+  IconReceipt,
   IconReport,
   IconTag,
 } from "@tabler/icons-react";
@@ -10,6 +12,7 @@ import { useRouter } from "next/navigation";
 const mockdata = [
   { title: "Purchase", icon: IconTag, color: "pink", target: "invoices/purchase" },
   { title: "Sale", icon: IconReport, color: "lime", target: "invoices/sales" },
+  { title: "Print Invoice", icon: IconPrinter, color: "lime", target: "invoices/print" },
 ];
 
 export default function ActionsGrid(props) {

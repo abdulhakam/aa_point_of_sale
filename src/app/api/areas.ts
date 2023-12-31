@@ -31,11 +31,9 @@ export const areaFormStructure: FormStructure<Area> = {
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
   collectionName:'areas',
-  onCreate: (data) => createArea(data),
-  onUpdate: (data) => updateArea(data),
-  onDelete: (data) => {
-    updateArea({ ...data, deleted: true });
-  },
+  onCreate: (data) => pb.collection('areas').create(data),
+  onUpdate: (data) => pb.collection('areas').update(data.id,data),
+  onDelete: (data) => {pb.collection('areas').delete(data.id)},
 };
 
 export const exampleFormStructure = {

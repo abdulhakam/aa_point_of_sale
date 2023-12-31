@@ -1,16 +1,13 @@
+"use client";
 // Import styles of packages that you've installed.
 // All packages except `@mantine/hooks` require styles imports
 import { ColorSchemeScript } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
-import 'mantine-datatable/styles.layer.css';
+import "mantine-datatable/styles.layer.css";
 import Providers from "./providers";
 import FetchingIndicator from "./components/global/apiCallIndicator/fetchingIndicator";
-
-export const metadata = {
-  title: "aa POS App",
-  description: "A Point of Sale app for small businesses.",
-};
+import RouteProtector from "./routeProtector";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           {/* <FetchingIndicator/> */}
-          {children}
+          <RouteProtector>{children}</RouteProtector>
         </Providers>
       </body>
     </html>

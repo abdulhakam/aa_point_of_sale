@@ -36,7 +36,7 @@ export default function Areas() {
       {areas.isError && <h2>{areas.error.message}</h2>}
       {areas.isSuccess && (
         <DataViewTable
-          formStructure={areaFormStructure}
+          formstructure={areaFormStructure}
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
           data={areas.data}

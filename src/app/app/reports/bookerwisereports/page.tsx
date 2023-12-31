@@ -54,7 +54,7 @@ export default function BookerWiseReport({ type = "sale" }) {
           <Button onClick={close}>OK</Button>
         </Modal>
         <Button onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
-          {`AREA WISE ${type.toUpperCase()} REPORT`}
+          {`BOOKER WISE ${type.toUpperCase()} REPORT IS IN PROGRESS`}
         </Button>
         <hr />
         <ReportViewTable

@@ -23,7 +23,7 @@ const tableStructure: DataTableColumn[] = [
 ];
 
 export default function AreaWiseReport({ type = "sale" }) {
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([new Date('2020-01-01'), new Date('2050-01-01')]);
   const [opened, { open, close }] = useDisclosure(true);
   const invoiceReport = useCRUD().fullList({
     collection: "purchase_sale_report",
@@ -38,7 +38,7 @@ export default function AreaWiseReport({ type = "sale" }) {
       { key: "type", value: type },
     ],
     invoiceReport.data
-  ).filter((inv) => new Date(inv.created) > dateRange[0] && new Date(inv.created) < dateRange[1]);
+  ).filter((inv) => new Date(inv.created) > dateRange[0] && new Date(inv.created) < (dateRange[1]));
   const queries = [invoiceReport, areas];
   if (checkSuccess(queries)) {
     return (
@@ -50,12 +50,17 @@ export default function AreaWiseReport({ type = "sale" }) {
             value={filterValue}
             onChange={setFilter}
           />
-          <DatePicker type='range' value={dateRange} onChange={setDateRange} />
+          <DatePicker
+            type='range'
+            value={dateRange}
+            onChange={setDateRange}
+          />
           <Button onClick={close}>OK</Button>
         </Modal>
         <Button onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
           {`AREA WISE ${type.toUpperCase()} REPORT`}
         </Button>
+        <Text>AREA: {filterValue}</Text>
         <hr />
         <ReportViewTable
           rowStyle={({ party_type, amount }) =>

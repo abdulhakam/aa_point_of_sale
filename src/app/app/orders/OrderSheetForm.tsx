@@ -40,14 +40,14 @@ export default function OrderSheetForm(props) {
   });
   const items = useCRUD().fullList({ collection: "items" });
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
-  const user = useCRUD().read({ collection: "users", recordID: pb.authStore.model.id });
+  const user = useCRUD().read({ collection: "users", recordID: pb.authStore?.model?.id });
   const newOrder = useMutation({ mutationFn: crud.create, onSuccess: () => qc.invalidateQueries() });
   const updateOrder = useMutation({ mutationFn: crud.update, onSuccess: () => qc.invalidateQueries() });
   const orderSheetForm = useForm({
     initialValues: {
       orderSheetNo: "new",
       party: "pty000000000000",
-      booking_maker: pb.authStore.model.id,
+      booking_maker: pb.authStore?.model?.id,
       booker: "",
       discount_1: 0,
       discount_2: 0,
@@ -70,7 +70,7 @@ export default function OrderSheetForm(props) {
         orderSheets.data.filter((inv) => inv.type === props.type).length + 1,
         props.type === "sale" ? "ods" : "odp"
       ),
-      booking_maker: user.data.id,
+      booking_maker: user.data?.id,
       party: orderSheetForm.values.party,
       booker: orderSheetForm.values.booker,
       transactions: [],
@@ -125,7 +125,7 @@ export default function OrderSheetForm(props) {
                   readOnly={editing ? true : false}
                   allowDeselect={false}
                   searchable
-                  data={[...orderSheets.data.map((inv) => inv.id), "new"]}
+                  data={[...orderSheets.data?.map((inv) => inv.id), "new"]}
                   {...orderSheetForm.getInputProps("orderSheetNo")}
                 />
 
@@ -155,7 +155,7 @@ export default function OrderSheetForm(props) {
                       }
                       allowDeselect={false}
                       searchable
-                      data={[...parties.data.map((pty) => ({ value: pty.id, label: pty.name }))]}
+                      data={[...parties.data?.map((pty) => ({ value: pty.id, label: pty.name }))]}
                       {...orderSheetForm.getInputProps("party")}
                     />
                   </Group>
@@ -172,7 +172,7 @@ export default function OrderSheetForm(props) {
                       }
                       allowDeselect={false}
                       searchable
-                      data={[...bookers.data.map((pty) => ({ value: pty.id, label: pty.name }))]}
+                      data={[...bookers.data?.map((pty) => ({ value: pty.id, label: pty.name }))]}
                       {...orderSheetForm.getInputProps("booker")}
                     />
                   </Group>

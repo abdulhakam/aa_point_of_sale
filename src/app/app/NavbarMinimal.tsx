@@ -11,6 +11,7 @@ import {
   IconShoppingBag,
   IconDashboard,
   IconCoinEuro,
+  IconBuildingWarehouse,
 } from '@tabler/icons-react';
 import classes from './NavbarMinimal.module.css';
 import { useUserAuthContext } from '../context/AuthContext';
@@ -33,17 +34,15 @@ function NavbarLink({ icon: Icon, label, active, onClick }: NavbarLinkProps) {
 }
 
 const mockdata = [
-  { label: "Dashboard", icon: IconDashboard, target:"/dashboard"},
-  { label: "Customers", icon: IconUser, target:"parties/customers"},
-  { label: "Items", icon: IconTag,  target:"items"},
-  { label: "Suppliers", icon: IconBriefcase, target:"parties/suppliers"},
-  { label: "Reports", icon: IconReport, target:"reports"},
-  { label: "Orders", icon: IconTrolley, target:"orders"},
-  { label: "Sales", icon: IconShoppingBag,  target:"invoices/sales"},
-  { label: "Purchases", icon: IconShoppingBag, target:"invoices/purchase"},
-  { label: "Payments", icon: IconCoinEuro, target:"payments"},
-  { label: "Management", icon: IconSettings, target:"management"},
-];
+    { label: "Parties", icon: IconBuildingWarehouse, color: "blue", target:"parties"},
+    { label: "Bookers", icon: IconUser, color: "blue", target:"bookers"},
+    { label: "Items", icon: IconTag, color: "yellow", target:"items"},
+    { label: "Reports", icon: IconReport, color: "pink", target:"reports"},
+    { label: "Orders", icon: IconTrolley, color: "green", target:"orders"},
+    { label: "Invoices", icon: IconShoppingBag, color: "orange", target:"invoices"},
+    { label: "Payments", icon: IconCoinEuro, color:'red', target:"payments"},
+    { label: "Management", icon: IconSettings, color: "gray", target:"management"},
+  ];
 
 export default function NavbarMinimal(props) {
   const pathname = usePathname().split('/').pop()

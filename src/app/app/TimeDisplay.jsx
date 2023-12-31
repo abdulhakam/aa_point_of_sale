@@ -27,11 +27,8 @@ export const useDate = () => {
   };
 };
 
-export const TimeDisplay = (secondsEnabled=false) => {
+export const TimeDisplay = () => {
   const { date, time } = useDate();
-  if (secondsEnabled ===true){
-    return <div><span>{date},{new Date().toLocaleTimeString('en',{hour: "numeric", hour12:true,minute:'numeric',second:'numeric'})}</span></div>
-  }
   return (
     <div>
       <span>

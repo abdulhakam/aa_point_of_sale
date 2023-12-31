@@ -39,7 +39,7 @@ export default function OrderBookers() {
         <DataViewTable
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          formStructure={orderBookerFormStructure}
+          formstructure={orderBookerFormStructure}
           data={order_bookers.data}
         />
       )}

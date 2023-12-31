@@ -62,7 +62,7 @@ export async function updateInvoice(data) {
 }
 
 export async function deleteInvoice(rid) {
-  return await pb.collection("invoices").delete("RECORD_ID");
+  return await pb.collection("invoices").delete(rid);
 }
 
 export const invoiceFormStructure: FormStructure<Invoice> = {
