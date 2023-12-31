@@ -27,9 +27,7 @@ export const categoryFormStructure: FormStructure<Category> = {
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
   collectionName:'categories',
-  onCreate: (data) => createCategory(data),
-  onUpdate: (data) => updateCategory(data),
-  onDelete: (data) => {
-    updateCategory({ ...data, deleted: true });
-  },
+  onCreate: (data) => pb.collection('categories').create(data),
+  onUpdate: (data) => pb.collection('categories').update(data.id,data),
+  onDelete: (data) => {pb.collection('categories').delete(data.id)},
 };

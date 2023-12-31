@@ -1,4 +1,4 @@
-'use Client'
+"use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD, { crud } from "@/app/api/useAPI";
 import pb from "@/app/pocketbase";
@@ -10,6 +10,7 @@ import idGenerator from "@/app/components/functions/idGenerator";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDisclosure } from "@mantine/hooks";
 import { TransactionForm } from "../TransactionForm";
+import { itemFormStructure } from "@/app/api/items";
 
 export default function InvoiceForm(props) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -26,26 +27,41 @@ export default function InvoiceForm(props) {
     filter: props.type === "sale" ? 'type="customer"||type="both"' : 'type="supplier"||type="both"',
     queryKey: props.type === "sale" ? "customers" : "suppliers",
   });
+
+  
   const items = useCRUD().fullList({ collection: "items" });
-  const user = useCRUD().read({ collection: "users", recordID: pb.authStore.model.id });
+  const user = useCRUD().read({ collection: "users", recordID: pb.authStore?.model?.id });
   const newInvoice = useMutation({
     mutationFn: crud.create,
     onSuccess: () => {
       paymentCreator();
     },
   });
-  const updateInvoice = useMutation({ mutationFn: crud.update, onSuccess: () => {qc.invalidateQueries(); paymentPayer() }});
+  const updateInvoice = useMutation({
+    mutationFn: crud.update,
+    onSuccess: () => {
+      qc.invalidateQueries();
+      paymentPayer();
+    },
+  });
   const invoiceForm = useForm({
     initialValues: {
       invoiceNo: "new",
       party: "pty000000000000",
-      invoice_maker: pb.authStore.model.id,
+      invoice_maker: pb.authStore?.model?.id,
       discount_1: 0,
       discount_2: 0,
       description: "",
     },
   });
-  const newPayment = useMutation({ mutationFn: crud.create, onSuccess: () => {qc.invalidateQueries();close()} });
+  const newPayment = useMutation({
+    mutationFn: crud.create,
+    onSuccess: () => {
+      qc.invalidateQueries();
+      close();
+    },
+  });
+
   function getInvoiceData(value) {
     if (value !== "new") {
       const invoice = invoices.data.find((inv) => inv.id === value);
@@ -83,7 +99,7 @@ export default function InvoiceForm(props) {
     };
     if (paidAmount > 0) {
       newPayment.mutate({ collection: "payments", data });
-    }
+    }else{close()}
   }
   function invoiceCreator() {
     const data = {
@@ -106,7 +122,7 @@ export default function InvoiceForm(props) {
       discount_2: invoiceForm.values.discount_2,
       description: invoiceForm.values.description,
     };
-    updateInvoice.mutate({ collection: "invoices", recordID: invoiceForm.values.invoiceNo, data: data })
+    updateInvoice.mutate({ collection: "invoices", recordID: invoiceForm.values.invoiceNo, data: data });
   }
   const invoice = invoices.data?.find((inv) => inv.id === invoiceForm.values.invoiceNo);
   const final_total = () => {
@@ -138,7 +154,7 @@ export default function InvoiceForm(props) {
           </Group>
         </Modal>
         <Text size='xl' fw={600}>
-          {String(props.type).toUpperCase()} INVOICE
+          PURCHASE INVOICE
         </Text>
         <hr />
         <Group>

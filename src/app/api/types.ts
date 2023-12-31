@@ -4,7 +4,7 @@ export type Field<T> = {
   default?: T;
   baseProps: {
     label: string;
-    data?: T[];
+    data?: any[];
     searchable?: boolean;
     readOnly?: boolean;
     variant?: string;

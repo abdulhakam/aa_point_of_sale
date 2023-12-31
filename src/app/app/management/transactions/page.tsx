@@ -43,7 +43,7 @@ export default function Transactions() {
         <DataViewTable
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          formStructure={transactionFormStructure}
+          formstructure={transactionFormStructure}
           data={transactions.data}
         />
       )}

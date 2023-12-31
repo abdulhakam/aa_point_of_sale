@@ -27,7 +27,7 @@ export default function InvoiceForm(props) {
     queryKey: props.type === "sale" ? "customers" : "suppliers",
   });
   const items = useCRUD().fullList({ collection: "items" });
-  const user = useCRUD().read({ collection: "users", recordID: pb.authStore.model.id });
+  const user = useCRUD().read({ collection: "users", recordID: pb.authStore?.model?.id });
   const newInvoice = useMutation({
     mutationFn: crud.create,
     onSuccess: () => {
@@ -39,7 +39,7 @@ export default function InvoiceForm(props) {
     initialValues: {
       invoiceNo: "new",
       party: "pty000000000000",
-      invoice_maker: pb.authStore.model.id,
+      invoice_maker: pb.authStore?.model?.id,
       discount_1: 0,
       discount_2: 0,
       description: "",
@@ -83,7 +83,7 @@ export default function InvoiceForm(props) {
     };
     if (paidAmount > 0) {
       newPayment.mutate({ collection: "payments", data });
-    }
+    }else{close()}
   }
   function invoiceCreator() {
     const data = {
@@ -91,7 +91,7 @@ export default function InvoiceForm(props) {
         invoices.data.filter((inv) => inv.type === props.type).length + 1,
         props.type === "sale" ? "pos" : "pop"
       ),
-      invoice_maker: user.data.id,
+      invoice_maker: user.data?.id,
       party: invoiceForm.values.party,
       transactions: [],
       type: props.type === "sale" ? "sale" : "purchase",

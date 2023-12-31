@@ -38,7 +38,7 @@ export default function Categories() {
         <DataViewTable
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          formStructure={categoryFormStructure}
+          formstructure={categoryFormStructure}
           data={categories.data}
         />
       )}

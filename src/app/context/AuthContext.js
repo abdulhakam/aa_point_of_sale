@@ -13,7 +13,6 @@ export function UserAuthContextProvider({ children }) {
   }
   function logout() {
     pb.authStore.clear();
-    router.push('/auth')
   }
 
   return <userAuthContext.Provider value={{login,logout}}>{children}</userAuthContext.Provider>;
