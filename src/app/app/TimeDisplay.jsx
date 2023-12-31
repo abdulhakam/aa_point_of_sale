@@ -1,15 +1,5 @@
 'use client'
-
-import { Container} from "@mantine/core";
-import classes from "./HeaderSimple.module.css";
 import React from "react";
-
-const links = [
-  { link: "/about", label: "Features" },
-  { link: "/pricing", label: "Pricing" },
-  { link: "/learn", label: "Learn" },
-  { link: "/community", label: "Community" },
-];
 
 export const useDate = () => {
   const locale = "en";
@@ -37,7 +27,7 @@ export const useDate = () => {
   };
 };
 
-const TimeDisplay = (secondsEnabled=false) => {
+export const TimeDisplay = (secondsEnabled=false) => {
   const { date, time } = useDate();
   if (secondsEnabled ===true){
     return <div><span>{date},{new Date().toLocaleTimeString('en',{hour: "numeric", hour12:true,minute:'numeric',second:'numeric'})}</span></div>
@@ -51,12 +41,3 @@ const TimeDisplay = (secondsEnabled=false) => {
   );
 };
 
-export default function HeaderSimple(props) {
-  return (
-    <header className={classes.header}>
-      <Container fluid className={classes.inner}>
-        <TimeDisplay />
-      </Container>
-    </header>
-  );
-}
