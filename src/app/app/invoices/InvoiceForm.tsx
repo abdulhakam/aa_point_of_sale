@@ -45,7 +45,7 @@ export default function InvoiceForm(props) {
       description: "",
     },
   });
-  const newPayment = useMutation({ mutationFn: crud.create, onSuccess: () => qc.invalidateQueries() });
+  const newPayment = useMutation({ mutationFn: crud.create, onSuccess: () => {qc.invalidateQueries();close()} });
   function getInvoiceData(value) {
     if (value !== "new") {
       const invoice = invoices.data.find((inv) => inv.id === value);
@@ -81,9 +81,7 @@ export default function InvoiceForm(props) {
       description: "payment",
       paid: true,
     };
-    console.log(data.amount)
     if (paidAmount > 0) {
-      console.log("Paying")
       newPayment.mutate({ collection: "payments", data });
     }
   }
