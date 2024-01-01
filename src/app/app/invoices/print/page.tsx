@@ -60,6 +60,7 @@ export default function InvoicePrint() {
           <>
             <Text>{`Invoice #: ${filterValue}`}</Text>
             <Text>{`Invoice Maker: ${invoice?.expand.invoice_maker.name}`}</Text>
+            <Text>{`Party: ${invoice?.expand.party.name}`}</Text>
             <hr />
             <ReportViewTable columns={tableStructure} data={filteredData} />
             <Flex
