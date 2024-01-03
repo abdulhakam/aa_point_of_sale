@@ -30,7 +30,7 @@ export default function Items() {
     label: cat.name,
   }))
   const [search, setSearch] = useState("");
-  const items = useCRUD().fullList({ collection: "items", expand: "category" });
+  const items = useCRUD().fullList({ collection: "items_report", expand: "category" });
   return (
     <>
       <Group align='end'>

@@ -1,5 +1,6 @@
+import { areaCreateForm } from "@/app/api/areas";
 import CreateRecord from "./CreateRecord";
 
 export default function Test(){
-  return <><CreateRecord/></>
+  return <><CreateRecord formStructure={areaCreateForm} /></>
 }

@@ -10,7 +10,6 @@ import idGenerator from "@/app/components/functions/idGenerator";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDisclosure } from "@mantine/hooks";
 import { TransactionForm } from "../TransactionForm";
-import { itemFormStructure } from "@/app/api/items";
 
 export default function InvoiceForm(props) {
   const [opened, { open, close }] = useDisclosure(false);
