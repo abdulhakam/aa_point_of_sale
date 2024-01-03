@@ -30,29 +30,23 @@ export const areaFormStructure: FormStructure<Area> = {
     name: { type: "text", baseProps: { label: "Name" } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
-  collectionName:'areas',
-  onCreate: (data) => pb.collection('areas').create(data),
-  onUpdate: (data) => pb.collection('areas').update(data.id,data),
-  onDelete: (data) => {pb.collection('areas').delete(data.id)},
+  collectionName: "areas",
+  onCreate: (data) => pb.collection("areas").create(data),
+  onUpdate: (data) => pb.collection("areas").update(data.id, data),
+  onDelete: (data) => {
+    pb.collection("areas").delete(data.id);
+  },
 };
 
-export const exampleFormStructure = {
+export const areaCreateForm = {
   fields: {
-    id: { type: "autocomplete", default: undefined, baseProps: { label: "id", data: [] } },
-    created: { type: "datetime", default: undefined, baseProps: { label: "Created" } },
-    name: { type: "text", default: "", baseProps: { label: "Name" } },
-    updated: { type: "datetime", default: undefined, baseProps: { label: "Updated" } },
-    isActive: { type: "checkbox", default: false, baseProps: { label: "Is Active" } },
-    role: {
-      type: "select",
-      default: "Guest",
-      baseProps: { label: "Role", data: ["Admin", "User", "Guest"] },
+    id: { type: "text", baseProps: { label: "ID" } },
+    name: { type: "text", baseProps: { label: "Name" } },
+    section: {
+      type: "select", withCreate: true,
+      baseProps: { label: "Section", searchable: true, data: [], dataQuery: { collectionName: "sections" } },
     },
-    isSwitch: { type: "switch", default: true, baseProps: { label: "A big Switch" } },
+    deleted: { type: "switch", default: false, baseProps: { label: "DELETED", disabled: true } },
   },
-  onCreate: (data) => createArea(data),
-  onUpdate: (data) => updateArea(data),
-  onDelete: (data) => {
-    updateArea({ ...data, deleted: true });
-  },
+  collectionName: "areas",
 };
