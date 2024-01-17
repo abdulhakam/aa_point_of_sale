@@ -127,6 +127,7 @@ export default function InvoiceForm(props) {
         props.type === "sale" ? "pos" : "pop"
       ),
       invoiceNo: (props.type === "sale" ? counts.data.sale_invoices : counts.data.purchase_invoices) + 1,
+      booker: invoiceForm.values.booker,
       invoice_maker: user.data.id,
       party: invoiceForm.values.party,
       type: props.type,

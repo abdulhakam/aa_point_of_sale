@@ -98,7 +98,7 @@ export default function DataViewTable(
   <>
    <DataTable
    {...props}
-    style={{ border: "1px solid lightgray", borderRadius: "3px" }}
+    style={{ border: "1px solid gray", borderRadius: "3px" }}
     withTableBorder
     withColumnBorders
     records={records}

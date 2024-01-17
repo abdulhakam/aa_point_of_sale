@@ -5,19 +5,19 @@ import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import ReportViewTable from "@/app/components/ReportViewTable";
 import dataFilter from "@/app/components/functions/dataFilter";
 import { useState } from "react";
-import { Button, Flex, Group, Modal, Select, Stack, Text } from "@mantine/core";
+import { Box, Button, Flex, Group, Modal, Select, Stack, Text, TextInput, Textarea } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import {qtyDisplay} from "@/app/components/functions/qtyParser"
+import { qtyDisplay } from "@/app/components/functions/qtyParser";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
   { accessor: "created", hidden: true },
-  { accessor: "item" ,width:'10em'},
-  { accessor: "qty" , width:'5em', render:(record)=>qtyDisplay(record.expand.item,record.qty) },
-  { accessor: "price" , width:'3em' },
-  { accessor: "discount_1", title: "D1", width:'2em'},
-  { accessor: "discount_2", title: "D2", width:'3em'},
-  { accessor: "total", width:'4em'},
+  { accessor: "item", width: "10em" },
+  { accessor: "qty", width: "5em", render: (record) => qtyDisplay(record.expand.item, record.qty) },
+  { accessor: "price", width: "3em" },
+  { accessor: "discount_1", title: "D1", width: "2em" },
+  { accessor: "discount_2", title: "D2", width: "3em" },
+  { accessor: "total", width: "4em" },
 ];
 
 export default function InvoicePrint() {
@@ -26,12 +26,13 @@ export default function InvoicePrint() {
   const [filterValue, setFilter] = useState("");
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
-    expand: "invoice_maker,party",
+    expand: "invoice_maker,party,booker",
   });
   const transactions = useCRUD().fullList({ collection: "transaction_view", expand: "item" });
   const filteredData = dataFilter([{ key: "invoice", value: filterValue }], transactions.data);
   const filteredInvoices = invoices.data?.filter((inv) => inv.type === type);
   const invoice = invoices.data?.find((inv) => inv.id === filterValue);
+  console.log(invoice);
   const queries = [invoices, transactions];
   if (checkSuccess(queries)) {
     return (
@@ -73,31 +74,53 @@ export default function InvoicePrint() {
         </Flex>
         {filterValue !== "" && (
           <>
+            <Text size={"xs"}>{`BOOKER: ${invoice?.expand.booker.name}`}</Text>
             <Flex justify={"space-between"}>
               <Text size={"xs"}>{`Invoice #: ${invoice?.invoiceNo}`}</Text>
-              <Text size={"xs"}>{`Invoice Maker: ${invoice?.expand.invoice_maker.name}`}</Text>
               <Text size={"xs"}>{`Party: ${invoice?.expand.party.name}`}</Text>
+              <Text size={"xs"}>{`Invoice Maker: ${invoice?.expand.invoice_maker.name}`}</Text>
             </Flex>
             <hr />
             <ReportViewTable columns={tableStructure} data={filteredData} />
             <Flex
               justify={"end"}
               align={"center"}
-              mr={'0.5rem'}
-              mt={'-4.15em'}
-              h={'4em'}
+              mr={"0.5rem"}
+              mt={"-5em"}
+              h={"4em"}
               style={{
                 position: "relative",
               }}
             >
-              <Stack justify='end' align='end'>
-                <Group mr={0}>
-                  <Text mr={"1em"} size='xs'>
-                    Total
-                  </Text>
-                  <Text size='xs' fw={700}>
-                    {invoice.total}
-                  </Text>
+              <Stack w={"100%"} justify='end' align='end'>
+                <Group mr={0} w={"100%"} justify='space-between'>
+                  {new Date(invoice?.duedate) > new Date(invoice?.created) ? (
+                    <Group>
+                      {invoice?.description && (
+                        <TextInput
+                          variant='unstyled'
+                          size='xs'
+                          value={invoice?.description}
+                        ></TextInput>
+                      )}
+                      <Text ml={"1em"} fw={700} size='xs'>
+                        Due Date:
+                      </Text>
+                      <Text size='xs' fw={700}>
+                        {invoice?.duedate.slice(0, 10)}
+                      </Text>
+                    </Group>
+                  ) : (
+                    <></>
+                  )}
+                  <Group>
+                    <Text mr={"1em"} size='xs'>
+                      Total
+                    </Text>
+                    <Text size='xs' fw={700}>
+                      {invoice.total}
+                    </Text>
+                  </Group>
                 </Group>
                 <Group mt={-10}>
                   <Text mr={"1em"} size='xs'>
