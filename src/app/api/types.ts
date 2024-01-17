@@ -2,6 +2,7 @@
 export type Field<T> = {
   type: "autocomplete" | "datetime" | "text" | "number" | "checkbox" | "switch" | "select";
   default?: T;
+  hidden?: boolean;
   baseProps: {
     label: string;
     data?: any[];
@@ -104,6 +105,7 @@ export interface Transaction extends CollectionItem {
   invoice: string;
   item: string;
   qty: number;
+  scheme: number;
   price: number;
   discount_1: number;
   discount_2: number;

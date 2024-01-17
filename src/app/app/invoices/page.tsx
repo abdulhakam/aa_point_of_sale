@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 
 const mockdata = [
   { title: "Purchase", icon: IconTag, color: "pink", target: "invoices/purchase" },
-  { title: "Sale", icon: IconReport, color: "lime", target: "invoices/sales" },
+  { title: "Sale", icon: IconReport, color: "lime", target: "invoices/sale" },
   { title: "Print Invoice", icon: IconPrinter, color: "lime", target: "invoices/print" },
 ];
 

@@ -25,7 +25,7 @@ export default function Transactions() {
   const transactions = useTransactions()
   return (
     <>
-      <Group align='end'>
+      {/* <Group align='end'>
         <TextInput
           style={{ width: "10rem" }}
           label='Search'
@@ -36,7 +36,7 @@ export default function Transactions() {
         <FormGenerator editable formStructure={transactionFormStructure} />
       </Modal>
         <Button onClick={open}> Add New </Button>
-      </Group>
+      </Group> */}
       {transactions.isLoading && <h1>Loading...</h1>}
       {transactions.status==='error' && <h2>{transactions.error.message}</h2>}
       {transactions.status==='success' && (

@@ -7,7 +7,11 @@ export const paymentFormStructure: FormStructure<Payment> = {
     id: { type: "autocomplete", default: undefined, baseProps: { label: "id", data: [] } },
     created: { type: "datetime", default: undefined, baseProps: { disabled: true, label: "Created" } },
     updated: { type: "datetime", default: undefined, baseProps: { disabled: true, label: "Updated" } },
-    invoice: { type: "select", default: undefined, baseProps: { label: "Invoice", data: [],searchable:true } },
+    invoice: {
+      type: "select",
+      default: undefined,
+      baseProps: { label: "Invoice", data: [], searchable: true },
+    },
     party: { type: "select", default: undefined, baseProps: { label: "Party", data: [] } },
     type: {
       type: "select",
@@ -23,4 +27,19 @@ export const paymentFormStructure: FormStructure<Payment> = {
   onCreate: (data) => crud.create({ collection: "payments", data }),
   onUpdate: (data) => crud.update({ collection: "payments", recordID: data.id, data }),
   onDelete: (data) => crud.remove({ collection: "payments", recordID: data.id || data }),
+};
+
+export const paymentCreateForm = {
+  fields: {
+    type: {
+      type: "select",
+      default: "recieving",
+      baseProps: { label: "Payment Type", allowDeselect: false, data: ["sending", "recieving"] },
+    },
+    party: { type: "select", baseProps: { label: "Party",allowDeselect: false, searchable: true, data: [] } },
+    paid: { type: "checkbox", default: true, baseProps: { label: "Paid", defaultChecked: true } },
+    amount: { type: "number", baseProps: { label: "Amount" } },
+    description: { type: "text", baseProps: { label: "Description" } },
+  },
+  collectionName: "payments",
 };

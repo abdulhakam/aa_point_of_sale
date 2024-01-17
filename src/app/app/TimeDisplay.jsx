@@ -17,11 +17,11 @@ export const useDate = () => {
   }, []);
 
   const day = today.toLocaleDateString(locale, { weekday: "long" });
-  const date = `${day}, ${today.toLocaleDateString(locale, { day:'numeric',month:'short', year:'numeric' })}\n\n`;
-
-  const time = today.toLocaleTimeString(locale, { hour: "numeric", hour12: true, minute: "numeric"});
+  const date = `${today.toLocaleDateString(locale, { day:'numeric',month:'short', year:'numeric' })}\n\n`;
+  const time = today.toLocaleTimeString(locale, { hour: "numeric", hour12: true, minute: "numeric", second:'2-digit'});
 
   return {
+    day,
     date,
     time
   };
@@ -30,11 +30,9 @@ export const useDate = () => {
 export const TimeDisplay = () => {
   const { date, time } = useDate();
   return (
-    <div>
       <span>
         {`${date}, ${time}`}
       </span>
-    </div>
   );
 };
 

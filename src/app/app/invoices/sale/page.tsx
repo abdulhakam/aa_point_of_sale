@@ -6,7 +6,7 @@ export default function Invoices() {
 
     return (
       <>
-        <InvoiceForm type={"purchase"} />
+        <InvoiceForm type={"sale"} />
       </>
     );
 }

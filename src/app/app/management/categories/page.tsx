@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button, Group, Modal, TextInput } from "@mantine/core";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
-import { categoryFormStructure, listCategories } from "@/app/api/categories";
+import { categoryCreateForm, categoryFormStructure, listCategories } from "@/app/api/categories";
 import { useQuery } from "@tanstack/react-query";
 
 const tableStructure: DataTableColumn[] = [
@@ -27,8 +27,8 @@ export default function Categories() {
           onChange={(value) => setSearch(value.target.value)}
           value={search}
         />
-        <Modal opened={opened} onClose={close} title="Create">
-        <FormGenerator editable formStructure={categoryFormStructure} />
+        <Modal centered size={'auto'} opened={opened} onClose={close} title="Create">
+        <FormGenerator close={close} editable formStructure={categoryCreateForm} />
       </Modal>
         <Button onClick={open}> Add New </Button>
       </Group>

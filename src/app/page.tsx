@@ -18,14 +18,15 @@ export default function Home() {
   return (
     <>
       <h1>Proper Routings are Work In Progress</h1>
-      <h1>you are logged in</h1>
+      <h1>
+        If you are one this screen it means something is not right, either you have manually entered the wrong
+        url or programs routing system is not working properly.
+      </h1>
       <Button color='red' onClick={logout}>
         Logout
       </Button>
     </>
   );
 }
-//TODO: NEED PROPER INVIOCING SYSTEM
-//TODO: USE IDGENERATOR
 //TODO: REMAKE REPORTING TABLES
 //TODO: MAKE REPORT GENERATION FILTERS
