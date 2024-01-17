@@ -16,20 +16,29 @@ export default function PaymentsReport() {
     expand: "invoice,party,area,section,booker",
     sort: "",
   });
-  const invoices = useCRUD().fullList({ collection: "invoices" });
   const parties = useCRUD().fullList({ collection: "parties" });
+  const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
+  const sections = useCRUD().fullList({ collection: "sections" });
+  const bookers = useCRUD().fullList({ collection: "order_bookers" });
   //filter vars
-  const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,booker,(date---not it report type)
+  const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,section,booker,(date---not in report type)
+  const [booker, setBooker] = useState("All");
+  const [areaFilter, setAreaFilter] = useState("All");
+  const [sectionFilter, setSectionFilter] = useState("All");
   const [party, setParty] = useState("All");
   const [paymentType, setPaymentType] = useState("all");
   //
   const filteredPayments = dataFilter(
     [
+      { key: "booker", value: booker === "All" ? "" : booker },
+      { key: "area", value: areaFilter === "All" ? "" : areaFilter },
+      { key: "section", value: sectionFilter === "All" ? "" : sectionFilter },
       { key: "party", value: party === "All" ? "" : party },
       { key: "type", value: paymentType === "all" ? "" : paymentType },
     ],
     payments.data
   );
+  console.log(filteredPayments)
   const tableStructure: DataTableColumn[] = [
     { accessor: "id", hidden: true },
     {
@@ -77,35 +86,105 @@ export default function PaymentsReport() {
       }))
     );
   const finalData = [
-    ["Sending", sending, "Sent", sent, "Sending Total", totalSending],
-    ["Recieving", recieving, "Recieved", recieved, "Recieving Total", totalRecieving],
-    ["Invoice Total", invoiceTotal, "Paid Total", totalPaid, "Total", total],
+    reportType !== "all" ? [] : ["Sending", sending, "Sent", sent, "Sending Total", totalSending],
+    reportType !== "all"
+      ? []
+      : ["Recieving", recieving, "Recieved", recieved, "Recieving Total", totalRecieving],
+    reportType === "all" ? [] : ["Invoice Total", invoiceTotal, "Paid Total", totalPaid, "Total", total],
   ];
-  const queries = [payments, invoices, parties];
+  const queries = [payments, areas, sections, bookers, parties];
   if (checkSuccess(queries)) {
     return (
       <>
         <Modal centered opened={opened} onClose={close} title='Filter Data'>
-          <Select
-            label={"Select Report Type"}
-            data={["All", "Sending", "Recieving", "Area", "Booker", "Party"]}
-            value={reportType}
-            onChange={setReportType}
-          />
-          <Select
-            label={"Select Party"}
-            data={[...parties.data.map((pty) => pty.name), "All"]}
-            value={party}
-            searchable
-            onChange={setParty}
-          />
-          <Select
-            label={"Select Payment Type"}
-            data={["sending", "recieving", "all"]}
-            value={paymentType}
-            onChange={setPaymentType}
-          />
-          <Button onClick={close}>OK</Button>
+          <Stack>
+            <Select
+              label={"Select Booker"}
+              data={[
+                ...bookers.data?.map((bkr) => bkr.name),'All'
+              ]}
+              value={booker}
+              searchable
+              onChange={(v) => {
+                setBooker(v);
+                setSectionFilter(v);
+                setAreaFilter("All");
+                setPaymentType("all");
+                setParty("All");
+                setReportType("section");
+              }}
+            />
+            <Select
+              label={"Select Section"}
+              data={[...sections.data.map((sec) => sec.name), "All"]}
+              value={sectionFilter}
+              searchable
+              onChange={(v) => {
+                setSectionFilter(v);
+                setAreaFilter("All");
+                setPaymentType("all");
+                setParty("All");
+                setReportType("section");
+              }}
+            />
+            <Select
+              label={"Select Area"}
+              data={
+                sectionFilter === "All"
+                  ? [...areas?.data?.map((ara) => ara.name), "All"]
+                  : [
+                      ...areas?.data
+                        ?.filter((ara) => ara.expand?.section?.name === sectionFilter)
+                        .map((itm) => itm.name),
+                      "All",
+                    ]
+              }
+              value={areaFilter}
+              searchable
+              onChange={(v) => {
+                setAreaFilter(v);
+                setPaymentType("all");
+                setParty("All");
+                setReportType("area");
+              }}
+            />
+            <Select
+              label={"Select Party"}
+              data={[...parties.data.map((pty) => pty.name), "All"]}
+              value={party}
+              searchable
+              onChange={(v) => {
+                setParty(v);
+                setPaymentType("all");
+                setReportType("party");
+              }}
+            />
+            <Select
+              label={"Select Payment Type"}
+              data={["sending", "recieving", "all"]}
+              value={paymentType}
+              onChange={(v) => {
+                setParty("All");
+                setPaymentType(v);
+                setReportType(v);
+              }}
+            />
+            <Group>
+              <Button
+                onClick={() => {
+                  setSectionFilter("All");
+                  setAreaFilter("All");
+                  setReportType("all");
+                  setSectionFilter("All");
+                  setParty("All");
+                  setPaymentType("all");
+                }}
+              >
+                RESET
+              </Button>
+              <Button onClick={close}>OK</Button>
+            </Group>
+          </Stack>
         </Modal>
         <Group align='center'>
           <Button onClick={open} variant='transparent' m={0} p={0} size='compact-lg' fw={"700"} color='black'>
@@ -113,7 +192,7 @@ export default function PaymentsReport() {
           </Button>
           <NewPayment />
         </Group>
-        <Text size={"md"}>{`Party: ${party}`}</Text>
+        {party !== "All" && <Text size={"md"}>{`Party: ${party}`}</Text>}
         <hr />
         <DataViewTable
           report
@@ -138,7 +217,7 @@ export default function PaymentsReport() {
         <Flex
           justify={"end"}
           align={"center"}
-          mt={"-4.15em"}
+          mt={"-3.5em"}
           mr={"1rem"}
           h={"3rem"}
           style={{

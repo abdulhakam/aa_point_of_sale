@@ -39,12 +39,12 @@ export default function InvoiceForm(props) {
     filter: props.type === "sale" ? 'type="customer"||type="both"' : 'type="supplier"||type="both"',
     queryKey: props.type === "sale" ? "customers" : "suppliers",
   });
-  const items = useCRUD().fullList({ collection: "items",expand:'category' });
+  const items = useCRUD().fullList({ collection: "items", expand: "category" });
   const user = useCRUD().read({ collection: "users", recordID: pb.authStore?.model?.id });
   const counts = useCRUD().read({ collection: "counts_for_row_numbers", recordID: "1" });
   const bookers = useCRUD().fullList({
-    collection:'order_bookers'
-  })
+    collection: "order_bookers",
+  });
   const newInvoice = useMutation({
     mutationFn: crud.create,
     onSuccess: () => {
@@ -61,13 +61,13 @@ export default function InvoiceForm(props) {
   const invoiceForm = useForm({
     initialValues: {
       invoiceNo: "new",
-      booker:'',
+      booker: "",
       invoice_maker: pb.authStore?.model?.id,
-      party: "pty000000000000",
+      party: "",
       discount_1: 0,
       discount_2: 0,
-      completed:false,
-      duedate:new Date(),
+      completed: false,
+      duedate: new Date(),
       description: "",
     },
   });
@@ -204,6 +204,13 @@ export default function InvoiceForm(props) {
                     { value: "new", label: "new" },
                   ]}
                   {...invoiceForm.getInputProps("invoiceNo")}
+                  onChange={(v) => {
+                    invoiceForm.setFieldValue("invoiceNo", v);
+                    invoiceForm.setFieldValue(
+                      "booker",
+                      invoices.data.find((inv) => inv.id === v)?.expand.booker?.id
+                    );
+                  }}
                 />
 
                 {invoiceForm.values.invoiceNo !== "new" && !editing && (
@@ -229,9 +236,7 @@ export default function InvoiceForm(props) {
                     readOnly={editing ? true : false}
                     allowDeselect={false}
                     searchable
-                    data={[
-                      ...bookers.data.map((bkr) => ({ value: bkr.id, label: bkr.name })),
-                    ]}
+                    data={[...bookers.data.map((bkr) => ({ value: bkr.id, label: bkr.name }))]}
                     {...invoiceForm.getInputProps("booker")}
                   />
                 </Group>
@@ -264,6 +269,7 @@ export default function InvoiceForm(props) {
               )}
               {!editing && invoiceForm.values.invoiceNo === "new" && (
                 <Button
+                  disabled={invoiceForm.values.party === "" || props.type==='sale' && invoiceForm.values.booker === ''}
                   onClick={() => {
                     invoiceCreator();
                   }}
@@ -337,5 +343,3 @@ export default function InvoiceForm(props) {
     );
   } else return <StatusCheck check={queries} />;
 }
-
-//TODO: turn payments to a custom hook
