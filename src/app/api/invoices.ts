@@ -81,10 +81,51 @@ export const invoiceFormStructure: FormStructure<Invoice> = {
     description: { type: "text", baseProps: { label: "User", readOnly: true } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
-  collectionName:'invoices',
+  collectionName: "invoices",
   onCreate: (data) => {
     createInvoice(data);
   },
   onUpdate: updateInvoice,
   onDelete: (data) => deleteInvoice(data.id),
+};
+
+export const invoiceCreateForm = {
+  fields: {
+    id: { type: "number", hidden: true, baseProps: { label: "id", readOnly: true, variant: "unstyled" } },
+    invoiceNo: { type: "number", baseProps: { label: "INVOICE NO", readOnly: true, variant: "unstyled" } },
+    booker: {
+      type: "select",
+      baseProps: {
+        label: "BOOKER",
+        searchable: true,
+        data: [],
+        dataQuery: { collectionName: "order_bookers" },
+      },
+    },
+    invoice_maker: {
+      type: "text",
+      default: pb.authStore.model.id,
+      hidden: true,
+      baseProps: {
+        label: "INVOICE MAKER",
+      },
+    },
+    party: {
+      type: "select",
+      baseProps: { label: "Party", searchable: true, data: [], },
+    },
+    type: {
+      type: "select",
+      hidden: true,
+      baseProps: { label: "type", searchable: true, data: ["purchase", "sale"] },
+    },
+    duedate: { type: "datetime", baseProps: { label: "DUE DATE" } },
+    deleted: {
+      type: "switch",
+      hidden: true,
+      default: false,
+      baseProps: { label: "DELETED", disabled: true },
+    },
+  },
+  collectionName: "invoices",
 };

@@ -60,10 +60,6 @@ export default function NavbarMinimal(props) {
 
   return (
     <nav className={classes.navbar}>
-      <Center>
-        AA
-      </Center>
-
       <div className={classes.navbarMain}>
         <Stack justify="center" gap={0}>
           {links}

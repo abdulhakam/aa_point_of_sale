@@ -1,8 +1,20 @@
-"use Client";
+"use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD, { crud } from "@/app/api/useAPI";
 import pb from "@/app/pocketbase";
-import { Button, Flex, Group, Modal, NumberInput, Select, Space, Stack, Text, Textarea } from "@mantine/core";
+import {
+  Button,
+  Checkbox,
+  Flex,
+  Group,
+  Modal,
+  NumberInput,
+  Select,
+  Space,
+  Stack,
+  Text,
+  Textarea,
+} from "@mantine/core";
 import { useForm } from "@mantine/form";
 import Transactions from "./transactions";
 import { useState } from "react";
@@ -10,6 +22,7 @@ import idGenerator from "@/app/components/functions/idGenerator";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDisclosure } from "@mantine/hooks";
 import { TransactionForm } from "./TransactionForm";
+import { DateInput } from "@mantine/dates";
 
 export default function InvoiceForm(props) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -17,7 +30,7 @@ export default function InvoiceForm(props) {
   const qc = useQueryClient();
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
-    expand: "party,invoice_maker",
+    expand: "party,invoice_maker,booker",
     filter: `type="${props.type === "sale" ? "sale" : "purchase"}"`,
     queryKey: `${props.type}Invoices`,
   });
@@ -26,26 +39,46 @@ export default function InvoiceForm(props) {
     filter: props.type === "sale" ? 'type="customer"||type="both"' : 'type="supplier"||type="both"',
     queryKey: props.type === "sale" ? "customers" : "suppliers",
   });
-  const items = useCRUD().fullList({ collection: "items" });
+  const items = useCRUD().fullList({ collection: "items",expand:'category' });
   const user = useCRUD().read({ collection: "users", recordID: pb.authStore?.model?.id });
+  const counts = useCRUD().read({ collection: "counts_for_row_numbers", recordID: "1" });
+  const bookers = useCRUD().fullList({
+    collection:'order_bookers'
+  })
   const newInvoice = useMutation({
     mutationFn: crud.create,
     onSuccess: () => {
       paymentCreator();
     },
   });
-  const updateInvoice = useMutation({ mutationFn: crud.update, onSuccess: () => {qc.invalidateQueries(); paymentPayer() }});
+  const updateInvoice = useMutation({
+    mutationFn: crud.update,
+    onSuccess: () => {
+      qc.invalidateQueries();
+      paymentPayer();
+    },
+  });
   const invoiceForm = useForm({
     initialValues: {
       invoiceNo: "new",
-      party: "pty000000000000",
+      booker:'',
       invoice_maker: pb.authStore?.model?.id,
+      party: "pty000000000000",
       discount_1: 0,
       discount_2: 0,
+      completed:false,
+      duedate:new Date(),
       description: "",
     },
   });
-  const newPayment = useMutation({ mutationFn: crud.create, onSuccess: () => {qc.invalidateQueries();close()} });
+  const newPayment = useMutation({
+    mutationFn: crud.create,
+    onSuccess: () => {
+      qc.invalidateQueries();
+      close();
+    },
+  });
+
   function getInvoiceData(value) {
     if (value !== "new") {
       const invoice = invoices.data.find((inv) => inv.id === value);
@@ -83,7 +116,9 @@ export default function InvoiceForm(props) {
     };
     if (paidAmount > 0) {
       newPayment.mutate({ collection: "payments", data });
-    }else{close()}
+    } else {
+      close();
+    }
   }
   function invoiceCreator() {
     const data = {
@@ -91,10 +126,10 @@ export default function InvoiceForm(props) {
         invoices.data.filter((inv) => inv.type === props.type).length + 1,
         props.type === "sale" ? "pos" : "pop"
       ),
-      invoice_maker: user.data?.id,
+      invoiceNo: (props.type === "sale" ? counts.data.sale_invoices : counts.data.purchase_invoices) + 1,
+      invoice_maker: user.data.id,
       party: invoiceForm.values.party,
-      transactions: [],
-      type: props.type === "sale" ? "sale" : "purchase",
+      type: props.type,
     };
     invoiceForm.setFieldValue("invoiceNo", data.id);
     newInvoice.mutate({ collection: "invoices", data: data });
@@ -104,9 +139,11 @@ export default function InvoiceForm(props) {
       party: invoiceForm.values.party,
       discount_1: invoiceForm.values.discount_1,
       discount_2: invoiceForm.values.discount_2,
+      duedate: invoiceForm.values.duedate,
+      completed: invoiceForm.values.completed,
       description: invoiceForm.values.description,
     };
-    updateInvoice.mutate({ collection: "invoices", recordID: invoiceForm.values.invoiceNo, data: data })
+    updateInvoice.mutate({ collection: "invoices", recordID: invoiceForm.values.invoiceNo, data: data });
   }
   const invoice = invoices.data?.find((inv) => inv.id === invoiceForm.values.invoiceNo);
   const final_total = () => {
@@ -114,18 +151,24 @@ export default function InvoiceForm(props) {
       invoice?.discount_1 !== invoiceForm.values.discount_1 ||
       invoice?.discount_2 !== invoiceForm.values.discount_2
     ) {
-      return invoice?.total - invoiceForm.values.discount_1 - invoiceForm.values.discount_2;
+      return (
+        invoice?.total -
+        invoice?.total * (invoiceForm.values.discount_1 / 100) -
+        (invoice?.total * (invoiceForm.values.discount_1 / 100) * invoiceForm.values.discount_2) / 100
+      );
     } else {
       return invoice.final_total;
     }
   };
-  const queries = [invoices, parties, user, items];
+  const queries = [invoices, parties, user, items, counts, bookers];
   if (checkSuccess(queries)) {
     return (
       <>
         <Modal opened={opened} centered onClose={close} title='Confirm Invoice?'>
-          <NumberInput readOnly label='TOTAL for invoice' value={final_total()} />
+          <DateInput label='PAYMENT DUE DATE' {...invoiceForm.getInputProps("duedate")} />
+          <NumberInput readOnly label='Total Amount' value={final_total()} />
           <NumberInput onChange={(v) => setPaidAmount(Number(v))} label='Paid Amount' value={paidAmount} />
+          <Checkbox m={"xs"} label='Order Completed' {...invoiceForm.getInputProps("completed")} />
           <Group mt={"md"} justify='end'>
             <Button
               onClick={() => {
@@ -138,23 +181,27 @@ export default function InvoiceForm(props) {
           </Group>
         </Modal>
         <Text size='xl' fw={600}>
-          {String(props.type).toUpperCase()} INVOICE
+          {props.type.toUpperCase()} INVOICE
         </Text>
         <hr />
         <Group>
-          <Stack>
+          <Stack gap={0}>
             <Group>
               <Group>
                 <Text ml={"xs"} fw={500}>
                   {"INVOICE NO:"}
                 </Text>
                 <Select
-                  w={"10rem"}
+                  w={"8rem"}
+                  rightSectionWidth={0}
                   variant={editing ? "unstyled" : "default"}
                   readOnly={editing ? true : false}
                   allowDeselect={false}
                   searchable
-                  data={[...invoices.data.map((inv) => inv.id), "new"]}
+                  data={[
+                    ...invoices.data.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) })),
+                    { value: "new", label: "new" },
+                  ]}
                   {...invoiceForm.getInputProps("invoiceNo")}
                 />
 
@@ -169,6 +216,25 @@ export default function InvoiceForm(props) {
                   </Button>
                 )}
               </Group>
+              {props.type === "sale" && (
+                <Group>
+                  <Text ml={"xs"} fw={500}>
+                    {"BOOKER:"}
+                  </Text>
+                  <Select
+                    w={"10rem"}
+                    rightSectionWidth={0}
+                    variant={editing ? "unstyled" : "default"}
+                    readOnly={editing ? true : false}
+                    allowDeselect={false}
+                    searchable
+                    data={[
+                      ...bookers.data.map((bkr) => ({ value: bkr.id, label: bkr.name })),
+                    ]}
+                    {...invoiceForm.getInputProps("booker")}
+                  />
+                </Group>
+              )}
               {(invoiceForm.values.invoiceNo === "new" || editing) && (
                 <>
                   <Group>
@@ -177,6 +243,7 @@ export default function InvoiceForm(props) {
                       variant={
                         editing === true || invoiceForm.values.invoiceNo !== "new" ? "unstyled" : "default"
                       }
+                      rightSectionWidth={0}
                       readOnly={editing === true || invoiceForm.values.invoiceNo !== "new" ? true : false}
                       allowDeselect={false}
                       searchable
@@ -204,55 +271,62 @@ export default function InvoiceForm(props) {
                 </Button>
               )}
             </Group>
-            {editing && (
-              <Group align={"end"}>
-                <NumberInput readOnly label={"Total"} defaultValue={0} value={invoice.total || 0} />
-                <NumberInput
-                  variant='default'
-                  label={"Discount_1"}
-                  rightSection={" "}
-                  {...invoiceForm.getInputProps("discount_1")}
-                />
-                <NumberInput
-                  variant='default'
-                  label={"Discount_2"}
-                  rightSection={" "}
-                  {...invoiceForm.getInputProps("discount_2")}
-                />
-                <NumberInput
-                  readOnly
-                  label={"Total After Discount"}
-                  defaultValue={0}
-                  value={final_total() || 0}
-                />
-                <Button
-                  onClick={() => {
-                    open();
-                    // setPaidAmount(final_total());
-                  }}
-                >
-                  Commit
-                </Button>
-              </Group>
-            )}
           </Stack>
           {editing && (
-            <Group>
+            <Stack gap={0}>
               <Textarea
                 autosize
-                minRows={3}
-                maxRows={3}
+                minRows={2}
                 label='description'
                 {...invoiceForm.getInputProps("description")}
               />
-            </Group>
+            </Stack>
           )}
         </Group>
-        <Stack>
+        <Stack gap={"0.3rem"}>
           {editing ? (
             <>
               <TransactionForm type={props.type} items={items.data} invoice={invoiceForm.values.invoiceNo} />
               <Transactions invoice={invoiceForm.values.invoiceNo} />
+              {editing && (
+                <Stack gap={0} align='end'>
+                  <NumberInput
+                    mr={"6.5rem"}
+                    readOnly
+                    label={"Total"}
+                    defaultValue={0}
+                    value={invoice.total || 0}
+                  />
+                  <Group align={"end"}>
+                    <NumberInput
+                      variant='default'
+                      label={"Discount_1"}
+                      rightSection={" "}
+                      {...invoiceForm.getInputProps("discount_1")}
+                    />
+                    <NumberInput
+                      variant='default'
+                      label={"Discount_2"}
+                      rightSection={" "}
+                      {...invoiceForm.getInputProps("discount_2")}
+                    />
+                    <NumberInput
+                      readOnly
+                      label={"Total After Discount"}
+                      defaultValue={0}
+                      value={final_total() || 0}
+                    />
+                    <Button
+                      onClick={() => {
+                        open();
+                        // setPaidAmount(final_total());
+                      }}
+                    >
+                      Commit
+                    </Button>
+                  </Group>
+                </Stack>
+              )}
             </>
           ) : (
             <h2>Please Edit or Create a new Invoice</h2>
@@ -262,3 +336,5 @@ export default function InvoiceForm(props) {
     );
   } else return <StatusCheck check={queries} />;
 }
+
+//TODO: turn payments to a custom hook

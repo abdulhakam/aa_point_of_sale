@@ -19,3 +19,14 @@ export const itemFormStructure: FormStructure<Item> = {
   onUpdate: (data) => {pb.collection('items').update(data.id,data)},
   onDelete: (data) => {pb.collection('items').delete(data.id)},
 };
+
+export const itemCreateForm = {
+  fields: {
+    name: { type: "text", default: "", baseProps: { label: "Name" } },
+    cost_price: { type: "number", default: 0, baseProps: { label: "CP" } },
+    sale_price: { type: "number", default: 0, baseProps: { label: "SP" } },
+    box_size_qty: { type: "number", default: 1, baseProps: { label: "Box Size" } },
+    category: { type: "select", default: "", baseProps: { label: "Category", searchable: true, data: [],dataQuery: { collectionName: "categories" }, } },
+  },
+  collectionName:'items',
+};

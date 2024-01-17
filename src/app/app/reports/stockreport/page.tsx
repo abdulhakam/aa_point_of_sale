@@ -7,16 +7,16 @@ import dataFilter from "@/app/components/functions/dataFilter";
 import { useState } from "react";
 import { Button, Flex, Group, Modal, Select, Table, Text, TextInput } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { DatePicker } from "@mantine/dates";
+import { qtyDisplay } from "@/app/components/functions/qtyParser";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
   { accessor: "created", hidden: true },
   { accessor: "category", sortable: true },
   { accessor: "name",  },
-  { accessor: "cost_price", sortable: true },
-  { accessor: "sale_price", sortable: true },
-  { accessor: "qty", sortable: true, },
+  { accessor: "cost_price", sortable: true,title:'CP' },
+  { accessor: "sale_price", sortable: true,title:'SP' },
+  { accessor: "qty", sortable: true,render:(record)=>qtyDisplay(record,record.qty) },
   { accessor: "box_size_qty", sortable: true },
 ];
 
@@ -35,7 +35,6 @@ export default function ItemsReport() {
     ],
     itemsReport.data
     )
-    console.log(filteredData)
   const queries = [itemsReport, categories];
   if (checkSuccess(queries)) {
     return (
@@ -43,7 +42,7 @@ export default function ItemsReport() {
         <Modal centered opened={opened} onClose={close} title='Filter Data'>
           <Select
             label={"Please Select Category"}
-            data={categories.data.map((cat) => ({ value: cat.name, label: cat.name }))}
+            data={[...categories.data.map((cat) => ({ value: cat.name, label: cat.name })),{value:'',label:'All'}]}
             value={filterValue}
             onChange={setFilter}
           />

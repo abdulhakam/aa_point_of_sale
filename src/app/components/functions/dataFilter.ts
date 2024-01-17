@@ -1,3 +1,10 @@
+/**
+ * Filters the given data array based on the provided filters.
+ *
+ * @param {array} filters - An array of filters to apply to the data. Each filter is an object with a `key` and `value`.
+ * @param {array} data - The data array to filter.
+ * @return {array} - The filtered data array.
+ */
 export default function dataFilter(filters = [], data = []) {
   function getExpandedValue(item, property) {
     return item.hasOwnProperty("expand")
@@ -17,7 +24,7 @@ export default function dataFilter(filters = [], data = []) {
           const expandedValue = getExpandedValue(item, property);
 
           if (typeof expandedValue === "string") {
-            return expandedValue.toLowerCase().includes(value.toLowerCase());
+            return String(expandedValue).toLowerCase().includes(String(value).toLowerCase());
           } else if (typeof expandedValue === "number" && !isNaN(value)) {
             return expandedValue === Number(value);
           }
@@ -27,7 +34,7 @@ export default function dataFilter(filters = [], data = []) {
         const expandedValue = getExpandedValue(item, key);
 
         if (typeof expandedValue === "string" && typeof value === "string") {
-          return expandedValue.toLowerCase().includes(value.toLowerCase());
+          return String(expandedValue).toLowerCase().includes(String(value).toLowerCase());
         } else if (typeof expandedValue === "number" && !isNaN(value)) {
           return expandedValue === Number(value);
         }

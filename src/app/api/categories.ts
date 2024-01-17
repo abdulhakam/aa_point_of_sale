@@ -31,3 +31,12 @@ export const categoryFormStructure: FormStructure<Category> = {
   onUpdate: (data) => pb.collection('categories').update(data.id,data),
   onDelete: (data) => {pb.collection('categories').delete(data.id)},
 };
+
+export const categoryCreateForm = {
+  fields: {
+    id: { type: "text", baseProps: { label: "ID" } },
+    name: { type: "text", baseProps: { label: "Name" } },
+    deleted: { type: "switch", default: false, baseProps: { label: "DELETED", disabled: true } },
+  },
+  collectionName: "categories",
+};

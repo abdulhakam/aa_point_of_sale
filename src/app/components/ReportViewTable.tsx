@@ -20,6 +20,9 @@ export default function ReportViewTable(props) {
   return (
     <>
       <DataTable
+      fz={'xs'}
+      verticalSpacing={0}
+      horizontalSpacing={2}
         withTableBorder
         withColumnBorders
         records={records}

@@ -5,19 +5,19 @@ import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import ReportViewTable from "@/app/components/ReportViewTable";
 import dataFilter from "@/app/components/functions/dataFilter";
 import { useState } from "react";
-import { Button, Flex, Group, Modal, Select, Stack, Table, Text, TextInput } from "@mantine/core";
+import { Button, Flex, Group, Modal, Select, Stack, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { DatePicker } from "@mantine/dates";
+import {qtyDisplay} from "@/app/components/functions/qtyParser"
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
   { accessor: "created", hidden: true },
-  { accessor: "item" },
-  { accessor: "qty" },
-  { accessor: "price" },
-  { accessor: "discount_1" },
-  { accessor: "discount_2" },
-  { accessor: "total" },
+  { accessor: "item" ,width:'10em'},
+  { accessor: "qty" , width:'5em', render:(record)=>qtyDisplay(record.expand.item,record.qty) },
+  { accessor: "price" , width:'3em' },
+  { accessor: "discount_1", title: "D1", width:'2em'},
+  { accessor: "discount_2", title: "D2", width:'3em'},
+  { accessor: "total", width:'4em'},
 ];
 
 export default function InvoicePrint() {
@@ -29,8 +29,8 @@ export default function InvoicePrint() {
     expand: "invoice_maker,party",
   });
   const transactions = useCRUD().fullList({ collection: "transaction_view", expand: "item" });
-  const filterKey = "invoice";
-  const filteredData = dataFilter([{ key: filterKey, value: filterValue }], transactions.data);
+  const filteredData = dataFilter([{ key: "invoice", value: filterValue }], transactions.data);
+  const filteredInvoices = invoices.data?.filter((inv) => inv.type === type);
   const invoice = invoices.data?.find((inv) => inv.id === filterValue);
   const queries = [invoices, transactions];
   if (checkSuccess(queries)) {
@@ -38,69 +38,87 @@ export default function InvoicePrint() {
       <>
         <Modal centered opened={opened} onClose={close} title='Filter Data'>
           <Select
-          searchable
-            label={"Please Select Invoice:"}
-            data={invoices.data.map((inv) => inv.id)}
+            searchable
+            allowDeselect={false}
+            label={"Invoice Type:"}
+            data={["purchase", "sale"]}
+            value={type}
+            onChange={setType}
+          />
+          <Select
+            searchable
+            label={"Invoice No:"}
+            data={filteredInvoices.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) }))}
             value={filterValue}
             onChange={setFilter}
           />
           <Button
+            mt={"sm"}
             onClick={() => {
-              setType(invoices.data.find((inv) => inv.id === filterValue).type);
               close();
             }}
           >
             OK
           </Button>
         </Modal>
-        <Button onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
-          {`${type.toUpperCase()} INVOICE`}
-        </Button>
+        <Flex align={"center"} justify={"space-between"}>
+          <Button p={0} onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
+            {`${type.toUpperCase()} INVOICE`}
+          </Button>
+          <Text size={"xs"}>{`Invoice Date: ${new Date(invoice?.created).toLocaleDateString("en", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          })}`}</Text>
+        </Flex>
         {filterValue !== "" && (
           <>
-            <Text>{`Invoice #: ${filterValue}`}</Text>
-            <Text>{`Invoice Maker: ${invoice?.expand.invoice_maker.name}`}</Text>
-            <Text>{`Party: ${invoice?.expand.party.name}`}</Text>
+            <Flex justify={"space-between"}>
+              <Text size={"xs"}>{`Invoice #: ${invoice?.invoiceNo}`}</Text>
+              <Text size={"xs"}>{`Invoice Maker: ${invoice?.expand.invoice_maker.name}`}</Text>
+              <Text size={"xs"}>{`Party: ${invoice?.expand.party.name}`}</Text>
+            </Flex>
             <hr />
             <ReportViewTable columns={tableStructure} data={filteredData} />
             <Flex
               justify={"end"}
               align={"center"}
+              mr={'0.5rem'}
+              mt={'-4.15em'}
+              h={'4em'}
               style={{
-                border: "1px solid lightgray",
                 position: "relative",
-                marginTop: "-4.15rem",
-                height: "4rem",
               }}
             >
-              <Stack justify="end" align="end">
+              <Stack justify='end' align='end'>
                 <Group mr={0}>
-                  <Text mr={"3rem"} size='lg'>
+                  <Text mr={"1em"} size='xs'>
                     Total
                   </Text>
-                  <Text mr={"7rem"} size='lg' fw={700}>
+                  <Text size='xs' fw={700}>
                     {invoice.total}
                   </Text>
-                </Group> 
+                </Group>
                 <Group mt={-10}>
-                <Text mr={"1rem"} size='md'>
+                  <Text mr={"1em"} size='xs'>
                     Discount_1
                   </Text>
-                  <Text mr={"4rem"} size='md' fw={700}>
+                  <Text mr={"1em"} size='xs' fw={700}>
                     {invoice.discount_1}
-                  </Text><Text mr={"1rem"} size='md'>
+                  </Text>
+                  <Text mr={"1em"} size='xs'>
                     Discount_2
                   </Text>
-                  <Text mr={"4rem"} size='md' fw={700}>
+                  <Text mr={"1em"} size='xs' fw={700}>
                     {invoice.discount_2}
                   </Text>
-                  <Text mr={"3rem"} size='xl'>
-                    Total After Discount
+                  <Text mr={"1em"} size='sm'>
+                    Invoice Total
                   </Text>
-                  <Text mr={"7rem"} size='xl' fw={700}>
+                  <Text size='md' fw={700}>
                     {invoice.final_total}
                   </Text>
-                </Group>  
+                </Group>
               </Stack>
             </Flex>
           </>

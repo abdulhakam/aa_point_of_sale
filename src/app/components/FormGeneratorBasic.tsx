@@ -73,8 +73,6 @@ export default function FormGeneratorBasic(props) {
         case "text":
           return (
             <TextInput
-              
-              
               variant={props.editable ? "default" : "unstyled"}
               readOnly={!props.editable}
               key={`${key}-input-${field.name}`}
@@ -109,8 +107,6 @@ export default function FormGeneratorBasic(props) {
         case "checkbox":
           return (
             <Checkbox
-              
-              
               variant={props.editable ? "default" : "unstyled"}
               readOnly={!props.editable}
               key={`${key}-input-${field.name}`}

@@ -48,13 +48,14 @@ export async function deleteTransaction(rid) {
 
 export const transactionFormStructure: FormStructure<Transaction> = {
   fields: {
-    created: { type: "datetime", baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
-    updated: { type: "datetime", baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },
-    id: { type: "autocomplete", baseProps: { label: "id", readOnly: true, variant: "unstyled" } },
+    created: { type: "datetime", hidden:true, baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
+    updated: { type: "datetime", hidden:true, baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },
+    id: { type: "autocomplete", hidden:true, baseProps: { label: "id", readOnly: true, variant: "unstyled" } },
     invoice: { type: "text", baseProps: { label: "Invoice" } },
     item: { type: "select", baseProps: { label: "Item", data: [] } },
     price: { type: "number", baseProps: { label: "price" } },
     qty: { type: "number", baseProps: { label: "qty" } },
+    scheme: { type: "number", baseProps: { label: "scheme" } },
     discount_1: { type: "number", baseProps: { label: "discount_1" } },
     discount_2: { type: "number", baseProps: { label: "discount_2" } },
     total: { type: "number", baseProps: { label: "Total", readOnly: true } },
