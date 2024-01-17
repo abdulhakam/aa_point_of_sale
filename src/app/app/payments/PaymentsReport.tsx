@@ -2,33 +2,52 @@
 import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
-import { Button, Flex, Group, Modal, Select, Stack, Text } from "@mantine/core";
+import { Box, Button, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import dataFilter from "@/app/components/functions/dataFilter";
 import NewPayment from "./NewPayment";
-import { IconSearch } from "@tabler/icons-react";
 
 export default function PaymentsReport() {
   const [opened, { open, close }] = useDisclosure(false);
-  const [party, setParty] = useState("");
-  const [paymentType, setPaymentType] = useState("all");
-  const payments = useCRUD().fullList({ collection: "payments_view", expand: "invoice", sort: "+created" });
+  const payments = useCRUD().fullList({
+    collection: "payments_view",
+    expand: "invoice,party,area,section,booker",
+    sort: "",
+  });
   const invoices = useCRUD().fullList({ collection: "invoices" });
   const parties = useCRUD().fullList({ collection: "parties" });
+  //filter vars
+  const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,booker,(date---not it report type)
+  const [party, setParty] = useState("All");
+  const [paymentType, setPaymentType] = useState("all");
+  //
   const filteredPayments = dataFilter(
     [
-      { key: "party", value: party },
+      { key: "party", value: party === "All" ? "" : party },
       { key: "type", value: paymentType === "all" ? "" : paymentType },
     ],
     payments.data
   );
   const tableStructure: DataTableColumn[] = [
     { accessor: "id", hidden: true },
-    { accessor: "created", sortable: true },
+    {
+      accessor: "created",
+      title: "Date",
+      render: (record) => <>{record.created.slice(0, 10)}</>,
+      sortable: true,
+    },
     {
       accessor: "type",
+      sortable: true,
+    },
+    {
+      accessor: "area",
+      sortable: true,
+    },
+    {
+      accessor: "section",
       sortable: true,
     },
     {
@@ -37,36 +56,47 @@ export default function PaymentsReport() {
       render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
     },
     { accessor: "party", sortable: true },
+    { accessor: "booker", hidden: reportType === "Sending", sortable: true },
     { accessor: "amount", sortable: true },
     {
       accessor: "paid",
-      sortable: true,
+      hidden: true,
       title: "Payment",
       render: (record) => <>{record.paid ? "O" : "X"}</>,
     },
     { accessor: "description", sortable: true },
   ];
-  const { total, totalPaid, invoiceTotal } = calculator(
-    filteredPayments?.map((pmnt) => ({
-      ...pmnt,
-      expand: {
-        ...pmnt.expand,
-        party: { ...parties.data?.find((pty) => pty.id === pmnt.party) },
-      },
-    }))
-  );
+  const { total, totalPaid, invoiceTotal, totalSending, totalRecieving, recieving, recieved, sending, sent } =
+    calculator(
+      filteredPayments?.map((pmnt) => ({
+        ...pmnt,
+        expand: {
+          ...pmnt.expand,
+          party: { ...parties.data?.find((pty) => pty.id === pmnt.party) },
+        },
+      }))
+    );
+  const finalData = [
+    ["Sending", sending, "Sent", sent, "Sending Total", totalSending],
+    ["Recieving", recieving, "Recieved", recieved, "Recieving Total", totalRecieving],
+    ["Invoice Total", invoiceTotal, "Paid Total", totalPaid, "Total", total],
+  ];
   const queries = [payments, invoices, parties];
   if (checkSuccess(queries)) {
     return (
       <>
         <Modal centered opened={opened} onClose={close} title='Filter Data'>
           <Select
+            label={"Select Report Type"}
+            data={["All", "Sending", "Recieving", "Area", "Booker", "Party"]}
+            value={reportType}
+            onChange={setReportType}
+          />
+          <Select
             label={"Select Party"}
-            data={[
-              ...parties.data.map((pty) => ({ value: pty.id, label: pty.name })),
-              { value: "", label: "All" },
-            ]}
+            data={[...parties.data.map((pty) => pty.name), "All"]}
             value={party}
+            searchable
             onChange={setParty}
           />
           <Select
@@ -77,13 +107,13 @@ export default function PaymentsReport() {
           />
           <Button onClick={close}>OK</Button>
         </Modal>
-        <Group align="center">
+        <Group align='center'>
           <Button onClick={open} variant='transparent' m={0} p={0} size='compact-lg' fw={"700"} color='black'>
             {`PAYMENTS REPORT`}
           </Button>
           <NewPayment />
         </Group>
-        <Text size={"md"}>{`Party: ${parties.data?.find((pty) => pty.id === party)?.name || "all"}`}</Text>
+        <Text size={"md"}>{`Party: ${party}`}</Text>
         <hr />
         <DataViewTable
           report
@@ -93,20 +123,17 @@ export default function PaymentsReport() {
           rowStyle={({ paid, invoice, type }) =>
             invoice
               ? null
-              : type === "recieving"
+              : type !== "sending"
               ? paid
                 ? { color: "green" }
-                : { color: "red" }
+                : { color: "maroon" }
               : paid
-              ? { color: "red" }
+              ? { color: "maroon" }
               : { color: "green" }
           }
           formstructure={{}}
           columns={tableStructure}
-          data={filteredPayments?.map((pmnt) => ({
-            ...pmnt,
-            expand: { ...pmnt.expand, party: { ...parties.data?.find((pty) => pty.id === pmnt.party) } },
-          }))}
+          data={filteredPayments}
         />
         <Flex
           justify={"end"}
@@ -118,24 +145,18 @@ export default function PaymentsReport() {
             position: "relative",
           }}
         >
-          <Stack justify='end' align='end'>
-            <Group mr={0}>
-              <Text mr={"1em"} size='xs'>
-                Invoice Total
-              </Text>
-              <Text size='xs' fw={700}>
-                {invoiceTotal}
-              </Text>
-              <Text mr={"1em"} size='xs'>
-                Paid Total
-              </Text>
-              <Text size='xs' fw={700}>
-                {totalPaid}
-              </Text>
-
-              <Text mr={"1em"}>Total</Text>
-              <Text fw={700}>{total}</Text>
-            </Group>
+          <Stack>
+            {finalData.map((row, i) => {
+              return (
+                <Group my={"-0.5rem"} key={i}>
+                  {row.map((cell, iter) => (
+                    <Text size='xs' w={"6rem"} fw={iter % 2 ? "700" : "400"} key={iter}>
+                      {cell}
+                    </Text>
+                  ))}
+                </Group>
+              );
+            })}
           </Stack>
         </Flex>
       </>
@@ -145,12 +166,36 @@ export default function PaymentsReport() {
 
 function calculator(payments) {
   let invoiceTotal = 0;
-  let paid = 0;
+  let recieving = 0;
+  let recieved = 0;
+  let sending = 0;
+  let sent = 0;
+  let totalPaid = 0;
   for (const pmnt of payments) {
-    pmnt.paid ? (paid += pmnt.amount) : (invoiceTotal += pmnt.amount);
+    pmnt.type === "sending"
+      ? pmnt.paid
+        ? (sent += pmnt.amount)
+        : (sending += pmnt.amount)
+      : pmnt.paid
+      ? (recieved += pmnt.amount)
+      : (recieving += pmnt.amount);
   }
 
-  const total = Number((invoiceTotal - paid).toFixed(2));
-  return { total, invoiceTotal, totalPaid: paid };
+  for (const pmnt of payments) {
+    pmnt.paid ? (totalPaid += pmnt.amount) : (invoiceTotal += pmnt.amount);
+  }
+  const totalSending = Number((sending - sent).toFixed(2));
+  const totalRecieving = Number((recieving - recieved).toFixed(2));
+  const total = Number((invoiceTotal - totalPaid).toFixed(2));
+  return {
+    total,
+    totalSending,
+    totalRecieving,
+    invoiceTotal: Number(invoiceTotal).toFixed(2),
+    totalPaid: Number(totalPaid).toFixed(2),
+    recieving: Number(recieving).toFixed(2),
+    recieved: Number(recieved).toFixed(2),
+    sending: Number(sending).toFixed(2),
+    sent: Number(sent).toFixed(2),
+  };
 }
-//TODO: CALCULATE TOTAL PAYMENTS TO RECIEVE TO PAY AND TOTALS
