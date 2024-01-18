@@ -11,7 +11,7 @@ export function qtyDisplay(item, qty) {
   const numPcs = qty % boxSizeQty;
   const boxLabel = numBoxes === 1 ? 'bx' : 'bxs';
   const pcsLabel = numPcs === 1 ? 'pc' : 'pcs';
-  return `${numBoxes>0?numBoxes:numBoxes+1} ${boxLabel} ${numPcs} ${pcsLabel}`;
+  return `${numBoxes>=0?numBoxes:numBoxes+1} ${boxLabel} ${numPcs} ${pcsLabel}`;
 }
 
 /**

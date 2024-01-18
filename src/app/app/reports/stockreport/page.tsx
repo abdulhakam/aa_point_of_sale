@@ -8,11 +8,13 @@ import { useState } from "react";
 import { Button, Flex, Group, Modal, Select, Table, Text, TextInput } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
+import DataViewTable from "@/app/components/DataViewTable";
+import NumberAddress from "@/app/components/NumberAddress/NumberAddress";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
   { accessor: "created", hidden: true },
-  { accessor: "category", sortable: true },
+  { accessor: "category", title:'Company', sortable: true },
   { accessor: "name",  },
   { accessor: "cost_price", sortable: true,title:'CP' },
   { accessor: "sale_price", sortable: true,title:'SP' },
@@ -48,11 +50,15 @@ export default function ItemsReport() {
           />
           <Button onClick={close}>OK</Button>
         </Modal>
-        <Button onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
+        <NumberAddress/>
+        <Button mb={'md'} onClick={open} variant='transparent' size='compact-lg' p={0} fw={"700"} color='black'>
           {`STOCK REPORT`}
         </Button>
-        <hr />
-        <ReportViewTable
+        <DataViewTable
+        report
+        fz={'sm'}
+        horizontalSpacing={'sm'}
+        verticalSpacing={0}
           rowStyle={({ party_type, amount }) =>
             party_type === "supplier"
               ? amount > 0

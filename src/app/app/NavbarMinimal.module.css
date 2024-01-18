@@ -7,6 +7,12 @@
   border-right: rem(1px) solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
 }
 
+/* @media print {
+  .navbar{
+    display:none;
+  }
+} */
+
 .navbarMain {
   flex: 1;
   margin-top: rem(50px);

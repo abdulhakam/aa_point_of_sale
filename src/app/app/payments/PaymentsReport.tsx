@@ -8,6 +8,7 @@ import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import dataFilter from "@/app/components/functions/dataFilter";
 import NewPayment from "./NewPayment";
+import { DatePicker } from "@mantine/dates";
 
 export default function PaymentsReport() {
   const [opened, { open, close }] = useDisclosure(false);
@@ -21,8 +22,12 @@ export default function PaymentsReport() {
   const sections = useCRUD().fullList({ collection: "sections" });
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
   //filter vars
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
+    new Date("2024-01-01"),
+    new Date(),
+  ]);
   const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,section,booker,(date---not in report type)
-  const [booker, setBooker] = useState("All");
+  const [bookerFilter, setBooker] = useState("All");
   const [areaFilter, setAreaFilter] = useState("All");
   const [sectionFilter, setSectionFilter] = useState("All");
   const [party, setParty] = useState("All");
@@ -30,15 +35,16 @@ export default function PaymentsReport() {
   //
   const filteredPayments = dataFilter(
     [
-      { key: "booker", value: booker === "All" ? "" : booker },
+      { key: "booker", value: bookerFilter === "All" ? "" : bookerFilter },
       { key: "area", value: areaFilter === "All" ? "" : areaFilter },
       { key: "section", value: sectionFilter === "All" ? "" : sectionFilter },
       { key: "party", value: party === "All" ? "" : party },
       { key: "type", value: paymentType === "all" ? "" : paymentType },
     ],
-    payments.data
+    payments.data?.filter(
+      (pmt) => dateRange[0] < new Date(pmt.created) && dateRange[1] > new Date(pmt.created)
+    )
   );
-  console.log(filteredPayments)
   const tableStructure: DataTableColumn[] = [
     { accessor: "id", hidden: true },
     {
@@ -90,7 +96,16 @@ export default function PaymentsReport() {
     reportType !== "all"
       ? []
       : ["Recieving", recieving, "Recieved", recieved, "Recieving Total", totalRecieving],
-    reportType === "all" ? [] : ["Invoice Total", invoiceTotal, "Paid Total", totalPaid, "Total", total],
+    reportType === "all"
+      ? []
+      : [
+          reportType === "booker" ? "" : "Invoice Total",
+          reportType === "booker" ? "" : invoiceTotal,
+          reportType === "booker" ? "" : "Paid Total",
+          reportType === "booker" ? "" : totalPaid,
+          "Total",
+          total,
+        ],
   ];
   const queries = [payments, areas, sections, bookers, parties];
   if (checkSuccess(queries)) {
@@ -98,20 +113,19 @@ export default function PaymentsReport() {
       <>
         <Modal centered opened={opened} onClose={close} title='Filter Data'>
           <Stack>
+            <DatePicker type='range' size='xs' value={dateRange} onChange={setDateRange} />
             <Select
               label={"Select Booker"}
-              data={[
-                ...bookers.data?.map((bkr) => bkr.name),'All'
-              ]}
-              value={booker}
+              data={[...bookers.data?.map((bkr) => bkr.name), "All"]}
+              value={bookerFilter}
               searchable
               onChange={(v) => {
                 setBooker(v);
-                setSectionFilter(v);
+                setSectionFilter("All");
                 setAreaFilter("All");
                 setPaymentType("all");
                 setParty("All");
-                setReportType("section");
+                setReportType("booker");
               }}
             />
             <Select
@@ -156,6 +170,8 @@ export default function PaymentsReport() {
               onChange={(v) => {
                 setParty(v);
                 setPaymentType("all");
+                setAreaFilter("All");
+                setSectionFilter("All");
                 setReportType("party");
               }}
             />
@@ -172,12 +188,11 @@ export default function PaymentsReport() {
             <Group>
               <Button
                 onClick={() => {
-                  setSectionFilter("All");
                   setAreaFilter("All");
-                  setReportType("all");
                   setSectionFilter("All");
                   setParty("All");
                   setPaymentType("all");
+                  setReportType("all");
                 }}
               >
                 RESET
@@ -188,11 +203,34 @@ export default function PaymentsReport() {
         </Modal>
         <Group align='center'>
           <Button onClick={open} variant='transparent' m={0} p={0} size='compact-lg' fw={"700"} color='black'>
-            {`PAYMENTS REPORT`}
+            {reportType === "all" && `ALL PAYMENTS`}
+            {reportType === "sending" && `PURCHASES REPORT`}
+            {reportType === "recieving" && `SALES REPORT`}
+            {reportType === "area" && `AREA REPORT`}
+            {reportType === "section" && `SECTION REPORT`}
+            {reportType === "party" && `PARTY PAYMENTS REPORT`}
+            {reportType === "booker" && `BOOKER INVOICE REPORT`}
           </Button>
           <NewPayment />
         </Group>
-        {party !== "All" && <Text size={"md"}>{`Party: ${party}`}</Text>}
+        <Group justify='end'>
+          <Text size={"sm"}>{`DATE FROM: ${dateRange[0].toLocaleDateString("en", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}`}</Text>
+          <Text size={"sm"}>{`DATE TO: ${dateRange[0].toLocaleDateString("en", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          })}`}</Text>
+        </Group>
+        <Group justify="space-between">
+          {bookerFilter !== "All" && <Text size={"sm"}>{`BOOKER: ${bookerFilter}`}</Text>}
+          {party !== "All" && <Text size={"sm"}>{`Party: ${party}`}</Text>}
+          {sectionFilter !== "All" && <Text size={"sm"}>{`Section: ${sectionFilter}`}</Text>}
+          {areaFilter !== "All" && <Text size={"sm"}>{`Area: ${areaFilter}`}</Text>}
+        </Group>
         <hr />
         <DataViewTable
           report
