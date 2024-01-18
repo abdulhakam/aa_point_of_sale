@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Box, Button, Flex, Group, Modal, Select, Stack, Text, TextInput, Textarea } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
+import NumberAddress from "@/app/components/NumberAddress/NumberAddress";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
@@ -23,7 +24,7 @@ const tableStructure: DataTableColumn[] = [
 export default function InvoicePrint() {
   const [opened, { open, close }] = useDisclosure(true);
   const [type, setType] = useState("sale");
-  const [filterValue, setFilter] = useState("");
+  const [filterValue, setFilter] = useState("1");
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
     expand: "invoice_maker,party,booker",
@@ -32,7 +33,6 @@ export default function InvoicePrint() {
   const filteredData = dataFilter([{ key: "invoice", value: filterValue }], transactions.data);
   const filteredInvoices = invoices.data?.filter((inv) => inv.type === type);
   const invoice = invoices.data?.find((inv) => inv.id === filterValue);
-  console.log(invoice);
   const queries = [invoices, transactions];
   if (checkSuccess(queries)) {
     return (
@@ -48,6 +48,7 @@ export default function InvoicePrint() {
           />
           <Select
             searchable
+            allowDeselect={false}
             label={"Invoice No:"}
             data={filteredInvoices.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) }))}
             value={filterValue}
@@ -62,6 +63,7 @@ export default function InvoicePrint() {
             OK
           </Button>
         </Modal>
+        <NumberAddress/>
         <Flex align={"center"} justify={"space-between"}>
           <Button p={0} onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
             {`${type.toUpperCase()} INVOICE`}
@@ -74,76 +76,76 @@ export default function InvoicePrint() {
         </Flex>
         {filterValue !== "" && (
           <>
-            <Text size={"xs"}>{`BOOKER: ${invoice?.expand.booker.name}`}</Text>
+            {type === "sale" && <Text size={"xs"}>{`BOOKER: ${invoice?.expand?.booker?.name}`}</Text>}
             <Flex justify={"space-between"}>
               <Text size={"xs"}>{`Invoice #: ${invoice?.invoiceNo}`}</Text>
               <Text size={"xs"}>{`Party: ${invoice?.expand.party.name}`}</Text>
               <Text size={"xs"}>{`Invoice Maker: ${invoice?.expand.invoice_maker.name}`}</Text>
             </Flex>
             <hr />
-            <ReportViewTable columns={tableStructure} data={filteredData} />
-            <Flex
-              justify={"end"}
-              align={"center"}
-              mr={"0.5rem"}
-              mt={"-5em"}
-              h={"4em"}
-              style={{
-                position: "relative",
-              }}
-            >
-              <Stack w={"100%"} justify='end' align='end'>
-                <Group mr={0} w={"100%"} justify='space-between'>
-                  {new Date(invoice?.duedate) > new Date(invoice?.created) ? (
-                    <Group>
-                      {invoice?.description && (
-                        <TextInput
-                          variant='unstyled'
-                          size='xs'
-                          value={invoice?.description}
-                        ></TextInput>
+            {invoice?.invoiceNo && (
+              <>
+                <ReportViewTable columns={tableStructure} data={filteredData} />
+                <Flex
+                  justify={"end"}
+                  align={"center"}
+                  mr={"0.5rem"}
+                  mt={"-4.5em"}
+                  h={"4em"}
+                  style={{
+                    position: "relative",
+                  }}
+                >
+                  <Stack w={"100%"} justify='end' align='end'>
+                    <Group mr={0} w={"100%"} justify='space-between'>
+                      {new Date(invoice?.duedate.slice(0, 10)) > new Date(invoice?.created.slice(0, 10)) ? (
+                        <Group>
+                          {invoice?.description && (
+                            <TextInput variant='unstyled' size='xs' value={invoice?.description}></TextInput>
+                          )}
+                          <Text ml={"1em"} fw={700} size='xs'>
+                            Due Date:
+                          </Text>
+                          <Text size='xs' fw={700}>
+                            {`${invoice?.duedate.slice(0, 10)} `}
+                          </Text>
+                        </Group>
+                      ) : (
+                        <></>
                       )}
-                      <Text ml={"1em"} fw={700} size='xs'>
-                        Due Date:
+                      <Group>
+                        <Text mr={"1em"} size='xs'>
+                          Total
+                        </Text>
+                        <Text size='xs' fw={700}>
+                          {invoice?.total || 0}
+                        </Text>
+                      </Group>
+                    </Group>
+                    <Group mt={-10}>
+                      <Text mr={"1em"} size='xs'>
+                        Discount_1
                       </Text>
-                      <Text size='xs' fw={700}>
-                        {invoice?.duedate.slice(0, 10)}
+                      <Text mr={"1em"} size='xs' fw={700}>
+                        {invoice?.discount_1 || 0}
+                      </Text>
+                      <Text mr={"1em"} size='xs'>
+                        Discount_2
+                      </Text>
+                      <Text mr={"1em"} size='xs' fw={700}>
+                        {invoice?.discount_2 || 0}
+                      </Text>
+                      <Text mr={"1em"} size='sm'>
+                        Invoice Total
+                      </Text>
+                      <Text size='md' fw={700}>
+                        {invoice?.final_total || 0}
                       </Text>
                     </Group>
-                  ) : (
-                    <></>
-                  )}
-                  <Group>
-                    <Text mr={"1em"} size='xs'>
-                      Total
-                    </Text>
-                    <Text size='xs' fw={700}>
-                      {invoice.total}
-                    </Text>
-                  </Group>
-                </Group>
-                <Group mt={-10}>
-                  <Text mr={"1em"} size='xs'>
-                    Discount_1
-                  </Text>
-                  <Text mr={"1em"} size='xs' fw={700}>
-                    {invoice.discount_1}
-                  </Text>
-                  <Text mr={"1em"} size='xs'>
-                    Discount_2
-                  </Text>
-                  <Text mr={"1em"} size='xs' fw={700}>
-                    {invoice.discount_2}
-                  </Text>
-                  <Text mr={"1em"} size='sm'>
-                    Invoice Total
-                  </Text>
-                  <Text size='md' fw={700}>
-                    {invoice.final_total}
-                  </Text>
-                </Group>
-              </Stack>
-            </Flex>
+                  </Stack>
+                </Flex>
+              </>
+            )}
           </>
         )}
       </>

@@ -6,9 +6,9 @@ import NavbarMinimal from "./NavbarMinimal";
 import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const isPrinting = useMediaQuery('print');
-  const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
-  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
+  // const isPrinting = useMediaQuery('print');
+  const [mobileOpened, { toggle: toggleMobile }] = useDisclosure(false);
+  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(false);
   const { date, time } = useDate();
   return (
     <AppShell
@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       navbar={{
         width: 80,
         breakpoint: "sm",
-        collapsed: { mobile: !mobileOpened, desktop: isPrinting? true : !desktopOpened },
+        collapsed: { mobile: !mobileOpened, desktop:  !desktopOpened },
       }}
       padding='0'
     >
