@@ -30,14 +30,14 @@ export default function Invoices() {
           value={search}
         />
       {invoices.isLoading && <h1>Loading...</h1>}
-      {invoices.status === "error" && <h2>{invoices.error.message}</h2>}
+      {invoices.status === "error" && <h2>{invoices.error?.message}</h2>}
       {invoices.status === "success" && (
         <DataViewTable
         report
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
           formstructure={invoiceFormStructure}
-          data={invoices.data}
+          data={invoices?.data}
         />
       )}
     </>

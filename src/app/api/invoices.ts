@@ -104,7 +104,7 @@ export const invoiceCreateForm = {
     },
     invoice_maker: {
       type: "text",
-      default: pb.authStore.model.id,
+      default: pb.authStore.model?.id,
       hidden: true,
       baseProps: {
         label: "INVOICE MAKER",

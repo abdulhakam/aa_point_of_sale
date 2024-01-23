@@ -326,7 +326,6 @@ export default function InvoiceForm(props) {
                     <Button
                       onClick={() => {
                         open();
-                        // setPaidAmount(final_total());
                       }}
                     >
                       Commit
@@ -343,3 +342,4 @@ export default function InvoiceForm(props) {
     );
   } else return <StatusCheck check={queries} />;
 }
+

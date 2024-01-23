@@ -47,7 +47,6 @@
     "postcss": "^8.4.32",
     "postcss-preset-mantine": "^1.11.1",
     "postcss-simple-vars": "^7.0.1",
-    "storybook": "^7.6.7",
     "storybook-dark-mode": "^3.0.3",
     "typescript": "^5"
   }

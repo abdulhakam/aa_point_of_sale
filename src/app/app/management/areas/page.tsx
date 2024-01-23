@@ -1,5 +1,5 @@
 "use client";
-import { useAreas } from "@/app/api/areas";
+import { areaCreateForm, useAreas } from "@/app/api/areas";
 import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
@@ -7,6 +7,8 @@ import { Button, Group, Modal, TextInput } from "@mantine/core";
 import { areaFormStructure } from "@/app/api/areas";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
+import CreateRecord from "@/app/components/CreateRecord/CreateRecord";
+import { IconMap } from "@tabler/icons-react";
 
 const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
@@ -27,10 +29,8 @@ export default function Areas() {
           onChange={(value) => setSearch(value.target.value)}
           value={search}
         />
-        <Modal opened={opened} onClose={close} title='Create'>
-          <FormGenerator editable />
-        </Modal>
-        <Button onClick={open}> Add New </Button>
+
+        <CreateRecord formStructure={areaCreateForm} icon={<IconMap />} label={"Create New Area"} />
       </Group>
       {areas.isLoading && <h1>Loading...</h1>}
       {areas.isError && <h2>{areas.error.message}</h2>}

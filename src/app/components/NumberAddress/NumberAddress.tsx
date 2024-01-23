@@ -7,7 +7,6 @@ export default function NumberAddress() {
         <Text size='xs'> {process.env.NEXT_PUBLIC_ADDRESS} </Text>
         <Text size='xs'> {process.env.NEXT_PUBLIC_PHONE} </Text>
       </Group>
-      <hr />
     </>
   );
 }
