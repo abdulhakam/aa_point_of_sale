@@ -11,14 +11,14 @@ import { qtyDisplay } from "@/app/components/functions/qtyParser";
 import DataViewTable from "@/app/components/DataViewTable";
 import NumberAddress from "@/app/components/NumberAddress/NumberAddress";
 
-const tableStructure: DataTableColumn[] = [
+const tableStructure = [
   { accessor: "id", hidden: true },
   { accessor: "created", hidden: true },
-  { accessor: "category", title:'Company', sortable: true },
-  { accessor: "name",  },
-  { accessor: "cost_price", sortable: true,title:'CP' },
-  { accessor: "sale_price", sortable: true,title:'SP' },
-  { accessor: "qty", sortable: true,render:(record)=>qtyDisplay(record,record.qty) },
+  { accessor: "category", title: "Company", sortable: true },
+  { accessor: "name" },
+  { accessor: "cost_price", sortable: true, title: "CP" },
+  { accessor: "sale_price", sortable: true, title: "SP" },
+  { accessor: "qty", sortable: true, render: (record) => qtyDisplay(record, record.qty) },
   { accessor: "box_size_qty", sortable: true },
 ];
 
@@ -31,43 +31,41 @@ export default function ItemsReport() {
   const categories = useCRUD().fullList({ collection: "categories" });
   const filterKey = "category";
   const [filterValue, setFilter] = useState("");
-  const filteredData = dataFilter(
-    [
-      { key: filterKey, value: filterValue },
-    ],
-    itemsReport.data
-    )
+  const filteredData = dataFilter([{ key: filterKey, value: filterValue }], itemsReport.data);
   const queries = [itemsReport, categories];
   if (checkSuccess(queries)) {
     return (
       <>
         <Modal centered opened={opened} onClose={close} title='Filter Data'>
           <Select
-            label={"Please Select Category"}
-            data={[...categories.data.map((cat) => ({ value: cat.name, label: cat.name })),{value:'',label:'All'}]}
+            label={"Company"}
+            data={[
+              ...categories.data.map((cat) => ({ value: cat.name, label: cat.name })),
+              { value: "", label: "All" },
+            ]}
             value={filterValue}
             onChange={setFilter}
           />
           <Button onClick={close}>OK</Button>
         </Modal>
-        <NumberAddress/>
-        <Button mb={'md'} onClick={open} variant='transparent' size='compact-lg' p={0} fw={"700"} color='black'>
+        <NumberAddress />
+        <Button
+          mb={"xs"}
+          onClick={open}
+          variant='transparent'
+          size='compact-lg'
+          p={0}
+          fw={"700"}
+          color='black'
+        >
           {`STOCK REPORT`}
         </Button>
+        {filterValue && <Text size='sm'>Company: {filterValue}</Text>}
         <DataViewTable
-        report
-        fz={'sm'}
-        horizontalSpacing={'sm'}
-        verticalSpacing={0}
-          rowStyle={({ party_type, amount }) =>
-            party_type === "supplier"
-              ? amount > 0
-                ? { color: "red" }
-                : { color: "green" }
-              : party_type === "customer" && amount < 0
-              ? { color: "red" }
-              : undefined
-          }
+          report
+          fz={"sm"}
+          horizontalSpacing={"sm"}
+          verticalSpacing={0}
           columns={tableStructure}
           data={filteredData}
         />

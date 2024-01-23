@@ -10,7 +10,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
 import NumberAddress from "@/app/components/NumberAddress/NumberAddress";
 
-const tableStructure: DataTableColumn[] = [
+const tableStructure = [
   { accessor: "id", hidden: true },
   { accessor: "created", hidden: true },
   { accessor: "item", width: "10em" },

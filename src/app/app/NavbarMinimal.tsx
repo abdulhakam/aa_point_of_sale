@@ -39,7 +39,7 @@ const mockdata = [
     { label: "Bookers", icon: IconUser, color: "blue", target:"bookers"},
     { label: "Items", icon: IconTag, color: "yellow", target:"items"},
     { label: "Reports", icon: IconReport, color: "pink", target:"reports"},
-    { label: "Orders", icon: IconTrolley, color: "green", target:"orders"},
+    { label: "Orders", icon: IconTrolley, color: "green", target:"invoices/orders"},
     { label: "Invoices", icon: IconShoppingBag, color: "orange", target:"invoices"},
     { label: "Payments", icon: IconCoinEuro, color:'red', target:"payments"},
     { label: "Management", icon: IconSettings, color: "gray", target:"management"},

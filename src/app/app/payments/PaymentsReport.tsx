@@ -45,29 +45,34 @@ export default function PaymentsReport() {
       (pmt) => dateRange[0] < new Date(pmt.created) && dateRange[1] > new Date(pmt.created)
     )
   );
-  const tableStructure: DataTableColumn[] = [
+  const tableStructure = [
     { accessor: "id", hidden: true },
     {
       accessor: "created",
       title: "Date",
       render: (record) => <>{record.created.slice(0, 10)}</>,
       sortable: true,
+      width:'7em'
     },
     {
       accessor: "type",
       sortable: true,
+      width:'5em'
     },
     {
       accessor: "area",
       sortable: true,
+      width:'9em'
     },
     {
       accessor: "section",
       sortable: true,
+      width:'9em'
     },
     {
       accessor: "invoice",
       sortable: true,
+      width:'5em',
       render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
     },
     { accessor: "party", sortable: true },
@@ -225,13 +230,12 @@ export default function PaymentsReport() {
             year: "numeric",
           })}`}</Text>
         </Group>
-        <Group justify="space-between">
+        <Group justify="start" gap={'4rem'}>
           {bookerFilter !== "All" && <Text size={"sm"}>{`BOOKER: ${bookerFilter}`}</Text>}
           {party !== "All" && <Text size={"sm"}>{`Party: ${party}`}</Text>}
           {sectionFilter !== "All" && <Text size={"sm"}>{`Section: ${sectionFilter}`}</Text>}
           {areaFilter !== "All" && <Text size={"sm"}>{`Area: ${areaFilter}`}</Text>}
         </Group>
-        <hr />
         <DataViewTable
           report
           fz={"xs"}
@@ -255,8 +259,8 @@ export default function PaymentsReport() {
         <Flex
           justify={"end"}
           align={"center"}
-          mt={"-3.5em"}
-          mr={"1rem"}
+          mt={"-3em"}
+          mr={"1em"}
           h={"3rem"}
           style={{
             position: "relative",

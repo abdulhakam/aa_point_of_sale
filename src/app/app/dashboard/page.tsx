@@ -8,6 +8,7 @@ import {
   IconSettings,
   IconCoinEuro,
   IconBuildingWarehouse,
+  IconTrolley,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
@@ -17,7 +18,7 @@ const mockdata = [
   { title: "Bookers", icon: IconUser, color: "blue", target:"bookers"},
   { title: "Items", icon: IconTag, color: "yellow", target:"items"},
   { title: "Reports", icon: IconReport, color: "pink", target:"reports"},
-  // { title: "Orders", icon: IconTrolley, color: "green", target:"orders"},
+  { title: "Orders", icon: IconTrolley, color: "green", target:"invoices/orders"},
   { title: "Invoices", icon: IconShoppingBag, color: "orange", target:"invoices"},
   { title: "Payments", icon: IconCoinEuro, color:'red', target:"payments"},
   { title: "Management", icon: IconSettings, color: "gray", target:"management"},

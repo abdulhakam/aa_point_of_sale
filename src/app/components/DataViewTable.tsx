@@ -12,12 +12,14 @@ import { crud } from "../api/useAPI";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export default function DataViewTable(
- props: {
+  props: 
+  DataTableProps
+  & {
   data?: any[];
   filter?: any;
   formstructure?: any;
   report?: boolean;
- } & DataTableProps
+ } 
 ) {
  const qc = useQueryClient();
  const [opened, { open, close }] = useDisclosure(false);
@@ -97,8 +99,12 @@ export default function DataViewTable(
  return (
   <>
    <DataTable
-   {...props}
+  //  {...props}
+    fz={props.fz}
+    horizontalSpacing={props.horizontalSpacing}
+    verticalSpacing={props.verticalSpacing}
     style={{ border: "1px solid gray", borderRadius: "3px" }}
+    rowStyle={props.rowStyle || null}
     withTableBorder
     withColumnBorders
     records={records}
