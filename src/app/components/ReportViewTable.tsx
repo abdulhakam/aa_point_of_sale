@@ -25,8 +25,9 @@ export default function ReportViewTable(props) {
       horizontalSpacing={2}
         withTableBorder
         withColumnBorders
+        borderColor={"black"}
         records={records}
-        columns={columns}
+        columns={[{accessor:"no",title:"#",width:"1em",render:(_,i)=>i+1},...columns]}
         emptyState={props.emptyState || <></>}
         rowStyle={props.rowStyle}
         defaultColumnRender={(row, _, accessor) => {

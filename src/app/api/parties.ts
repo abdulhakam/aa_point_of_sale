@@ -17,7 +17,8 @@ export const createParty = async (data) => {
 
 export async function getParties() {
   return await pb.collection("parties").getFullList({
-    sort: "-created",expand:'area'
+    sort: "-created",
+    expand: "area",
   });
 }
 export const updateParty = async (data) => {
@@ -28,17 +29,20 @@ export const useParties = () => {
     queryKey: ["parties"],
     queryFn: getParties,
   });
- const allParties = parties.data
+  const allParties = parties.data;
   return {
     allParties,
-    customers: allParties? allParties.filter((party) => party.type === "customer" || party.type === "both"):[],
-    suppliers: allParties? allParties.filter((party) => party.type === "supplier" || party.type === "both"):[],
-    isLoading:parties.isLoading,
-    status:parties.status,
-    error:parties.error,
-  }
+    customers: allParties
+      ? allParties.filter((party) => party.type === "customer" || party.type === "both")
+      : [],
+    suppliers: allParties
+      ? allParties.filter((party) => party.type === "supplier" || party.type === "both")
+      : [],
+    isLoading: parties.isLoading,
+    status: parties.status,
+    error: parties.error,
+  };
 };
-
 
 export const partyFormStructure: FormStructure<Party> = {
   fields: {
@@ -46,16 +50,49 @@ export const partyFormStructure: FormStructure<Party> = {
     created: { type: "datetime", default: undefined, baseProps: { label: "Created" } },
     updated: { type: "datetime", default: undefined, baseProps: { label: "Updated" } },
     name: { type: "text", default: "", baseProps: { label: "Name" } },
-    type: { type:'select', default:undefined,baseProps:{label:'Type',data:['customer','supplier','both']}},
-    area: {type:'select', default:undefined,baseProps:{label:'Area',searchable:true,data:[]}},
+    type: {
+      type: "select",
+      default: undefined,
+      baseProps: { label: "Type", data: ["customer", "supplier", "both"] },
+    },
+    area: { type: "select", default: undefined, baseProps: { label: "Area", searchable: true, data: [] } },
     phone: { type: "text", default: undefined, baseProps: { label: "Phone" } },
     address: { type: "text", default: undefined, baseProps: { label: "Address" } },
-    deleted: { type: 'switch', default:false, baseProps:{label:'deleted'}}
+    deleted: { type: "switch", default: false, baseProps: { label: "deleted" } },
   },
-  collectionName:'parties',
+  collectionName: "parties",
   onCreate: (data) => createParty(data),
   onUpdate: (data) => updateParty(data),
   onDelete: (data) => {
     updateParty({ ...data, deleted: true });
   },
+};
+
+export const partyCreateForm = {
+  fields: {
+    id: { type: "autocomplete", hidden: true, default: undefined, baseProps: { label: "id", data: [] } },
+    created: { type: "datetime", hidden: true, default: undefined, baseProps: { label: "Created" } },
+    updated: { type: "datetime", hidden: true, default: undefined, baseProps: { label: "Updated" } },
+    name: { type: "text", default: "", baseProps: { label: "Name" } },
+    type: {
+      type: "select",
+      default: undefined,
+      baseProps: { label: "Type", data: ["customer", "supplier", "both"] },
+    },
+    area: {
+      type: "select",
+      withCreate: true,
+      baseProps: {
+        label: "Area",
+        searchable: true,
+        data: [],
+        dataQueryValue: "id",
+        dataQuery: { collectionName: "areas" },
+      },
+    },
+    phone: { type: "text", default: undefined, baseProps: { label: "Phone" } },
+    address: { type: "text", default: undefined, baseProps: { label: "Address" } },
+    deleted: { type: "switch", hidden: true, default: false, baseProps: { label: "deleted" } },
+  },
+  collectionName: "parties",
 };

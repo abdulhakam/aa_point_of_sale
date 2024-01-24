@@ -1,0 +1,8 @@
+.showOnPrint {
+  display: none; /* Hide by default */
+}
+@media print {
+  .showOnPrint {
+    display: flex;
+  }
+}

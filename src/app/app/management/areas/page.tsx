@@ -1,25 +1,23 @@
 "use client";
-import { areaCreateForm, useAreas } from "@/app/api/areas";
-import { DataTableColumn } from "mantine-datatable";
+import { areaCreateForm } from "@/app/api/areas";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
-import { Button, Group, Modal, TextInput } from "@mantine/core";
+import {  Group,  TextInput } from "@mantine/core";
 import { areaFormStructure } from "@/app/api/areas";
-import FormGenerator from "@/app/components/FormGenerator";
-import { useDisclosure } from "@mantine/hooks";
 import CreateRecord from "@/app/components/CreateRecord/CreateRecord";
 import { IconMap } from "@tabler/icons-react";
+import useCRUD from "@/app/api/useAPI";
 
-const tableStructure: DataTableColumn[] = [
+const tableStructure = [
   { accessor: "id", hidden: true },
   { accessor: "name", sortable: true },
+  { accessor: "section", title:"Section", sortable: true, render:(record)=>(record?.expand?.section?.name) },
   { accessor: "created", sortable: true },
 ];
 
 export default function Areas() {
-  const [opened, { open, close }] = useDisclosure(false);
   const [search, setSearch] = useState("");
-  const areas = useAreas();
+  const areas = useCRUD().fullList({ collection: "areas",expand:'section'});
   return (
     <>
       <Group align='end'>
@@ -29,7 +27,6 @@ export default function Areas() {
           onChange={(value) => setSearch(value.target.value)}
           value={search}
         />
-
         <CreateRecord formStructure={areaCreateForm} icon={<IconMap />} label={"Create New Area"} />
       </Group>
       {areas.isLoading && <h1>Loading...</h1>}

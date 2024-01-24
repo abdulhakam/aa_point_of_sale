@@ -7,7 +7,7 @@ export default function ManagementPage() {
   const buttons = [
     { text: "areas", path: "management/areas" },
     { text: "bookers", path: "management/bookers" },
-    { text: "categories", path: "management/categories" },
+    { text: "companies", path: "management/categories" },
     { text: "invoices", path: "management/invoices" },
     { text: "transactions", path: "management/transactions" },
   ];

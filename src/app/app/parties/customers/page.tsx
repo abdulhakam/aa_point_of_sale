@@ -1,39 +1,27 @@
 "use client";
-
-import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
-import {  useState } from "react";
-import { Button, Group, Modal, TextInput } from "@mantine/core";
-import FormGenerator from "@/app/components/FormGenerator";
-import { useDisclosure } from "@mantine/hooks";
-import {  useQueryClient } from "@tanstack/react-query";
-import { partyFormStructure, useParties } from "@/app/api/parties";
-import { RecordModel } from "pocketbase";
+import { useState } from "react";
+import { Group, TextInput } from "@mantine/core";
+import { areaFormStructure } from "@/app/api/areas";
+import CreateRecord from "@/app/components/CreateRecord/CreateRecord";
+import { IconMap, IconUserPlus } from "@tabler/icons-react";
 import useCRUD from "@/app/api/useAPI";
+import { partyCreateForm } from "@/app/api/parties";
 
-const tableStructure: DataTableColumn[] = [
+const tableStructure = [
   { accessor: "id", hidden: true },
-  { accessor: "name", sortable: true },
-  { accessor: "type", sortable: true },
+  { accessor: "name", sortable: true, render: (item) => <>{item.expand?.party?.name}</> },
+  { accessor: "type", sortable: true, render: (item) => <>{item.expand?.party?.type}</> },
   { accessor: "area", sortable: true },
-  { accessor: "phone", sortable: true },
-  { accessor: "address", sortable: true },
+  { accessor: "section", sortable: true },
+  { accessor: "phone", sortable: true, render: (item) => <>{item.expand?.party?.phone}</> },
+  { accessor: "address", sortable: true, render: (item) => <>{item.expand?.party?.address}</> },
   { accessor: "deleted", sortable: true },
 ];
 
-export default function Items() {
-  const [opened, { open, close }] = useDisclosure(false);
-  const areas = useCRUD().fullList({collection:'areas'});
-  const formStructure = { ...partyFormStructure };
-  formStructure.fields.type.baseProps.data=['customer','both'];
-  formStructure.fields.type.default='customer';
-  formStructure.fields.area.baseProps.data = areas.data?.map((cat) => ({
-    value: cat.id,
-    label: cat.name,
-  }));
+export default function Areas() {
   const [search, setSearch] = useState("");
-  const parties = useParties();
-
+  const areas = useCRUD().fullList({ collection: "party_view", expand: "section,area,party" });
   return (
     <>
       <Group align='end'>
@@ -43,19 +31,18 @@ export default function Items() {
           onChange={(value) => setSearch(value.target.value)}
           value={search}
         />
-        <Modal centered size={'auto'} opened={opened} onClose={close} title='Create'>
-          <FormGenerator close={close} editable formStructure={partyFormStructure} />
-        </Modal>
-        <Button onClick={open}> Add New </Button>
+        <CreateRecord formStructure={partyCreateForm} icon={<IconUserPlus />} label={"Create New Customer"} />
       </Group>
-      {parties.isLoading && <h1>Loading...</h1>}
-      {parties.status==='error' && <h2>{parties.error.message}</h2>}
-      {parties.status==='success' && (
+      {areas.isLoading && <h1>Loading...</h1>}
+      {areas.isError && <h2>{areas.error.message}</h2>}
+      {areas.isSuccess && (
         <DataViewTable
+          formstructure={areaFormStructure}
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          formstructure={partyFormStructure}
-          data={parties.customers}
+          data={areas.data?.filter(
+            (item) => item.expand.party.type === "customer" || item.expand.party.type === "both"
+          )}
         />
       )}
     </>
