@@ -12,7 +12,7 @@ import { RecordModel } from "pocketbase";
 import useCRUD from "@/app/api/useAPI";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
 
-const tableStructure: DataTableColumn[] = [
+const tableStructure = [
   { accessor: "id", hidden: true },
   { accessor: "category", title: "Company", sortable: true },
   { accessor: "name", sortable: true },

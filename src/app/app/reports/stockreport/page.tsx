@@ -4,12 +4,15 @@ import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import ReportViewTable from "@/app/components/ReportViewTable";
 import dataFilter from "@/app/components/functions/dataFilter";
-import { useState } from "react";
-import { Button, Flex, Group, Modal, Select, Table, Text, TextInput } from "@mantine/core";
+import { useRef, useState } from "react";
+import { ActionIcon, Button, Flex, Group, Modal, Select, Table, Text, TextInput } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
 import DataViewTable from "@/app/components/DataViewTable";
 import NumberAddress from "@/app/components/NumberAddress/NumberAddress";
+import PrintHead from "@/app/components/printing/PrintHead";
+import { IconPrinter } from "@tabler/icons-react";
+import { useReactToPrint } from "react-to-print";
 
 const tableStructure = [
   { accessor: "id", hidden: true },
@@ -23,6 +26,10 @@ const tableStructure = [
 ];
 
 export default function ItemsReport() {
+  const printRef = useRef();
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+  });
   const [opened, { open, close }] = useDisclosure(true);
   const itemsReport = useCRUD().fullList({
     collection: "items_report",
@@ -48,27 +55,39 @@ export default function ItemsReport() {
           />
           <Button onClick={close}>OK</Button>
         </Modal>
-        <NumberAddress />
-        <Button
-          mb={"xs"}
-          onClick={open}
-          variant='transparent'
-          size='compact-lg'
-          p={0}
-          fw={"700"}
-          color='black'
+        <ActionIcon
+          onClick={() => {
+            handlePrint();
+          }}
+          size='xl'
+          variant='subtle'
+          color='blue'
         >
-          {`STOCK REPORT`}
-        </Button>
-        {filterValue && <Text size='sm'>Company: {filterValue}</Text>}
-        <DataViewTable
-          report
-          fz={"sm"}
-          horizontalSpacing={"sm"}
-          verticalSpacing={0}
-          columns={tableStructure}
-          data={filteredData}
-        />
+          <IconPrinter />
+        </ActionIcon>
+        <div ref={printRef} style={{ marginLeft: "1em", marginRight: "1em" }}>
+          <PrintHead />
+          <Button
+            mb={"xs"}
+            onClick={open}
+            variant='transparent'
+            size='compact-lg'
+            p={0}
+            fw={"700"}
+            color='black'
+          >
+            {`STOCK REPORT`}
+          </Button>
+          {filterValue && <Text size='sm'>Company: {filterValue}</Text>}
+          <DataViewTable
+            report
+            fz={"sm"}
+            horizontalSpacing={"sm"}
+            verticalSpacing={0}
+            columns={tableStructure}
+            data={filteredData}
+          />
+        </div>
       </>
     );
   } else return <StatusCheck check={queries} />;

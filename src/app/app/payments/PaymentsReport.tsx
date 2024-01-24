@@ -2,7 +2,7 @@
 import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
-import { Box, Button, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
+import { Box, Button, Checkbox, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
@@ -32,6 +32,7 @@ export default function PaymentsReport() {
   const [sectionFilter, setSectionFilter] = useState("All");
   const [party, setParty] = useState("All");
   const [paymentType, setPaymentType] = useState("all");
+  const [invoicesOnly, setInvoicesOnly] = useState(false);
   //
   const filteredPayments = dataFilter(
     [
@@ -40,10 +41,11 @@ export default function PaymentsReport() {
       { key: "section", value: sectionFilter === "All" ? "" : sectionFilter },
       // { key: "party", value: party === "All" ? "" : party },
       { key: "type", value: paymentType === "all" ? "" : paymentType },
+      {key: 'description', value: invoicesOnly ? 'Created' : ''},
     ],
-    payments.data?.filter(
-      (pmt) => dateRange[0] < new Date(pmt.created) && dateRange[1] > new Date(pmt.created)
-    ).filter((pmt) => party !=="All" ? pmt.expand.party.id===party:true )
+    payments.data
+      ?.filter((pmt) => dateRange[0] < new Date(pmt.created) && dateRange[1] > new Date(pmt.created))
+      .filter((pmt) => (party !== "All" ? pmt.expand.party.id === party : true))
   );
   const tableStructure = [
     { accessor: "id", hidden: true },
@@ -118,6 +120,11 @@ export default function PaymentsReport() {
       <>
         <Modal centered opened={opened} onClose={close} title='Filter Data'>
           <Stack>
+            <Checkbox
+              label={"Invoices Only"}
+              checked={invoicesOnly}
+              onChange={(event) => setInvoicesOnly(event.currentTarget.checked)}
+            />
             <DatePicker type='range' size='xs' value={dateRange} onChange={setDateRange} />
             <Select
               label={"Select Booker"}
@@ -169,7 +176,10 @@ export default function PaymentsReport() {
             />
             <Select
               label={"Select Party"}
-              data={[...parties.data.map((pty) => ({value:pty.id,label:pty.name})), {value: "All", label: "All"}]}
+              data={[
+                ...parties.data.map((pty) => ({ value: pty.id, label: pty.name })),
+                { value: "All", label: "All" },
+              ]}
               value={party}
               searchable
               onChange={(v) => {
@@ -228,16 +238,24 @@ export default function PaymentsReport() {
             <NewPayment />
           </Group>
           <Group justify='end'>
-            <Text size={"sm"}>{`DATE FROM: ${dateRange[0]!==null? dateRange[0].toLocaleDateString("en", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            }):"-"}`}</Text>
-            <Text size={"sm"}>{`DATE TO: ${dateRange[1]!==null?dateRange[1].toLocaleDateString("en", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            }):"-"}`}</Text>
+            <Text size={"sm"}>{`DATE FROM: ${
+              dateRange[0] !== null
+                ? dateRange[0].toLocaleDateString("en", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "-"
+            }`}</Text>
+            <Text size={"sm"}>{`DATE TO: ${
+              dateRange[1] !== null
+                ? dateRange[1].toLocaleDateString("en", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "-"
+            }`}</Text>
           </Group>
         </Group>
         <Group justify='start' gap={"4rem"}>
