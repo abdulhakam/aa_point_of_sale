@@ -109,6 +109,7 @@ export default function InvoiceForm(props) {
   function paymentPayer() {
     const data = {
       party: invoiceForm.values.party,
+      invoice: invoiceForm.values.invoiceNo,
       type: props.type === "sale" ? "recieving" : "sending",
       amount: paidAmount,
       description: "payment",

@@ -7,9 +7,7 @@ import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
 
 const mockdata = [
-  { title: "Area Wise Sale Report", icon: IconReportMoney, color: "pink", target: "reports/areawisereports/sale" },
-  { title: "Area Wise Purchase Report", icon: IconReportMoney, color: "blue", target: "reports/areawisereports/purchase" },
-  { title: "Booker Wise Report", icon: IconReportMoney, color: "yellow", target: "reports/bookerwisereports" },
+  { title: "Unified Payments Report", icon: IconReportMoney, color: "blue", target: "payments" },
   { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" }
 ];
 

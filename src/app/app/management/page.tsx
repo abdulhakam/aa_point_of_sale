@@ -5,11 +5,10 @@ import { useRouter } from "next/navigation";
 export default function ManagementPage() {
   const router = useRouter();
   const buttons = [
+    { text: "sections", path: "management/sections" },
     { text: "areas", path: "management/areas" },
     { text: "bookers", path: "management/bookers" },
     { text: "companies", path: "management/categories" },
-    { text: "invoices", path: "management/invoices" },
-    { text: "transactions", path: "management/transactions" },
   ];
   return (
     <>

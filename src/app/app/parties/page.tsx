@@ -1,37 +1,52 @@
 "use client";
-import { Card, Text, UnstyledButton, useMantineTheme, Grid } from "@mantine/core";
-import {
-  IconUser,
-  IconBriefcase,
-} from "@tabler/icons-react";
-import classes from "./page.module.css";
-import { useRouter } from "next/navigation";
+import DataViewTable from "@/app/components/DataViewTable";
+import { useState } from "react";
+import { Group, Select, TextInput } from "@mantine/core";
+import { areaFormStructure } from "@/app/api/areas";
+import CreateRecord from "@/app/components/CreateRecord/CreateRecord";
+import { IconMap, IconUserPlus } from "@tabler/icons-react";
+import useCRUD from "@/app/api/useAPI";
+import { partyCreateForm } from "@/app/api/parties";
 
-const mockdata = [
-  { title: "Customers", icon: IconUser, color: "green", target:"customers"},
-  { title: "Suppliers", icon: IconBriefcase, color: "pink", target:"suppliers"},
+const tableStructure = [
+  { accessor: "id", hidden: true },
+  { accessor: "name", sortable: true, render: (item) => <>{item.expand?.party?.name}</> },
+  { accessor: "type", sortable: true, render: (item) => <>{item.expand?.party?.type}</> },
+  { accessor: "area", sortable: true },
+  { accessor: "section", sortable: true },
+  { accessor: "phone", sortable: true, render: (item) => <>{item.expand?.party?.phone}</> },
+  { accessor: "address", sortable: true, render: (item) => <>{item.expand?.party?.address}</> },
+  { accessor: "deleted", sortable: true },
 ];
 
-export default function ActionsGrid(props) {
-  const theme = useMantineTheme();
-  const router = useRouter()
-  const items = mockdata.map((item) => (
-    <Grid.Col span="content" key={item.title}>
-      <UnstyledButton onClick={()=>router.push(`/app/parties/${item.target}`)} className={classes.item}>
-        <item.icon color={theme.colors[item.color][6]} size='4rem' />
-        <Text size='s' mt={7}>
-          {item.title}
-        </Text>
-      </UnstyledButton>
-    </Grid.Col>
-  ));
-
+export default function Areas() {
+  const [partyType,setPartyType] = useState('all')
+  const [search, setSearch] = useState("");
+  const areas = useCRUD().fullList({ collection: "party_view", expand: "section,area,party" });
   return (
-    <Card className={classes.card} radius={"md"} withBorder>
-      <Text className={classes.title}>Dashboard</Text>
-      <Grid style={{height:"100vh"}} justify='center' align='center'>
-        {items}
-      </Grid>
-    </Card>
+    <>
+      <Group align='end'>
+        <Select label='Party Type' value={partyType} onChange={setPartyType} data={['customer','supplier','all']} />
+        <TextInput
+          style={{ width: "10rem" }}
+          label='Search'
+          onChange={(value) => setSearch(value.target.value)}
+          value={search}
+        />
+        <CreateRecord formStructure={partyCreateForm} icon={<IconUserPlus />} label={"Create New Party"} />
+      </Group>
+      {areas.isLoading && <h1>Loading...</h1>}
+      {areas.isError && <h2>{areas.error.message}</h2>}
+      {areas.isSuccess && (
+        <DataViewTable
+          formstructure={areaFormStructure}
+          filter={[{ key: "", value: search }]}
+          columns={tableStructure}
+          data={areas.data?.filter(
+            (item) => partyType !== 'all' ? (item.expand.party.type === partyType || item.expand.party.type === "both") : true
+          )}
+        />
+      )}
+    </>
   );
 }
