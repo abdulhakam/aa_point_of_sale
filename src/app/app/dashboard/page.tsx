@@ -15,7 +15,6 @@ import { useRouter } from "next/navigation";
 
 const mockdata = [
   { title: "Parties", icon: IconBuildingWarehouse, color: "blue", target:"parties"},
-  { title: "Bookers", icon: IconUser, color: "blue", target:"bookers"},
   { title: "Items", icon: IconTag, color: "yellow", target:"items"},
   { title: "Reports", icon: IconReport, color: "pink", target:"reports"},
   { title: "Orders", icon: IconTrolley, color: "green", target:"invoices/orders"},

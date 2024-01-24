@@ -38,12 +38,12 @@ export default function PaymentsReport() {
       { key: "booker", value: bookerFilter === "All" ? "" : bookerFilter },
       { key: "area", value: areaFilter === "All" ? "" : areaFilter },
       { key: "section", value: sectionFilter === "All" ? "" : sectionFilter },
-      { key: "party", value: party === "All" ? "" : party },
+      // { key: "party", value: party === "All" ? "" : party },
       { key: "type", value: paymentType === "all" ? "" : paymentType },
     ],
     payments.data?.filter(
       (pmt) => dateRange[0] < new Date(pmt.created) && dateRange[1] > new Date(pmt.created)
-    )
+    ).filter((pmt) => party !=="All" ? pmt.expand.party.id===party:true )
   );
   const tableStructure = [
     { accessor: "id", hidden: true },
@@ -52,27 +52,27 @@ export default function PaymentsReport() {
       title: "Date",
       render: (record) => <>{record.created.slice(0, 10)}</>,
       sortable: true,
-      width:'7em'
+      width: "7em",
     },
     {
       accessor: "type",
       sortable: true,
-      width:'5em'
+      width: "5em",
     },
     {
       accessor: "area",
       sortable: true,
-      width:'9em'
+      width: "9em",
     },
     {
       accessor: "section",
       sortable: true,
-      width:'9em'
+      width: "9em",
     },
     {
       accessor: "invoice",
       sortable: true,
-      width:'5em',
+      width: "5em",
       render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
     },
     { accessor: "party", sortable: true },
@@ -169,7 +169,7 @@ export default function PaymentsReport() {
             />
             <Select
               label={"Select Party"}
-              data={[...parties.data.map((pty) => pty.name), "All"]}
+              data={[...parties.data.map((pty) => ({value:pty.id,label:pty.name})), {value: "All", label: "All"}]}
               value={party}
               searchable
               onChange={(v) => {
@@ -206,31 +206,41 @@ export default function PaymentsReport() {
             </Group>
           </Stack>
         </Modal>
-        <Group align='center'>
-          <Button onClick={open} variant='transparent' m={0} p={0} size='compact-lg' fw={"700"} color='black'>
-            {reportType === "all" && `ALL PAYMENTS`}
-            {reportType === "sending" && `PURCHASES REPORT`}
-            {reportType === "recieving" && `SALES REPORT`}
-            {reportType === "area" && `AREA REPORT`}
-            {reportType === "section" && `SECTION REPORT`}
-            {reportType === "party" && `PARTY PAYMENTS REPORT`}
-            {reportType === "booker" && `BOOKER INVOICE REPORT`}
-          </Button>
-          <NewPayment />
+        <Group align='center' justify='space-between'>
+          <Group>
+            <Button
+              onClick={open}
+              variant='transparent'
+              m={0}
+              p={0}
+              size='compact-lg'
+              fw={"700"}
+              color='black'
+            >
+              {reportType === "all" && `ALL PAYMENTS`}
+              {reportType === "sending" && `PURCHASES REPORT`}
+              {reportType === "recieving" && `SALES REPORT`}
+              {reportType === "area" && `AREA REPORT`}
+              {reportType === "section" && `SECTION REPORT`}
+              {reportType === "party" && `PARTY PAYMENTS REPORT`}
+              {reportType === "booker" && `BOOKER INVOICE REPORT`}
+            </Button>
+            <NewPayment />
+          </Group>
+          <Group justify='end'>
+            <Text size={"sm"}>{`DATE FROM: ${dateRange[0]!==null? dateRange[0].toLocaleDateString("en", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            }):"-"}`}</Text>
+            <Text size={"sm"}>{`DATE TO: ${dateRange[1]!==null?dateRange[1].toLocaleDateString("en", {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            }):"-"}`}</Text>
+          </Group>
         </Group>
-        <Group justify='end'>
-          <Text size={"sm"}>{`DATE FROM: ${dateRange[0].toLocaleDateString("en", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })}`}</Text>
-          <Text size={"sm"}>{`DATE TO: ${dateRange[0].toLocaleDateString("en", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })}`}</Text>
-        </Group>
-        <Group justify="start" gap={'4rem'}>
+        <Group justify='start' gap={"4rem"}>
           {bookerFilter !== "All" && <Text size={"sm"}>{`BOOKER: ${bookerFilter}`}</Text>}
           {party !== "All" && <Text size={"sm"}>{`Party: ${party}`}</Text>}
           {sectionFilter !== "All" && <Text size={"sm"}>{`Section: ${sectionFilter}`}</Text>}
@@ -259,17 +269,16 @@ export default function PaymentsReport() {
         <Flex
           justify={"end"}
           align={"center"}
-          mt={"-3em"}
-          mr={"1em"}
+          px={"1em"}
           h={"3rem"}
           style={{
             position: "relative",
           }}
         >
-          <Stack>
+          <Stack gap={0}>
             {finalData.map((row, i) => {
               return (
-                <Group my={"-0.5rem"} key={i}>
+                <Group key={i}>
                   {row.map((cell, iter) => (
                     <Text size='xs' w={"6rem"} fw={iter % 2 ? "700" : "400"} key={iter}>
                       {cell}

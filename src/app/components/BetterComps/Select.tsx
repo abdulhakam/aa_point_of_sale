@@ -15,7 +15,7 @@ export default function Select(props) {
       w={'100%'}
         {...props}
         data={props.dataQuery? query.data?.map((dt) => ({
-          value: dt.name || dt.number || dt.id,
+          value: props.dataQueryValue ? dt[props.dataQueryValue] : dt.name || dt.number || dt.id,
           label: dt.name || dt.number || dt.id,
         })):props.data}
       />

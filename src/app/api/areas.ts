@@ -22,12 +22,23 @@ export async function deleteArea(data) {
   return await pb.collection("areas").delete(data.id);
 }
 
-export const areaFormStructure: FormStructure<Area> = {
+export const areaFormStructure = {
   fields: {
     created: { type: "datetime", baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
     updated: { type: "datetime", baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },
     id: { type: "autocomplete", baseProps: { label: "id", readOnly: true, variant: "unstyled" } },
     name: { type: "text", baseProps: { label: "Name" } },
+    section: {
+      type: "select",
+      withCreate: true,
+      baseProps: {
+        label: "Section",
+        searchable: true,
+        data: [],
+        dataQueryValue: "id",
+        dataQuery: { collectionName: "sections" },
+      },
+    },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },
   collectionName: "areas",
@@ -43,8 +54,15 @@ export const areaCreateForm = {
     id: { type: "text", baseProps: { label: "ID" } },
     name: { type: "text", baseProps: { label: "Name" } },
     section: {
-      type: "select", withCreate: true,
-      baseProps: { label: "Section", searchable: true, data: [], dataQuery: { collectionName: "sections" } },
+      type: "select",
+      withCreate: true,
+      baseProps: {
+        label: "Section",
+        searchable: true,
+        data: [],
+        dataQueryValue: "id",
+        dataQuery: { collectionName: "sections" },
+      },
     },
     deleted: { type: "switch", default: false, baseProps: { label: "DELETED", disabled: true } },
   },

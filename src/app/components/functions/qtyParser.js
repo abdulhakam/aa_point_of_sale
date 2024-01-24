@@ -9,22 +9,35 @@ export function qtyDisplay(item, qty) {
   const boxSizeQty = item.box_size_qty;
   const numBoxes = Math.floor(qty / boxSizeQty);
   const numPcs = qty % boxSizeQty;
-  const boxLabel = numBoxes === 1 ? "bx" : "bxs";
-  const pcsLabel = numPcs === 1 ? "pc" : "pcs";
+  const boxLabel = numBoxes === 1 ? "ctn" : "ctns";
+  const pcsLabel = numPcs === 1 ? "unit" : "units";
   return `${numBoxes >= 0 ? numBoxes : numBoxes + 1} ${boxLabel} ${numPcs} ${pcsLabel}`;
 }
+/**
+ * Retrieves the number of boxes and number of pieces from the input string.
+ *
+ * @param {string} qty - The input string containing quantity information
+ * @return {Object} An object containing the number of cartons and number of units
+ */
 export function getQtyFromString(qty) {
   const splits = String(qty).split(" ",4);
-  return { numBoxes: splits[0], numPcs: splits[2] };
+  return { ctns: splits[0], units: splits[2] };
 }
 
+/**
+ * Returns the number of boxes and remaining units when given an item and quantity.
+ *
+ * @param {Object} item - the item object containing box size quantity
+ * @param {number} qty - the total quantity
+ * @return {Object} an object containing the number of boxes and remaining units
+ */
 export function getQty(item, qty) {
   const boxSizeQty = item.box_size_qty;
   const numBoxes = Math.floor(qty / boxSizeQty);
   const numPcs = qty % boxSizeQty;
-  const boxLabel = numBoxes === 1 ? "bx" : "bxs";
-  const pcsLabel = numPcs === 1 ? "pc" : "pcs";
-  return { numBoxes: numBoxes >= 0 ? numBoxes : numBoxes + 1, numPcs };
+  const boxLabel = numBoxes === 1 ? "ctn" : "ctns";
+  const pcsLabel = numPcs === 1 ? "unit" : "units";
+  return { ctns: numBoxes >= 0 ? numBoxes : numBoxes + 1, units:numPcs };
 }
 
 /**

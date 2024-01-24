@@ -62,6 +62,7 @@ export interface Area extends CollectionItem {
   updated: Date;
   id: string;
   name: string;
+  section:string;
   deleted: boolean;
 }
 

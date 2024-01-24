@@ -57,6 +57,7 @@ export default function FormGeneratorBasic(props) {
   );
   const submitHandler = (values) => {
     let data = { ...values };
+    props.data?null:delete data.id;
     delete data.created;
     delete data.updated;
     delete data.deleted; 
