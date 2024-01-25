@@ -56,7 +56,7 @@ export default function NewPayment() {
   const queries = [parties, invoices];
   if (checkSuccess(queries)) {
     return (
-      <CreateRecord icon={<IconCashBanknote />} label={"New Payment"}>
+      <CreateRecord icon={<IconCashBanknote />} size="xl" label={"New Payment"}>
         <Stack gap={"xs"}>
           <Select
             label='Invoice Type'

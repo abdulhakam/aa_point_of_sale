@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
 import { FormStructure, Party } from "./types";
+import { areaCreateForm } from "./areas";
 export const createParty = async (data) => {
   const exampleData = {
     id: "pty000000000000",
@@ -52,8 +53,8 @@ export const partyFormStructure: FormStructure<Party> = {
     name: { type: "text", default: "", baseProps: { label: "Name" } },
     type: {
       type: "select",
-      default: undefined,
-      baseProps: { label: "Type", data: ["customer", "supplier", "both"] },
+      default: "customer",
+      baseProps: { label: "Type",  data: ["customer", "supplier", "both"] },
     },
     area: { type: "select", default: undefined, baseProps: { label: "Area", searchable: true, data: [] } },
     phone: { type: "text", default: undefined, baseProps: { label: "Phone" } },
@@ -76,13 +77,15 @@ export const partyCreateForm = {
     name: { type: "text", default: "", baseProps: { label: "Name" } },
     type: {
       type: "select",
-      default: undefined,
-      baseProps: { label: "Type", data: ["customer", "supplier", "both"] },
+      default: "customer",
+      baseProps: { label: "Type",allowDeselect: false, data: ["customer", "supplier", "both"] },
     },
     area: {
       type: "select",
-      withCreate: true,
       baseProps: {
+        // key :"area-creator",
+        // withCreate: true,
+        // createForm: areaCreateForm,
         label: "Area",
         searchable: true,
         data: [],

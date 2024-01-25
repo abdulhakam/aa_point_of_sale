@@ -9,6 +9,7 @@ import {
   IconCoinEuro,
   IconBuildingWarehouse,
   IconTrolley,
+  IconBasketDollar,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
@@ -18,7 +19,8 @@ const mockdata = [
   { title: "Reports", icon: IconReport, color: "pink", target:"reports"},
   { title: "Orders", icon: IconTrolley, color: "green", target:"invoices/orders"},
   { title: "Invoices", icon: IconShoppingBag, color: "orange", target:"invoices"},
-  { title: "Payments", icon: IconCoinEuro, color:'red', target:"payments"},
+  { title: "Payments", icon: IconCoinEuro, color:'grape', target:"payments"},
+  { title: "Expenses", icon: IconBasketDollar, color: "red", target:"expenses"},
   { title: "Management", icon: IconSettings, color: "gray", target:"management"},
 ];
 

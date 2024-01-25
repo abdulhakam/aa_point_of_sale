@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
 import { FormStructure, Area } from "./types";
+import { sectionCreateForm } from "./sections";
 
 export function useAreas() {
   return useQuery({ queryKey: ["areas"], queryFn: listAreas });
@@ -55,8 +56,10 @@ export const areaCreateForm = {
     name: { type: "text", baseProps: { label: "Name" } },
     section: {
       type: "select",
-      withCreate: true,
       baseProps: {
+        // key:"section-creator",
+        // withCreate: true,
+        // createForm: sectionCreateForm,
         label: "Section",
         searchable: true,
         data: [],

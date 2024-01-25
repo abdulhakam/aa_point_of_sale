@@ -5,23 +5,22 @@ import { Group, Select, TextInput } from "@mantine/core";
 import CreateRecord from "@/app/components/CreateRecord/CreateRecord";
 import { IconUserPlus } from "@tabler/icons-react";
 import useCRUD from "@/app/api/useAPI";
-import { partyCreateForm, partyFormStructure } from "@/app/api/parties";
+import { partyCreateForm } from "@/app/api/parties";
 
 const tableStructure = [
   { accessor: "id", hidden: true },
-  { accessor: "name", sortable: true, render: (item) => <>{item.expand?.party?.name}</> },
-  { accessor: "type", sortable: true, render: (item) => <>{item.expand?.party?.type}</> },
+  { accessor: "name", sortable: true,},
+  { accessor: "type", sortable: true,},
   { accessor: "area", sortable: true },
-  { accessor: "section", sortable: true },
-  { accessor: "phone", sortable: true, render: (item) => <>{item.expand?.party?.phone}</> },
-  { accessor: "address", sortable: true, render: (item) => <>{item.expand?.party?.address}</> },
+  { accessor: "phone", sortable: true, },
+  { accessor: "address", sortable: true, },
   { accessor: "deleted", sortable: true },
 ];
 
-export default function Areas() {
+export default function Preas() {
   const [partyType,setPartyType] = useState('all')
   const [search, setSearch] = useState("");
-  const areas = useCRUD().fullList({ collection: "party_view", expand: "section,area,party" });
+  const parties = useCRUD().fullList({ collection: "parties", expand: "area" });
   return (
     <>
       <Group align='end'>
@@ -34,14 +33,14 @@ export default function Areas() {
         />
         <CreateRecord formStructure={partyCreateForm} icon={<IconUserPlus />} label={"Create New Party"} />
       </Group>
-      {areas.isLoading && <h1>Loading...</h1>}
-      {areas.isError && <h2>{areas.error.message}</h2>}
-      {areas.isSuccess && (
+      {parties.isLoading && <h1>Loading...</h1>}
+      {parties.isError && <h2>{parties.error.message}</h2>}
+      {parties.isSuccess && (
         <DataViewTable
-          formstructure={partyFormStructure}
+          formstructure={partyCreateForm}
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          data={areas.data?.filter(
+          data={parties.data?.filter(
             (item) => partyType !== 'all' ? (item.expand.party.type === partyType || item.expand.party.type === "both") : true
           )}
         />
