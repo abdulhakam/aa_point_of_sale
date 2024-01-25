@@ -15,6 +15,7 @@ export default function CreateRecord({
   formStructure = undefined,
   label = undefined,
   icon = <IconPlus />,
+  size='md',
   children = undefined,
 }) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -29,7 +30,7 @@ export default function CreateRecord({
         {formStructure && <FormGeneratorBasic formStructure={formStructure} editable={true} close={close} />}
       </Modal>
       <Tooltip label={label || `Create New ${nlabel}`}>
-        <ActionIcon mx={"0.3rem"} mb={"0.3rem"} size={"md"} onClick={open}>
+        <ActionIcon mx={"0.3rem"} mb={"0.3rem"} size={size} onClick={open}>
           {icon}
         </ActionIcon>
       </Tooltip>

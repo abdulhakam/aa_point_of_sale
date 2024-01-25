@@ -2,6 +2,7 @@
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD, { crud } from "@/app/api/useAPI";
 import pb from "@/app/pocketbase";
+import { NSelect } from "@/app/components/BetterComps/Select";
 import {
   Button,
   Checkbox,
@@ -23,6 +24,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDisclosure } from "@mantine/hooks";
 import { TransactionForm } from "./TransactionForm";
 import { DateInput } from "@mantine/dates";
+import { partyCreateForm } from "@/app/api/parties";
 
 export default function InvoiceForm(props) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -244,10 +246,12 @@ export default function InvoiceForm(props) {
                 <>
                   <Group>
                     <Text fw={500}>{props.type === "sale" ? "CUSTOMER:" : "SUPPLIER:"}</Text>
-                    <Select
+                    <NSelect
                       variant={
                         editing === true || invoiceForm.values.invoiceNo !== "new" ? "unstyled" : "default"
                       }
+                      withCreate
+                      createForm={partyCreateForm}
                       rightSectionWidth={0}
                       readOnly={editing === true || invoiceForm.values.invoiceNo !== "new" ? true : false}
                       allowDeselect={false}

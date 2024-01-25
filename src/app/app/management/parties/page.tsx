@@ -9,22 +9,29 @@ import { partyCreateForm } from "@/app/api/parties";
 
 const tableStructure = [
   { accessor: "id", hidden: true },
-  { accessor: "name", sortable: true,},
-  { accessor: "type", sortable: true,},
+  { accessor: "name", sortable: true },
+  { accessor: "type", sortable: true },
   { accessor: "area", sortable: true },
-  { accessor: "phone", sortable: true, },
-  { accessor: "address", sortable: true, },
+  { accessor: "section", sortable: true, render: (record) => record?.expand?.area?.expand?.section?.name },
+  { accessor: "phone", sortable: true },
+  { accessor: "address", sortable: true },
   { accessor: "deleted", sortable: true },
 ];
 
 export default function Preas() {
-  const [partyType,setPartyType] = useState('all')
+  const [partyType, setPartyType] = useState("all");
   const [search, setSearch] = useState("");
-  const parties = useCRUD().fullList({ collection: "parties", expand: "area" });
+  const parties = useCRUD().fullList({ collection: "parties", expand: "area,area.section" });
+  console.log(parties.data);
   return (
     <>
       <Group align='end'>
-        <Select label='Party Type' value={partyType} onChange={setPartyType} data={['customer','supplier','all']} />
+        <Select
+          label='Party Type'
+          value={partyType}
+          onChange={setPartyType}
+          data={["customer", "supplier", "all"]}
+        />
         <TextInput
           style={{ width: "10rem" }}
           label='Search'
@@ -40,8 +47,10 @@ export default function Preas() {
           formstructure={partyCreateForm}
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
-          data={parties.data?.filter(
-            (item) => partyType !== 'all' ? (item.expand.party.type === partyType || item.expand.party.type === "both") : true
+          data={parties.data?.filter((item) =>
+            partyType !== "all"
+              ? item.expand.party.type === partyType || item.expand.party.type === "both"
+              : true
           )}
         />
       )}

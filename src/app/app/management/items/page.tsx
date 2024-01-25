@@ -7,8 +7,6 @@ import { useState } from "react";
 import { Button, Group, Modal, TextInput } from "@mantine/core";
 import FormGenerator from "@/app/components/FormGenerator";
 import { useDisclosure } from "@mantine/hooks";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RecordModel } from "pocketbase";
 import useCRUD from "@/app/api/useAPI";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
 

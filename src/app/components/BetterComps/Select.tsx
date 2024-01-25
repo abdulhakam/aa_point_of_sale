@@ -3,7 +3,7 @@ import { Flex, Select as MSelect } from "@mantine/core";
 import pb from "@/app/pocketbase";
 import CreateRecord from "../CreateRecord/CreateRecord";
 
-export default function Select(props) {
+export function NSelect(props) {
   const query = useQuery({
     enabled:props.dataQuery?true:false,
     queryKey: [props.dataQuery?.collectionName||"empty"],
@@ -22,4 +22,9 @@ export default function Select(props) {
       {props.withCreate && <CreateRecord formStructure={props.createForm} />}
     </Flex>
   );
+}
+
+export default function Select(props)
+{
+  return <NSelect {...props} />
 }

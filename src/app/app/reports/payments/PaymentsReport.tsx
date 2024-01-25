@@ -1,8 +1,7 @@
 "use client";
-import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
-import { Box, Button, Checkbox, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
+import {  Button, Checkbox, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
@@ -237,7 +236,6 @@ export default function PaymentsReport() {
               {reportType === "party" && `PARTY PAYMENTS REPORT`}
               {reportType === "booker" && `BOOKER INVOICE REPORT`}
             </Button>
-            <NewPayment />
           </Group>
           <Group justify='end'>
             <Text size={"sm"}>{`DATE FROM: ${

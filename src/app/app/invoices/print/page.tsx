@@ -101,16 +101,18 @@ export default function InvoicePrint() {
             <Button p={0} onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
               {`${type.toUpperCase()} INVOICE`}
             </Button>
-            <Table
-              w={"40%"}
-              fz={"xs"}
-              withRowBorders={false}
-              verticalSpacing={0}
-              horizontalSpacing={0}
-            >
+            <Table w={"40%"} fz={"xs"} withRowBorders={false} verticalSpacing={0} horizontalSpacing={'1em'}>
               <Table.Tr>
-                <Table.Td>{"Invoice #:"}</Table.Td>
-                <Table.Td>{` ${invoice?.invoiceNo}`}</Table.Td>
+                <Table.Td >
+                  <Text fw={600}>
+                    {"Invoice #:"}
+                  </Text>
+                </Table.Td>
+                <Table.Td>
+                  <Text
+                    fw={"700"} style={{ border: "1px solid black", paddingLeft: "0.5em" }}
+                  >{` ${invoice?.invoiceNo}`}</Text>
+                </Table.Td>
               </Table.Tr>
               <Table.Tr>
                 <Table.Td>{"Invoice Date:"}</Table.Td>
@@ -118,6 +120,15 @@ export default function InvoicePrint() {
                   day: "numeric",
                   month: "short",
                   year: "numeric",
+                })}`}</Table.Td>
+              </Table.Tr>
+              <Table.Tr>
+                <Table.Td>{"Invoice Time:"}</Table.Td>
+                <Table.Td>{` ${new Date(invoice?.created).toLocaleTimeString("en", {
+                  hour: "numeric",
+                  minute: "numeric",
+                  second: "2-digit",
+                  hour12: true,
                 })}`}</Table.Td>
               </Table.Tr>
             </Table>
@@ -135,14 +146,7 @@ export default function InvoicePrint() {
                     body: [
                       ["Prepared By", invoice?.expand.invoice_maker.name],
                       ["Party", `${invoice?.expand.party.name} (${invoice?.expand?.party?.phone})`],
-                      type === "sale"
-                        ? [
-                            "Address",
-                            
-                              invoice?.expand?.party?.address
-                            ,
-                          ]
-                        : [],
+                      type === "sale" ? ["Address", invoice?.expand?.party?.address] : [],
                       type === "sale"
                         ? ["Booker", `${invoice?.expand?.booker?.name} (${invoice?.expand?.booker?.phone})`]
                         : [],
