@@ -9,6 +9,7 @@ export default function ManagementPage() {
     { text: "areas", path: "management/areas" },
     { text: "bookers", path: "management/bookers" },
     { text: "companies", path: "management/categories" },
+    { text: "items", path: "management/items" },
   ];
   return (
     <>

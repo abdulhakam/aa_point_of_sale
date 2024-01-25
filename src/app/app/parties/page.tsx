@@ -2,11 +2,10 @@
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
 import { Group, Select, TextInput } from "@mantine/core";
-import { areaFormStructure } from "@/app/api/areas";
 import CreateRecord from "@/app/components/CreateRecord/CreateRecord";
-import { IconMap, IconUserPlus } from "@tabler/icons-react";
+import { IconUserPlus } from "@tabler/icons-react";
 import useCRUD from "@/app/api/useAPI";
-import { partyCreateForm } from "@/app/api/parties";
+import { partyCreateForm, partyFormStructure } from "@/app/api/parties";
 
 const tableStructure = [
   { accessor: "id", hidden: true },
@@ -39,7 +38,7 @@ export default function Areas() {
       {areas.isError && <h2>{areas.error.message}</h2>}
       {areas.isSuccess && (
         <DataViewTable
-          formstructure={areaFormStructure}
+          formstructure={partyFormStructure}
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
           data={areas.data?.filter(

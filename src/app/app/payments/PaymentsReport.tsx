@@ -9,6 +9,7 @@ import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import dataFilter from "@/app/components/functions/dataFilter";
 import NewPayment from "./NewPayment";
 import { DatePicker } from "@mantine/dates";
+import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
 
 export default function PaymentsReport() {
   const [opened, { open, close }] = useDisclosure(false);
@@ -39,13 +40,13 @@ export default function PaymentsReport() {
       { key: "booker", value: bookerFilter === "All" ? "" : bookerFilter },
       { key: "area", value: areaFilter === "All" ? "" : areaFilter },
       { key: "section", value: sectionFilter === "All" ? "" : sectionFilter },
-      // { key: "party", value: party === "All" ? "" : party },
+      { key: "party", value: party === "All" ? "" : party },
       { key: "type", value: paymentType === "all" ? "" : paymentType },
       {key: 'description', value: invoicesOnly ? 'Created' : ''},
     ],
     payments.data
       ?.filter((pmt) => dateRange[0] < new Date(pmt.created) && dateRange[1] > new Date(pmt.created))
-      .filter((pmt) => (party !== "All" ? pmt.expand.party.id === party : true))
+      // .filter((pmt) => (party !== "All" ? pmt.expand.party.id === party : true))
   );
   const tableStructure = [
     { accessor: "id", hidden: true },
@@ -54,12 +55,13 @@ export default function PaymentsReport() {
       title: "Date",
       render: (record) => <>{record.created.slice(0, 10)}</>,
       sortable: true,
-      width: "7em",
+      width: "6em",
     },
     {
       accessor: "type",
       sortable: true,
-      width: "5em",
+      width: "3em",
+      render: (record) => record.type==='sending'?<IconArrowUp size={12}/>:<IconArrowDown size={12} />,
     },
     {
       accessor: "area",
@@ -74,12 +76,12 @@ export default function PaymentsReport() {
     {
       accessor: "invoice",
       sortable: true,
-      width: "5em",
+      width: "4em",
       render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
     },
     { accessor: "party", sortable: true },
     { accessor: "booker", hidden: reportType === "Sending", sortable: true },
-    { accessor: "amount", sortable: true },
+    { accessor: "amount", sortable: true ,render: (record) => <>{`${record.amount.toFixed(2)}`}</>},
     {
       accessor: "paid",
       hidden: true,
@@ -177,7 +179,7 @@ export default function PaymentsReport() {
             <Select
               label={"Select Party"}
               data={[
-                ...parties.data.map((pty) => ({ value: pty.id, label: pty.name })),
+                ...parties.data.map((pty) => ({ value: pty.name, label: pty.name })),
                 { value: "All", label: "All" },
               ]}
               value={party}
@@ -268,7 +270,7 @@ export default function PaymentsReport() {
           report
           fz={"xs"}
           verticalSpacing={0}
-          horizontalSpacing={0}
+          horizontalSpacing={2}
           rowStyle={({ paid, invoice, type }) =>
             invoice
               ? null

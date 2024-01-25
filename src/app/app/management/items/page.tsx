@@ -1,6 +1,6 @@
 "use client";
 
-import { itemFormStructure } from "../../api/items";
+import { itemFormStructure } from "../../../api/items";
 import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";

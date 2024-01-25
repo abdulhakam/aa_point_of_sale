@@ -13,11 +13,17 @@ export const itemFormStructure: FormStructure<Item> = {
     qty: { type: "number", default: 0, baseProps: { label: "Qty" } },
     category: { type: "select", default: "", baseProps: { label: "Category", searchable: true, data: [] } },
   },
-  collectionName:'items',
-  collectionView:'items',
-  onCreate: (data) => {pb.collection('items').create(data)},
-  onUpdate: (data) => {pb.collection('items').update(data.id,data)},
-  onDelete: (data) => {pb.collection('items').delete(data.id)},
+  collectionName: "items",
+  collectionView: "items",
+  onCreate: (data) => {
+    pb.collection("items").create(data);
+  },
+  onUpdate: (data) => {
+    pb.collection("items").update(data.id, data);
+  },
+  onDelete: (data) => {
+    pb.collection("items").delete(data.id);
+  },
 };
 
 export const itemCreateForm = {
@@ -26,7 +32,17 @@ export const itemCreateForm = {
     cost_price: { type: "number", default: 0, baseProps: { label: "CP" } },
     sale_price: { type: "number", default: 0, baseProps: { label: "SP" } },
     box_size_qty: { type: "number", default: 1, baseProps: { label: "Box Size" } },
-    category: { type: "select", default: "", baseProps: { label: "Category", searchable: true, data: [],dataQuery: { collectionName: "categories" }, } },
+    category: {
+      type: "select",
+      default: "",
+      baseProps: {
+        label: "Category",
+        searchable: true,
+        data: [],
+        dataQueryValue: "id",
+        dataQuery: { collectionName: "categories" },
+      },
+    },
   },
-  collectionName:'items',
+  collectionName: "items",
 };
