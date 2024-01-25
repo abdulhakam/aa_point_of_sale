@@ -36,7 +36,6 @@ function NavbarLink({ icon: Icon, label, active, onClick }: NavbarLinkProps) {
 const mockdata = [
   { label: "Main", icon: IconDashboard, color: "blue", target:"dashboard"},
     { label: "Parties", icon: IconBuildingWarehouse, color: "blue", target:"parties"},
-    { label: "Items", icon: IconTag, color: "yellow", target:"items"},
     { label: "Reports", icon: IconReport, color: "pink", target:"reports"},
     { label: "Orders", icon: IconTrolley, color: "green", target:"invoices/orders"},
     { label: "Invoices", icon: IconShoppingBag, color: "orange", target:"invoices"},

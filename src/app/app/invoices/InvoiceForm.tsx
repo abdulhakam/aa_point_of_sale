@@ -149,15 +149,13 @@ export default function InvoiceForm(props) {
   }
   const invoice = invoices.data?.find((inv) => inv.id === invoiceForm.values.invoiceNo);
   const final_total = () => {
+    const dis_1 = invoice?.total * (invoiceForm.values.discount_1 / 100);
+    const dis_2 = (invoice?.total - dis_1) * (invoiceForm.values.discount_2 / 100);
     if (
       invoice?.discount_1 !== invoiceForm.values.discount_1 ||
       invoice?.discount_2 !== invoiceForm.values.discount_2
     ) {
-      return (
-        invoice?.total -
-        invoice?.total * (invoiceForm.values.discount_1 / 100) -
-        (invoice?.total * (invoiceForm.values.discount_1 / 100) * invoiceForm.values.discount_2) / 100
-      );
+      return (invoice?.total - dis_1 - dis_2).toFixed(2);
     } else {
       return invoice.final_total;
     }
@@ -270,7 +268,10 @@ export default function InvoiceForm(props) {
               )}
               {!editing && invoiceForm.values.invoiceNo === "new" && (
                 <Button
-                  disabled={invoiceForm.values.party === "" || props.type==='sale' && invoiceForm.values.booker === ''}
+                  disabled={
+                    invoiceForm.values.party === "" ||
+                    (props.type === "sale" && invoiceForm.values.booker === "")
+                  }
                   onClick={() => {
                     invoiceCreator();
                   }}
@@ -343,4 +344,3 @@ export default function InvoiceForm(props) {
     );
   } else return <StatusCheck check={queries} />;
 }
-

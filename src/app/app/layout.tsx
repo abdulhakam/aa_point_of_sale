@@ -20,7 +20,7 @@ import NumberAddress from "../components/NumberAddress/NumberAddress";
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // const isPrinting = useMediaQuery('print');
   const [mobileOpened, { toggle: toggleMobile }] = useDisclosure(false);
-  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(false);
+  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
   const { date, time } = useDate();
   return (
     <AppShell
