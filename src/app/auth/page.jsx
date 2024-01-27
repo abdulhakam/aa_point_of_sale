@@ -1,24 +1,25 @@
 "use client";
 import { useForm } from "@mantine/form";
 import { TextInput, PasswordInput, Text, Paper, Group, Button, Stack, Alert } from "@mantine/core";
-import { useUserAuthContext } from "../context/AuthContext";
 import React, { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import pb from "../pocketbase";
 export default function AuthenticationForm(props) {
-  const router = useRouter()
-  pb.authStore.isValid?router.push('/app/dashboard'):null
+  const router = useRouter();
+  const search = useSearchParams()
+  // pb.authStore.isValid ? router.push("/app/dashboard") : null;
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useUserAuthContext();
   const {
     mutate: loginPB,
     error,
     isError,
   } = useMutation({
-    mutationFn: login,
+    mutationFn: (dt) => pb.collection("users").authWithPassword(dt.email, dt.password),
     onMutate: () => setIsLoading(true),
-    onSuccess: () => {router.push('/app/dashboard')},
+    onSuccess: () => {
+      router.push("/app/dashboard");
+    },
     onSettled: () => setIsLoading(false),
   });
   const form = useForm({
@@ -30,9 +31,9 @@ export default function AuthenticationForm(props) {
       password: (val) => (val.length < 5 ? "Password should include at least 5 characters" : null),
     },
   });
-  const submitFunction=(data)=> {
+  const submitFunction = (data) => {
     loginPB({ email: data.email, password: data.password });
-  }
+  };
   return (
     <div style={{ height: "100vh", display: "grid", placeItems: "center" }}>
       <Paper w={"28rem"} radius='md' p='xl' withBorder>

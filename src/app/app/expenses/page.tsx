@@ -7,11 +7,11 @@ import CreateRecord from "@/app/components/CreateRecord/CreateRecord";
 import { IconZoomMoney } from "@tabler/icons-react";
 import useCRUD from "@/app/api/useAPI";
 import { DateInput} from "@mantine/dates";
-import dataFilter from "@/app/components/functions/dataFilter";
 
 const tableStructure = [
   { accessor: "id", hidden: true },
-  { accessor: "description", sortable: true },
+  {accessor: "name"},
+  { accessor: "description"},
   { accessor: "amount", width: "5rem" },
   { accessor: "created",width: '12rem', sortable: true },
 ];
@@ -20,13 +20,10 @@ export default function Expenses() {
   const [fromDate, setFromDate] = useState<Date | null>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
   );
-  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [toDate, setToDate] = useState<Date | null>(new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999));
   const [search, setSearch] = useState("");
-  const expenses = useCRUD().fullList({ collection: "expenses" });
-  const filteredData = dataFilter(
-    [{ key: "", value: search }],
-    expenses.data?.filter((pmt) => fromDate < new Date(pmt.created) && toDate > new Date(pmt.created))
-  );
+  const expenses = useCRUD().fullList({ collection: "expenses" ,filter:`created >= '${fromDate.toISOString().slice(0, 19).replace('T', ' ')}' && created <= '${toDate.toISOString().slice(0, 19).replace('T', ' ')}'`});
+  const filteredData = expenses.data
   return (
     <>
       <Group align='end'>

@@ -5,4 +5,7 @@
   .showOnPrint {
     display: flex;
   }
+  .hideOnPrint {
+   display: none; 
+  }
 }
