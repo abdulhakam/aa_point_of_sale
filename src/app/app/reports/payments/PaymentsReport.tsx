@@ -11,7 +11,7 @@ import { DateInput, DatePicker } from "@mantine/dates";
 import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
 
 export default function PaymentsReport() {
-  const [opened, { open, close }] = useDisclosure(false);
+  // const [opened, { open, close }] = useDisclosure(false);
   const payments = useCRUD().fullList({
     collection: "payments_view",
     expand: "invoice,party,area,section,booker",
@@ -235,14 +235,13 @@ export default function PaymentsReport() {
         {/* </Modal> */}
         <Group align='center' justify='space-between'>
           <Group>
-            <Button
-              onClick={open}
+            <Text
               variant='transparent'
               m={0}
               p={0}
               size='compact-lg'
               fw={"700"}
-              color='black'
+              c='black'
             >
               {reportType === "all" && `ALL PAYMENTS`}
               {reportType === "sending" && `PURCHASES REPORT`}
@@ -251,7 +250,7 @@ export default function PaymentsReport() {
               {reportType === "section" && `SECTION REPORT`}
               {reportType === "party" && `PARTY PAYMENTS REPORT`}
               {reportType === "booker" && `BOOKER INVOICE REPORT`}
-            </Button>
+            </Text>
           </Group>
           <Group justify='end'>
             <Text size={"sm"}>{`DATE FROM: ${

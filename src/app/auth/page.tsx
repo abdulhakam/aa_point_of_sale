@@ -1,26 +1,19 @@
 "use client";
 import { useForm } from "@mantine/form";
 import { TextInput, PasswordInput, Text, Paper, Group, Button, Stack, Alert } from "@mantine/core";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import pb from "../pocketbase";
 export default function AuthenticationForm(props) {
   const router = useRouter();
-  const search = useSearchParams()
-  // pb.authStore.isValid ? router.push("/app/dashboard") : null;
-  const [isLoading, setIsLoading] = useState(false);
-  const {
-    mutate: loginPB,
-    error,
-    isError,
-  } = useMutation({
-    mutationFn: (dt) => pb.collection("users").authWithPassword(dt.email, dt.password),
-    onMutate: () => setIsLoading(true),
+  const params = useSearchParams();
+  const auth = useMutation({
+    mutationFn: (dt: { email: string; password: string }) =>
+      pb.collection("users").authWithPassword(dt.email, dt.password),
     onSuccess: () => {
-      router.push("/app/dashboard");
+      params.get("redirection") ? router.push(params.get("redirection")) : router.push("/app/dashboard");
     },
-    onSettled: () => setIsLoading(false),
   });
   const form = useForm({
     initialValues: {
@@ -31,8 +24,15 @@ export default function AuthenticationForm(props) {
       password: (val) => (val.length < 5 ? "Password should include at least 5 characters" : null),
     },
   });
+
+  useEffect(() => {
+    if (pb.authStore.isValid) {
+      params.get("redirection") ? router.push(params.get("redirection")) : router.push("/app/dashboard");
+    }
+  }, []);
+
   const submitFunction = (data) => {
-    loginPB({ email: data.email, password: data.password });
+    auth.mutate({ email: data.email, password: data.password });
   };
   return (
     <div style={{ height: "100vh", display: "grid", placeItems: "center" }}>
@@ -41,7 +41,7 @@ export default function AuthenticationForm(props) {
           Welcome to POS
         </Text>
         <form onSubmit={form.onSubmit(submitFunction)}>
-          {isError && <Alert color='red'>{error.message}</Alert>}
+          {auth.isError && <Alert color='red'>{auth.error.message}</Alert>}
           <Stack>
             <TextInput
               required
@@ -63,15 +63,9 @@ export default function AuthenticationForm(props) {
             />
           </Stack>
           <Group justify='space-between' mt='xl'>
-            {!isLoading ? (
-              <Button type='submit' radius='xl'>
-                Login
-              </Button>
-            ) : (
-              <Button type='submit' radius='xl' disabled>
-                Login
-              </Button>
-            )}
+            <Button disabled={!auth.isIdle} type='submit' radius='xl'>
+              Login
+            </Button>
           </Group>
         </form>
       </Paper>
