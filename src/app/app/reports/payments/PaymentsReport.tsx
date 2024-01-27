@@ -1,13 +1,13 @@
 "use client";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
-import {  Button, Checkbox, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
+import { Button, Checkbox, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import dataFilter from "@/app/components/functions/dataFilter";
-import NewPayment from "./NewPayment";
-import { DatePicker } from "@mantine/dates";
+import styles from "@/app/components/printing/styles.module.css";
+import { DateInput, DatePicker } from "@mantine/dates";
 import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
 
 export default function PaymentsReport() {
@@ -22,10 +22,10 @@ export default function PaymentsReport() {
   const sections = useCRUD().fullList({ collection: "sections" });
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
   //filter vars
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
-    new Date("2024-01-01"),
-    new Date(),
-  ]);
+  const [fromDate, setFromDate] = useState<Date | null>(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
+  );
+  const [toDate, setToDate] = useState<Date | null>(new Date());
   const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,section,booker,(date---not in report type)
   const [bookerFilter, setBooker] = useState("All");
   const [areaFilter, setAreaFilter] = useState("All");
@@ -41,11 +41,10 @@ export default function PaymentsReport() {
       { key: "section", value: sectionFilter === "All" ? "" : sectionFilter },
       { key: "party", value: party === "All" ? "" : party },
       { key: "type", value: paymentType === "all" ? "" : paymentType },
-      {key: 'description', value: invoicesOnly ? 'Created' : ''},
+      { key: "description", value: invoicesOnly ? "Created" : "" },
     ],
-    payments.data
-      ?.filter((pmt) => dateRange[0] < new Date(pmt.created) && dateRange[1] > new Date(pmt.created))
-      // .filter((pmt) => (party !== "All" ? pmt.expand.party.id === party : true))
+    payments.data?.filter((pmt) => fromDate < new Date(pmt.created) && toDate > new Date(pmt.created))
+    // .filter((pmt) => (party !== "All" ? pmt.expand.party.id === party : true))
   );
   const tableStructure = [
     { accessor: "id", hidden: true },
@@ -60,7 +59,8 @@ export default function PaymentsReport() {
       accessor: "type",
       sortable: true,
       width: "3em",
-      render: (record) => record.type==='sending'?<IconArrowUp size={12}/>:<IconArrowDown size={12} />,
+      render: (record) =>
+        record.type === "sending" ? <IconArrowUp size={12} /> : <IconArrowDown size={12} />,
     },
     {
       accessor: "area",
@@ -80,7 +80,7 @@ export default function PaymentsReport() {
     },
     { accessor: "party", sortable: true },
     { accessor: "booker", hidden: reportType === "Sending", sortable: true },
-    { accessor: "amount", sortable: true ,render: (record) => <>{`${record.amount.toFixed(2)}`}</>},
+    { accessor: "amount", sortable: true, render: (record) => <>{`${record.amount.toFixed(2)}`}</> },
     {
       accessor: "paid",
       hidden: true,
@@ -119,29 +119,19 @@ export default function PaymentsReport() {
   if (checkSuccess(queries)) {
     return (
       <>
-        <Modal centered opened={opened} onClose={close} title='Filter Data'>
-          <Stack>
-            <Checkbox
-              label={"Invoices Only"}
-              checked={invoicesOnly}
-              onChange={(event) => setInvoicesOnly(event.currentTarget.checked)}
-            />
-            <DatePicker type='range' size='xs' value={dateRange} onChange={setDateRange} />
+        {/* <Modal centered opened={opened} onClose={close} title='Filter Data'> */}
+        <Group className={styles.hideOnPrint}>
+          <Stack gap={0}>
+            <DateInput value={fromDate} onChange={setFromDate} label='Date From' />
+            <DateInput value={toDate} onChange={setToDate} label='Date To' />
+            {/* <Group>
+              
+              <Button onClick={close}>OK</Button> 
+            </Group> */}
+          </Stack>
+          <Stack gap={0}>
             <Select
-              label={"Select Booker"}
-              data={[...bookers.data?.map((bkr) => bkr.name), "All"]}
-              value={bookerFilter}
-              searchable
-              onChange={(v) => {
-                setBooker(v);
-                setSectionFilter("All");
-                setAreaFilter("All");
-                setPaymentType("all");
-                setParty("All");
-                setReportType("booker");
-              }}
-            />
-            <Select
+              allowDeselect={false}
               label={"Select Section"}
               data={[...sections.data.map((sec) => sec.name), "All"]}
               value={sectionFilter}
@@ -155,6 +145,7 @@ export default function PaymentsReport() {
               }}
             />
             <Select
+              allowDeselect={false}
               label={"Select Area"}
               data={
                 sectionFilter === "All"
@@ -175,7 +166,26 @@ export default function PaymentsReport() {
                 setReportType("area");
               }}
             />
+          </Stack>
+          <Stack gap={0}>
             <Select
+              allowDeselect={false}
+              label={"Select Booker"}
+              data={[...bookers.data?.map((bkr) => bkr.name), "All"]}
+              value={bookerFilter}
+              searchable
+              onChange={(v) => {
+                setBooker(v);
+                setSectionFilter("All");
+                setAreaFilter("All");
+                setPaymentType("all");
+                setParty("All");
+                setReportType("booker");
+              }}
+            />
+
+            <Select
+              allowDeselect={false}
               label={"Select Party"}
               data={[
                 ...parties.data.map((pty) => ({ value: pty.name, label: pty.name })),
@@ -191,7 +201,10 @@ export default function PaymentsReport() {
                 setReportType("party");
               }}
             />
+          </Stack>
+          <Stack gap={0}>
             <Select
+              allowDeselect={false}
               label={"Select Payment Type"}
               data={["sending", "recieving", "all"]}
               value={paymentType}
@@ -201,22 +214,25 @@ export default function PaymentsReport() {
                 setReportType(v);
               }}
             />
-            <Group>
-              <Button
-                onClick={() => {
-                  setAreaFilter("All");
-                  setSectionFilter("All");
-                  setParty("All");
-                  setPaymentType("all");
-                  setReportType("all");
-                }}
-              >
-                RESET
-              </Button>
-              <Button onClick={close}>OK</Button>
-            </Group>
+            <Checkbox
+              label={"Invoices Only"}
+              checked={invoicesOnly}
+              onChange={(event) => setInvoicesOnly(event.currentTarget.checked)}
+            />
+            <Button
+              onClick={() => {
+                setAreaFilter("All");
+                setSectionFilter("All");
+                setParty("All");
+                setPaymentType("all");
+                setReportType("all");
+              }}
+            >
+              RESET
+            </Button>
           </Stack>
-        </Modal>
+        </Group>
+        {/* </Modal> */}
         <Group align='center' justify='space-between'>
           <Group>
             <Button
@@ -239,8 +255,8 @@ export default function PaymentsReport() {
           </Group>
           <Group justify='end'>
             <Text size={"sm"}>{`DATE FROM: ${
-              dateRange[0] !== null
-                ? dateRange[0].toLocaleDateString("en", {
+              fromDate !== null
+                ? fromDate.toLocaleDateString("en", {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
@@ -248,8 +264,8 @@ export default function PaymentsReport() {
                 : "-"
             }`}</Text>
             <Text size={"sm"}>{`DATE TO: ${
-              dateRange[1] !== null
-                ? dateRange[1].toLocaleDateString("en", {
+              toDate !== null
+                ? toDate.toLocaleDateString("en", {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",

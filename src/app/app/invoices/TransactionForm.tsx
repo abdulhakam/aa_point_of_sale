@@ -1,4 +1,5 @@
 "use client";
+import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import { itemCreateForm, itemFormStructure } from "@/app/api/items";
 import useCRUD, { crud } from "@/app/api/useAPI";
 import FormGenerator from "@/app/components/FormGenerator";
@@ -12,6 +13,11 @@ import { useState } from "react";
 
 export function TransactionForm(props) {
   const qc = useQueryClient();
+  const invoiceData = useCRUD().read({
+    collection: "invoices",
+    recordID: props.invoice,
+    expand: "booker.company",
+  });
   const [itemSP, setSP] = useState(0);
   const [opened, { open, close }] = useDisclosure(false);
   const [niOpened, { open: niOpen, close: niClose }] = useDisclosure(false);
@@ -82,155 +88,165 @@ export function TransactionForm(props) {
     const dis2 = (p * qty - dis1) * (d2 / 100);
     setTot(p * qty - dis1 - dis2);
   };
-  return (
-    <>
-      <form onSubmit={submitHandler}>
-        <Flex my='0' align={"end"}>
-          <Select
-            required
-            style={{ width: `${props.type === "sale" ? "47%" : "36%"}` }}
-            searchable
-            label={"Item"}
-            value={item}
-            onChange={(v) => {
-              setItem(v);
-              setItemData(props.items.find((itm) => itm.id == v));
-              setPrice(v);
-            }}
-            data={props.items.map((itm) => ({ value: itm.id, label: `${itm.name}` }))}
-          />
-          <Tooltip label='Create New item'>
-            <ActionIcon m={"0.3rem"} onClick={niOpen}>
-              <IconPlus />
-            </ActionIcon>
-          </Tooltip>
-          {props.type !== "sale" && (
+
+  
+  console.log(
+    props.items
+      .filter((item) => item.category === invoiceData.data?.expand?.booker?.company)
+      .map((itm) => ({ value: itm.id, label: `${itm.name}` }))
+  );
+  const queries = [invoiceData];
+  if (checkSuccess(queries)) {
+    return (
+      <>
+        <form onSubmit={submitHandler}>
+          <Flex my='0' align={"end"}>
+            <Select
+              required
+              style={{ width: `${props.type === "sale" ? "47%" : "36%"}` }}
+              searchable
+              label={"Item"}
+              value={item}
+              onChange={(v) => {
+                setItem(v);
+                setItemData(props.items.find((itm) => itm.id == v));
+                setPrice(v);
+              }}
+              data={props.items.map((itm) => ({ value: itm.id, label: `${itm.name}` }))}
+            />
+            <Tooltip label='Create New item'>
+              <ActionIcon m={"0.3rem"} onClick={niOpen}>
+                <IconPlus />
+              </ActionIcon>
+            </Tooltip>
+            {props.type !== "sale" && (
+              <NumberInput
+                style={{ width: "7%" }}
+                label='PP/CP'
+                rightSectionWidth={0}
+                // readOnly={props.type === "sale" ? true : false}
+                value={purchasePrice}
+                onChange={(v) => {
+                  setPurchasePrice(Number(v));
+                  discCalc(Number(v), qtyInput(itemData, boxes, pcs), disc_1, disc_2);
+                }}
+              />
+            )}
             <NumberInput
               style={{ width: "7%" }}
-              label='PP/CP'
-              rightSectionWidth={0}
-              // readOnly={props.type === "sale" ? true : false}
-              value={purchasePrice}
+              label='SP'
+              readOnly={props.type === "sale" ? false : true}
+              value={itemPrice}
               onChange={(v) => {
-                setPurchasePrice(Number(v));
-                discCalc(Number(v), qtyInput(itemData, boxes, pcs), disc_1, disc_2);
+                setItemPrice(Number(v));
+                discCalc(
+                  props.type === "sale" ? Number(v) : purchasePrice,
+                  qtyInput(itemData, boxes, pcs),
+                  disc_1,
+                  disc_2
+                );
               }}
             />
-          )}
-          <NumberInput
-            style={{ width: "7%" }}
-            label='SP'
-            readOnly={props.type === "sale" ? false : true}
-            value={itemPrice}
-            onChange={(v) => {
-              setItemPrice(Number(v));
-              discCalc(
-                props.type === "sale" ? Number(v) : purchasePrice,
-                qtyInput(itemData, boxes, pcs),
-                disc_1,
-                disc_2
-              );
-            }}
-          />
-          <Tooltip label='Adjust Sale Price'>
-            <ActionIcon
-              m={"0.3rem"}
-              onClick={() => {
-                open();
-                setSP(itemPrice);
+            <Tooltip label='Adjust Sale Price'>
+              <ActionIcon
+                m={"0.3rem"}
+                onClick={() => {
+                  open();
+                  setSP(itemPrice);
+                }}
+              >
+                <IconAdjustmentsDollar />
+              </ActionIcon>
+            </Tooltip>
+            <NumberInput
+              style={{ width: "7%" }}
+              label='Boxes'
+              rightSectionWidth={0}
+              value={boxes}
+              onChange={(v) => {
+                setBoxes(Number(v));
+                discCalc(
+                  props.type === "sale" ? itemPrice : purchasePrice,
+                  qtyInput(itemData, Number(v), pcs),
+                  disc_1,
+                  disc_2
+                );
               }}
-            >
-              <IconAdjustmentsDollar />
-            </ActionIcon>
-          </Tooltip>
-          <NumberInput
-            style={{ width: "7%" }}
-            label='Boxes'
-            rightSectionWidth={0}
-            value={boxes}
-            onChange={(v) => {
-              setBoxes(Number(v));
-              discCalc(
-                props.type === "sale" ? itemPrice : purchasePrice,
-                qtyInput(itemData, Number(v), pcs),
-                disc_1,
-                disc_2
-              );
+            />
+            <NumberInput
+              style={{ width: "7%" }}
+              label='Pcs'
+              rightSectionWidth={0}
+              value={pcs}
+              onChange={(v) => {
+                setPcs(Number(v));
+                discCalc(
+                  props.type === "sale" ? itemPrice : purchasePrice,
+                  qtyInput(itemData, boxes, Number(v)),
+                  disc_1,
+                  disc_2
+                );
+              }}
+            />
+            <NumberInput
+              style={{ width: "7%" }}
+              label='Scheme'
+              rightSectionWidth={0}
+              value={scheme}
+              onChange={(v) => {
+                setScheme(Number(v));
+              }}
+            />
+            <NumberInput
+              style={{ width: "7%" }}
+              label='discount_1'
+              rightSectionWidth={0}
+              value={disc_1}
+              onChange={(v) => {
+                setD1(Number(v));
+                discCalc(
+                  props.type === "sale" ? itemPrice : purchasePrice,
+                  qtyInput(itemData, boxes, pcs),
+                  Number(v),
+                  disc_2
+                );
+              }}
+            />
+            <NumberInput
+              style={{ width: "7%" }}
+              label='discount_2'
+              rightSectionWidth={0}
+              value={disc_2}
+              onChange={(v) => {
+                setD2(Number(v));
+                discCalc(
+                  props.type === "sale" ? itemPrice : purchasePrice,
+                  qtyInput(itemData, boxes, pcs),
+                  disc_1,
+                  Number(v)
+                );
+              }}
+            />
+            <NumberInput style={{ width: "7%" }} readOnly label='total' value={total} />
+            <Button type='submit'>Add</Button>
+          </Flex>
+        </form>
+        <Modal centered opened={opened} onClose={close} title='Update Price'>
+          <NumberInput label={"New Price for Item"} value={itemSP} onChange={(v) => setSP(Number(v))} />
+          <Button
+            mt={"sm"}
+            onClick={() => {
+              updateItemSP.mutate({ collection: "items", recordID: item, data: { sale_price: itemSP } });
             }}
-          />
-          <NumberInput
-            style={{ width: "7%" }}
-            label='Pcs'
-            rightSectionWidth={0}
-            value={pcs}
-            onChange={(v) => {
-              setPcs(Number(v));
-              discCalc(
-                props.type === "sale" ? itemPrice : purchasePrice,
-                qtyInput(itemData, boxes, Number(v)),
-                disc_1,
-                disc_2
-              );
-            }}
-          />
-          <NumberInput
-            style={{ width: "7%" }}
-            label='Scheme'
-            rightSectionWidth={0}
-            value={scheme}
-            onChange={(v) => {
-              setScheme(Number(v));
-            }}
-          />
-          <NumberInput
-            style={{ width: "7%" }}
-            label='discount_1'
-            rightSectionWidth={0}
-            value={disc_1}
-            onChange={(v) => {
-              setD1(Number(v));
-              discCalc(
-                props.type === "sale" ? itemPrice : purchasePrice,
-                qtyInput(itemData, boxes, pcs),
-                Number(v),
-                disc_2
-              );
-            }}
-          />
-          <NumberInput
-            style={{ width: "7%" }}
-            label='discount_2'
-            rightSectionWidth={0}
-            value={disc_2}
-            onChange={(v) => {
-              setD2(Number(v));
-              discCalc(
-                props.type === "sale" ? itemPrice : purchasePrice,
-                qtyInput(itemData, boxes, pcs),
-                disc_1,
-                Number(v)
-              );
-            }}
-          />
-          <NumberInput style={{ width: "7%" }} readOnly label='total' value={total} />
-          <Button type='submit'>Add</Button>
-        </Flex>
-      </form>
-      <Modal centered opened={opened} onClose={close} title='Update Price'>
-        <NumberInput label={"New Price for Item"} value={itemSP} onChange={(v) => setSP(Number(v))} />
-        <Button
-          mt={"sm"}
-          onClick={() => {
-            updateItemSP.mutate({ collection: "items", recordID: item, data: { sale_price: itemSP } });
-          }}
-        >
-          OK
-        </Button>
-      </Modal>
+          >
+            OK
+          </Button>
+        </Modal>
 
-      <Modal centered size={"auto"} opened={niOpened} onClose={niClose} title='Create New Item'>
-        <FormGeneratorBasic close={niClose} editable formStructure={itemCreateForm} />
-      </Modal>
-    </>
-  );
+        <Modal centered size={"auto"} opened={niOpened} onClose={niClose} title='Create New Item'>
+          <FormGeneratorBasic close={niClose} editable formStructure={itemCreateForm} />
+        </Modal>
+      </>
+    );
+  } else return <StatusCheck check={queries} />;
 }

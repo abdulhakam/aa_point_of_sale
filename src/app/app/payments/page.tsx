@@ -6,13 +6,12 @@ import { useDisclosure } from "@mantine/hooks";
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import dataFilter from "@/app/components/functions/dataFilter";
-import NewPayment from "../reports/payments/NewPayment";
-import { DatePicker } from "@mantine/dates";
+import NewPayment from "./NewPayment";
+import { DateInput, DatePicker } from "@mantine/dates";
 import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
 import { paymentCreateForm } from "@/app/api/payments";
 
 export default function PaymentsReport() {
-  const [opened, { open, close }] = useDisclosure(false);
   const payments = useCRUD().fullList({
     collection: "payments_view",
     expand: "invoice,party,area,section,booker",
@@ -25,10 +24,11 @@ export default function PaymentsReport() {
   const invoices = useCRUD().fullList({ collection: "invoice_view" });
 
   //filter vars
-  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0),
-    new Date(),
-  ]);
+
+  const [fromDate, setFromDate] = useState<Date | null>(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
+  );
+  const [toDate, setToDate] = useState<Date | null>(new Date());
   const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,section,booker,(date---not in report type)
   const [bookerFilter, setBooker] = useState("All");
   const [areaFilter, setAreaFilter] = useState("All");
@@ -50,7 +50,7 @@ export default function PaymentsReport() {
       { key: "description", value: invoicesOnly ? "Created" : "" },
     ],
     payments.data
-      ?.filter((pmt) => dateRange[0] < new Date(pmt.created) && dateRange[1] > new Date(pmt.created))
+      ?.filter((pmt) => fromDate < new Date(pmt.created) && toDate > new Date(pmt.created))
       .filter((nm) =>
         invoiceNumber !== "All" ? nm.expand?.invoice?.invoiceNo === Number(invoiceNumber) : true
       )
@@ -124,15 +124,18 @@ export default function PaymentsReport() {
           total,
         ],
   ];
-  const queries = [payments, areas, sections, bookers, parties];
+  const queries = [payments, areas, sections, bookers, parties, invoices];
   if (checkSuccess(queries)) {
     return (
       <>
-        <Button onClick={open} variant='transparent' m={0} p={0} size='compact-xl' fw={"700"} color='black'>
+        <Button variant='transparent' m={0} p={0} size='compact-xl' fw={"700"} color='black'>
           {"PAYMENTS VIEW"}
         </Button>
-        <Group align="start">
-          <DatePicker type='range' size='xs' value={dateRange} onChange={setDateRange} />
+        <Group align='start'>
+          <Stack gap={0}>
+            <DateInput value={fromDate} onChange={setFromDate} label='Date From' />
+            <DateInput value={toDate} onChange={setToDate} label='Date To' />
+          </Stack>
           <Stack gap={0}>
             <Select
               label={"Select Payment Type"}
@@ -221,14 +224,14 @@ export default function PaymentsReport() {
             />
 
             <Checkbox
-            mt={'xl'}
+              mt={"xl"}
               label={"Invoices Only"}
               checked={invoicesOnly}
               onChange={(event) => setInvoicesOnly(event.currentTarget.checked)}
             />
           </Stack>
           <Button
-          variant="outline"
+            variant='outline'
             onClick={() => {
               setAreaFilter("All");
               setSectionFilter("All");
@@ -246,8 +249,8 @@ export default function PaymentsReport() {
         <Group align='center' justify='space-between'>
           <Group justify='end'>
             <Text size={"sm"}>{`DATE FROM: ${
-              dateRange[0] !== null
-                ? dateRange[0].toLocaleDateString("en", {
+              fromDate !== null
+                ? fromDate.toLocaleDateString("en", {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
@@ -255,8 +258,8 @@ export default function PaymentsReport() {
                 : "-"
             }`}</Text>
             <Text size={"sm"}>{`DATE TO: ${
-              dateRange[1] !== null
-                ? dateRange[1].toLocaleDateString("en", {
+              toDate !== null
+                ? toDate.toLocaleDateString("en", {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
@@ -273,6 +276,7 @@ export default function PaymentsReport() {
         </Group>
         <DataViewTable
           // report
+          height={300}
           fz={"xs"}
           verticalSpacing={0}
           horizontalSpacing={2}

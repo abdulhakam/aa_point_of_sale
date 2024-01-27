@@ -3,7 +3,7 @@ import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import ReportViewTable from "@/app/components/ReportViewTable";
 import dataFilter from "@/app/components/functions/dataFilter";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActionIcon,
   Box,
@@ -23,6 +23,7 @@ import { getQty, qtyDisplay } from "@/app/components/functions/qtyParser";
 import { IconPrinter } from "@tabler/icons-react";
 import { useReactToPrint } from "react-to-print";
 import PrintHead from "@/app/components/printing/PrintHead";
+import { useSearchParams } from "next/navigation";
 
 const tableStructure = [
   { accessor: "id", hidden: true },
@@ -31,7 +32,7 @@ const tableStructure = [
   // { accessor: "qty", width: "5em", render: (record) => qtyDisplay(record.expand.item, record.qty) },
   { accessor: "ctn", width: "3em", render: (record) => getQty(record.expand.item, record.qty).ctns },
   { accessor: "units", width: "3em", render: (record) => getQty(record.expand.item, record.qty).units },
-  { accessor: "scheme", title: "Free", width: "3em" },
+  { accessor: "scheme", title: "Free (units)", width: "3em" },
   { accessor: "price", width: "3em" },
   { accessor: "discount_1", title: "D1", width: "2em" },
   { accessor: "discount_2", title: "D2", width: "3em" },
@@ -39,20 +40,47 @@ const tableStructure = [
 ];
 
 export default function InvoicePrint() {
+  const searchParams = useSearchParams();
+  const invoiceId = searchParams.get("invoiceId");
+
   const printRef = useRef();
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
   });
-  const [opened, { open, close }] = useDisclosure(true);
-  const [type, setType] = useState("purchase");
-  const [filterValue, setFilter] = useState("");
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
     expand: "invoice_maker,party,booker",
   });
   const transactions = useCRUD().fullList({ collection: "transaction_view", expand: "item" });
-  const filteredInvoices = dataFilter([{ key: "type", value: type }], invoices.data);
-  const filteredData = dataFilter([{ key: "invoice", value: filterValue }], transactions.data);
+
+  const thisInvoice = invoices.data?.find((inv) => inv.id === invoiceId);
+  const [opened, { open, close }] = useDisclosure(true);
+  const [type, setType] = useState("purchase");
+  const [filterValue, setFilter] = useState("");
+  useEffect(() => {
+    if (thisInvoice) {
+      setFilter(thisInvoice?.id);
+      setType(thisInvoice?.type);
+    }
+  }, [thisInvoice]);
+  const filteredInvoices = dataFilter(
+    [
+      {
+        key: "type",
+        value: type,
+      },
+    ],
+    invoices.data
+  );
+  const filteredData = dataFilter(
+    [
+      {
+        key: "invoice",
+        value: filterValue,
+      },
+    ],
+    transactions.data
+  );
   const invoice = invoices.data?.find((inv) => inv.id === filterValue);
   const queries = [invoices, transactions];
   if (checkSuccess(queries)) {
@@ -68,31 +96,45 @@ export default function InvoicePrint() {
         >
           <IconPrinter />
         </ActionIcon>
-        <Modal centered opened={opened} onClose={close} title='Filter Data'>
-          <Select
-            searchable
-            allowDeselect={false}
-            label={"Invoice Type:"}
-            data={["purchase", "sale"]}
-            value={type}
-            onChange={setType}
-          />
-          <Select
-            searchable
-            allowDeselect={false}
-            label={"Invoice No:"}
-            data={filteredInvoices.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) }))}
-            value={filterValue}
-            onChange={setFilter}
-          />
-          <Button
-            mt={"sm"}
-            onClick={() => {
-              close();
-            }}
-          >
-            OK
-          </Button>
+        <Modal centered opened={opened} onClose={close} title={thisInvoice?"Click to Print Invoice":'Filter Data'}>
+          {thisInvoice ? (
+            <ActionIcon
+              onClick={() => {
+                handlePrint();
+              }}
+              size='xl'
+              color='blue'
+            >
+              <IconPrinter />
+            </ActionIcon>
+          ) : (
+            <>
+              <Select
+                searchable
+                allowDeselect={false}
+                label={"Invoice Type:"}
+                data={["purchase", "sale"]}
+                value={type}
+                onChange={setType}
+              />
+              <Select
+                searchable
+                allowDeselect={false}
+                label={"Invoice No:"}
+                data={filteredInvoices.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) }))}
+                value={filterValue}
+                onChange={setFilter}
+              />
+              <Button
+                mt={"sm"}
+                onClick={() => {
+                  close();
+                }}
+              >
+                OK
+              </Button>
+            </>
+          )}
         </Modal>
         {/* //////////////////////////////////////////////////////////////////////////// */}
         <div ref={printRef} style={{ marginLeft: "1em", marginRight: "1em" }}>
@@ -101,16 +143,15 @@ export default function InvoicePrint() {
             <Button p={0} onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
               {`${type.toUpperCase()} INVOICE`}
             </Button>
-            <Table w={"40%"} fz={"xs"} withRowBorders={false} verticalSpacing={0} horizontalSpacing={'1em'}>
+            <Table w={"40%"} fz={"xs"} withRowBorders={false} verticalSpacing={0} horizontalSpacing={"1em"}>
               <Table.Tr>
-                <Table.Td >
-                  <Text fw={600}>
-                    {"Invoice #:"}
-                  </Text>
+                <Table.Td>
+                  <Text fw={600}>{"Invoice #:"}</Text>
                 </Table.Td>
                 <Table.Td>
                   <Text
-                    fw={"700"} style={{ border: "1px solid black", paddingLeft: "0.5em" }}
+                    fw={"700"}
+                    style={{ border: "1px solid black", paddingLeft: "0.5em" }}
                   >{` ${invoice?.invoiceNo}`}</Text>
                 </Table.Td>
               </Table.Tr>
@@ -172,14 +213,14 @@ export default function InvoicePrint() {
                     <Stack w={"100%"} justify='end' align='end'>
                       <Group mr={0} w={"100%"} justify='space-between'>
                         {new Date(invoice?.duedate.slice(0, 10)) > new Date(invoice?.created.slice(0, 10)) ? (
-                          <Stack align='center' gap={0}>
+                          <Group align='center' gap={"1em"}>
                             <Text ml={"1em"} fw={700} size='xs'>
                               Due Date:
                             </Text>
                             <Text size='xs' fw={700}>
                               {`${invoice?.duedate.slice(0, 10)} `}
                             </Text>
-                          </Stack>
+                          </Group>
                         ) : (
                           <div> </div>
                         )}
@@ -209,7 +250,7 @@ export default function InvoicePrint() {
                           Invoice Total
                         </Text>
                         <Text size='md' fw={700}>
-                          {invoice?.final_total || 0}
+                          {Number(invoice?.final_total).toFixed(2) || 0}
                         </Text>
                       </Group>
                     </Stack>

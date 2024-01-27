@@ -1,23 +1,20 @@
-import { Center, Tooltip, UnstyledButton, Stack, rem } from '@mantine/core';
+import {  Tooltip, UnstyledButton, Stack, rem } from '@mantine/core';
 import {
   IconHome2,
-  IconUser,
   IconSettings,
   IconLogout,
-  IconTag,
-  IconBriefcase,
   IconReport,
   IconTrolley,
   IconShoppingBag,
   IconDashboard,
   IconCoinEuro,
   IconBuildingWarehouse,
-  IconExchange,
   IconBasketDollar,
 } from '@tabler/icons-react';
 import classes from './NavbarMinimal.module.css';
 import { useUserAuthContext } from '../context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
+import pb from '../pocketbase';
 interface NavbarLinkProps {
   icon: typeof IconHome2;
   label: string;
@@ -49,7 +46,6 @@ const mockdata = [
 export default function NavbarMinimal(props) {
   const pathname = usePathname().split('/').pop()
   const router = useRouter()
-  const {logout} = useUserAuthContext()
   const links = mockdata.map((link) => (
     <NavbarLink
       {...link}
@@ -68,7 +64,7 @@ export default function NavbarMinimal(props) {
       </div>
 
       <Stack justify="center" gap={0}>
-        <NavbarLink icon={IconLogout} label="Logout" onClick={logout} />
+        <NavbarLink icon={IconLogout} label="Logout" onClick={()=>{pb.authStore.clear();router.push('/auth')}} />
       </Stack>
     </nav>
   );

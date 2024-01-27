@@ -4,6 +4,7 @@ import useCRUD, { crud } from "@/app/api/useAPI";
 import pb from "@/app/pocketbase";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import {
+  ActionIcon,
   Button,
   Checkbox,
   Flex,
@@ -25,6 +26,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { TransactionForm } from "./TransactionForm";
 import { DateInput } from "@mantine/dates";
 import { partyCreateForm } from "@/app/api/parties";
+import { IconPrinter } from "@tabler/icons-react";
 
 export default function InvoiceForm(props) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -80,7 +82,6 @@ export default function InvoiceForm(props) {
       close();
     },
   });
-
   function getInvoiceData(value) {
     if (value !== "new") {
       const invoice = invoices.data.find((inv) => inv.id === value);
@@ -295,6 +296,19 @@ export default function InvoiceForm(props) {
               />
             </Stack>
           )}
+          <ActionIcon
+            component='a'
+            href={`print?invoiceId=${invoiceForm.values.invoiceNo}`}
+            target='_blank'
+            onClick={() => {
+              // handlePrint();
+            }}
+            size='xl'
+            variant='subtle'
+            color='blue'
+          >
+            <IconPrinter />
+          </ActionIcon>
         </Group>
         <Stack gap={"0.3rem"}>
           {editing ? (

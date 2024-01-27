@@ -34,6 +34,7 @@ export const orderBookerFormStructure = {
       type: "select",
       withCreate: true,
       baseProps: {
+        multiselect:true,
         label: "Company",
         searchable: true,
         data: [],
