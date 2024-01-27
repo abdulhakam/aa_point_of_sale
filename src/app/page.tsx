@@ -9,7 +9,7 @@ export default function Home() {
   const { logout } = useUserAuthContext();
   const router = useRouter();
   useEffect(() => {
-    if (pb.authStore.isValid) {
+    if (!pb.authStore.isValid) {
       router.push("/auth");
     } else {
       router.push("/app/dashboard");

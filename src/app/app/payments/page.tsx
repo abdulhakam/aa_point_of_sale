@@ -275,7 +275,7 @@ export default function PaymentsReport() {
           {areaFilter !== "All" && <Text size={"sm"}>{`Area: ${areaFilter}`}</Text>}
         </Group>
         <DataViewTable
-          // report
+          report
           height={300}
           fz={"xs"}
           verticalSpacing={0}
