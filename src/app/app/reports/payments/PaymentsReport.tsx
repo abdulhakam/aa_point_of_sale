@@ -25,7 +25,9 @@ export default function PaymentsReport() {
   const [fromDate, setFromDate] = useState<Date | null>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
   );
-  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [toDate, setToDate] = useState<Date | null>(
+    new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999)
+  );
   const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,section,booker,(date---not in report type)
   const [bookerFilter, setBooker] = useState("All");
   const [areaFilter, setAreaFilter] = useState("All");
@@ -122,8 +124,32 @@ export default function PaymentsReport() {
         {/* <Modal centered opened={opened} onClose={close} title='Filter Data'> */}
         <Group className={styles.hideOnPrint}>
           <Stack gap={0}>
-            <DateInput value={fromDate} onChange={setFromDate} label='Date From' />
-            <DateInput value={toDate} onChange={setToDate} label='Date To' />
+            <DateInput
+              value={fromDate}
+              onChange={(v) =>
+                setFromDate(
+                  new Date(new Date(v).getFullYear(), new Date(v).getMonth(), new Date(v).getDate(), 0, 0, 0)
+                )
+              }
+              label='Date From'
+            />
+            <DateInput
+              value={toDate}
+              onChange={(v) =>
+                setToDate(
+                  new Date(
+                    new Date(v).getFullYear(),
+                    new Date(v).getMonth(),
+                    new Date(v).getDate(),
+                    23,
+                    59,
+                    59,
+                    999
+                  )
+                )
+              }
+              label='Date To'
+            />
             {/* <Group>
               
               <Button onClick={close}>OK</Button> 
@@ -235,14 +261,7 @@ export default function PaymentsReport() {
         {/* </Modal> */}
         <Group align='center' justify='space-between'>
           <Group>
-            <Text
-              variant='transparent'
-              m={0}
-              p={0}
-              size='compact-lg'
-              fw={"700"}
-              c='black'
-            >
+            <Text variant='transparent' m={0} p={0} size='compact-lg' fw={"700"} c='black'>
               {reportType === "all" && `ALL PAYMENTS`}
               {reportType === "sending" && `PURCHASES REPORT`}
               {reportType === "recieving" && `SALES REPORT`}
