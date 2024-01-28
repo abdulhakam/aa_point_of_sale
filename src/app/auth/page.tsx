@@ -27,7 +27,11 @@ export default function AuthenticationForm(props) {
 
   useEffect(() => {
     if (pb.authStore.isValid) {
-      params.get("redirection") ? router.push(params.get("redirection")) : router.push("/app/dashboard");
+      params.get("redirection")
+        ? (params.get("redirection") !== "/"
+          ? router.push(params.get("redirection"))
+          : router.push("/app/dashboard"))
+        : router.push("/app/dashboard");
     }
   }, []);
 
