@@ -1,6 +1,8 @@
 "use client";
 import { Card, Text,  UnstyledButton,  useMantineTheme, Grid } from "@mantine/core";
 import {
+  IconChartBar,
+  IconChartLine,
   IconReportMoney, IconTrolley,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
@@ -8,7 +10,9 @@ import { useRouter } from "next/navigation";
 
 const mockdata = [
   { title: "Unified Payments Report", icon: IconReportMoney, color: "blue", target: "reports/payments" },
-  { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" }
+  { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" },
+  { title: "Balance Report", icon: IconChartBar, color: "orange", target: "reports/balancereport" },
+  { title: "General Ledger", icon: IconChartLine, color: "grape", target: "reports/ledgerreport" }
 ];
 
 export default function ActionsGrid(props) {

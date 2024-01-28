@@ -1,21 +1,16 @@
 "use client";
 
 import {
-  ActionIcon,
   AppShell,
-  Burger,
   Button,
   Container,
   Flex,
-  Group,
-  Skeleton,
   Stack,
   Text,
 } from "@mantine/core";
-import { TimeDisplay, useDate } from "./TimeDisplay";
+import { useDate } from "./TimeDisplay";
 import NavbarMinimal from "./NavbarMinimal";
-import { useDisclosure, useMediaQuery } from "@mantine/hooks";
-import NumberAddress from "../components/NumberAddress/NumberAddress";
+import { useDisclosure } from "@mantine/hooks";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // const isPrinting = useMediaQuery('print');
@@ -49,8 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </Text>
           </Button>
           <Stack gap={0} align={"center"}>
-            {/* <Text size='xs'>TIME:</Text> */}
-            <Text size='xs'> {time} </Text>
+            <Text size='xs'>{time} </Text>
             <Text size='xs'>{date}</Text>
           </Stack>
         </Flex>

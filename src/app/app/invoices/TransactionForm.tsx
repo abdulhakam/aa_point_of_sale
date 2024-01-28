@@ -66,6 +66,7 @@ export function TransactionForm(props) {
       item: item,
       qty: qtyInput(itemData, boxes, pcs),
       scheme: scheme,
+      cost_price: purchasePrice,
       price: props.type === "sale" ? itemPrice : purchasePrice,
       discount_1: disc_1,
       discount_2: disc_2,
@@ -89,12 +90,6 @@ export function TransactionForm(props) {
     setTot(p * qty - dis1 - dis2);
   };
 
-  
-  console.log(
-    props.items
-      .filter((item) => item.category === invoiceData.data?.expand?.booker?.company)
-      .map((itm) => ({ value: itm.id, label: `${itm.name}` }))
-  );
   const queries = [invoiceData];
   if (checkSuccess(queries)) {
     return (
