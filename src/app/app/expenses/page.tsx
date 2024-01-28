@@ -10,10 +10,10 @@ import { DateInput} from "@mantine/dates";
 
 const tableStructure = [
   { accessor: "id", hidden: true },
-  {accessor: "name"},
+  // {accessor: "name"},
   { accessor: "description"},
   { accessor: "amount", width: "5rem" },
-  { accessor: "created",width: '12rem', sortable: true },
+  { accessor: "created", title:'Date',width: '12rem', sortable: true, render:(record)=>{ return String(record.created).slice(0,10)} },
 ];
 
 export default function Expenses() {
