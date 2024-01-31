@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 const mockdata = [
   { title: "Unified Payments Report", icon: IconReportMoney, color: "blue", target: "reports/payments" },
   { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" },
-  { title: "Balance Report", icon: IconChartBar, color: "orange", target: "reports/balancereport" },
+  { title: "Parties Report", icon: IconChartBar, color: "orange", target: "reports/parties" },
   { title: "General Ledger", icon: IconChartLine, color: "grape", target: "reports/ledgerreport" }
 ];
 

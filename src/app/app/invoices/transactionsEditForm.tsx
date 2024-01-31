@@ -47,12 +47,12 @@ export function TransactionEditForm(props) {
   const [boxes, setBoxes] = useState(Number(numBoxes));
   const [pcs, setPcs] = useState(Number(numPcs));
   const [scheme, setScheme] = useState(props.data.scheme);
-  const [purchasePrice, setPurchasePrice] = useState(props.data.expand.item.cost_price||0);
-  const [itemPrice, setItemPrice] = useState(props.data.expand.item.sale_price||0);
+  const [purchasePrice, setPurchasePrice] = useState(props.data.expand?.item.cost_price||0);
+  const [itemPrice, setItemPrice] = useState(props.data.expand?.item.sale_price||0);
   const [disc_1, setD1] = useState(props.data.discount_1);
   const [disc_2, setD2] = useState(props.data.discount_2);
   const [total, setTot] = useState(props.data.total);
-  const [itemData, setItemData] = useState(props.data.expand.item);
+  const [itemData, setItemData] = useState(props.data.expand?.item||{});
 
   function submitHandler(e) {
     e.preventDefault(e);

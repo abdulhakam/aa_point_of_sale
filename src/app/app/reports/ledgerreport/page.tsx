@@ -33,10 +33,31 @@ export default function LedgerReport() {
   const ledger = useCRUD().fullList({
     collection: "ledger_journal",
     sort: "+created",
-    filter: `created >= '${fromDate.toISOString().slice(0, 19).replace("T", " ")}' && created <= '${toDate
+    filter: `(created >= '${new Date(
+      Date.UTC(
+        fromDate.getFullYear(),
+        fromDate.getMonth(),
+        fromDate.getDate(),
+        fromDate.getHours(),
+        fromDate.getMinutes(),
+        fromDate.getSeconds()
+      )
+    )
       .toISOString()
-      .slice(0, 19)
-      .replace("T", " ")}'`,
+      .replace("T", " ")
+      .slice(0, 19)}' && created <= '${new Date(
+      Date.UTC(
+        toDate.getFullYear(),
+        toDate.getMonth(),
+        toDate.getDate(),
+        toDate.getHours(),
+        toDate.getMinutes(),
+        toDate.getSeconds()
+      )
+    )
+      .toISOString()
+      .replace("T", " ")
+      .slice(0, 19)}')`,
   });
   const printRef = useRef();
   const handlePrint = useReactToPrint({
@@ -73,38 +94,62 @@ export default function LedgerReport() {
             <IconPrinter />
           </ActionIcon>
           <Group>
-            <DateInput value={fromDate} onChange={setFromDate} label='Date From' />
-            <DateInput value={toDate} onChange={setToDate} label='Date To' />
+            <DateInput
+              value={fromDate}
+              onChange={(v) =>
+                setFromDate(
+                  new Date(
+                    new Date(v).getFullYear(),
+                    new Date(v).getMonth(),
+                    new Date().getDate(),
+                    0,
+                    0,
+                    0,
+                    0
+                  )
+                )
+              }
+              label='Date From'
+            />
+            <DateInput
+              value={toDate}
+              onChange={(v) =>
+                setToDate(
+                  new Date(
+                    new Date(v).getFullYear(),
+                    new Date(v).getMonth(),
+                    new Date().getDate(),
+                    23,
+                    59,
+                    59,
+                    999
+                  )
+                )
+              }
+              label='Date To'
+            />
           </Group>
           <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
             <PrintHead />
+            <Text size='xl' fw={700}>
+              {" "}
+              GENERAL LEDGER{" "}
+            </Text>
             <DataViewTable
               report
-              fz={"sm"}
-              horizontalSpacing={4}
+              fz={"xs"}
+              horizontalSpacing={2}
               verticalSpacing={4}
               formstructure={{}}
               columns={tableStructure}
               data={[...ledger.data, totals]}
             />
-
             <Stack gap={0} align='end'>
               <Group>
                 <Text fw={700}>Closing Value</Text>
-                <Text fw={600}>{Number(recievable)-Number(payable)+Number(cash)+Number(stock)}</Text>
+                <Text fw={600}>{(Number(recievable) - Number(payable) + Number(cash) + Number(stock)).toFixed(2)}</Text>
               </Group>
             </Stack>
-
-            {/* <Flex justify={"space-between"}>
-            <Text size='sm'>Received: </Text>
-            <Text size='sm'>{received}</Text>
-            <Text size='sm'>To Recieve: </Text>
-            <Text size='sm'>{to_recieve}</Text>
-            <Text size='sm'>Sent: </Text>
-            <Text size='sm'>{sent}</Text>
-            <Text size='sm'>To Send: </Text>
-            <Text size='sm'>{to_send}</Text>
-          </Flex> */}
           </div>
         </Stack>
       </>
@@ -124,8 +169,8 @@ function calculator(data) {
     stock += Number(row.stock);
   });
   return {
-    recievable: Number(accounts_recievable),
-    payable: Number(accounts_payable),
+    recievable: Number(accounts_recievable).toFixed(2),
+    payable: Number(accounts_payable).toFixed(2),
     cash: Number(cash).toFixed(2),
     stock: Number(stock).toFixed(2),
   };

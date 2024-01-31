@@ -24,7 +24,6 @@ export default function Payments() {
       >
         <IconPrinter />
       </ActionIcon>
-      <NewPayment />
       <div style={{marginLeft:'1em',marginRight:'1em'}} ref={printRef}>
         <PrintHead/>
         <hr/>

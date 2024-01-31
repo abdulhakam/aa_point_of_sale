@@ -11,17 +11,6 @@ import { DateInput, DatePicker } from "@mantine/dates";
 import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
 
 export default function PaymentsReport() {
-  // const [opened, { open, close }] = useDisclosure(false);
-  const payments = useCRUD().fullList({
-    collection: "payments_view",
-    expand: "invoice,party,area,section,booker",
-    sort: "",
-  });
-  const parties = useCRUD().fullList({ collection: "parties" });
-  const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
-  const sections = useCRUD().fullList({ collection: "sections" });
-  const bookers = useCRUD().fullList({ collection: "order_bookers" });
-  //filter vars
   const [fromDate, setFromDate] = useState<Date | null>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
   );
@@ -35,6 +24,40 @@ export default function PaymentsReport() {
   const [party, setParty] = useState("All");
   const [paymentType, setPaymentType] = useState("all");
   const [invoicesOnly, setInvoicesOnly] = useState(false);
+
+  const payments = useCRUD().fullList({
+    collection: "payments_view",
+    expand: "invoice,party,area,section,booker",
+    filter: `(created >= '${new Date(
+      Date.UTC(
+        fromDate.getFullYear(),
+        fromDate.getMonth(),
+        fromDate.getDate(),
+        fromDate.getHours(),
+        fromDate.getMinutes(),
+        fromDate.getSeconds()
+      )
+    )
+      .toISOString()
+      .replace("T", " ")
+      .slice(0, 19)}' && created <= '${new Date(
+      Date.UTC(
+        toDate.getFullYear(),
+        toDate.getMonth(),
+        toDate.getDate(),
+        toDate.getHours(),
+        toDate.getMinutes(),
+        toDate.getSeconds()
+      )
+    )
+      .toISOString()
+      .replace("T", " ")
+      .slice(0, 19)}')`,
+  });
+  const parties = useCRUD().fullList({ collection: "parties" });
+  const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
+  const sections = useCRUD().fullList({ collection: "sections" });
+  const bookers = useCRUD().fullList({ collection: "order_bookers" });
   //
   const filteredPayments = dataFilter(
     [
@@ -45,9 +68,9 @@ export default function PaymentsReport() {
       { key: "type", value: paymentType === "all" ? "" : paymentType },
       { key: "description", value: invoicesOnly ? "Created" : "" },
     ],
-    payments.data?.filter((pmt) => fromDate < new Date(pmt.created) && toDate > new Date(pmt.created))
-    // .filter((pmt) => (party !== "All" ? pmt.expand.party.id === party : true))
+    payments.data
   );
+  
   const tableStructure = [
     { accessor: "id", hidden: true },
     {
@@ -128,7 +151,15 @@ export default function PaymentsReport() {
               value={fromDate}
               onChange={(v) =>
                 setFromDate(
-                  new Date(new Date(v).getFullYear(), new Date(v).getMonth(), new Date(v).getDate(), 0, 0, 0)
+                  new Date(
+                    new Date(v).getFullYear(),
+                    new Date(v).getMonth(),
+                    new Date(v).getDate(),
+                    0,
+                    0,
+                    0,
+                    0
+                  )
                 )
               }
               label='Date From'
@@ -150,10 +181,6 @@ export default function PaymentsReport() {
               }
               label='Date To'
             />
-            {/* <Group>
-              
-              <Button onClick={close}>OK</Button> 
-            </Group> */}
           </Stack>
           <Stack gap={0}>
             <Select
