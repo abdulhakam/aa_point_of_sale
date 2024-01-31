@@ -11,24 +11,16 @@ import { DateInput, DatePicker } from "@mantine/dates";
 import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
 import { paymentCreateForm } from "@/app/api/payments";
 
-export default function PaymentsReport() {
-  const payments = useCRUD().fullList({
-    collection: "payments_view",
-    expand: "invoice,party,area,section,booker",
-    sort: "",
-  });
-  const parties = useCRUD().fullList({ collection: "parties" });
-  const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
-  const sections = useCRUD().fullList({ collection: "sections" });
-  const bookers = useCRUD().fullList({ collection: "order_bookers" });
-  const invoices = useCRUD().fullList({ collection: "invoice_view" });
-
+export default function Payments() {
   //filter vars
 
   const [fromDate, setFromDate] = useState<Date | null>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
   );
-  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [toDate, setToDate] = useState<Date | null>(
+    new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999)
+  );
+
   const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,section,booker,(date---not in report type)
   const [bookerFilter, setBooker] = useState("All");
   const [areaFilter, setAreaFilter] = useState("All");
@@ -36,7 +28,42 @@ export default function PaymentsReport() {
   const [party, setParty] = useState("All");
   const [invoiceNumber, setInvoiceNumber] = useState("All");
   const [paymentType, setPaymentType] = useState("all");
-  const [invoicesOnly, setInvoicesOnly] = useState(false);
+  const [unpaidOnly, setUnpaidOnly] = useState(false);
+
+  const payments = useCRUD().fullList({
+    collection: "payments_view",
+    expand: "invoice,party,area,section,booker",
+    filter: `(created >= '${new Date(
+      Date.UTC(
+        fromDate.getFullYear(),
+        fromDate.getMonth(),
+        fromDate.getDate(),
+        fromDate.getHours(),
+        fromDate.getMinutes(),
+        fromDate.getSeconds()
+      )
+    )
+      .toISOString()
+      .replace("T", " ")
+      .slice(0, 19)}' && created <= '${new Date(
+      Date.UTC(
+        toDate.getFullYear(),
+        toDate.getMonth(),
+        toDate.getDate(),
+        toDate.getHours(),
+        toDate.getMinutes(),
+        toDate.getSeconds()
+      )
+    )
+      .toISOString()
+      .replace("T", " ")
+      .slice(0, 19)}')`,
+  });
+  const parties = useCRUD().fullList({ collection: "parties" });
+  const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
+  const sections = useCRUD().fullList({ collection: "sections" });
+  const bookers = useCRUD().fullList({ collection: "order_bookers" });
+  const invoices = useCRUD().fullList({ collection: "invoice_view" });
   const invoiceList = invoices.data?.filter(
     (inv) => inv.type === (paymentType === "recieving" ? "sale" : "purchase")
   );
@@ -47,20 +74,17 @@ export default function PaymentsReport() {
       { key: "section", value: sectionFilter === "All" ? "" : sectionFilter },
       { key: "party", value: party === "All" ? "" : party },
       { key: "type", value: paymentType === "all" ? "" : paymentType },
-      { key: "description", value: invoicesOnly ? "Created" : "" },
     ],
-    payments.data
-      ?.filter((pmt) => fromDate < new Date(pmt.created) && toDate > new Date(pmt.created))
-      .filter((nm) =>
-        invoiceNumber !== "All" ? nm.expand?.invoice?.invoiceNo === Number(invoiceNumber) : true
-      )
+    payments.data?.filter((nm) =>
+      invoiceNumber !== "All" ? nm.expand?.invoice?.invoiceNo === Number(invoiceNumber) : true
+    )
   );
   const tableStructure = [
     { accessor: "id", hidden: true },
     {
       accessor: "created",
       title: "Date",
-      render: (record) => <>{record.created.slice(0, 10)}</>,
+      render: (record) => <>{record.created ? record?.created?.slice(0, 10):" - - - "}</>,
       sortable: true,
       width: "6em",
     },
@@ -69,7 +93,12 @@ export default function PaymentsReport() {
       sortable: true,
       width: "3em",
       render: (record) =>
-        record.type === "sending" ? <IconArrowUp size={12} /> : <IconArrowDown size={12} />,
+        record.type === "sending" ? <><IconArrowUp size={12} />{"P"}</> : <><IconArrowDown size={12} />{"S"}</>,
+    },{
+      accessor: "invoice",
+      sortable: true,
+      width: "4em",
+      render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
     },
     {
       accessor: "area",
@@ -81,15 +110,10 @@ export default function PaymentsReport() {
       sortable: true,
       width: "9em",
     },
-    {
-      accessor: "invoice",
-      sortable: true,
-      width: "4em",
-      render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
-    },
+    
     { accessor: "party", sortable: true },
     { accessor: "booker", hidden: reportType === "Sending", sortable: true },
-    { accessor: "amount", sortable: true, render: (record) => <>{`${record.amount.toFixed(2)}`}</> },
+    { accessor: "amount", sortable: true, render: (record) => <>{record.amount ? record.amount.toFixed(2):" - - "}</> },
     {
       accessor: "paid",
       hidden: true,
@@ -133,8 +157,40 @@ export default function PaymentsReport() {
         </Button>
         <Group align='start'>
           <Stack gap={0}>
-            <DateInput value={fromDate} onChange={setFromDate} label='Date From' />
-            <DateInput value={toDate} onChange={setToDate} label='Date To' />
+            <DateInput
+              value={fromDate}
+              onChange={(v) =>
+                setFromDate(
+                  new Date(
+                    new Date(v).getFullYear(),
+                    new Date(v).getMonth(),
+                    new Date(v).getDate(),
+                    0,
+                    0,
+                    0,
+                    0
+                  )
+                )
+              }
+              label='Date From'
+            />
+            <DateInput
+              value={toDate}
+              onChange={(v) =>
+                setToDate(
+                  new Date(
+                    new Date(v).getFullYear(),
+                    new Date(v).getMonth(),
+                    new Date(v).getDate(),
+                    23,
+                    59,
+                    59,
+                    999
+                  )
+                )
+              }
+              label='Date To'
+            />
           </Stack>
           <Stack gap={0}>
             <Select
@@ -174,19 +230,6 @@ export default function PaymentsReport() {
             />
           </Stack>
           <Stack gap={0}>
-            {/* <Select
-              label={"Select Section"}
-              data={[...sections.data.map((sec) => sec.name), "All"]}
-              value={sectionFilter}
-              searchable
-              onChange={(v) => {
-                setSectionFilter(v);
-                setAreaFilter("All");
-                setPaymentType("all");
-                setParty("All");
-                setReportType("section");
-              }}
-            /> */}
             <Select
               label={"Select Area"}
               data={
@@ -225,9 +268,9 @@ export default function PaymentsReport() {
 
             <Checkbox
               mt={"xl"}
-              label={"Invoices Only"}
-              checked={invoicesOnly}
-              onChange={(event) => setInvoicesOnly(event.currentTarget.checked)}
+              label={"Unpaid Invoices Only"}
+              checked={unpaidOnly}
+              onChange={(event) => setUnpaidOnly(event.currentTarget.checked)}
             />
           </Stack>
           <Button
@@ -293,7 +336,7 @@ export default function PaymentsReport() {
           }
           formstructure={paymentCreateForm}
           columns={tableStructure}
-          data={filteredPayments}
+          data={unpaidOnly ? getOutstandingPayments(filteredPayments):filteredPayments}
         />
         <Flex
           justify={"end"}
@@ -357,4 +400,19 @@ function calculator(payments) {
     sending: Number(sending).toFixed(2),
     sent: Number(sent).toFixed(2),
   };
+}
+
+function getOutstandingPayments(payments) {
+
+const invoices = Object.values(payments.reduce((acc, obj) => {
+  const invoiceId = obj.expand.invoice.id;
+  const amount = Number(obj.amount).toPrecision(2) * (obj.paid ? -1 : 1);
+
+  acc[invoiceId] = acc[invoiceId] || { ...obj, amount: 0, invoices: [] };
+  acc[invoiceId].invoices.push(obj);
+  acc[invoiceId].amount += amount;
+
+  return acc;
+}, {})).filter(invoice => invoice.amount !== 0);
+return invoices
 }

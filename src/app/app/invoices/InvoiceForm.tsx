@@ -60,6 +60,7 @@ export default function InvoiceForm(props) {
     onSuccess: () => {
       qc.invalidateQueries();
       paymentPayer();
+      window.open(`print?invoiceId=${invoiceForm.values.invoiceNo}`, "_blank").focus();
     },
   });
   const invoiceForm = useForm({
@@ -300,9 +301,6 @@ export default function InvoiceForm(props) {
             component='a'
             href={`print?invoiceId=${invoiceForm.values.invoiceNo}`}
             target='_blank'
-            onClick={() => {
-              // handlePrint();
-            }}
             size='xl'
             variant='subtle'
             color='blue'

@@ -56,7 +56,7 @@ export default function Transactions({ invoice }) {
     ...tr,
     count: index + 1,
     qty: qtyDisplay(
-      items.data.find((itm) => itm.id === tr.item),
+      items.data?.find((itm) => itm.id === tr.item)||{},
       tr.qty
     ),
   }));
