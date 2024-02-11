@@ -3,15 +3,15 @@ import { FormStructure, Item } from "./types";
 
 export const itemFormStructure: FormStructure<Item> = {
   fields: {
-    created: { type: "datetime", default: undefined, baseProps: { label: "Created" } },
+    created: { type: "datetime", hidden:true, default: undefined, baseProps: { label: "Created" } },
     updated: { type: "datetime", default: undefined, baseProps: { label: "Updated" } },
-    id: { type: "autocomplete", default: undefined, baseProps: { label: "id", data: [] } },
+    id: { type: "autocomplete", hidden:true, default: undefined, baseProps: { label: "id", data: [] } },
+    category: { type: "select", default: "", baseProps: { label: "Company", searchable: true, data: [] } },
     name: { type: "text", default: "", baseProps: { label: "Name" } },
     cost_price: { type: "number", default: 0, baseProps: { label: "CP" } },
     sale_price: { type: "number", default: 0, baseProps: { label: "SP" } },
-    box_size_qty: { type: "number", default: 1, baseProps: { label: "Box Size" } },
+    box_size_qty: { type: "number", default: 1, baseProps: { label: "Carton Size" } },
     qty: { type: "number", default: 0,hidden:true, baseProps: { label: "Qty" } },
-    category: { type: "select", default: "", baseProps: { label: "Company", searchable: true, data: [] } },
   },
   collectionName: "items",
   collectionView: "items",

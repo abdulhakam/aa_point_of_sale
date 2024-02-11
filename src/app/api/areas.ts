@@ -25,9 +25,13 @@ export async function deleteArea(data) {
 
 export const areaFormStructure = {
   fields: {
-    created: { type: "datetime", baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
-    updated: { type: "datetime", baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },
-    id: { type: "autocomplete", baseProps: { label: "id", readOnly: true, variant: "unstyled" } },
+    created: { type: "datetime", hidden:true, baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
+    updated: { type: "datetime", hidden:true, baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },
+    id: {
+      type: "autocomplete",
+      hidden: true,
+      baseProps: { label: "id", readOnly: true, variant: "unstyled" },
+    },
     name: { type: "text", baseProps: { label: "Name" } },
     section: {
       type: "select",
@@ -52,7 +56,7 @@ export const areaFormStructure = {
 
 export const areaCreateForm = {
   fields: {
-    id: { type: "text", baseProps: { label: "ID" } },
+    id: { type: "text", hidden: true, baseProps: { label: "ID" } },
     name: { type: "text", baseProps: { label: "Name" } },
     section: {
       type: "select",

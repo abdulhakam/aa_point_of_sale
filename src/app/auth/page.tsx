@@ -67,7 +67,7 @@ export default function AuthenticationForm(props) {
             />
           </Stack>
           <Group justify='space-between' mt='xl'>
-            <Button disabled={!auth.isIdle} type='submit' radius='xl'>
+            <Button type='submit' radius='xl'>
               Login
             </Button>
           </Group>

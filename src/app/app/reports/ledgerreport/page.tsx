@@ -4,7 +4,7 @@ import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD from "@/app/api/useAPI";
 import DataViewTable from "@/app/components/DataViewTable";
 import PrintHead from "@/app/components/printing/PrintHead";
-import { ActionIcon, Flex, Group, Stack, Text } from "@mantine/core";
+import { ActionIcon, Flex, Group, NumberInput, Stack, Text } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { IconPrinter } from "@tabler/icons-react";
 import { useRef, useState } from "react";
@@ -20,7 +20,7 @@ const tableStructure = [
   { accessor: "accounts_recievable" },
   { accessor: "accounts_payable" },
   { accessor: "cash" },
-  { accessor: "stock" },
+  // { accessor: "stock" },
 ];
 
 export default function LedgerReport() {
@@ -64,7 +64,25 @@ export default function LedgerReport() {
     content: () => printRef.current,
   });
 
-  const { recievable, payable, cash, stock } = calculator(ledger.data);
+  const [openningRecievables, setOpenningRecievables] = useState(0);
+  const [openningPayables, setOpenningPayables] = useState(0);
+  const [openningCash, setOpenningCash] = useState(0);
+  const [openningStock, setOpenningStock] = useState(0);
+
+  const openning = {
+    id: "",
+    collectionId: "",
+    description: "Openning Balance",
+    collectionName: "",
+    created: "",
+    transaction_type: "",
+    account_type: "",
+    accounts_recievable: openningRecievables,
+    cash: openningCash,
+    accounts_payable: openningPayables,
+    stock: openningStock,
+  };
+  const { recievable, payable, cash, stock } = calculator(ledger.data ? [openning, ...ledger.data]: [openning]);
   const totals = {
     account_type: <Text fw={700}>Totals</Text>,
     collectionId: "",
@@ -129,6 +147,28 @@ export default function LedgerReport() {
               label='Date To'
             />
           </Group>
+          <Group>
+            <NumberInput
+              label='Openning Recievables'
+              value={openningRecievables}
+              onChange={(v) => setOpenningRecievables(Number(v))}
+            />
+            <NumberInput
+              label='Openning Payables'
+              value={openningPayables}
+              onChange={(v) => setOpenningPayables(Number(v))}
+            />
+            <NumberInput
+              label='Openning Cash'
+              value={openningCash}
+              onChange={(v) => setOpenningCash(Number(v))}
+            />
+            <NumberInput
+              label='Openning Stock'
+              value={openningStock}
+              onChange={(v) => setOpenningStock(Number(v))}
+            />
+          </Group>
           <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
             <PrintHead />
             <Text size='xl' fw={700}>
@@ -142,12 +182,14 @@ export default function LedgerReport() {
               verticalSpacing={4}
               formstructure={{}}
               columns={tableStructure}
-              data={[...ledger.data, totals]}
+              data={[openning, ...ledger.data, totals]}
             />
             <Stack gap={0} align='end'>
               <Group>
                 <Text fw={700}>Closing Value</Text>
-                <Text fw={600}>{(Number(recievable) - Number(payable) + Number(cash) + Number(stock)).toFixed(2)}</Text>
+                <Text fw={600}>
+                  {(Number(recievable) - Number(payable) + Number(cash) + Number(stock)).toFixed(2)}
+                </Text>
               </Group>
             </Stack>
           </div>
