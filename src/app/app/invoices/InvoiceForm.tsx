@@ -53,6 +53,7 @@ export default function InvoiceForm(props) {
     mutationFn: crud.create,
     onSuccess: () => {
       paymentCreator();
+      setEditing(true);
     },
   });
   const updateInvoice = useMutation({
@@ -72,6 +73,7 @@ export default function InvoiceForm(props) {
       discount_1: 0,
       discount_2: 0,
       completed: false,
+      date: new Date(),
       duedate: new Date(),
       description: "",
     },
@@ -164,6 +166,10 @@ export default function InvoiceForm(props) {
       return invoice.final_total;
     }
   };
+  const getInvoiceDate = (invoice) => {
+    const invoicedata = invoices.data.find((inv) => inv.id === invoice);
+    return invoicedata.date ? new Date(invoicedata.date) : new Date(invoicedata.created)
+  }
   const queries = [invoices, parties, user, items, counts, bookers];
   if (checkSuccess(queries)) {
     return (
@@ -192,14 +198,15 @@ export default function InvoiceForm(props) {
           <Stack gap={0}>
             <Group>
               <Group>
-                <Text ml={"xs"} fw={500}>
+                {/* <Text ml={"xs"} fw={500}>
                   {"INVOICE NO:"}
-                </Text>
+                </Text> */}
                 <Select
+                  label='INVOICE NO:'
                   w={"8rem"}
                   rightSectionWidth={0}
-                  variant={editing ? "unstyled" : "default"}
-                  readOnly={editing ? true : false}
+                  variant={"default"}
+                  disabled={editing ? true : false}
                   allowDeselect={false}
                   searchable
                   data={[
@@ -213,9 +220,33 @@ export default function InvoiceForm(props) {
                       "booker",
                       invoices.data.find((inv) => inv.id === v)?.expand.booker?.id
                     );
+                    invoiceForm.setFieldValue(
+                      "party",
+                      invoices.data.find((inv) => inv.id === v)?.expand.party?.id
+                    );
+                    invoiceForm.setFieldValue(
+                      "date",
+                      v==="new" ? new Date() : getInvoiceDate(v)
+                    );
                   }}
                 />
-
+                <DateInput
+                  label='INVOICE DATE'
+                  value={invoiceForm.values.date}
+                  onChange={(v) =>
+                    invoiceForm.setFieldValue(
+                      "date",
+                      new Date(
+                        new Date(v).getFullYear(),
+                        new Date(v).getMonth(),
+                        new Date(v).getDate(),
+                        0,
+                        0,
+                        0
+                      )
+                    )
+                  }
+                />
                 {invoiceForm.values.invoiceNo !== "new" && !editing && (
                   <Button
                     onClick={() => {
@@ -229,14 +260,15 @@ export default function InvoiceForm(props) {
               </Group>
               {props.type === "sale" && (
                 <Group>
-                  <Text ml={"xs"} fw={500}>
+                  {/* <Text ml={"xs"} fw={500}>
                     {"BOOKER:"}
-                  </Text>
+                  </Text> */}
                   <Select
                     w={"10rem"}
                     rightSectionWidth={0}
-                    variant={editing ? "unstyled" : "default"}
-                    readOnly={editing ? true : false}
+                    label='BOOKER'
+                    variant={"default"}
+                    // disabled={editing ? true : false}
                     allowDeselect={false}
                     searchable
                     data={[...bookers.data.map((bkr) => ({ value: bkr.id, label: bkr.name }))]}
@@ -244,34 +276,35 @@ export default function InvoiceForm(props) {
                   />
                 </Group>
               )}
-              {(invoiceForm.values.invoiceNo === "new" || editing) && (
-                <>
-                  <Group>
-                    <Text fw={500}>{props.type === "sale" ? "CUSTOMER:" : "SUPPLIER:"}</Text>
-                    <NSelect
-                      variant={
-                        editing === true || invoiceForm.values.invoiceNo !== "new" ? "unstyled" : "default"
-                      }
-                      withCreate
-                      createForm={partyCreateForm}
-                      rightSectionWidth={0}
-                      readOnly={editing === true || invoiceForm.values.invoiceNo !== "new" ? true : false}
-                      allowDeselect={false}
-                      searchable
-                      data={[...parties.data.map((pty) => ({ value: pty.id, label: pty.name }))]}
-                      {...invoiceForm.getInputProps("party")}
-                    />
-                  </Group>
+              {/* {(invoiceForm.values.invoiceNo === "new" || editing) && ( */}
+              <>
+                <Group>
+                  {/* <Text fw={500}>{props.type === "sale" ? "CUSTOMER:" : "SUPPLIER:"}</Text> */}
+                  <NSelect
+                    label={props.type === "sale" ? "CUSTOMER" : "SUPPLIER"}
+                    variant={
+                      editing === true || invoiceForm.values.invoiceNo !== "new" ? "unstyled" : "default"
+                    }
+                    withCreate={editing ? false : true}
+                    createForm={partyCreateForm}
+                    rightSectionWidth={0}
+                    readOnly={editing === true || invoiceForm.values.invoiceNo !== "new" ? true : false}
+                    allowDeselect={false}
+                    searchable
+                    data={[...parties.data.map((pty) => ({ value: pty.id, label: pty.name }))]}
+                    {...invoiceForm.getInputProps("party")}
+                  />
+                </Group>
 
-                  <Group>
-                    <Flex align={"center"} w={"10rem"}>
-                      <Text fw={500}>USER:</Text>
-                      <Space w={"xs"} />
-                      <Text>{user.data.name}</Text>
-                    </Flex>
-                  </Group>
-                </>
-              )}
+                <Group>
+                  <Flex direction={"column"} align={"center"} w={"10rem"}>
+                    <Text fw={500}>USER:</Text>
+                    <Space w={"xs"} />
+                    <Text>{user.data.name}</Text>
+                  </Flex>
+                </Group>
+              </>
+              {/* )} */}
               {!editing && invoiceForm.values.invoiceNo === "new" && (
                 <Button
                   disabled={
@@ -320,7 +353,7 @@ export default function InvoiceForm(props) {
                     readOnly
                     label={"Total"}
                     defaultValue={0}
-                    value={invoice.total || 0}
+                    value={invoice?.total || 0}
                   />
                   <Group align={"end"}>
                     <NumberInput
@@ -346,7 +379,7 @@ export default function InvoiceForm(props) {
                         open();
                       }}
                     >
-                      Commit
+                      Complete
                     </Button>
                   </Group>
                 </Stack>

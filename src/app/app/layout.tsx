@@ -23,26 +23,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       header={{ height: "52" }}
       navbar={{
         width: 80,
-        breakpoint: "sm",
+        breakpoint: "md",
         collapsed: { mobile: !mobileOpened, desktop: !desktopOpened },
       }}
       padding='0'
     >
       <AppShell.Header>
         <Flex justify={"space-between"} align={"center"} px={"md"}>
-          <Button
-            style={{ height: "3rem" }}
-            color='black'
-            p={0}
-            m={0}
-            variant='transparent'
-            onClick={toggleDesktop}
-            size={"compact-xl"}
-          >
-            <Text size='xl' fw={700}>
+            <Text size='xl' fw={700} onClick={toggleDesktop} >
             {process.env.NEXT_PUBLIC_NAME}
           </Text>
-          </Button>
           <Stack gap={0} align={"center"}>
             <Text size='xs'>{time} </Text>
             <Text size='xs'>{date}</Text>

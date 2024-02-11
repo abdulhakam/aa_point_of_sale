@@ -31,21 +31,20 @@ export function TransactionEditForm(props) {
     mutationFn: crud.update,
     onSuccess: () => {
       qc.invalidateQueries();
-      setItem("");
-      setBoxes(1);
-      setPcs(0);
-      setItemPrice(0);
-      setD1(0);
-      setD2(0);
-      setTot(0);
+      // setItem("");
+      // setBoxes(1);
+      // setPcs(0);
+      // setItemPrice(0);
+      // setD1(0);
+      // setD2(0);
+      // setTot(0);
       close()
     },
   });
-  const {numBoxes,numPcs}=getQtyFromString(props.data.qty)
-  console.log(props.data)
+  const {ctns,units}=getQtyFromString(props.data.qty)
   const [item, setItem] = useState(props.data.item);
-  const [boxes, setBoxes] = useState(Number(numBoxes));
-  const [pcs, setPcs] = useState(Number(numPcs));
+  const [boxes, setBoxes] = useState(Number(ctns));
+  const [pcs, setPcs] = useState(Number(units));
   const [scheme, setScheme] = useState(props.data.scheme);
   const [purchasePrice, setPurchasePrice] = useState(props.data.expand?.item.cost_price||0);
   const [itemPrice, setItemPrice] = useState(props.data.expand?.item.sale_price||0);
@@ -53,6 +52,7 @@ export function TransactionEditForm(props) {
   const [disc_2, setD2] = useState(props.data.discount_2);
   const [total, setTot] = useState(props.data.total);
   const [itemData, setItemData] = useState(props.data.expand?.item||{});
+
 
   function submitHandler(e) {
     e.preventDefault(e);

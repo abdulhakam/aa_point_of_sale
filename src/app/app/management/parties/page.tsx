@@ -6,6 +6,8 @@ import CreateRecord from "@/app/components/CreateRecord/CreateRecord";
 import { IconUserPlus } from "@tabler/icons-react";
 import useCRUD from "@/app/api/useAPI";
 import { partyCreateForm } from "@/app/api/parties";
+import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
+
 
 const tableStructure = [
   { accessor: "id", hidden: true },
@@ -22,7 +24,15 @@ export default function Preas() {
   const [partyType, setPartyType] = useState("all");
   const [search, setSearch] = useState("");
   const parties = useCRUD().fullList({ collection: "parties", expand: "area,area.section" });
-  console.log(parties.data);
+  const areasWithSections = useCRUD().fullList({ collection: "areas", expand: "section" });
+  const completedCreateForm = {
+    ...partyCreateForm,
+  }
+  delete completedCreateForm.fields.area.baseProps.dataQuery
+  delete completedCreateForm.fields.area.baseProps.dataQueryValue
+  completedCreateForm.fields.area.baseProps.data=areasWithSections.data?.map((area)=>({label:`${area.name} - ${area.expand?.section?.name}`,value:area.id}))
+  console.log(completedCreateForm.fields.area.baseProps.data)
+  if (checkSuccess([parties, areasWithSections])){
   return (
     <>
       <Group align='end'>
@@ -55,5 +65,5 @@ export default function Preas() {
         />
       )}
     </>
-  );
+  );}else return <StatusCheck check={[parties, areasWithSections]} />
 }

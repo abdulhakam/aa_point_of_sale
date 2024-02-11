@@ -49,7 +49,7 @@ export default function BalanceReport() {
       sortable: true,
       width: "9em",
     },
-    { accessor: "amount", sortable: true, render: (record) => <>{`${record.amount.toFixed(2)}`}</> },
+    { accessor: "amount", sortable: true, render: (record) => <>{`${record.amount!=null ?record.amount.toFixed(2):0}`}</> },
   ];
   const { total, totalPaid, invoiceTotal, totalSending, totalRecieving, recieving, recieved, sending, sent } =
     calculator(

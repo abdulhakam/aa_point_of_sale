@@ -2,12 +2,12 @@
 import { DataTableColumn } from "mantine-datatable";
 import DataViewTable from "@/app/components/DataViewTable";
 import { transactionFormStructure } from "@/app/api/transactions";
-import useCRUD from "@/app/api/useAPI";
+import useCRUD, { crud } from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
-import { ActionIcon, Modal } from "@mantine/core";
-import { IconEdit } from "@tabler/icons-react";
+import { ActionIcon, Group, Modal } from "@mantine/core";
+import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { TransactionEditForm } from "./transactionsEditForm";
 import { useDisclosure } from "@mantine/hooks";
 import { useState } from "react";
@@ -15,8 +15,14 @@ import { useState } from "react";
 export default function Transactions({ invoice }) {
   const [opened, { open, close }] = useDisclosure(false);
   const [formData,setFormData] = useState({})
-  const queryClient = useQueryClient();
-  queryClient.invalidateQueries();
+  const qc = useQueryClient();
+  qc.invalidateQueries();
+  const remove = useMutation({
+    mutationFn: crud.remove,
+    onSuccess: () => {
+      qc.invalidateQueries();
+    },
+  });
   const items = useCRUD().fullList({ collection: "items", expand: "category" });
   const transactions = useCRUD().fullList({
     collection: "transaction_view",
@@ -37,14 +43,17 @@ export default function Transactions({ invoice }) {
     { accessor: "total", width: "10%", sortable: false },
     {
       accessor: "actions",
-      width: "2rem",
+      width: "4.5rem",
       sortable: false,
       render: (record) => (
-        <>
-          <ActionIcon size='sm' variant='subtle' color='blue' onClick={() => showModal(record)}>
+        <Group gap={"0.1em"}>
+          <ActionIcon m={0} size='sm' variant='outline' color='blue' onClick={() => showModal(record)}>
             <IconEdit size={16} />
           </ActionIcon>
-        </>
+          <ActionIcon m={0} size='sm' variant='outline' color='red' onClick={() => remove.mutate({ collection: 'transactions', recordID: record.id })}>
+            <IconTrash size={16} />
+          </ActionIcon>
+        </Group>
       ),
     },
   ];

@@ -4,20 +4,7 @@ import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import ReportViewTable from "@/app/components/ReportViewTable";
 import dataFilter from "@/app/components/functions/dataFilter";
 import { useEffect, useRef, useState } from "react";
-import {
-  ActionIcon,
-  Box,
-  Button,
-  Flex,
-  Group,
-  Modal,
-  Select,
-  Stack,
-  Table,
-  Text,
-  TextInput,
-  Textarea,
-} from "@mantine/core";
+import { ActionIcon, Button, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { getQty, qtyDisplay } from "@/app/components/functions/qtyParser";
 import { IconPrinter } from "@tabler/icons-react";
@@ -28,15 +15,20 @@ import { useSearchParams } from "next/navigation";
 const tableStructure = [
   { accessor: "id", hidden: true },
   { accessor: "created", hidden: true },
-  { accessor: "item", width: "10em" },
-  // { accessor: "qty", width: "5em", render: (record) => qtyDisplay(record.expand.item, record.qty) },
-  { accessor: "ctn", width: "3em", render: (record) => getQty(record.expand.item, record.qty).ctns },
-  { accessor: "units", width: "3em", render: (record) => getQty(record.expand.item, record.qty).units },
+  { accessor: "item", width: "8em" },
+  {
+    accessor: "box_size_qty",
+    title: "Ctn Size",
+    width: "3em",
+    render: (record) => record.expand.item.box_size_qty,
+  },
+  { accessor: "ctn", width: "2em", render: (record) => getQty(record.expand.item, record.qty).ctns },
+  { accessor: "units", width: "2em", render: (record) => getQty(record.expand.item, record.qty).units },
   { accessor: "scheme", title: "Free (units)", width: "3em" },
   { accessor: "price", width: "3em" },
   { accessor: "discount_1", title: "D1", width: "2em" },
   { accessor: "discount_2", title: "D2", width: "3em" },
-  { accessor: "total", width: "4em" },
+  { accessor: "total", width: "4em", render: ({ total }) => Number(total).toFixed(2) },
 ];
 
 export default function InvoicePrint() {
@@ -49,9 +41,9 @@ export default function InvoicePrint() {
   });
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
-    expand: "invoice_maker,party,booker",
+    expand: "invoice_maker,party,booker,party.area,party.area.section",
   });
-  const transactions = useCRUD().fullList({ collection: "transaction_view", expand: "item" });
+  const transactions = useCRUD().fullList({ collection: "transaction_view", expand: "item", sort: "+created" });
 
   const thisInvoice = invoices.data?.find((inv) => inv.id === invoiceId);
   const [opened, { open, close }] = useDisclosure(true);
@@ -79,7 +71,7 @@ export default function InvoicePrint() {
         value: filterValue,
       },
     ],
-    transactions.data
+    transactions.data ? transactions.data : []
   );
   const invoice = invoices.data?.find((inv) => inv.id === filterValue);
   const queries = [invoices, transactions];
@@ -96,7 +88,12 @@ export default function InvoicePrint() {
         >
           <IconPrinter />
         </ActionIcon>
-        <Modal centered opened={opened} onClose={close} title={thisInvoice?"Click to Print Invoice":'Filter Data'}>
+        <Modal
+          centered
+          opened={opened}
+          onClose={close}
+          title={thisInvoice ? "Click to Print Invoice" : "Filter Data"}
+        >
           {thisInvoice ? (
             <ActionIcon
               onClick={() => {
@@ -140,62 +137,75 @@ export default function InvoicePrint() {
         <div ref={printRef} style={{ marginLeft: "1em", marginRight: "1em" }}>
           <PrintHead />
           <Flex align={"center"} justify={"space-between"}>
-            <Button p={0} onClick={open} variant='transparent' size='lg' fw={"700"} color='black'>
+            <Button p={0} /*onClick={open} */ variant='transparent' size='lg' fw={"700"} color='black'>
               {`${type.toUpperCase()} INVOICE`}
             </Button>
-            <Table w={"40%"} fz={"xs"} withRowBorders={false} verticalSpacing={0} horizontalSpacing={"1em"}>
-              <Table.Tr>
-                <Table.Td>
-                  <Text fw={600}>{"Invoice #:"}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Text
-                    fw={"700"}
-                    style={{ border: "1px solid black", paddingLeft: "0.5em" }}
-                  >{` ${invoice?.invoiceNo}`}</Text>
-                </Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Td>{"Invoice Date:"}</Table.Td>
-                <Table.Td>{` ${new Date(invoice?.created).toLocaleDateString("en", {
-                  day: "numeric",
-                  month: "short",
-                  year: "numeric",
-                })}`}</Table.Td>
-              </Table.Tr>
-              <Table.Tr>
-                <Table.Td>{"Invoice Time:"}</Table.Td>
-                <Table.Td>{` ${new Date(invoice?.created).toLocaleTimeString("en", {
-                  hour: "numeric",
-                  minute: "numeric",
-                  second: "2-digit",
-                  hour12: true,
-                })}`}</Table.Td>
-              </Table.Tr>
-            </Table>
           </Flex>
           {filterValue !== "" && (
             <>
-              <Stack gap={0} justify={"space-between"}>
+              <Group gap={0} justify='space-between'>
+                <Stack w={"65%"}>
+                  <Table
+                    borderColor='gray'
+                    fz={"xs"}
+                    withRowBorders={false}
+                    horizontalSpacing={"1em"}
+                    verticalSpacing={0}
+                    data={{
+                      body: [
+                        ["Prepared By", invoice?.expand.invoice_maker.name],
+                        ["Party", `${invoice?.expand.party.name} (${invoice?.expand?.party?.phone})`],
+                        type === "sale"
+                          ? [
+                              "Address",
+                              `${invoice?.expand?.party?.address} - ${invoice?.expand?.party?.expand?.area?.name} - ${invoice?.expand?.party?.expand?.area?.expand?.section?.name}`,
+                            ]
+                          : [],
+                        type === "sale"
+                          ? ["Booker", `${invoice?.expand?.booker?.name} (${invoice?.expand?.booker?.phone})`]
+                          : [],
+                        ["Remarks", invoice?.description],
+                      ],
+                    }}
+                  />
+                </Stack>
                 <Table
-                  borderColor='gray'
+                  w={"35%"}
                   fz={"xs"}
                   withRowBorders={false}
-                  horizontalSpacing={0}
                   verticalSpacing={0}
-                  data={{
-                    body: [
-                      ["Prepared By", invoice?.expand.invoice_maker.name],
-                      ["Party", `${invoice?.expand.party.name} (${invoice?.expand?.party?.phone})`],
-                      type === "sale" ? ["Address", invoice?.expand?.party?.address] : [],
-                      type === "sale"
-                        ? ["Booker", `${invoice?.expand?.booker?.name} (${invoice?.expand?.booker?.phone})`]
-                        : [],
-                      ["Remarks", invoice?.description],
-                    ],
-                  }}
-                />
-              </Stack>
+                  horizontalSpacing={"1em"}
+                >
+                  <Table.Tr>
+                    <Table.Td>
+                      <Text fw={600}>{"Invoice #:"}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text
+                        fw={"700"}
+                        style={{ border: "1px solid black", paddingLeft: "0.5em" }}
+                      >{` ${invoice?.invoiceNo}`}</Text>
+                    </Table.Td>
+                  </Table.Tr>
+                  <Table.Tr>
+                    <Table.Td>{"Invoice Date:"}</Table.Td>
+                    <Table.Td>{` ${new Date(invoice?.created).toLocaleDateString("en", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}`}</Table.Td>
+                  </Table.Tr>
+                  <Table.Tr>
+                    <Table.Td>{"Invoice Time:"}</Table.Td>
+                    <Table.Td>{` ${new Date(invoice?.created).toLocaleTimeString("en", {
+                      hour: "numeric",
+                      minute: "numeric",
+                      second: "2-digit",
+                      hour12: true,
+                    })}`}</Table.Td>
+                  </Table.Tr>
+                </Table>
+              </Group>
               <hr />
               {invoice?.invoiceNo && (
                 <>
@@ -206,13 +216,15 @@ export default function InvoicePrint() {
                     px={"0.5rem"}
                     h={"4em"}
                     style={{
-                      position: "relative",
                       border: "1px solid black",
                     }}
                   >
                     <Stack w={"100%"} justify='end' align='end'>
                       <Group mr={0} w={"100%"} justify='space-between'>
-                        {new Date(invoice?.duedate.slice(0, 10)) > new Date(invoice?.created.slice(0, 10)) ? (
+                        {new Date(invoice?.duedate.slice(0, 10)) >
+                        new Date(
+                          invoice?.date ? invoice?.date.slice(0, 10) : invoice?.created.slice(0, 10)
+                        ) ? (
                           <Group align='center' gap={"1em"}>
                             <Text ml={"1em"} fw={700} size='xs'>
                               Due Date:
@@ -225,12 +237,12 @@ export default function InvoicePrint() {
                           <div> </div>
                         )}
                         <Group>
-                          <Text mr={"1em"} size='xs'>
+                          {/* <Text mr={"1em"} size='xs'>
                             Total
                           </Text>
                           <Text size='xs' fw={700}>
-                            {invoice?.total || 0}
-                          </Text>
+                            {Number(invoice?.total).toFixed(2) || 0}
+                          </Text> */}
                         </Group>
                       </Group>
                       <Group mt={-10}>

@@ -20,9 +20,9 @@ export async function deleteCategory(data) {
 
 export const categoryFormStructure: FormStructure<Category> = {
   fields: {
-    created: { type: "datetime", baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
-    updated: { type: "datetime", baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },
-    id: { type: "autocomplete", baseProps: { label: "id", readOnly: true, variant: "unstyled" } },
+    created: { type: "datetime",hidden:true, baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
+    updated: { type: "datetime",hidden:true, baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },
+    id: { type: "autocomplete", hidden:true, baseProps: { label: "id", readOnly: true, variant: "unstyled" } },
     name: { type: "text", baseProps: { label: "Name" } },
     deleted: { type: "switch", baseProps: { label: "DELETED", disabled: true } },
   },

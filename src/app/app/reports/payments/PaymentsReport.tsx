@@ -105,7 +105,7 @@ export default function PaymentsReport() {
     },
     { accessor: "party", sortable: true },
     { accessor: "booker", hidden: reportType === "Sending", sortable: true },
-    { accessor: "amount", sortable: true, render: (record) => <>{`${record.amount.toFixed(2)}`}</> },
+    { accessor: "amount", sortable: true, render: (record) => <>{`${record.amount != null ? record.amount.toFixed(2):-0}`}</> },
     {
       accessor: "paid",
       hidden: true,

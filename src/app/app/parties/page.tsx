@@ -12,15 +12,16 @@ const tableStructure = [
   { accessor: "name", sortable: true,},
   { accessor: "type", sortable: true,},
   { accessor: "area", sortable: true },
+  { accessor: "section", sortable: true, render: (record) => record?.expand?.area?.expand?.section?.name },
   { accessor: "phone", sortable: true, },
   { accessor: "address", sortable: true, },
-  { accessor: "deleted", sortable: true },
+  // { accessor: "deleted", sortable: true },
 ];
 
 export default function Preas() {
   const [partyType,setPartyType] = useState('all')
   const [search, setSearch] = useState("");
-  const parties = useCRUD().fullList({ collection: "parties", expand: "area" });
+  const parties = useCRUD().fullList({ collection: "parties", expand: "area,area.section" });
   return (
     <>
       <Group align='end'>

@@ -23,6 +23,7 @@ const tableStructure = [
   { accessor: "sale_price", sortable: true, title: "SP" },
   { accessor: "qty", sortable: true, render: (record) => qtyDisplay(record, record.qty) },
   { accessor: "box_size_qty", sortable: true },
+  { accessor: "stock_amount", title:'Stock Amount', render: (record)=>record.qty*record.cost_price}
 ];
 
 export default function ItemsReport() {

@@ -51,5 +51,6 @@
     "postcss-simple-vars": "^7.0.1",
     "storybook-dark-mode": "^3.0.3",
     "typescript": "^5"
-  }
+  },
+  "bin": "./bin/cli.js"
 }
