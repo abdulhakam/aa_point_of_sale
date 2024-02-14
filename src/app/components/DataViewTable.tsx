@@ -11,6 +11,7 @@ import FormGenerator from "./FormGenerator";
 import { crud } from "../api/useAPI";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import FormGeneratorBasic from "./FormGeneratorBasic";
+import classes from "./tableclasses.module.css"
 
 export default function DataViewTable(
   props: DataTableProps & {
@@ -99,19 +100,22 @@ export default function DataViewTable(
   return (
     <>
       <DataTable
-      withRowBorders
-      borderColor={'black'}
-      rowBorderColor={'black'}
+      classNames={{
+        root: classes.root,
+        table: classes.table,
+        header: classes.header,
+        footer: classes.footer,
+        pagination: classes.pagination,
+      }}
         fz={props.fz}
         horizontalSpacing={props.horizontalSpacing}
         verticalSpacing={props.verticalSpacing}
         style={{ border: "1px solid gray", borderRadius: "3px" }}
         rowStyle={props.rowStyle || null}
-        withTableBorder
         withColumnBorders
         records={records}
         columns={columns}
-        emptyState={<></>}
+        // emptyState={<></>}
         defaultColumnRender={(row, _, accessor) => {
           return row.hasOwnProperty("expand")
             ? row.expand.hasOwnProperty(accessor)

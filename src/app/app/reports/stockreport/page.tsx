@@ -13,17 +13,33 @@ import NumberAddress from "@/app/components/NumberAddress/NumberAddress";
 import PrintHead from "@/app/components/printing/PrintHead";
 import { IconPrinter } from "@tabler/icons-react";
 import { useReactToPrint } from "react-to-print";
+import Link from "next/link";
 
-const tableStructure = [
+const tableStructure: DataTableColumn[] = [
   { accessor: "id", hidden: true },
   { accessor: "created", hidden: true },
   { accessor: "category", title: "Company", sortable: true },
-  { accessor: "name" },
+  {
+    accessor: "name",
+    render: (record) => (
+      <Link
+        style={{ textDecoration: "none", color: "#000055" }}
+        href={`/app/reports/stockreport/itemTransactionsReport?itemID=${record.id}`}
+      >
+        {String(record.name)}
+      </Link>
+    ),
+  },
   { accessor: "cost_price", sortable: true, title: "CP" },
   { accessor: "sale_price", sortable: true, title: "SP" },
-  { accessor: "qty", sortable: true, render: (record) => qtyDisplay(record, record.qty) },
+  { accessor: "qty", sortable: true, render: (record) => qtyDisplay(record, Number(record.qty)) },
   { accessor: "box_size_qty", sortable: true },
-  { accessor: "stock_amount", title:'Stock Amount', render: (record)=>record.qty*record.cost_price}
+  {
+    accessor: "stock_amount",
+    title: "Stock Amount",
+    textAlign: "right",
+    render: (record) => (Number(record.qty) * Number(record.cost_price)).toFixed(2),
+  },
 ];
 
 export default function ItemsReport() {
@@ -41,6 +57,7 @@ export default function ItemsReport() {
   const [filterValue, setFilter] = useState("");
   const filteredData = dataFilter([{ key: filterKey, value: filterValue }], itemsReport.data);
   const queries = [itemsReport, categories];
+  const stockAmountTotal = filteredData.reduce((total, record) => total + record.qty * record.cost_price, 0);
   if (checkSuccess(queries)) {
     return (
       <>
@@ -88,6 +105,10 @@ export default function ItemsReport() {
             columns={tableStructure}
             data={filteredData}
           />
+          <Group justify='end' mr={"sm"}>
+            {"Total Stock: "}
+            {stockAmountTotal.toFixed(2)}
+          </Group>
         </div>
       </>
     );
