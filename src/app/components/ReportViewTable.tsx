@@ -20,14 +20,14 @@ export default function ReportViewTable(props) {
   return (
     <>
       <DataTable
-      fz={'xs'}
-      verticalSpacing={0}
-      horizontalSpacing={2}
+        fz={"xs"}
+        verticalSpacing={0}
+        horizontalSpacing={2}
         withTableBorder
         withColumnBorders
         borderColor={"black"}
         records={props.data}
-        columns={[{accessor:"no",title:"#",width:"1em",render:(_,i)=>i+1},...props.columns]}
+        columns={[{ accessor: "no", title: "#", width: "1em", render: (_, i) => i + 1 }, ...props.columns]}
         // emptyState={props.emptyState || <></>}
         rowStyle={props.rowStyle}
         defaultColumnRender={(row, _, accessor) => {

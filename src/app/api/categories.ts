@@ -34,7 +34,7 @@ export const categoryFormStructure: FormStructure<Category> = {
 
 export const categoryCreateForm = {
   fields: {
-    id: { type: "text", baseProps: { label: "ID" } },
+    id: { type: "text", hidden:true, baseProps: { label: "ID" } },
     name: { type: "text", baseProps: { label: "Name" } },
     deleted: { type: "switch", default: false, baseProps: { label: "DELETED", disabled: true } },
   },
