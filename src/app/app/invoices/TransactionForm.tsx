@@ -13,11 +13,6 @@ import { useState } from "react";
 
 export function TransactionForm(props) {
   const qc = useQueryClient();
-  // const invoiceData = useCRUD().read({
-  //   collection: "invoices",
-  //   recordID: props.invoice,
-  //   expand: "booker.company",
-  // });
   const [itemSP, setSP] = useState(0);
   const [opened, { open, close }] = useDisclosure(false);
   const [niOpened, { open: niOpen, close: niClose }] = useDisclosure(false);
@@ -67,7 +62,7 @@ export function TransactionForm(props) {
       qty: qtyInput(itemData, boxes, pcs),
       scheme: scheme,
       cost_price: purchasePrice,
-      price: props.type === "sale" ? itemPrice : purchasePrice,
+      price: props.type === "purchase" ? purchasePrice : itemPrice,
       discount_1: disc_1,
       discount_2: disc_2,
     };
@@ -82,7 +77,7 @@ export function TransactionForm(props) {
     const pp = item.cost_price || 0;
     setItemPrice(price);
     setPurchasePrice(pp);
-    discCalc(props.type === "sale" ? price : pp, qtyInput(itemData, boxes, pcs), disc_1, disc_2);
+    discCalc(props.type === "purchase" ? pp : price, qtyInput(itemData, boxes, pcs), disc_1, disc_2);
   }
   const discCalc = (p, qty, d1, d2) => {
     const dis1 = p * qty * (d1 / 100);
@@ -99,7 +94,7 @@ export function TransactionForm(props) {
           <Select
             required
             allowDeselect={false}
-            style={{ width: `${props.type === "sale" ? "47%" : "36%"}` }}
+            style={{ width: `${props.type === "purchase" ? "35%" : "45%"}` }}
             searchable
             label={"Item"}
             value={item}
@@ -131,12 +126,12 @@ export function TransactionForm(props) {
           <NumberInput
             style={{ width: "7%" }}
             label='SP'
-            readOnly={props.type === "sale" ? false : true}
+            readOnly={props.type === "purchase" ? true : false}
             value={itemPrice}
             onChange={(v) => {
               setItemPrice(Number(v));
               discCalc(
-                props.type === "sale" ? Number(v) : purchasePrice,
+                props.type === "purchase" ? purchasePrice:Number(v),
                 qtyInput(itemData, boxes, pcs),
                 disc_1,
                 disc_2
@@ -162,7 +157,7 @@ export function TransactionForm(props) {
             onChange={(v) => {
               setBoxes(Number(v));
               discCalc(
-                props.type === "sale" ? itemPrice : purchasePrice,
+                props.type === "purchase" ? purchasePrice:itemPrice,
                 qtyInput(itemData, Number(v), pcs),
                 disc_1,
                 disc_2
@@ -201,7 +196,7 @@ export function TransactionForm(props) {
             onChange={(v) => {
               setD1(Number(v));
               discCalc(
-                props.type === "sale" ? itemPrice : purchasePrice,
+                props.type === "purchase" ? purchasePrice:itemPrice,
                 qtyInput(itemData, boxes, pcs),
                 Number(v),
                 disc_2
@@ -216,7 +211,7 @@ export function TransactionForm(props) {
             onChange={(v) => {
               setD2(Number(v));
               discCalc(
-                props.type === "sale" ? itemPrice : purchasePrice,
+                props.type === "purchase" ? purchasePrice:itemPrice,
                 qtyInput(itemData, boxes, pcs),
                 disc_1,
                 Number(v)

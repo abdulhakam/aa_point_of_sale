@@ -1,6 +1,7 @@
 "use client";
 import { Card, Text,  UnstyledButton,  useMantineTheme, Grid } from "@mantine/core";
 import {
+  IconArrowBack,
   IconPrinter,
   IconReceipt,
   IconReport,
@@ -13,7 +14,8 @@ import Link from "next/link";
 const mockdata = [
   { title: "Purchase", icon: IconTag, color: "pink", target: "invoices/purchase" },
   { title: "Sale", icon: IconReport, color: "lime", target: "invoices/sale" },
-  { title: "Print Invoice", icon: IconPrinter, color: "lime", target: "invoices/printinvoice" },
+  { title: "Print Invoice", icon: IconPrinter, color: "green", target: "invoices/printinvoice" },
+  { title: "Return", icon: IconArrowBack, color: "red", target: "invoices/return" },
 ];
 
 export default function ActionsGrid(props) {

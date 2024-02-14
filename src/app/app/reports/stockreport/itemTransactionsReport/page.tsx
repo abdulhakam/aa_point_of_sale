@@ -2,6 +2,7 @@
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD from "@/app/api/useAPI";
 import DataViewTable from "@/app/components/DataViewTable";
+import { qtyDisplay } from "@/app/components/functions/qtyParser";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -32,6 +33,7 @@ const columns = [
     accessor: "qty",
     title: "Qty",
     sortable: true,
+    render: (row) => qtyDisplay(row.expand?.item,row.qty),
   },
   {
     accessor: "scheme",
