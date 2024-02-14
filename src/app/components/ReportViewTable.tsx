@@ -4,6 +4,7 @@ import { DataTable, type DataTableSortStatus } from "mantine-datatable";
 import sortBy from "lodash.sortBy";
 import { useEffect, useState } from "react";
 import dataFilter from "./functions/dataFilter";
+import classes from "./tableclasses.module.css";
 
 export default function ReportViewTable(props) {
   // const [sortStatus, setSortStatus] = useState({
@@ -19,7 +20,7 @@ export default function ReportViewTable(props) {
 
   return (
     <>
-      <DataTable
+      <DataTable<any>
         fz={"xs"}
         verticalSpacing={0}
         horizontalSpacing={2}
@@ -28,8 +29,7 @@ export default function ReportViewTable(props) {
         borderColor={"black"}
         records={props.data}
         columns={[{ accessor: "no", title: "#", width: "1em", render: (_, i) => i + 1 }, ...props.columns]}
-        // emptyState={props.emptyState || <></>}
-        rowStyle={props.rowStyle}
+        rowStyle={props.rowStyle || null}
         defaultColumnRender={(row, _, accessor) => {
           return row.hasOwnProperty("expand")
             ? row.expand.hasOwnProperty(accessor)
@@ -37,12 +37,19 @@ export default function ReportViewTable(props) {
               : row[accessor]
             : row[accessor];
         }}
+        classNames={{
+          root: classes.root,
+          table: classes.table,
+          header: classes.header,
+          footer: classes.footer,
+          pagination: classes.pagination,
+        }}
         // sortStatus={sortStatus}
         // onSortStatusChange={setSortStatus}
-        sortIcons={{
-          sorted: <></>,
-          unsorted: <></>,
-        }}
+        // sortIcons={{
+        //   sorted: <></>,
+        //   unsorted: <></>,
+        // }}
       />
     </>
   );

@@ -196,7 +196,12 @@ export default function InvoiceForm(props) {
               />
             </>
           )}
-          <Checkbox m={"xs"} label={props.type === "return" ? 'Return Completed' : 'Order Completed'} {...invoiceForm.getInputProps("completed")} />
+          <Checkbox
+            defaultChecked={props.type === "return"}
+            m={"xs"}
+            label={props.type === "return" ? "Return Completed" : "Order Completed"}
+            {...invoiceForm.getInputProps("completed")}
+          />
           <Group mt={"md"} justify='end'>
             <Button
               onClick={() => {
