@@ -35,13 +35,18 @@ export default function InvoiceForm(props) {
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
     expand: "party,invoice_maker,booker",
-    filter: `type="${props.type === "sale" ? "sale" : "purchase"}"`,
+    filter: `type="${props.type === "sale" ? "sale" : props.type === "purchase" ? "purchase" : "return"}"`,
     queryKey: `${props.type}Invoices`,
   });
   const parties = useCRUD().fullList({
     collection: "parties",
-    filter: props.type === "sale" ? 'type="customer"||type="both"' : 'type="supplier"||type="both"',
-    queryKey: props.type === "sale" ? "customers" : "suppliers",
+    filter:
+      props.type === "sale"
+        ? 'type="customer"||type="both"'
+        : props.type === "purchase"
+        ? 'type="supplier"||type="both"'
+        : null,
+    queryKey: props.type === "sale" ? "customers" : props.type === "suppliers" ? "suppliers" : "all",
   });
   const items = useCRUD().fullList({ collection: "items", expand: "category" });
   const user = useCRUD().read({ collection: "users", recordID: pb.authStore?.model?.id });
@@ -99,13 +104,13 @@ export default function InvoiceForm(props) {
   function paymentCreator() {
     const iid = idGenerator(
       invoices.data.filter((inv) => inv.type === props.type).length + 1,
-      props.type === "sale" ? "pos" : "pop"
+      props.type === "sale" ? "pos" : props.type === "purchase" ? "pop" : "rtn"
     );
     const data = {
       id: iid,
       invoice: iid,
       party: invoiceForm.values.party,
-      type: props.type === "sale" ? "recieving" : "sending",
+      type: props.type === "sale" ? "recieving" : props.type === "purchase" ? "sending" : "return", ////////////////////////////////////
       description: "Invoice Created",
       amount: 0,
       paid: false,
@@ -131,9 +136,14 @@ export default function InvoiceForm(props) {
     const data = {
       id: idGenerator(
         invoices.data.filter((inv) => inv.type === props.type).length + 1,
-        props.type === "sale" ? "pos" : "pop"
+        props.type === "sale" ? "pos" : props.type === "purchase" ? "pop" : "rtn"
       ),
-      invoiceNo: (props.type === "sale" ? counts.data.sale_invoices : counts.data.purchase_invoices) + 1,
+      invoiceNo:
+        (props.type === "sale"
+          ? counts.data.sale_invoices
+          : props.type === "purchase"
+          ? counts.data.purchase_invoices
+          : counts.data.return_invoices) + 1,
       booker: invoiceForm.values.booker,
       invoice_maker: user.data.id,
       party: invoiceForm.values.party,
@@ -168,17 +178,25 @@ export default function InvoiceForm(props) {
   };
   const getInvoiceDate = (invoice) => {
     const invoicedata = invoices.data.find((inv) => inv.id === invoice);
-    return invoicedata.date ? new Date(invoicedata.date) : new Date(invoicedata.created)
-  }
+    return invoicedata.date ? new Date(invoicedata.date) : new Date(invoicedata.created);
+  };
   const queries = [invoices, parties, user, items, counts, bookers];
   if (checkSuccess(queries)) {
     return (
       <>
         <Modal opened={opened} centered onClose={close} title='Confirm Invoice?'>
-          <DateInput label='PAYMENT DUE DATE' {...invoiceForm.getInputProps("duedate")} />
-          <NumberInput readOnly label='Total Amount' value={final_total()} />
-          <NumberInput onChange={(v) => setPaidAmount(Number(v))} label='Paid Amount' value={paidAmount} />
-          <Checkbox m={"xs"} label='Order Completed' {...invoiceForm.getInputProps("completed")} />
+          {props.type !== "return" && (
+            <>
+              <DateInput label='PAYMENT DUE DATE' {...invoiceForm.getInputProps("duedate")} />
+              <NumberInput readOnly label='Total Amount' value={final_total()} />
+              <NumberInput
+                onChange={(v) => setPaidAmount(Number(v))}
+                label='Paid Amount'
+                value={paidAmount}
+              />
+            </>
+          )}
+          <Checkbox m={"xs"} label={props.type === "return" ? 'Return Completed' : 'Order Completed'} {...invoiceForm.getInputProps("completed")} />
           <Group mt={"md"} justify='end'>
             <Button
               onClick={() => {
@@ -224,10 +242,7 @@ export default function InvoiceForm(props) {
                       "party",
                       invoices.data.find((inv) => inv.id === v)?.expand.party?.id
                     );
-                    invoiceForm.setFieldValue(
-                      "date",
-                      v==="new" ? new Date() : getInvoiceDate(v)
-                    );
+                    invoiceForm.setFieldValue("date", v === "new" ? new Date() : getInvoiceDate(v));
                   }}
                 />
                 <DateInput
@@ -281,7 +296,9 @@ export default function InvoiceForm(props) {
                 <Group>
                   {/* <Text fw={500}>{props.type === "sale" ? "CUSTOMER:" : "SUPPLIER:"}</Text> */}
                   <NSelect
-                    label={props.type === "sale" ? "CUSTOMER" : "SUPPLIER"}
+                    label={
+                      props.type === "sale" ? "CUSTOMER" : props.type === "purchase" ? "SUPPLIER" : "PARTY"
+                    }
                     variant={
                       editing === true || invoiceForm.values.invoiceNo !== "new" ? "unstyled" : "default"
                     }
