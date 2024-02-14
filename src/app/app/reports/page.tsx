@@ -7,6 +7,7 @@ import {
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 const mockdata = [
   { title: "Unified Payments Report", icon: IconReportMoney, color: "blue", target: "reports/payments" },
@@ -20,12 +21,12 @@ export default function ActionsGrid(props) {
   const router = useRouter();
   const items = mockdata.map((item) => (
     <Grid.Col m={'sm'} span={2} key={item.title}>
-      <UnstyledButton onClick={() => router.push(`/app/${item.target}`)} className={classes.item}>
+      <Link style={{textDecoration:'none'}} href={`/app/${item.target}`} className={classes.item}>
         <item.icon color={theme.colors[item.color][6]} size='4rem' />
         <Text size='s' mt={7}>
           {item.title}
         </Text>
-      </UnstyledButton>
+      </Link>
     </Grid.Col>
   ));
 
