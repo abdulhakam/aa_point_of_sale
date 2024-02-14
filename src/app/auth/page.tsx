@@ -8,11 +8,12 @@ import pb from "../pocketbase";
 export default function AuthenticationForm(props) {
   const router = useRouter();
   const params = useSearchParams();
+  const redirection = params.get("redirection")
   const auth = useMutation({
     mutationFn: (dt: { email: string; password: string }) =>
       pb.collection("users").authWithPassword(dt.email, dt.password),
     onSuccess: () => {
-      params.get("redirection") ? router.push(params.get("redirection")) : router.push("/app/dashboard");
+      redirection ? router.push(redirection) : router.push("/app/dashboard");
     },
   });
   const form = useForm({
@@ -27,9 +28,9 @@ export default function AuthenticationForm(props) {
 
   useEffect(() => {
     if (pb.authStore.isValid) {
-      params.get("redirection")
-        ? (params.get("redirection") !== "/"
-          ? router.push(params.get("redirection"))
+      redirection
+        ? (redirection !== "/"
+          ? router.push(redirection)
           : router.push("/app/dashboard"))
         : router.push("/app/dashboard");
     }

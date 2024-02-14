@@ -15,7 +15,7 @@ export default function RouteProtector({ children }) {
       <Container h={"100vh"} p={0}>
         <Flex align={"center"} justify={"center"} h={"100%"}>
           <Text size={"lg"} fw={700}>
-            Please <Link href="/auth">log in</Link> to continue
+            Please <Link href={`/auth?redirection=${currentPath}`}>log in</Link> to continue
           </Text>
         </Flex>
       </Container>

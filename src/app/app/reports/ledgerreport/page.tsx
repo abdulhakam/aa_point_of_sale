@@ -7,19 +7,20 @@ import PrintHead from "@/app/components/printing/PrintHead";
 import { ActionIcon, Flex, Group, NumberInput, Stack, Text } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { IconPrinter } from "@tabler/icons-react";
+import { DataTableColumn } from "mantine-datatable";
 import { useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
 
-const tableStructure = [
+const tableStructure:DataTableColumn[] = [
   { accessor: "id", hidden: true },
   { accessor: "created", width: "7em", title: "Date", render: (row) => String(row.created).slice(0, 10) },
   { accessor: "invoiceNo", title: "Inv #", width: "5em" },
   { accessor: "description" },
   { accessor: "transaction_type" },
   { accessor: "account_type" },
-  { accessor: "accounts_recievable" },
-  { accessor: "accounts_payable" },
-  { accessor: "cash" },
+  { accessor: "accounts_recievable",textAlign:'right', render:(record) => Number(record.accounts_recievable).toFixed(2) },
+  { accessor: "accounts_payable",textAlign:'right', render:(record) => Number(record.accounts_payable).toFixed(2) },
+  { accessor: "cash",textAlign:'right', render:(record) => Number(record.cash).toFixed(2) },
   // { accessor: "stock" },
 ];
 
@@ -90,11 +91,11 @@ export default function LedgerReport() {
     created: "",
     description: "",
     id: "",
-    accounts_recievable: <Text fw={600}>{recievable}</Text>,
-    cash: <Text fw={600}>{cash}</Text>,
-    accounts_payable: <Text fw={600}>{payable}</Text>,
-    stock: <Text fw={600}>{stock}</Text>,
-    transaction_type: "",
+    accounts_recievable: Number(recievable),
+    cash: Number(cash),
+    accounts_payable: Number(payable),
+    stock: Number(stock),
+    transaction_type: "",textAlign:'right',
   };
   const queries = [ledger];
   if (checkSuccess(queries)) {

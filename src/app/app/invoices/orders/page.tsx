@@ -22,6 +22,7 @@ export default function InvoiceOrders() {
   const invoices = useCRUD().fullList({ collection: "invoice_view", expand: "booker,invoice_maker,party" });
   return (
     <>
+    <h2>ALL INCOMPLETE ORDERS</h2>
       <DataViewTable
         fz={"xs"}
         horizontalSpacing={'0.2rem'}
