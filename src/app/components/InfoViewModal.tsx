@@ -3,7 +3,7 @@ import { Button, Modal, Table } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { useDisclosure } from "@mantine/hooks";
 
-//TODO: complete modal generation
+
 export default function InfoViewModal(props) {
   const [opened, { open, close }] = useDisclosure(false);
   const data = props.data;

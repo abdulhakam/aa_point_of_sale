@@ -111,7 +111,12 @@ export default function InvoiceForm(props) {
       invoice: iid,
       party: invoiceForm.values.party,
       type: props.type === "sale" ? "recieving" : props.type === "purchase" ? "sending" : "return", ////////////////////////////////////
-      description: "Invoice Created",
+      description:
+        props.type === "sale"
+          ? "Sale Invoice Created"
+          : props.type === "purchase"
+          ? "Purchase Invoice Created"
+          : "Return Invoice Created",
       amount: 0,
       paid: false,
     };

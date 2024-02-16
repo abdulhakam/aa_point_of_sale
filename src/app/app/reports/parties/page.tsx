@@ -185,7 +185,7 @@ export default function BalanceReport() {
     );
   } else return <StatusCheck check={queries} />;
 }
-//TODO: MAKE SURE CALCULATIONS ARE WORKING
+
 
 function calculator(payments) {
   let invoiceTotal = 0;
