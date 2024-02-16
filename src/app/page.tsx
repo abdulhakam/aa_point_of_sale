@@ -1,4 +1,4 @@
-//TODO: Proper routing needed
+//TODO: implement middleware for proper routing
 "use client";
 import { useRouter } from "next/navigation";
 import { useUserAuthContext } from "./context/AuthContext";
@@ -28,5 +28,3 @@ export default function Home() {
     </>
   );
 }
-//TODO: REMAKE REPORTING TABLES
-//TODO: MAKE REPORT GENERATION FILTERS

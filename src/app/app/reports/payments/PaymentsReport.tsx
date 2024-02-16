@@ -8,7 +8,7 @@ import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import dataFilter from "@/app/components/functions/dataFilter";
 import styles from "@/app/components/printing/styles.module.css";
 import { DateInput, DatePicker } from "@mantine/dates";
-import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
+import { IconArrowDown, IconArrowUp, IconArrowBack } from "@tabler/icons-react";
 
 export default function PaymentsReport() {
   const [fromDate, setFromDate] = useState<Date | null>(
@@ -70,7 +70,7 @@ export default function PaymentsReport() {
     ],
     payments.data
   );
-  
+
   const tableStructure = [
     { accessor: "id", hidden: true },
     {
@@ -83,9 +83,15 @@ export default function PaymentsReport() {
     {
       accessor: "type",
       sortable: true,
-      width: "3em",
+      // width: "3em",
       render: (record) =>
-        record.type === "sending" ? <IconArrowUp size={12} /> : <IconArrowDown size={12} />,
+        record.type === "sending" ? (
+          <>{"Purchase"}</>
+        ) : record.type === "recieving" ? (
+          <>{"Sale"}</>
+        ) : (
+          <>{"Return"}</>
+        ),
     },
     {
       accessor: "area",
@@ -105,7 +111,11 @@ export default function PaymentsReport() {
     },
     { accessor: "party", sortable: true },
     { accessor: "booker", hidden: reportType === "Sending", sortable: true },
-    { accessor: "amount", sortable: true, render: (record) => <>{`${record.amount != null ? record.amount.toFixed(2):-0}`}</> },
+    {
+      accessor: "amount",
+      sortable: true,
+      render: (record) => <>{`${record.amount != null ? record.amount.toFixed(2) : -0}`}</>,
+    },
     {
       accessor: "paid",
       hidden: true,
