@@ -5,7 +5,7 @@ import { transactionFormStructure } from "@/app/api/transactions";
 import useCRUD, { crud } from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { qtyDisplay } from "@/app/components/functions/qtyParser";
+import { getQtyFromString, qtyDisplay } from "@/app/components/functions/qtyParser";
 import { ActionIcon, Group, Modal } from "@mantine/core";
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { TransactionEditForm } from "./transactionsEditForm";
@@ -35,9 +35,10 @@ export default function Transactions({ invoice }) {
     { accessor: "invoice", hidden: true },
     { accessor: "count", width: "4%", title: "#", sortable: true },
     { accessor: "item", width: "40%", sortable: false },
-    { accessor: "qty", width: "8%", sortable: false },
+    { accessor: "ctns", width: "5%", sortable: false ,render:(record)=>getQtyFromString(String(record.qty)).ctns},
+    { accessor: "units", width: "5%", sortable: false ,render:(record)=>getQtyFromString(String(record.qty)).units},
     { accessor: "scheme", width: "8%", sortable: false },
-    { accessor: "price", width: "10%", sortable: false },
+    { accessor: "price", width: "8%", sortable: false },
     { accessor: "discount_1", width: "8%", sortable: false },
     { accessor: "discount_2", width: "8%", sortable: false },
     { accessor: "total", width: "10%", sortable: false },

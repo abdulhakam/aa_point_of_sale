@@ -164,11 +164,11 @@ export default function LedgerReport() {
               value={openningCash}
               onChange={(v) => setOpenningCash(Number(v))}
             />
-            <NumberInput
+            {/* <NumberInput
               label='Openning Stock'
               value={openningStock}
               onChange={(v) => setOpenningStock(Number(v))}
-            />
+            /> */}
           </Group>
           <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
             <PrintHead />

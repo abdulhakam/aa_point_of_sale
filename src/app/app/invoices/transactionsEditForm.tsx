@@ -31,13 +31,6 @@ export function TransactionEditForm(props) {
     mutationFn: crud.update,
     onSuccess: () => {
       qc.invalidateQueries();
-      // setItem("");
-      // setBoxes(1);
-      // setPcs(0);
-      // setItemPrice(0);
-      // setD1(0);
-      // setD2(0);
-      // setTot(0);
       close()
     },
   });

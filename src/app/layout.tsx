@@ -4,6 +4,7 @@
 import { ColorSchemeScript } from "@mantine/core";
 import "@mantine/core/styles.css";
 import "@mantine/dates/styles.css";
+import '@mantine/notifications/styles.css';
 import "mantine-datatable/styles.layer.css";
 import Providers from "./providers";
 import FetchingIndicator from "./components/global/apiCallIndicator/fetchingIndicator";

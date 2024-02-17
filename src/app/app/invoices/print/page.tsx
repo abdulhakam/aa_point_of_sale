@@ -20,15 +20,32 @@ const tableStructure = [
     accessor: "box_size_qty",
     title: "Ctn Size",
     width: "3em",
+    textAlign: "right",
     render: (record) => record.expand.item.box_size_qty,
   },
-  { accessor: "ctn", width: "2em", render: (record) => getQty(record.expand.item, record.qty).ctns },
-  { accessor: "units", width: "2em", render: (record) => getQty(record.expand.item, record.qty).units },
-  { accessor: "scheme", title: "Free (units)", width: "3em" },
-  { accessor: "price", width: "3em" },
-  { accessor: "discount_1", title: "D1", width: "2em" },
-  { accessor: "discount_2", title: "D2", width: "3em" },
-  { accessor: "total", width: "4em", render: ({ total }) => Number(total).toFixed(2) },
+  {
+    accessor: "ctn",
+    width: "2em",
+    textAlign: "right",
+    render: (record) => getQty(record.expand.item, record.qty).ctns,
+  },
+  {
+    accessor: "units",
+    width: "2em",
+    textAlign: "right",
+    render: (record) => getQty(record.expand.item, record.qty).units,
+  },
+  { accessor: "scheme", title: "Free (units)", textAlign: "right", width: "3em" },
+  { accessor: "price", title: "Unit Price", textAlign: "right", width: "3em" },
+  {
+    accessor: "ctn price",
+    width: "3em",
+    textAlign: "right",
+    render: (record) => record.price * record.expand.item.box_size_qty,
+  },
+  { accessor: "discount_1", title: "D1", textAlign: "right", width: "2em" },
+  { accessor: "discount_2", title: "D2", textAlign: "right", width: "3em" },
+  { accessor: "total", width: "4em", textAlign: "right", render: ({ total }) => Number(total).toFixed(2) },
 ];
 
 export default function InvoicePrint() {
@@ -43,7 +60,11 @@ export default function InvoicePrint() {
     collection: "invoice_view",
     expand: "invoice_maker,party,booker,party.area,party.area.section",
   });
-  const transactions = useCRUD().fullList({ collection: "transaction_view", expand: "item", sort: "+created" });
+  const transactions = useCRUD().fullList({
+    collection: "transaction_view",
+    expand: "item",
+    sort: "+created",
+  });
 
   const thisInvoice = invoices.data?.find((inv) => inv.id === invoiceId);
   const [opened, { open, close }] = useDisclosure(true);
@@ -137,7 +158,7 @@ export default function InvoicePrint() {
         <div ref={printRef} style={{ marginLeft: "1em", marginRight: "1em" }}>
           <PrintHead />
           <Flex align={"center"} justify={"space-between"}>
-            <Button p={0} /*onClick={open} */ variant='transparent' size='lg' fw={"700"} color='black'>
+            <Button p={0} variant='transparent' size='lg' fw={"700"} color='black'>
               {`${type.toUpperCase()} INVOICE`}
             </Button>
           </Flex>
@@ -147,7 +168,7 @@ export default function InvoicePrint() {
                 <Stack w={"65%"}>
                   <Table
                     borderColor='gray'
-                    fz={"xs"}
+                    fz={"8pt"}
                     withRowBorders={false}
                     horizontalSpacing={"1em"}
                     verticalSpacing={0}
@@ -171,7 +192,7 @@ export default function InvoicePrint() {
                 </Stack>
                 <Table
                   w={"35%"}
-                  fz={"xs"}
+                  fz={"8pt"}
                   withRowBorders={false}
                   verticalSpacing={0}
                   horizontalSpacing={"1em"}
@@ -209,63 +230,78 @@ export default function InvoicePrint() {
               <hr />
               {invoice?.invoiceNo && (
                 <>
-                  <ReportViewTable columns={tableStructure} data={filteredData} />
+                  <ReportViewTable fz={"7pt"} columns={tableStructure} data={filteredData} />
                   <Flex
                     justify={"end"}
                     align={"center"}
-                    px={"0.5rem"}
-                    h={"4em"}
+                    // px={"0.5rem"}
+                    // h={"4em"}
                     style={{
                       border: "1px solid black",
                     }}
                   >
-                    <Stack w={"100%"} justify='end' align='end'>
-                      <Group mr={0} w={"100%"} justify='space-between'>
-                        {new Date(invoice?.duedate.slice(0, 10)) >
-                        new Date(
-                          invoice?.date ? invoice?.date.slice(0, 10) : invoice?.created.slice(0, 10)
-                        ) ? (
-                          <Group align='center' gap={"1em"}>
-                            <Text ml={"1em"} fw={700} size='xs'>
-                              Due Date:
-                            </Text>
-                            <Text size='xs' fw={700}>
-                              {`${invoice?.duedate.slice(0, 10)} `}
-                            </Text>
-                          </Group>
-                        ) : (
-                          <div> </div>
-                        )}
-                        <Group>
-                          {/* <Text mr={"1em"} size='xs'>
+                    <Group mr={0} w={"60%"} justify='space-between'>
+                      {new Date(invoice?.duedate.slice(0, 10)) >
+                      new Date(invoice?.date ? invoice?.date.slice(0, 10) : invoice?.created.slice(0, 10)) ? (
+                        <Group align='center' gap={"1em"}>
+                          <Text ml={"1em"} fw={700} size='xs'>
+                            Due Date:
+                          </Text>
+                          <Text size='xs' fw={700}>
+                            {`${invoice?.duedate.slice(0, 10)} `}
+                          </Text>
+                        </Group>
+                      ) : (
+                        <div> </div>
+                      )}
+                    </Group>
+                    <Group gap={0}>
+                      <Table
+                        horizontalSpacing={2}
+                        verticalSpacing={0}
+                        fz={"7pt"}
+                        data={{
+                          body: [
+                            ["TOTAL AMOUNT", Number(invoice?.total).toFixed(2)],
+                            ["DISCOUNT 1", `${Number(invoice?.discount_1).toFixed(2)}%`],
+                            ["DISCOUNT 2", `${Number(invoice?.discount_2).toFixed(2)}%`],
+                            ["PAYABLE AMOUNT", Number(invoice?.final_total).toFixed(2)],
+                          ],
+                        }}
+                      />
+                      {/* <Group>
+                          <Text mr={"1em"} size='xs'>
                             Total
                           </Text>
                           <Text size='xs' fw={700}>
                             {Number(invoice?.total).toFixed(2) || 0}
-                          </Text> */}
+                          </Text>
                         </Group>
-                      </Group>
-                      <Group mt={-10}>
-                        <Text mr={"1em"} size='xs'>
-                          Discount_1
-                        </Text>
-                        <Text mr={"1em"} size='xs' fw={700}>
-                          {invoice?.discount_1 || 0}
-                        </Text>
-                        <Text mr={"1em"} size='xs'>
-                          Discount_2
-                        </Text>
-                        <Text mr={"1em"} size='xs' fw={700}>
-                          {invoice?.discount_2 || 0}
-                        </Text>
-                        <Text mr={"1em"} size='sm'>
-                          Invoice Total
-                        </Text>
-                        <Text size='md' fw={700}>
-                          {Number(invoice?.final_total).toFixed(2) || 0}
-                        </Text>
-                      </Group>
-                    </Stack>
+                        <Group>
+                          <Text mr={"1em"} size='xs'>
+                            Discount_1
+                          </Text>
+                          <Text mr={"1em"} size='xs' fw={700}>
+                            {`${invoice?.discount_1 || 0}%`}
+                          </Text>
+                        </Group>
+                        <Group>
+                          <Text mr={"1em"} size='xs'>
+                            Discount_2
+                          </Text>
+                          <Text mr={"1em"} size='xs' fw={700}>
+                            {invoice?.discount_2 || 0}
+                          </Text>
+                        </Group>
+                        <Group>
+                          <Text mr={"1em"} size='sm'>
+                            Invoice Total
+                          </Text>
+                          <Text size='md' fw={700}>
+                            {Number(invoice?.final_total).toFixed(2) || 0}
+                          </Text>
+                        </Group> */}
+                    </Group>
                   </Flex>
                 </>
               )}
