@@ -21,7 +21,7 @@ export default function ReportViewTable(props) {
   return (
     <>
       <DataTable<any>
-        fz={"xs"}
+        fz={props.fz || "xs"}
         verticalSpacing={0}
         horizontalSpacing={2}
         withTableBorder

@@ -25,13 +25,28 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDisclosure } from "@mantine/hooks";
 import { TransactionForm } from "./TransactionForm";
 import { DateInput } from "@mantine/dates";
-import { partyCreateForm } from "@/app/api/parties";
 import { IconPrinter } from "@tabler/icons-react";
+import CreateSupplier from "./purchase/CreateSupplier";
+import CreateCustomer from "./sale/CreateCustomer";
 
 export default function InvoiceForm(props) {
   const [opened, { open, close }] = useDisclosure(false);
   const [editing, setEditing] = useState(false);
   const qc = useQueryClient();
+  const invoiceForm = useForm({
+    initialValues: {
+      invoiceNo: "new",
+      booker: "",
+      invoice_maker: pb.authStore?.model?.id,
+      party: "",
+      discount_1: 0,
+      discount_2: 0,
+      completed: false,
+      date: new Date(),
+      duedate: new Date(),
+      description: "",
+    },
+  });
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
     expand: "party,invoice_maker,booker",
@@ -40,6 +55,7 @@ export default function InvoiceForm(props) {
   });
   const parties = useCRUD().fullList({
     collection: "parties",
+    expand: "area,area.section",
     filter:
       props.type === "sale"
         ? 'type="customer"||type="both"'
@@ -47,6 +63,12 @@ export default function InvoiceForm(props) {
         ? 'type="supplier"||type="both"'
         : null,
     queryKey: props.type === "sale" ? "customers" : props.type === "suppliers" ? "suppliers" : "all",
+  });
+  const partyInvoices = useCRUD().fullList({
+    collection: "invoice_view",
+    filter: `party="${invoiceForm.values.party}" && type="${
+      parties.data?.find((p) => p.id === invoiceForm.values.party)?.type === "customer" ? "sale" : "purchase"
+    }"`,
   });
   const items = useCRUD().fullList({ collection: "items", expand: "category" });
   const user = useCRUD().read({ collection: "users", recordID: pb.authStore?.model?.id });
@@ -69,20 +91,7 @@ export default function InvoiceForm(props) {
       window.open(`print?invoiceId=${invoiceForm.values.invoiceNo}`, "_blank").focus();
     },
   });
-  const invoiceForm = useForm({
-    initialValues: {
-      invoiceNo: "new",
-      booker: "",
-      invoice_maker: pb.authStore?.model?.id,
-      party: "",
-      discount_1: 0,
-      discount_2: 0,
-      completed: false,
-      date: new Date(),
-      duedate: new Date(),
-      description: "",
-    },
-  });
+
   const newPayment = useMutation({
     mutationFn: crud.create,
     onSuccess: () => {
@@ -226,9 +235,6 @@ export default function InvoiceForm(props) {
           <Stack gap={0}>
             <Group>
               <Group>
-                {/* <Text ml={"xs"} fw={500}>
-                  {"INVOICE NO:"}
-                </Text> */}
                 <Select
                   label='INVOICE NO:'
                   w={"8rem"}
@@ -285,15 +291,11 @@ export default function InvoiceForm(props) {
               </Group>
               {props.type === "sale" && (
                 <Group>
-                  {/* <Text ml={"xs"} fw={500}>
-                    {"BOOKER:"}
-                  </Text> */}
                   <Select
                     w={"10rem"}
                     rightSectionWidth={0}
                     label='BOOKER'
                     variant={"default"}
-                    // disabled={editing ? true : false}
                     allowDeselect={false}
                     searchable
                     data={[...bookers.data.map((bkr) => ({ value: bkr.id, label: bkr.name }))]}
@@ -301,10 +303,8 @@ export default function InvoiceForm(props) {
                   />
                 </Group>
               )}
-              {/* {(invoiceForm.values.invoiceNo === "new" || editing) && ( */}
               <>
-                <Group>
-                  {/* <Text fw={500}>{props.type === "sale" ? "CUSTOMER:" : "SUPPLIER:"}</Text> */}
+                <Group align='end'>
                   <NSelect
                     label={
                       props.type === "sale" ? "CUSTOMER" : props.type === "purchase" ? "SUPPLIER" : "PARTY"
@@ -312,17 +312,32 @@ export default function InvoiceForm(props) {
                     variant={
                       editing === true || invoiceForm.values.invoiceNo !== "new" ? "unstyled" : "default"
                     }
-                    withCreate={editing ? false : true}
-                    createForm={partyCreateForm}
                     rightSectionWidth={0}
-                    readOnly={editing === true || invoiceForm.values.invoiceNo !== "new" ? true : false}
+                    disabled={editing === true || invoiceForm.values.invoiceNo !== "new" ? true : false}
                     allowDeselect={false}
                     searchable
-                    data={[...parties.data.map((pty) => ({ value: pty.id, label: pty.name }))]}
+                    data={[
+                      ...parties.data.map((pty) => ({
+                        value: pty.id,
+                        label: `${pty.name} - ${pty.expand?.area.name}`,
+                      })),
+                    ]}
                     {...invoiceForm.getInputProps("party")}
                   />
+                  {props.type === "purchase" && <CreateSupplier />}
+                  {props.type === "sale" && <CreateCustomer />}
                 </Group>
-
+                <NSelect
+                  label={"Original Invoice"}
+                  disabled={editing}
+                  rightSectionWidth={0}
+                  allowDeselect={false}
+                  searchable
+                  data={partyInvoices.data?.map((inv) => ({
+                    value: inv.id,
+                    label: String(inv.invoiceNo),
+                  })) ?? []}
+                />
                 <Group>
                   <Flex direction={"column"} align={"center"} w={"10rem"}>
                     <Text fw={500}>USER:</Text>

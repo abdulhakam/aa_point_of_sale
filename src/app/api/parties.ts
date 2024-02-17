@@ -78,7 +78,73 @@ export const partyCreateForm = {
     type: {
       type: "select",
       default: "customer",
-      baseProps: { label: "Type",allowDeselect: false, data: ["customer", "supplier", "both"] },
+      baseProps: { label: "Type",allowDeselect: false, data: ["customer", "supplier"] },
+    },
+    area: {
+      type: "select",
+      baseProps: {
+        // key :"area-creator",
+        // withCreate: true,
+        // createForm: areaCreateForm,
+        label: "Area",
+        searchable: true,
+        data: [],
+        dataQueryValue: "id",
+        dataQuery: { collectionName: "areas" },
+      },
+    },
+    phone: { type: "text", default: undefined, baseProps: { label: "Phone" } },
+    address: { type: "text", default: undefined, baseProps: { label: "Address" } },
+    deleted: { type: "switch", hidden: true, default: false, baseProps: { label: "deleted" } },
+  },
+  collectionName: "parties",
+};
+
+
+export const supplierCreateForm = {
+  fields: {
+    id: { type: "autocomplete", hidden: true, default: undefined, baseProps: { label: "id", data: [] } },
+    created: { type: "datetime", hidden: true, default: undefined, baseProps: { label: "Created" } },
+    updated: { type: "datetime", hidden: true, default: undefined, baseProps: { label: "Updated" } },
+    name: { type: "text", default: "", baseProps: { label: "Name" } },
+    type: {
+      type: "select",
+      hidden: true,
+      default: "supplier",
+      baseProps: { label: "Type",allowDeselect: false, data: ["customer", "supplier"] },
+    },
+    area: {
+      type: "select",
+      hidden:true,
+      baseProps: {
+        // key :"area-creator",
+        // withCreate: true,
+        // createForm: areaCreateForm,
+        label: "Area",
+        searchable: true,
+        data: [],
+        dataQueryValue: "id",
+        dataQuery: { collectionName: "areas" },
+      },
+    },
+    phone: { type: "text",hidden:true, default: undefined, baseProps: { label: "Phone" } },
+    address: { type: "text",hidden:true, default: undefined, baseProps: { label: "Address" } },
+    deleted: { type: "switch", hidden: true, default: false, baseProps: { label: "deleted" } },
+  },
+  collectionName: "parties",
+};
+
+export const customerCreateForm = {
+  fields: {
+    id: { type: "autocomplete", hidden: true, default: undefined, baseProps: { label: "id", data: [] } },
+    created: { type: "datetime", hidden: true, default: undefined, baseProps: { label: "Created" } },
+    updated: { type: "datetime", hidden: true, default: undefined, baseProps: { label: "Updated" } },
+    name: { type: "text", default: "", baseProps: { label: "Name" } },
+    type: {
+      type: "select",
+      hidden: true,
+      default: "customer",
+      baseProps: { label: "Type",allowDeselect: false, data: ["customer", "supplier"] },
     },
     area: {
       type: "select",
