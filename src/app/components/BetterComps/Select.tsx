@@ -38,7 +38,7 @@ export function NSelect(
     queryFn: () =>
       pb
         .collection(props.dataQuery.collectionName)
-        .getFullList(props.options ? { options: props.options } : {}),
+        .getFullList(props.options ? { ...props.options } : {}),
   });
 
   const optionsFilter: OptionsFilter = ({ options, search }) => {

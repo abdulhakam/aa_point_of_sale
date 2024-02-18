@@ -10,13 +10,15 @@ import { ActionIcon, Group, Modal } from "@mantine/core";
 import { IconEdit, IconTrash } from "@tabler/icons-react";
 import { TransactionEditForm } from "./transactionsEditForm";
 import { useDisclosure } from "@mantine/hooks";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Transactions({ invoice }) {
   const [opened, { open, close }] = useDisclosure(false);
-  const [formData,setFormData] = useState({})
+  const [formData, setFormData] = useState({});
   const qc = useQueryClient();
-  qc.invalidateQueries();
+  useEffect(() => {
+    qc.invalidateQueries();
+  }, []);
   const remove = useMutation({
     mutationFn: crud.remove,
     onSuccess: () => {
@@ -35,8 +37,18 @@ export default function Transactions({ invoice }) {
     { accessor: "invoice", hidden: true },
     { accessor: "count", width: "4%", title: "#", sortable: true },
     { accessor: "item", width: "40%", sortable: false },
-    { accessor: "ctns", width: "5%", sortable: false ,render:(record)=>getQtyFromString(String(record.qty)).ctns},
-    { accessor: "units", width: "5%", sortable: false ,render:(record)=>getQtyFromString(String(record.qty)).units},
+    {
+      accessor: "ctns",
+      width: "5%",
+      sortable: false,
+      render: (record) => getQtyFromString(String(record.qty)).ctns,
+    },
+    {
+      accessor: "units",
+      width: "5%",
+      sortable: false,
+      render: (record) => getQtyFromString(String(record.qty)).units,
+    },
     { accessor: "scheme", width: "8%", sortable: false },
     { accessor: "price", width: "8%", sortable: false },
     { accessor: "discount_1", width: "8%", sortable: false },
@@ -51,7 +63,13 @@ export default function Transactions({ invoice }) {
           <ActionIcon m={0} size='sm' variant='outline' color='blue' onClick={() => showModal(record)}>
             <IconEdit size={16} />
           </ActionIcon>
-          <ActionIcon m={0} size='sm' variant='outline' color='red' onClick={() => remove.mutate({ collection: 'transactions', recordID: record.id })}>
+          <ActionIcon
+            m={0}
+            size='sm'
+            variant='outline'
+            color='red'
+            onClick={() => remove.mutate({ collection: "transactions", recordID: record.id })}
+          >
             <IconTrash size={16} />
           </ActionIcon>
         </Group>
@@ -65,17 +83,14 @@ export default function Transactions({ invoice }) {
   const dataWithCount = transactions.data?.map((tr, index) => ({
     ...tr,
     count: index + 1,
-    qty: qtyDisplay(
-      items.data?.find((itm) => itm.id === tr.item)||{},
-      tr.qty
-    ),
+    qty: qtyDisplay(items.data?.find((itm) => itm.id === tr.item) || {}, tr.qty),
   }));
   const formStructure = { ...transactionFormStructure };
   formStructure.fields.item.baseProps.data = items.data?.map((cat) => ({
     value: cat.id,
     label: cat.name,
   }));
-  const queries = [transactions,items];
+  const queries = [transactions, items];
   if (checkSuccess(queries)) {
     return (
       <>
@@ -86,7 +101,7 @@ export default function Transactions({ invoice }) {
           report
           verticalSpacing={"0.1rem"}
           height={300}
-          filter={[{ key: "invoice", value: invoice }]}
+          // filter={[{ key: "invoice", value: invoice }]}
           columns={tableStructure}
           formstructure={transactionFormStructure}
           data={dataWithCount}

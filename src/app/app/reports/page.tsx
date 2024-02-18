@@ -1,6 +1,7 @@
 "use client";
 import { Card, Text,  UnstyledButton,  useMantineTheme, Grid } from "@mantine/core";
 import {
+  IconChartArea,
   IconChartBar,
   IconChartLine,
   IconReportMoney, IconTrolley,
@@ -12,7 +13,8 @@ import Link from "next/link";
 const mockdata = [
   { title: "Unified Payments Report", icon: IconReportMoney, color: "blue", target: "reports/payments" },
   { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" },
-  { title: "Parties Report", icon: IconChartBar, color: "orange", target: "reports/parties" },
+  { title: "Unified Item Sales Report", icon: IconChartBar, color: "pink", target: "reports/transactions" },
+  { title: "Payments By Company", icon: IconChartArea, color: "red", target: "reports/paymentsbycompany" },
   { title: "General Ledger", icon: IconChartLine, color: "grape", target: "reports/ledgerreport" }
 ];
 
