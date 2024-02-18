@@ -7,6 +7,7 @@ import {
   ActionIcon,
   Button,
   Checkbox,
+  ComboboxItem,
   Flex,
   Group,
   Modal,
@@ -15,6 +16,7 @@ import {
   Space,
   Stack,
   Text,
+  TextInput,
   Textarea,
 } from "@mantine/core";
 import { useForm } from "@mantine/form";
@@ -28,6 +30,7 @@ import { DateInput } from "@mantine/dates";
 import { IconPrinter } from "@tabler/icons-react";
 import CreateSupplier from "./purchase/CreateSupplier";
 import CreateCustomer from "./sale/CreateCustomer";
+import { notifications } from "@mantine/notifications";
 
 export default function InvoiceForm(props) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -78,9 +81,37 @@ export default function InvoiceForm(props) {
   });
   const newInvoice = useMutation({
     mutationFn: crud.create,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      invoiceForm.setFieldValue("invoiceNo", data.id);
       paymentCreator();
+      props.type === "return"
+        ? newReturnReference.mutate({
+            collection: "invoices_return_reference",
+            data: {
+              original_invoices: originalInvoice,
+              return_invoice: data.id,
+              id: idGenerator(Number(data.id.substring(3)), "rtn"),
+            },
+          })
+        : null;
       setEditing(true);
+    },
+  });
+  const newReturnReference = useMutation({
+    mutationFn: crud.create,
+    onSuccess: (data) => {
+      notifications.show({
+        title: "Success!",
+        message: "Return Reference Created",
+      });
+      console.log(data);
+    },
+    onError: () => {
+      notifications.show({
+        title: "Error!",
+        color: "red",
+        message: "Return Reference Creation Failed",
+      });
     },
   });
   const updateInvoice = useMutation({
@@ -91,7 +122,7 @@ export default function InvoiceForm(props) {
       window.open(`print?invoiceId=${invoiceForm.values.invoiceNo}`, "_blank").focus();
     },
   });
-
+  const [originalInvoice, setOriginalInvoice] = useState(null);
   const newPayment = useMutation({
     mutationFn: crud.create,
     onSuccess: () => {
@@ -163,7 +194,6 @@ export default function InvoiceForm(props) {
       party: invoiceForm.values.party,
       type: props.type,
     };
-    invoiceForm.setFieldValue("invoiceNo", data.id);
     newInvoice.mutate({ collection: "invoices", data: data });
   }
   function invComplete() {
@@ -199,7 +229,7 @@ export default function InvoiceForm(props) {
     return (
       <>
         <Modal opened={opened} centered onClose={close} title='Confirm Invoice?'>
-          {props.type !== "return" && (
+          {props.type !== "return" ? (
             <>
               <DateInput label='PAYMENT DUE DATE' {...invoiceForm.getInputProps("duedate")} />
               <NumberInput readOnly label='Total Amount' value={final_total()} />
@@ -209,13 +239,19 @@ export default function InvoiceForm(props) {
                 value={paidAmount}
               />
             </>
+          ) : (
+            <>
+              <Checkbox
+                defaultChecked={props.type === "return"}
+                m={"xs"}
+                disabled={props.type === "return"}
+                label={props.type === "return" ? "Return Completed" : "Order Completed"}
+                {...invoiceForm.getInputProps("completed")}
+              />
+              <Text>Press OK to confirm</Text>
+            </>
           )}
-          <Checkbox
-            defaultChecked={props.type === "return"}
-            m={"xs"}
-            label={props.type === "return" ? "Return Completed" : "Order Completed"}
-            {...invoiceForm.getInputProps("completed")}
-          />
+
           <Group mt={"md"} justify='end'>
             <Button
               onClick={() => {
@@ -232,136 +268,140 @@ export default function InvoiceForm(props) {
         </Text>
         <hr />
         <Group>
-          <Stack gap={0}>
+          <Group align='end'>
             <Group>
-              <Group>
-                <Select
-                  label='INVOICE NO:'
-                  w={"8rem"}
-                  rightSectionWidth={0}
-                  variant={"default"}
-                  disabled={editing ? true : false}
-                  allowDeselect={false}
-                  searchable
-                  data={[
-                    ...invoices.data.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) })),
-                    { value: "new", label: "new" },
-                  ]}
-                  {...invoiceForm.getInputProps("invoiceNo")}
-                  onChange={(v) => {
-                    invoiceForm.setFieldValue("invoiceNo", v);
-                    invoiceForm.setFieldValue(
-                      "booker",
-                      invoices.data.find((inv) => inv.id === v)?.expand.booker?.id
-                    );
-                    invoiceForm.setFieldValue(
-                      "party",
-                      invoices.data.find((inv) => inv.id === v)?.expand.party?.id
-                    );
-                    invoiceForm.setFieldValue("date", v === "new" ? new Date() : getInvoiceDate(v));
-                  }}
-                />
-                <DateInput
-                  label='INVOICE DATE'
-                  value={invoiceForm.values.date}
-                  onChange={(v) =>
-                    invoiceForm.setFieldValue(
-                      "date",
-                      new Date(
-                        new Date(v).getFullYear(),
-                        new Date(v).getMonth(),
-                        new Date(v).getDate(),
-                        0,
-                        0,
-                        0
-                      )
+              <Select
+                label='INVOICE NO:'
+                w={"8rem"}
+                rightSectionWidth={0}
+                variant={"default"}
+                disabled={editing ? true : false}
+                allowDeselect={false}
+                searchable
+                data={[
+                  ...invoices.data.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) })),
+                  { value: "new", label: "new" },
+                ]}
+                {...invoiceForm.getInputProps("invoiceNo")}
+                onChange={(v) => {
+                  invoiceForm.setFieldValue("invoiceNo", v);
+                  invoiceForm.setFieldValue(
+                    "booker",
+                    invoices.data.find((inv) => inv.id === v)?.expand.booker?.id
+                  );
+                  invoiceForm.setFieldValue(
+                    "party",
+                    invoices.data.find((inv) => inv.id === v)?.expand.party?.id
+                  );
+                  invoiceForm.setFieldValue("date", v === "new" ? new Date() : getInvoiceDate(v));
+                }}
+              />
+              <DateInput
+                label='INVOICE DATE'
+                value={invoiceForm.values.date}
+                onChange={(v) =>
+                  invoiceForm.setFieldValue(
+                    "date",
+                    new Date(
+                      new Date(v).getFullYear(),
+                      new Date(v).getMonth(),
+                      new Date(v).getDate(),
+                      0,
+                      0,
+                      0
                     )
-                  }
-                />
-                {invoiceForm.values.invoiceNo !== "new" && !editing && (
-                  <Button
-                    onClick={() => {
-                      getInvoiceData(invoiceForm.values.invoiceNo);
-                      setEditing(true);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                )}
-              </Group>
-              {props.type === "sale" && (
-                <Group>
-                  <Select
-                    w={"10rem"}
-                    rightSectionWidth={0}
-                    label='BOOKER'
-                    variant={"default"}
-                    allowDeselect={false}
-                    searchable
-                    data={[...bookers.data.map((bkr) => ({ value: bkr.id, label: bkr.name }))]}
-                    {...invoiceForm.getInputProps("booker")}
-                  />
-                </Group>
-              )}
-              <>
-                <Group align='end'>
-                  <NSelect
-                    label={
-                      props.type === "sale" ? "CUSTOMER" : props.type === "purchase" ? "SUPPLIER" : "PARTY"
-                    }
-                    variant={
-                      editing === true || invoiceForm.values.invoiceNo !== "new" ? "unstyled" : "default"
-                    }
-                    rightSectionWidth={0}
-                    disabled={editing === true || invoiceForm.values.invoiceNo !== "new" ? true : false}
-                    allowDeselect={false}
-                    searchable
-                    data={[
-                      ...parties.data.map((pty) => ({
-                        value: pty.id,
-                        label: `${pty.name} - ${pty.expand?.area.name}`,
-                      })),
-                    ]}
-                    {...invoiceForm.getInputProps("party")}
-                  />
-                  {props.type === "purchase" && <CreateSupplier />}
-                  {props.type === "sale" && <CreateCustomer />}
-                </Group>
-                <NSelect
-                  label={"Original Invoice"}
-                  disabled={editing}
-                  rightSectionWidth={0}
-                  allowDeselect={false}
-                  searchable
-                  data={partyInvoices.data?.map((inv) => ({
-                    value: inv.id,
-                    label: String(inv.invoiceNo),
-                  })) ?? []}
-                />
-                <Group>
-                  <Flex direction={"column"} align={"center"} w={"10rem"}>
-                    <Text fw={500}>USER:</Text>
-                    <Space w={"xs"} />
-                    <Text>{user.data.name}</Text>
-                  </Flex>
-                </Group>
-              </>
-              {/* )} */}
-              {!editing && invoiceForm.values.invoiceNo === "new" && (
+                  )
+                }
+              />
+              {invoiceForm.values.invoiceNo !== "new" && !editing && (
                 <Button
-                  disabled={
-                    invoiceForm.values.party === "" ||
-                    (props.type === "sale" && invoiceForm.values.booker === "")
-                  }
                   onClick={() => {
-                    invoiceCreator();
+                    getInvoiceData(invoiceForm.values.invoiceNo);
+                    setEditing(true);
                   }}
                 >
-                  Create
+                  Edit
                 </Button>
               )}
             </Group>
-          </Stack>
+            {props.type === "sale" && (
+              <Group>
+                <Select
+                  w={"10rem"}
+                  rightSectionWidth={0}
+                  label='BOOKER'
+                  variant={"default"}
+                  allowDeselect={false}
+                  searchable
+                  data={[...bookers.data.map((bkr) => ({ value: bkr.id, label: bkr.name }))]}
+                  {...invoiceForm.getInputProps("booker")}
+                />
+              </Group>
+            )}
+            <>
+              <Group align='end'>
+                <NSelect
+                  label={
+                    props.type === "sale" ? "CUSTOMER" : props.type === "purchase" ? "SUPPLIER" : "PARTY"
+                  }
+                  variant={
+                    editing === true || invoiceForm.values.invoiceNo !== "new" ? "unstyled" : "default"
+                  }
+                  rightSectionWidth={0}
+                  disabled={editing === true || invoiceForm.values.invoiceNo !== "new" ? true : false}
+                  allowDeselect={false}
+                  searchable
+                  data={[
+                    ...parties.data.map((pty) => ({
+                      value: pty.id,
+                      label: `${pty.name} - ${pty.expand?.area.name}`,
+                    })),
+                  ]}
+                  {...invoiceForm.getInputProps("party")}
+                />
+                {props.type === "purchase" && <CreateSupplier />}
+                {props.type === "sale" && <CreateCustomer />}
+              </Group>
+              {props.type === "return" && (
+                <NSelect
+                  label={"Original Invoice"}
+                  disabled={editing || invoiceForm.values.invoiceNo !== "new"}
+                  rightSectionWidth={0}
+                  allowDeselect={false}
+                  searchable
+                  value={originalInvoice ? originalInvoice : null}
+                  onChange={(v) => setOriginalInvoice(v)}
+                  data={
+                    partyInvoices.data?.map((inv) => ({
+                      value: inv.id,
+                      label: String(inv.invoiceNo),
+                    })) ?? []
+                  }
+                />
+              )}
+              <Group>
+                <Flex direction={"column"} align={"center"} w={"10rem"}>
+                  <TextInput disabled label={"USER:"} value={user.data.name} />
+                </Flex>
+              </Group>
+            </>
+            {/* )} */}
+            {!editing && invoiceForm.values.invoiceNo === "new" && (
+              <Button
+                disabled={
+                  invoiceForm.values.party === "" ||
+                  (props.type === "sale" && invoiceForm.values.booker === "") ||
+                  (props.type === "return" && originalInvoice === null)
+                }
+                onClick={() => {
+                  invoiceCreator();
+                }}
+              >
+                Create
+              </Button>
+            )}
+          </Group>
+
           {editing && (
             <Stack gap={0}>
               <Textarea
@@ -399,13 +439,11 @@ export default function InvoiceForm(props) {
                   />
                   <Group align={"end"}>
                     <NumberInput
-                      variant='default'
                       label={"Discount_1"}
                       rightSection={" "}
                       {...invoiceForm.getInputProps("discount_1")}
                     />
                     <NumberInput
-                      variant='default'
                       label={"Discount_2"}
                       rightSection={" "}
                       {...invoiceForm.getInputProps("discount_2")}

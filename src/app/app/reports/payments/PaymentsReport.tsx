@@ -1,14 +1,15 @@
 "use client";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
-import { Button, Checkbox, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
+import { Button, Checkbox, Chip, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import dataFilter from "@/app/components/functions/dataFilter";
 import styles from "@/app/components/printing/styles.module.css";
 import { DateInput, DatePicker } from "@mantine/dates";
-import { IconArrowDown, IconArrowUp, IconArrowBack } from "@tabler/icons-react";
+import { NSelect } from "@/app/components/BetterComps/Select";
+import moment from "moment";
 
 export default function PaymentsReport() {
   const [fromDate, setFromDate] = useState<Date | null>(
@@ -24,35 +25,19 @@ export default function PaymentsReport() {
   const [party, setParty] = useState("All");
   const [paymentType, setPaymentType] = useState("all");
   const [invoicesOnly, setInvoicesOnly] = useState(false);
+  const [company, setCompany] = useState<any>("");
 
   const payments = useCRUD().fullList({
     collection: "payments_view",
-    expand: "invoice,party,area,section,booker",
-    filter: `(created >= '${new Date(
-      Date.UTC(
-        fromDate.getFullYear(),
-        fromDate.getMonth(),
-        fromDate.getDate(),
-        fromDate.getHours(),
-        fromDate.getMinutes(),
-        fromDate.getSeconds()
-      )
-    )
-      .toISOString()
-      .replace("T", " ")
-      .slice(0, 19)}' && created <= '${new Date(
-      Date.UTC(
-        toDate.getFullYear(),
-        toDate.getMonth(),
-        toDate.getDate(),
-        toDate.getHours(),
-        toDate.getMinutes(),
-        toDate.getSeconds()
-      )
-    )
-      .toISOString()
-      .replace("T", " ")
-      .slice(0, 19)}')`,
+    expand: "invoice,party,area,section,booker,company",
+    filter: `(created >= '${moment(fromDate)
+      .add(1, "day")
+      .utc()
+      .startOf("day")
+      .format("YYYY-MM-DD HH:mm:ss")}' 
+      && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')${
+      company ? `&& (company~"${company}")` : ""
+    }`,
   });
   const parties = useCRUD().fullList({ collection: "parties" });
   const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
@@ -70,7 +55,6 @@ export default function PaymentsReport() {
     ],
     payments.data
   );
-
   const tableStructure = [
     { accessor: "id", hidden: true },
     {
@@ -83,7 +67,7 @@ export default function PaymentsReport() {
     {
       accessor: "type",
       sortable: true,
-      // width: "3em",
+      width: "5em",
       render: (record) =>
         record.type === "sending" ? (
           <>{"Purchase"}</>
@@ -92,6 +76,12 @@ export default function PaymentsReport() {
         ) : (
           <>{"Return"}</>
         ),
+    },
+    {
+      accessor: "invoice",
+      sortable: true,
+      width: "4em",
+      render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
     },
     {
       accessor: "area",
@@ -103,11 +93,17 @@ export default function PaymentsReport() {
       sortable: true,
       width: "9em",
     },
+
     {
-      accessor: "invoice",
+      accessor: "company",
       sortable: true,
-      width: "4em",
-      render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
+      render: (record) =>
+        record.expand?.company?.name ||
+        record.expand?.company?.map((cmp, i) => (
+          <Chip size='xs' key={`company-name-chip-${i}-${cmp.id}`}>
+            {cmp.name}
+          </Chip>
+        )),
     },
     { accessor: "party", sortable: true },
     { accessor: "booker", hidden: reportType === "Sending", sortable: true },
@@ -124,21 +120,43 @@ export default function PaymentsReport() {
     },
     { accessor: "description", sortable: true },
   ];
-  const { total, totalPaid, invoiceTotal, totalSending, totalRecieving, recieving, recieved, sending, sent } =
-    calculator(
-      filteredPayments?.map((pmnt) => ({
-        ...pmnt,
-        expand: {
-          ...pmnt.expand,
-          party: { ...parties.data?.find((pty) => pty.id === pmnt.party) },
-        },
-      }))
-    );
+  const {
+    total,
+    totalPaid,
+    invoiceTotal,
+    totalSending,
+    totalRecieving,
+    recieving,
+    recieved,
+    sending,
+    sent,
+    sendingReturns,
+    recievingReturns,
+  } = calculator(
+    filteredPayments?.map((pmnt) => ({
+      ...pmnt,
+      expand: {
+        ...pmnt.expand,
+        party: { ...parties.data?.find((pty) => pty.id === pmnt.party) },
+      },
+    }))
+  );
   const finalData = [
-    reportType !== "all" ? [] : ["Sending", sending, "Sent", sent, "Sending Total", totalSending],
     reportType !== "all"
       ? []
-      : ["Recieving", recieving, "Recieved", recieved, "Recieving Total", totalRecieving],
+      : ["Sending", sending, "Sent", sent, "Returns", sendingReturns, "Sending Total", totalSending],
+    reportType !== "all"
+      ? []
+      : [
+          "Recieving",
+          recieving,
+          "Recieved",
+          recieved,
+          "Returns",
+          recievingReturns,
+          "Recieving Total",
+          totalRecieving,
+        ],
     reportType === "all"
       ? []
       : [
@@ -277,6 +295,15 @@ export default function PaymentsReport() {
                 setReportType(v);
               }}
             />
+            <NSelect
+              label={"Company"}
+              value={company}
+              onChange={setCompany}
+              dataQuery={{
+                collectionName: "categories",
+              }}
+              dataQueryValue='id'
+            />
             <Checkbox
               label={"Invoices Only"}
               checked={invoicesOnly}
@@ -390,26 +417,34 @@ function calculator(payments) {
   let sending = 0;
   let sent = 0;
   let totalPaid = 0;
+  let sendingReturns = 0;
+  let recievingReturns = 0;
   for (const pmnt of payments) {
-    pmnt.type === "sending"
-      ? pmnt.paid
-        ? (sent += pmnt.amount)
-        : (sending += pmnt.amount)
-      : pmnt.paid
-      ? (recieved += pmnt.amount)
-      : (recieving += pmnt.amount);
+    if (pmnt.type === "sending") {
+      pmnt.paid ? (sent += pmnt.amount) : (sending += pmnt.amount);
+    } else if (pmnt.type === "recieving") {
+      pmnt.paid ? (recieved += pmnt.amount) : (recieving += pmnt.amount);
+    } else {
+      if (pmnt.expand?.party.type === "customer") {
+        recievingReturns += pmnt.amount;
+      } else {
+        sendingReturns += pmnt.amount;
+      }
+    }
   }
 
   for (const pmnt of payments) {
     pmnt.paid ? (totalPaid += pmnt.amount) : (invoiceTotal += pmnt.amount);
   }
-  const totalSending = Number((sending - sent).toFixed(2));
-  const totalRecieving = Number((recieving - recieved).toFixed(2));
+  const totalSending = Number((sending - sent - sendingReturns).toFixed(2));
+  const totalRecieving = Number((recieving - recieved - recievingReturns).toFixed(2));
   const total = Number((invoiceTotal - totalPaid).toFixed(2));
   return {
     total,
     totalSending,
     totalRecieving,
+    sendingReturns: Number(sendingReturns).toFixed(2),
+    recievingReturns: Number(recievingReturns).toFixed(2),
     invoiceTotal: Number(invoiceTotal).toFixed(2),
     totalPaid: Number(totalPaid).toFixed(2),
     recieving: Number(recieving).toFixed(2),
