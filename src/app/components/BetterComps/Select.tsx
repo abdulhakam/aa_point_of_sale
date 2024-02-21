@@ -22,6 +22,7 @@ export function NSelect(
     MultiSelectProps & {
       dataQuery?: { collectionName: string };
       dataQueryValue?: string;
+      dataLabel?: string;
       multiselect?: boolean;
       withCreate?: boolean;
       createForm?: {
@@ -61,7 +62,7 @@ export function NSelect(
             props.dataQuery
               ? query.data?.map((dt) => ({
                   value: props.dataQueryValue ? dt[props.dataQueryValue] : dt.name || dt.number || dt.id,
-                  label: dt.name || dt.number || String(dt.invoiceNo) || dt.id,
+                  label: props.dataLabel ? String(dt[props.dataLabel]) : dt.name || dt.number || String(dt.invoiceNo) || dt.id,
                 }))
               : props.data
           }

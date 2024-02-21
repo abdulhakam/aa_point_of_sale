@@ -1,15 +1,5 @@
 "use client";
-import DataViewTable from "@/app/components/DataViewTable";
-import { useState } from "react";
-import { Button, Checkbox, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
-import useCRUD from "@/app/api/useAPI";
-import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import dataFilter from "@/app/components/functions/dataFilter";
 import NewPayment from "./NewPayment";
-import { DateInput, DatePicker } from "@mantine/dates";
-import { IconArrowDown, IconArrowUp } from "@tabler/icons-react";
-import { paymentCreateForm } from "@/app/api/payments";
 import PaymentsReport from "../reports/payments/PaymentsReport";
 
 export default function Payments() {

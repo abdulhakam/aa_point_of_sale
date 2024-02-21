@@ -13,9 +13,9 @@ import Link from "next/link";
 const mockdata = [
   { title: "Unified Payments Report", icon: IconReportMoney, color: "blue", target: "reports/payments" },
   { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" },
+  { title: "General Ledger", icon: IconChartLine, color: "grape", target: "reports/ledgerreport" },
   { title: "Unified Item Sales Report", icon: IconChartBar, color: "pink", target: "reports/transactions" },
   { title: "Payments By Company", icon: IconChartArea, color: "red", target: "reports/paymentsbycompany" },
-  { title: "General Ledger", icon: IconChartLine, color: "grape", target: "reports/ledgerreport" }
 ];
 
 export default function ActionsGrid(props) {
