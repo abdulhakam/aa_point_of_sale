@@ -4,11 +4,15 @@ import useCRUD from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import DataViewTable from "@/app/components/DataViewTable";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
-import { Button, Chip, Group } from "@mantine/core";
+import { ActionIcon, Button, Chip, Group } from "@mantine/core";
+import { IconPrinter } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useState,useRef} from "react";
+import { DateInput } from "@mantine/dates";
+import PrintHead from "@/app/components/printing/PrintHead";
+import { useReactToPrint } from "react-to-print";
 
 const columns = [
   { accessor: "id", hidden: true },
@@ -23,6 +27,7 @@ const columns = [
     accessor: "type",
     sortable: true,
     width: "5em",
+    render:(record)=> record.type==="recieving"?"Sale Payment":record.type
   },
   {
     accessor: "invoice",
@@ -74,22 +79,59 @@ const columns = [
 ];
 
 export default function ItemTransactionsReport() {
+  const printRef = useRef();
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+  });
+  const [fromDate, setFromDate] = useState(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
+  );
+  const [toDate, setToDate] = useState(
+    new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999)
+  );
   const form = useForm({
     initialValues: {
-      company: "" as any,
-      party: "" as any,
-      area: "" as any,
-      section: "" as any,
+      company: "",
+      party: "",
+      area: "",
+      section: "",
+      booker: ""
     },
   });
   const transactions = useCRUD().fullList({
     collection: "invoices_by_company",
     expand: "invoice,invoice_maker,booker,company,party,area,section,original_invoices",
-    filter: `(type = "sale" || type = "return")
+    filter: `(type = "sale" || type = "return" || type = "recieving")
+            && (created >= '${new Date(
+              Date.UTC(
+                fromDate.getFullYear(),
+                fromDate.getMonth(),
+                fromDate.getDate(),
+                fromDate.getHours(),
+                fromDate.getMinutes(),
+                fromDate.getSeconds()
+              )
+            )
+              .toISOString()
+              .replace("T", " ")
+              .slice(0, 19)}' && created <= '${new Date(
+              Date.UTC(
+              toDate.getFullYear(),
+              toDate.getMonth(),
+              toDate.getDate(),
+              toDate.getHours(),
+              toDate.getMinutes(),
+              toDate.getSeconds()
+              )
+              )
+              .toISOString()
+              .replace("T", " ")
+              .slice(0, 19)}')
             ${form.values.company ? `&& (company = "${form.values.company}")` : ""}
             ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
             ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
             ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
+            ${form.values.booker ? `&& (booker = "${form.values.booker}")`:""}
             `,
   });
   const payments = useCRUD().fullList({
@@ -108,6 +150,44 @@ export default function ItemTransactionsReport() {
   if (checkSuccess(queries)) {
     return (
       <>
+      <ActionIcon
+            onClick={() => {
+              handlePrint();
+            }}
+            size='xl'
+            variant='subtle'
+            color='blue'
+          >
+            <IconPrinter />
+          </ActionIcon>
+      <Group>
+          <DateInput
+            value={fromDate}
+            onChange={(v) =>
+              setFromDate(
+                new Date(new Date(v).getFullYear(), new Date(v).getMonth(), new Date(v).getDate(), 0, 0, 0, 0)
+              )
+            }
+            label='Date From'
+          />
+          <DateInput
+            value={toDate}
+            onChange={(v) =>
+              setToDate(
+                new Date(
+                  new Date(v).getFullYear(),
+                  new Date(v).getMonth(),
+                  new Date(v).getDate(),
+                  23,
+                  59,
+                  59,
+                  999
+                )
+              )
+            }
+            label='Date To'
+          />
+        </Group>
         <Group align='end'>
           <NSelect
             searchable
@@ -116,6 +196,14 @@ export default function ItemTransactionsReport() {
             dataQuery={{ collectionName: "categories" }}
             dataQueryValue='id'
             label={"Company"}
+          />
+          <NSelect
+            searchable
+            value={form.values.booker}
+            onChange={(v) => form.setFieldValue("booker", v)}
+            dataQuery={{ collectionName: "order_bookers" }}
+            dataQueryValue='id'
+            label={"Booker"}
           />
           <NSelect
             searchable
@@ -144,14 +232,17 @@ export default function ItemTransactionsReport() {
           />
           <Button onClick={() => form.reset()}>Reset</Button>
         </Group>
+        <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
+            <PrintHead />
         <h2>Company Sale & Payment Report</h2>
         <DataViewTable
-          fz={"xs"}
+          fz={"7pt"}
           horizontalSpacing={2}
           report
           data={[...transactions.data, ...payments.data]}
           columns={columns}
         />
+        </div>
       </>
     );
   } else return <StatusCheck check={queries} />;

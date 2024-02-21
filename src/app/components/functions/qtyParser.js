@@ -1,3 +1,11 @@
+function calculateCartonsAndUnits(qty, boxSizeQty) {
+  const neg = qty < 0?"-":"";
+  const absQty = Math.abs(qty);
+  const ctns = Math.floor(absQty / boxSizeQty);
+  const units = absQty % boxSizeQty;
+  return { neg, ctns, units };
+}
+
 /**
  * Generates a display string for the quantity of an item.
  *
@@ -7,21 +15,12 @@
  */
 export function qtyDisplay(item, qty) {
   const boxSizeQty = item.box_size_qty;
-  const numBoxes = Math.floor(qty / boxSizeQty);
-  const numPcs = qty % boxSizeQty;
+  const {neg,ctns,units} = calculateCartonsAndUnits(qty, boxSizeQty);
+  const numBoxes = ctns;
+  const numPcs = units;
   const boxLabel = numBoxes === 1 ? "ctn" : "ctns";
   const pcsLabel = numPcs === 1 ? "unit" : "units";
-  return `${numBoxes >= 0 ? numBoxes : numBoxes + 1} ${boxLabel} ${numPcs} ${pcsLabel}`;
-}
-/**
- * Retrieves the number of boxes and number of pieces from the input string.
- *
- * @param {string} qty - The input string containing quantity information
- * @return {Object} An object containing the number of cartons and number of units
- */
-export function getQtyFromString(qty) {
-  const splits = String(qty).split(" ",4);
-  return { ctns: splits[0], units: splits[2] };
+  return `${neg}${numBoxes} ${boxLabel} ${numPcs} ${pcsLabel}`;
 }
 
 /**
@@ -37,7 +36,18 @@ export function getQty(item, qty) {
   const numPcs = qty % boxSizeQty;
   const boxLabel = numBoxes === 1 ? "ctn" : "ctns";
   const pcsLabel = numPcs === 1 ? "unit" : "units";
-  return { ctns: numBoxes >= 0 ? numBoxes : numBoxes + 1, units:numPcs };
+  return { ctns: numBoxes >= 0 ? numBoxes : numBoxes + 1, units: numPcs };
+}
+
+/**
+ * Retrieves the number of boxes and number of pieces from the input string.
+ *
+ * @param {string} qty - The input string containing quantity information
+ * @return {Object} An object containing the number of cartons and number of units
+ */
+export function getQtyFromString(qty) {
+  const splits = String(qty).split(" ", 4);
+  return { ctns: splits[0], units: splits[2] };
 }
 
 /**

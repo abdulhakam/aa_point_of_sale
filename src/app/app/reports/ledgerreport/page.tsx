@@ -120,7 +120,7 @@ export default function LedgerReport() {
                   new Date(
                     new Date(v).getFullYear(),
                     new Date(v).getMonth(),
-                    new Date().getDate(),
+                    new Date(v).getDate(),
                     0,
                     0,
                     0,
@@ -137,7 +137,7 @@ export default function LedgerReport() {
                   new Date(
                     new Date(v).getFullYear(),
                     new Date(v).getMonth(),
-                    new Date().getDate(),
+                    new Date(v).getDate(),
                     23,
                     59,
                     59,
