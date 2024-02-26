@@ -31,7 +31,7 @@ const tableStructure: DataTableColumn[] = [
     ),
   },
   { accessor: "cost_price", sortable: true, title: "CP" },
-  { accessor: "sale_price", sortable: true, title: "SP" },
+  { accessor: "sale_price",hidden:true, sortable: true, title: "SP" },
   { accessor: "qty", sortable: true, render: (record) => qtyDisplay(record, Number(record.qty)) },
   { accessor: "box_size_qty", sortable: true },
   {

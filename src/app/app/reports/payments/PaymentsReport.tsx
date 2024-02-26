@@ -1,7 +1,7 @@
 "use client";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
-import { Button, Checkbox, Chip, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
+import { Badge, Button, Checkbox, Chip, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
@@ -10,6 +10,7 @@ import styles from "@/app/components/printing/styles.module.css";
 import { DateInput, DatePicker } from "@mantine/dates";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import moment from "moment";
+import { useForm } from "@mantine/form";
 
 export default function PaymentsReport() {
   const [fromDate, setFromDate] = useState<Date | null>(
@@ -18,14 +19,19 @@ export default function PaymentsReport() {
   const [toDate, setToDate] = useState<Date | null>(
     new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999)
   );
-  const [reportType, setReportType] = useState("all"); // sending, recieving, all,area,section,booker,(date---not in report type)
-  const [bookerFilter, setBooker] = useState("All");
-  const [areaFilter, setAreaFilter] = useState("All");
-  const [sectionFilter, setSectionFilter] = useState("All");
-  const [party, setParty] = useState("All");
-  const [paymentType, setPaymentType] = useState("all");
-  const [invoicesOnly, setInvoicesOnly] = useState(false);
-  const [company, setCompany] = useState<any>("");
+
+  const form = useForm({
+    initialValues: {
+      reportType: "",
+      booker: "" as any,
+      area: "" as any,
+      section: "" as any,
+      party: "",
+      paymentType: "" as any,
+      invoiceFilter: "",
+      company: "" as any,
+    },
+  });
 
   const payments = useCRUD().fullList({
     collection: "payments_view",
@@ -35,26 +41,25 @@ export default function PaymentsReport() {
       .utc()
       .startOf("day")
       .format("YYYY-MM-DD HH:mm:ss")}' 
-      && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')${
-      company ? `&& (company~"${company}")` : ""
-    }`,
+      && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
+      ${form.values.company ? `&& (company~"${form.values.company}")` : ""}
+      ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
+      ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
+      ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
+      ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
+      ${form.values.paymentType ? `&& (type = "${form.values.paymentType}")` : ""}
+      ${
+        form.values.invoiceFilter
+          ? `&& ( original_invoices ~ "${form.values.invoiceFilter}" || invoice = "${form.values.invoiceFilter}")`
+          : ""
+      }
+      `,
   });
-  const parties = useCRUD().fullList({ collection: "parties" });
+  const parties = useCRUD().fullList({ collection: "parties", expand: "area,area.section" });
   const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
   const sections = useCRUD().fullList({ collection: "sections" });
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
-  //
-  const filteredPayments = dataFilter(
-    [
-      { key: "booker", value: bookerFilter === "All" ? "" : bookerFilter },
-      { key: "area", value: areaFilter === "All" ? "" : areaFilter },
-      { key: "section", value: sectionFilter === "All" ? "" : sectionFilter },
-      { key: "party", value: party === "All" ? "" : party },
-      { key: "type", value: paymentType === "all" ? "" : paymentType },
-      { key: "description", value: invoicesOnly ? "Created" : "" },
-    ],
-    payments.data
-  );
+  const invoices = useCRUD().fullList({ collection: "invoices", sort: "+id" });
   const tableStructure = [
     { accessor: "id", hidden: true },
     {
@@ -67,12 +72,20 @@ export default function PaymentsReport() {
     {
       accessor: "type",
       sortable: true,
-      width: "5em",
+      width: "9em",
       render: (record) =>
         record.type === "sending" ? (
-          <>{"Purchase"}</>
+          record.description === "payment" ? (
+            <>{"Purchase Payment"}</>
+          ) : (
+            <>{"Purchase"}</>
+          )
         ) : record.type === "recieving" ? (
-          <>{"Sale"}</>
+          record.description === "payment" ? (
+            <>{"Sale Payment"}</>
+          ) : (
+            <>{"Sale"}</>
+          )
         ) : (
           <>{"Return"}</>
         ),
@@ -96,83 +109,52 @@ export default function PaymentsReport() {
 
     {
       accessor: "company",
+      width: "14em",
       sortable: true,
       render: (record) =>
         record.expand?.company?.name ||
         record.expand?.company?.map((cmp, i) => (
-          <Chip size='xs' key={`company-name-chip-${i}-${cmp.id}`}>
+          <Badge size='6pt' variant='white' color='black' key={`company-name-badge-${i}-${cmp.id}`}>
             {cmp.name}
-          </Chip>
+          </Badge>
         )),
     },
     { accessor: "party", sortable: true },
-    { accessor: "booker", hidden: reportType === "Sending", sortable: true },
+    { accessor: "booker", hidden: form.values.reportType === "Sending", sortable: true },
     {
       accessor: "amount",
-      sortable: true,
+      textAlign: "right" as any,
       render: (record) => <>{`${record.amount != null ? record.amount.toFixed(2) : -0}`}</>,
     },
-    {
-      accessor: "paid",
-      hidden: true,
-      title: "Payment",
-      render: (record) => <>{record.paid ? "O" : "X"}</>,
-    },
-    { accessor: "description", sortable: true },
+    { accessor: "description", hidden: true, sortable: true },
   ];
-  const {
-    total,
-    totalPaid,
-    invoiceTotal,
-    totalSending,
-    totalRecieving,
-    recieving,
-    recieved,
-    sending,
-    sent,
-    sendingReturns,
-    recievingReturns,
-  } = calculator(
-    filteredPayments?.map((pmnt) => ({
-      ...pmnt,
-      expand: {
-        ...pmnt.expand,
-        party: { ...parties.data?.find((pty) => pty.id === pmnt.party) },
-      },
-    }))
-  );
-  const finalData = [
-    reportType !== "all"
-      ? []
-      : ["Sending", sending, "Sent", sent, "Returns", sendingReturns, "Sending Total", totalSending],
-    reportType !== "all"
-      ? []
-      : [
-          "Recieving",
-          recieving,
-          "Recieved",
-          recieved,
-          "Returns",
-          recievingReturns,
-          "Recieving Total",
-          totalRecieving,
-        ],
-    reportType === "all"
-      ? []
-      : [
-          reportType === "booker" ? "" : "Invoice Total",
-          reportType === "booker" ? "" : invoiceTotal,
-          reportType === "booker" ? "" : "Paid Total",
-          reportType === "booker" ? "" : totalPaid,
-          "Total",
-          total,
-        ],
-  ];
-  const queries = [payments, areas, sections, bookers, parties];
+
+  const queries = [payments, areas, sections, bookers, parties, invoices];
   if (checkSuccess(queries)) {
+    const {
+      total,
+      totalPaid,
+      invoiceTotal,
+      totalSending,
+      totalRecieving,
+      recieving,
+      recieved,
+      sending,
+      sent,
+      sendingReturns,
+      recievingReturns,
+    } = calculator(
+      payments.data?.map((pmnt) => ({
+        ...pmnt,
+        expand: {
+          ...pmnt.expand,
+          party: { ...parties.data?.find((pty) => pty.id === pmnt.party) },
+        },
+      }))
+    );
+
     return (
       <>
-        {/* <Modal centered opened={opened} onClose={close} title='Filter Data'> */}
         <Group className={styles.hideOnPrint}>
           <Stack gap={0}>
             <DateInput
@@ -211,128 +193,131 @@ export default function PaymentsReport() {
             />
           </Stack>
           <Stack gap={0}>
-            <Select
+            <NSelect
               allowDeselect={false}
               label={"Select Section"}
-              data={[...sections.data.map((sec) => sec.name), "All"]}
-              value={sectionFilter}
+              dataQuery={{ collectionName: "sections" }}
+              dataQueryValue='id'
+              dataLabel='name'
+              value={form.values.section}
               searchable
               onChange={(v) => {
-                setSectionFilter(v);
-                setAreaFilter("All");
-                setPaymentType("all");
-                setParty("All");
-                setReportType("section");
+                form.setFieldValue("section", v);
+                form.setFieldValue("reportType", "section");
               }}
             />
             <Select
-              allowDeselect={false}
               label={"Select Area"}
               data={
-                sectionFilter === "All"
-                  ? [...areas?.data?.map((ara) => ara.name), "All"]
+                form.values.section === ""
+                  ? [...areas?.data?.map((ara) => ({ value: ara.id, label: ara.name }))]
                   : [
                       ...areas?.data
-                        ?.filter((ara) => ara.expand?.section?.name === sectionFilter)
-                        .map((itm) => itm.name),
-                      "All",
+                        ?.filter((ara) => ara.expand?.section?.id === form.values.section)
+                        .map((itm) => ({ label: itm.name, value: itm.id })),
                     ]
               }
-              value={areaFilter}
+              value={form.values.area}
               searchable
               onChange={(v) => {
-                setAreaFilter(v);
-                setPaymentType("all");
-                setParty("All");
-                setReportType("area");
+                form.setFieldValue("area", v);
+                form.setFieldValue("reportType", "area");
               }}
             />
           </Stack>
           <Stack gap={0}>
-            <Select
-              allowDeselect={false}
+            <NSelect
               label={"Select Booker"}
-              data={[...bookers.data?.map((bkr) => bkr.name), "All"]}
-              value={bookerFilter}
+              data={[]}
+              dataQuery={{ collectionName: "order_bookers" }}
+              dataQueryValue='id'
+              value={form.values.booker}
               searchable
               onChange={(v) => {
-                setBooker(v);
-                setSectionFilter("All");
-                setAreaFilter("All");
-                setPaymentType("all");
-                setParty("All");
-                setReportType("booker");
+                form.setFieldValue("booker", v);
+                form.setFieldValue("reportType", "booker");
               }}
             />
 
             <Select
-              allowDeselect={false}
               label={"Select Party"}
               data={[
-                ...parties.data.map((pty) => ({ value: pty.name, label: pty.name })),
-                { value: "All", label: "All" },
+                ...parties.data.map((pty) => ({
+                  value: pty.id,
+                  label: `${pty.name} - ${pty.expand.area.name}`,
+                })),
               ]}
-              value={party}
+              value={form.values.party}
               searchable
               onChange={(v) => {
-                setParty(v);
-                setPaymentType("all");
-                setAreaFilter("All");
-                setSectionFilter("All");
-                setReportType("party");
+                form.setFieldValue("party", v);
+                form.setFieldValue("reportType", "party");
               }}
             />
           </Stack>
           <Stack gap={0}>
             <Select
-              allowDeselect={false}
               label={"Select Payment Type"}
-              data={["sending", "recieving", "all"]}
-              value={paymentType}
+              data={[
+                { label: "Purchase", value: "sending" },
+                { label: "Sale", value: "recieving" },
+                { label: "Returns", value: "return" },
+              ]}
+              value={form.values.reportType}
               onChange={(v) => {
-                setParty("All");
-                setPaymentType(v);
-                setReportType(v);
+                form.setFieldValue("paymentType", v);
+                form.setFieldValue("reportType", v);
               }}
             />
             <NSelect
               label={"Company"}
-              value={company}
-              onChange={setCompany}
+              value={form.values.company}
+              onChange={(v) => {
+                form.setFieldValue("company", v);
+                form.setFieldValue("reportType", "company");
+              }}
               dataQuery={{
                 collectionName: "categories",
               }}
               dataQueryValue='id'
             />
-            <Checkbox
-              label={"Invoices Only"}
-              checked={invoicesOnly}
-              onChange={(event) => setInvoicesOnly(event.currentTarget.checked)}
+          </Stack>
+          <Stack>
+            <Select
+              label={"Invoice"}
+              searchable
+              value={form.values.invoiceFilter}
+              onChange={(v) => {
+                form.setFieldValue("invoiceFilter", v);
+                form.setFieldValue("reportType", "invoice");
+              }}
+              data={invoices.data?.map((inv) => ({
+                value: inv.id,
+                label: `${inv.invoiceNo} ${inv.type.toUpperCase().charAt(0)}`,
+              }))}
             />
             <Button
               onClick={() => {
-                setAreaFilter("All");
-                setSectionFilter("All");
-                setParty("All");
-                setPaymentType("all");
-                setReportType("all");
+                form.reset();
               }}
             >
               RESET
             </Button>
           </Stack>
         </Group>
-        {/* </Modal> */}
         <Group align='center' justify='space-between'>
           <Group>
             <Text variant='transparent' m={0} p={0} size='compact-lg' fw={"700"} c='black'>
-              {reportType === "all" && `ALL PAYMENTS`}
-              {reportType === "sending" && `PURCHASES REPORT`}
-              {reportType === "recieving" && `SALES REPORT`}
-              {reportType === "area" && `AREA REPORT`}
-              {reportType === "section" && `SECTION REPORT`}
-              {reportType === "party" && `PARTY PAYMENTS REPORT`}
-              {reportType === "booker" && `BOOKER INVOICE REPORT`}
+              {form.values.reportType === "" && `ALL PAYMENTS`}
+              {form.values.reportType === "sending" && `PURCHASES REPORT`}
+              {form.values.reportType === "recieving" && `SALES REPORT`}
+              {form.values.reportType === "return" && `RETURNS REPORT`}
+              {form.values.reportType === "area" && `AREA REPORT`}
+              {form.values.reportType === "section" && `SECTION REPORT`}
+              {form.values.reportType === "party" && `PARTY PAYMENTS REPORT`}
+              {form.values.reportType === "company" && `COMPANY WISE REPORT`}
+              {form.values.reportType === "booker" && `BOOKER INVOICE REPORT`}
+              {form.values.reportType === "invoice" && `INVOICE PAYMENTS REPORT`}
             </Text>
           </Group>
           <Group justify='end'>
@@ -357,59 +342,126 @@ export default function PaymentsReport() {
           </Group>
         </Group>
         <Group justify='start' gap={"4rem"}>
-          {bookerFilter !== "All" && <Text size={"sm"}>{`BOOKER: ${bookerFilter}`}</Text>}
-          {party !== "All" && <Text size={"sm"}>{`Party: ${party}`}</Text>}
-          {sectionFilter !== "All" && <Text size={"sm"}>{`Section: ${sectionFilter}`}</Text>}
-          {areaFilter !== "All" && <Text size={"sm"}>{`Area: ${areaFilter}`}</Text>}
+          {form.values.booker && (
+            <Text size={"sm"}>{`BOOKER: ${
+              bookers.data.find((r) => r.id === form.values.booker)?.name
+            }`}</Text>
+          )}
+          {form.values.party && (
+            <Text size={"sm"}>{`Party: ${parties.data.find((r) => r.id === form.values.party)?.name}`}</Text>
+          )}
+          {form.values.section && (
+            <Text size={"sm"}>{`Section: ${
+              sections.data.find((r) => r.id === form.values.section)?.name
+            }`}</Text>
+          )}
+          {form.values.area && (
+            <Text size={"sm"}>{`Area: ${areas.data.find((r) => r.id === form.values.area).name}`}</Text>
+          )}
         </Group>
-        <DataViewTable
-          report
-          fz={"xs"}
+        <Table
+          fz={"9pt"}
+          horizontalSpacing={1}
           verticalSpacing={0}
-          horizontalSpacing={2}
-          rowStyle={({ paid, invoice, type }) =>
-            invoice
-              ? null
-              : type !== "sending"
-              ? paid
-                ? { color: "green" }
-                : { color: "maroon" }
-              : paid
-              ? { color: "maroon" }
-              : { color: "green" }
-          }
-          formstructure={{}}
-          columns={tableStructure}
-          data={filteredPayments}
-        />
-        <Flex
-          justify={"end"}
-          align={"center"}
-          px={"1em"}
-          h={"3rem"}
-          style={{
-            position: "relative",
+          styles={{
+            td: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+            th: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
           }}
         >
-          <Stack gap={0}>
-            {finalData.map((row, i) => {
-              return (
-                <Group key={i}>
-                  {row.map((cell, iter) => (
-                    <Text size='xs' w={"6rem"} fw={iter % 2 ? "700" : "400"} key={iter}>
-                      {cell}
-                    </Text>
-                  ))}
+          <Table.Thead>
+            <Table.Tr>
+              {tableStructure.map((col) =>
+                col.hidden ? null : (
+                  <Table.Td key={`thead-${col.accessor}`}>
+                    {(col.title ?? col.accessor).toUpperCase()}
+                  </Table.Td>
+                )
+              )}
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {payments.data.map((row) => (
+              <Table.Tr key={`row-${row.id}`}>
+                {tableStructure.map((col) =>
+                  col.hidden ? null : (
+                    <Table.Td
+                      key={`td-${row.id}-${col.accessor}`}
+                      style={{ textAlign: col.textAlign ?? "start", width: col.width??"auto" }}
+                    >
+                      {col.render
+                        ? col.render(row)
+                        : row.hasOwnProperty("expand")
+                        ? row.expand.hasOwnProperty(col.accessor)
+                          ? row.expand[col.accessor].name || row.expand[col.accessor].value
+                          : row[col.accessor]
+                        : row[col.accessor]}
+                    </Table.Td>
+                  )
+                )}
+              </Table.Tr>
+            ))}
+          </Table.Tbody>
+        </Table>
+
+        <Stack gap={0} align='end' style={{ width: "100%" }}>
+          {form.values.reportType !== "recieving" &&
+            !form.values.booker &&
+            (form.values.party
+              ? parties.data.find((r) => r.id === form.values.party)?.type !== "customer"
+              : true) &&
+            (form.values.invoiceFilter
+              ? invoices.data.find((r) => r.id === form.values.invoiceFilter)?.type !== "sale"
+              : true) && (
+              <Flex gap={0} direction={"row"}justify={"space-evenly"} align={"end"} w={"100%"}>
+                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
+                  <Text style={{ fontSize: "8pt" }}>Purchase Invoice Amount</Text>
+                  <Text style={{ fontSize: "8pt" }}>{sending}</Text>
                 </Group>
-              );
-            })}
-          </Stack>
-        </Flex>
+                <Group justify='space-between' w={"12rem"} mx={"0.2rem"}>
+                  <Text style={{ fontSize: "8pt" }}>Paid Amount</Text>
+                  <Text style={{ fontSize: "8pt" }}>{sent}</Text>
+                </Group>
+                <Group justify='space-between' w={"8em"} mx={"0.2rem"}>
+                  <Text style={{ fontSize: "8pt" }}>Returns</Text>
+                  <Text style={{ fontSize: "8pt" }}>{sendingReturns}</Text>
+                </Group>
+                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
+                  <Text style={{ fontSize: "8pt" }}>Total Payable Amount</Text>
+                  <Text style={{ fontSize: "8pt" }}>{totalSending}</Text>
+                </Group>
+              </Flex>
+            )}
+          {form.values.reportType !== "sending" &&
+            (form.values.party
+              ? parties.data.find((r) => r.id === form.values.party)?.type !== "supplier"
+              : true) &&
+            (form.values.invoiceFilter
+              ? invoices.data.find((r) => r.id === form.values.invoiceFilter)?.type !== "purchase"
+              : true) && (
+              <Flex gap={0} direction={"row"}justify={"space-evenly"} align={"end"} w={"100%"}>
+                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
+                  <Text style={{ fontSize: "8pt" }}>Sale Invoice Amount</Text>
+                  <Text style={{ fontSize: "8pt" }}>{recieving}</Text>
+                </Group>
+                <Group justify='space-between' w={"12rem"} mx={"0.2rem"}>
+                  <Text style={{ fontSize: "8pt" }}>Recieved Amount</Text>
+                  <Text style={{ fontSize: "8pt" }}>{recieved}</Text>
+                </Group>
+                <Group justify='space-between' w={"8em"} mx={"0.2rem"}>
+                  <Text style={{ fontSize: "8pt" }}>Returns</Text>
+                  <Text style={{ fontSize: "8pt" }}>{recievingReturns}</Text>
+                </Group>
+                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
+                  <Text style={{ fontSize: "8pt" }}>Total Recivable Amount</Text>
+                  <Text style={{ fontSize: "8pt" }}>{totalRecieving}</Text>
+                </Group>
+              </Flex>
+            )}
+        </Stack>
       </>
     );
   } else return <StatusCheck check={queries} />;
 }
-
 function calculator(payments) {
   let invoiceTotal = 0;
   let recieving = 0;

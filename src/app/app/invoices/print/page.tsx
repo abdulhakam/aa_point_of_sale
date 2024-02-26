@@ -1,100 +1,105 @@
 "use client";
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import ReportViewTable from "@/app/components/ReportViewTable";
-import dataFilter from "@/app/components/functions/dataFilter";
 import { useEffect, useRef, useState } from "react";
 import { ActionIcon, Button, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { getQty, qtyDisplay } from "@/app/components/functions/qtyParser";
+import { getQty } from "@/app/components/functions/qtyParser";
 import { IconPrinter } from "@tabler/icons-react";
 import { useReactToPrint } from "react-to-print";
 import PrintHead from "@/app/components/printing/PrintHead";
 import { useSearchParams } from "next/navigation";
+import PrintFoot from "@/app/components/printing/PrintFoot";
+import PrintContent from "@/app/components/printing/PrintContent";
 
-const tableStructure = [
-  { accessor: "id", hidden: true },
-  { accessor: "created", hidden: true },
-  { accessor: "item", width: "8em" },
-  {
-    accessor: "box_size_qty",
-    title: "Ctn Size",
-    width: "3em",
-    textAlign: "right",
-    render: (record) => record.expand.item.box_size_qty,
-  },
-  {
-    accessor: "ctn",
-    width: "2em",
-    textAlign: "right",
-    render: (record) => getQty(record.expand.item, record.qty).ctns,
-  },
-  {
-    accessor: "units",
-    width: "2em",
-    textAlign: "right",
-    render: (record) => getQty(record.expand.item, record.qty).units,
-  },
-  { accessor: "scheme", title: "Free (units)", textAlign: "right", width: "3em" },
-  { accessor: "price", title: "Unit Price", textAlign: "right", width: "3em" },
-  {
-    accessor: "ctn price",
-    width: "3em",
-    textAlign: "right",
-    render: (record) => record.price * record.expand.item.box_size_qty,
-  },
-  { accessor: "discount_1", title: "D1", textAlign: "right", width: "2em" },
-  { accessor: "discount_2", title: "D2", textAlign: "right", width: "3em" },
-  { accessor: "total", width: "4em", textAlign: "right", render: ({ total }) => Number(total).toFixed(2) },
-];
 
+
+const head = (
+  <Table.Thead>
+    <Table.Tr>
+      <Table.Th scope='col' rowSpan={2}>
+        #
+      </Table.Th>
+      <Table.Th scope='col' rowSpan={2}>
+        ITEM
+      </Table.Th>
+      <Table.Th scope='col' style={{ width: "3em" }} rowSpan={2}>
+        BOX SIZE
+      </Table.Th>
+      <Table.Th scope='col' colSpan={3}>
+        QUANTITY
+      </Table.Th>
+      <Table.Th scope='col' colSpan={2}>
+        PRICES
+      </Table.Th>
+      <Table.Th scope='col' colSpan={3}>
+        DISCOUNTS
+      </Table.Th>
+      <Table.Th scope='col' rowSpan={2}>
+        TOTAL
+      </Table.Th>
+    </Table.Tr>
+    <Table.Tr>
+      <Table.Th scope='col'>CTN</Table.Th>
+      <Table.Th scope='col'>UNITS</Table.Th>
+      <Table.Th scope='col'>FREE</Table.Th>
+      <Table.Th scope='col'>UNIT</Table.Th>
+      <Table.Th scope='col'>CARTON</Table.Th>
+      <Table.Th scope='col'>1(%)</Table.Th>
+      <Table.Th scope='col'>2(%)</Table.Th>
+      <Table.Th scope='col'>IN RS</Table.Th>
+    </Table.Tr>
+  </Table.Thead>
+);
 export default function InvoicePrint() {
   const searchParams = useSearchParams();
   const invoiceId = searchParams.get("invoiceId");
 
   const printRef = useRef();
+  const invoices = useCRUD().read({
+    collection: "invoice_view",
+    recordID: invoiceId,
+    expand: "invoice_maker,party,booker,party.area,party.area.section",
+  });
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
-  });
-  const invoices = useCRUD().fullList({
-    collection: "invoice_view",
-    expand: "invoice_maker,party,booker,party.area,party.area.section",
+    documentTitle: `${invoices.data?.type.toUpperCase()} INVOICE ${invoiceId}`,
+    pageStyle: "@page {size: A5; margin: 0.5cm !important;}",
   });
   const transactions = useCRUD().fullList({
     collection: "transaction_view",
     expand: "item",
+    filter: `invoice = '${invoiceId}'`,
     sort: "+created",
   });
-
-  const thisInvoice = invoices.data?.find((inv) => inv.id === invoiceId);
   const [opened, { open, close }] = useDisclosure(true);
   const [type, setType] = useState("purchase");
   const [filterValue, setFilter] = useState("");
   useEffect(() => {
-    if (thisInvoice) {
-      setFilter(thisInvoice?.id);
-      setType(thisInvoice?.type);
+    if (invoices.isSuccess) {
+      setFilter(invoices.data?.id);
+      setType(invoices.data?.type);
     }
-  }, [thisInvoice]);
-  const filteredInvoices = dataFilter(
-    [
-      {
-        key: "type",
-        value: type,
-      },
-    ],
-    invoices.data
-  );
-  const filteredData = dataFilter(
-    [
-      {
-        key: "invoice",
-        value: filterValue,
-      },
-    ],
-    transactions.data ? transactions.data : []
-  );
-  const invoice = invoices.data?.find((inv) => inv.id === filterValue);
+  }, [invoices]);
+  const invoice = invoices.data;
+  const rows = transactions.data?.map((r, i) => (
+    <Table.Tr key={`TRow-${i + 1}`}>
+      <Table.Td>{i + 1}</Table.Td>
+      <Table.Td scope='row'>{r.expand.item.name}</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{r.expand.item.box_size_qty}</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{getQty(r.expand.item, r.qty).ctns}</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{getQty(r.expand.item, r.qty).units}</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{r.scheme}</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{Number(r.price).toFixed(2)}</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>
+        {Number(r.price * r.expand.item.box_size_qty).toFixed(2)}
+      </Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_1).toFixed(2)}%</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_2).toFixed(2)}%</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_rs).toFixed(2)}</Table.Td>
+      <Table.Td style={{ textAlign: "end" }}>{Number(r.total).toFixed(2)}</Table.Td>
+    </Table.Tr>
+  ));
   const queries = [invoices, transactions];
   if (checkSuccess(queries)) {
     return (
@@ -109,204 +114,153 @@ export default function InvoicePrint() {
         >
           <IconPrinter />
         </ActionIcon>
-        <Modal
-          centered
-          opened={opened}
-          onClose={close}
-          title={thisInvoice ? "Click to Print Invoice" : "Filter Data"}
-        >
-          {thisInvoice ? (
-            <ActionIcon
-              onClick={() => {
-                handlePrint();
-              }}
-              size='xl'
-              color='blue'
-            >
-              <IconPrinter />
-            </ActionIcon>
-          ) : (
-            <>
-              <Select
-                searchable
-                allowDeselect={false}
-                label={"Invoice Type:"}
-                data={["purchase", "sale"]}
-                value={type}
-                onChange={setType}
-              />
-              <Select
-                searchable
-                allowDeselect={false}
-                label={"Invoice No:"}
-                data={filteredInvoices.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) }))}
-                value={filterValue}
-                onChange={setFilter}
-              />
-              <Button
-                mt={"sm"}
-                onClick={() => {
-                  close();
-                }}
-              >
-                OK
-              </Button>
-            </>
-          )}
+        <Modal centered opened={opened} onClose={close} title='Click to Print Invoice'>
+          <ActionIcon
+            onClick={() => {
+              handlePrint();
+            }}
+            size='xl'
+            color='blue'
+          >
+            <IconPrinter />
+          </ActionIcon>
         </Modal>
         {/* //////////////////////////////////////////////////////////////////////////// */}
-        <div ref={printRef} style={{ marginLeft: "1em", marginRight: "1em" }}>
-          <PrintHead />
-          <Flex align={"center"} justify={"space-between"}>
-            <Button p={0} variant='transparent' size='lg' fw={"700"} color='black'>
-              {`${type.toUpperCase()} INVOICE`}
-            </Button>
-          </Flex>
-          {filterValue !== "" && (
-            <>
-              <Group gap={0} justify='space-between'>
-                <Stack w={"65%"}>
+        <div ref={printRef}>
+          <PrintContent header={<PrintHead />} footer={<PrintFoot />}>
+            <Flex align={"center"} justify={"space-between"}>
+              <Button p={0} variant='transparent' size='lg' fw={"700"} color='black'>
+                {`${type.toUpperCase()} INVOICE`}
+              </Button>
+            </Flex>
+            {filterValue !== "" && (
+              <>
+                <Group gap={0} justify='space-between'>
+                  <Stack w={"65%"}>
+                    <Table
+                      borderColor='gray'
+                      fz={"8pt"}
+                      withRowBorders={false}
+                      horizontalSpacing={"1em"}
+                      verticalSpacing={0}
+                      data={{
+                        body: [
+                          ["Party", `${invoice?.expand.party.name} (${invoice?.expand?.party?.phone})`],
+                          type === "sale"
+                            ? [
+                                "Address",
+                                `${invoice?.expand?.party?.address} - ${invoice?.expand?.party?.expand?.area?.name} - ${invoice?.expand?.party?.expand?.area?.expand?.section?.name}`,
+                              ]
+                            : [],
+                          type === "sale"
+                            ? [
+                                "Booker",
+                                `${invoice?.expand?.booker?.name} (${invoice?.expand?.booker?.phone})`,
+                              ]
+                            : [],
+                          ["Remarks", invoice?.description],
+                        ],
+                      }}
+                    />
+                  </Stack>
                   <Table
-                    borderColor='gray'
+                    w={"35%"}
                     fz={"8pt"}
                     withRowBorders={false}
-                    horizontalSpacing={"1em"}
                     verticalSpacing={0}
+                    horizontalSpacing={"1em"}
                     data={{
                       body: [
-                        ["Prepared By", invoice?.expand.invoice_maker.name],
-                        ["Party", `${invoice?.expand.party.name} (${invoice?.expand?.party?.phone})`],
-                        type === "sale"
-                          ? [
-                              "Address",
-                              `${invoice?.expand?.party?.address} - ${invoice?.expand?.party?.expand?.area?.name} - ${invoice?.expand?.party?.expand?.area?.expand?.section?.name}`,
-                            ]
-                          : [],
-                        type === "sale"
-                          ? ["Booker", `${invoice?.expand?.booker?.name} (${invoice?.expand?.booker?.phone})`]
-                          : [],
-                        ["Remarks", invoice?.description],
+                        [
+                          <Text key={"invoiceNoLabel"} fw={600}>
+                            {"Invoice #:"}
+                          </Text>,
+                          <Text
+                            key={"invoiceNoValue"}
+                            fw={"700"}
+                            style={{ border: "1px solid black", paddingLeft: "0.5em" }}
+                          >{` ${invoice?.invoiceNo}`}</Text>,
+                        ],
+                        [
+                          "Invoice Date:",
+                          ` ${new Date(invoice?.created).toLocaleDateString("en", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}`,
+                        ],
+                        [
+                          "Invoice Time:",
+                          ` ${new Date(invoice?.created).toLocaleTimeString("en", {
+                            hour: "numeric",
+                            minute: "numeric",
+                            second: "2-digit",
+                            hour12: true,
+                          })}`,
+                        ],
                       ],
                     }}
                   />
-                </Stack>
-                <Table
-                  w={"35%"}
-                  fz={"8pt"}
-                  withRowBorders={false}
-                  verticalSpacing={0}
-                  horizontalSpacing={"1em"}
-                >
-                  <Table.Tr>
-                    <Table.Td>
-                      <Text fw={600}>{"Invoice #:"}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text
-                        fw={"700"}
-                        style={{ border: "1px solid black", paddingLeft: "0.5em" }}
-                      >{` ${invoice?.invoiceNo}`}</Text>
-                    </Table.Td>
-                  </Table.Tr>
-                  <Table.Tr>
-                    <Table.Td>{"Invoice Date:"}</Table.Td>
-                    <Table.Td>{` ${new Date(invoice?.created).toLocaleDateString("en", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}`}</Table.Td>
-                  </Table.Tr>
-                  <Table.Tr>
-                    <Table.Td>{"Invoice Time:"}</Table.Td>
-                    <Table.Td>{` ${new Date(invoice?.created).toLocaleTimeString("en", {
-                      hour: "numeric",
-                      minute: "numeric",
-                      second: "2-digit",
-                      hour12: true,
-                    })}`}</Table.Td>
-                  </Table.Tr>
-                </Table>
-              </Group>
-              <hr />
-              {invoice?.invoiceNo && (
-                <>
-                  <ReportViewTable fz={"7pt"} columns={tableStructure} data={filteredData} />
-                  <Flex
-                    justify={"end"}
-                    align={"center"}
-                    // px={"0.5rem"}
-                    // h={"4em"}
-                    style={{
-                      border: "1px solid black",
-                    }}
-                  >
-                    <Group mr={0} w={"60%"} justify='space-between'>
-                      {new Date(invoice?.duedate.slice(0, 10)) >
-                      new Date(invoice?.date ? invoice?.date.slice(0, 10) : invoice?.created.slice(0, 10)) ? (
-                        <Group align='center' gap={"1em"}>
-                          <Text ml={"1em"} fw={700} size='xs'>
-                            Due Date:
-                          </Text>
-                          <Text size='xs' fw={700}>
-                            {`${invoice?.duedate.slice(0, 10)} `}
-                          </Text>
-                        </Group>
-                      ) : (
-                        <div> </div>
-                      )}
-                    </Group>
-                    <Group gap={0}>
-                      <Table
-                        horizontalSpacing={2}
-                        verticalSpacing={0}
-                        fz={"7pt"}
-                        data={{
-                          body: [
-                            ["TOTAL AMOUNT", Number(invoice?.total).toFixed(2)],
-                            ["DISCOUNT 1", `${Number(invoice?.discount_1).toFixed(2)}%`],
-                            ["DISCOUNT 2", `${Number(invoice?.discount_2).toFixed(2)}%`],
-                            ["PAYABLE AMOUNT", Number(invoice?.final_total).toFixed(2)],
-                          ],
-                        }}
-                      />
-                      {/* <Group>
-                          <Text mr={"1em"} size='xs'>
-                            Total
-                          </Text>
-                          <Text size='xs' fw={700}>
-                            {Number(invoice?.total).toFixed(2) || 0}
-                          </Text>
-                        </Group>
-                        <Group>
-                          <Text mr={"1em"} size='xs'>
-                            Discount_1
-                          </Text>
-                          <Text mr={"1em"} size='xs' fw={700}>
-                            {`${invoice?.discount_1 || 0}%`}
-                          </Text>
-                        </Group>
-                        <Group>
-                          <Text mr={"1em"} size='xs'>
-                            Discount_2
-                          </Text>
-                          <Text mr={"1em"} size='xs' fw={700}>
-                            {invoice?.discount_2 || 0}
-                          </Text>
-                        </Group>
-                        <Group>
-                          <Text mr={"1em"} size='sm'>
-                            Invoice Total
-                          </Text>
-                          <Text size='md' fw={700}>
-                            {Number(invoice?.final_total).toFixed(2) || 0}
-                          </Text>
-                        </Group> */}
-                    </Group>
-                  </Flex>
-                </>
-              )}
-            </>
-          )}
+                </Group>
+                <hr />
+                {invoice?.invoiceNo && (
+                  <>
+                    <Table
+                      styles={{
+                        td: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+                        th: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+                      }}
+                    >
+                      {head}
+                      <Table.Tbody>{rows}</Table.Tbody>
+                    </Table>
+                    <Flex
+                      justify={"end"}
+                      align={"center"}
+                      style={{
+                        border: "1px solid black",
+                      }}
+                      mb={"2rem"}
+                    >
+                      <Group mr={0} w={"60%"} justify='space-between'>
+                        {new Date(invoice?.duedate.slice(0, 10)) >
+                        new Date(
+                          invoice?.date ? invoice?.date.slice(0, 10) : invoice?.created.slice(0, 10)
+                        ) ? (
+                          <Group align='center' gap={"1em"}>
+                            <Text ml={"1em"} fw={700} size='xs'>
+                              Due Date:
+                            </Text>
+                            <Text size='xs' fw={700}>
+                              {`${invoice?.duedate.slice(0, 10)} `}
+                            </Text>
+                          </Group>
+                        ) : (
+                          <div> </div>
+                        )}
+                      </Group>
+                      <Group gap={0}>
+                        <Table
+                          horizontalSpacing={2}
+                          verticalSpacing={0}
+                          fz={"7pt"}
+                          data={{
+                            body: [
+                              ["TOTAL AMOUNT", Number(invoice?.total).toFixed(2)],
+                              ["DISCOUNT 1", `${Number(invoice?.discount_1).toFixed(2)}%`],
+                              ["DISCOUNT 2", `${Number(invoice?.discount_2).toFixed(2)}%`],
+                              ["DISCOUNT cash", `${Number(invoice?.discount_rs).toFixed(2)}`],
+                              ["PAYABLE AMOUNT", Number(invoice?.final_total).toFixed(2)],
+                            ],
+                          }}
+                        />
+                      </Group>
+                    </Flex>
+                  </>
+                )}
+              </>
+            )}
+          </PrintContent>
         </div>
       </>
     );
