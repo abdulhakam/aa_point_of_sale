@@ -1,18 +1,37 @@
 "use client";
 import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
-import { Badge, Button, Checkbox, Chip, Flex, Group, Modal, Select, Stack, Table, Text } from "@mantine/core";
+import { modals } from "@mantine/modals";
+import {
+  Badge,
+  Button,
+  Flex,
+  Group,
+  Select,
+  Stack,
+  Text,
+  Box,
+  ActionIcon,
+  Modal,
+  TextInput,
+} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import useCRUD from "@/app/api/useAPI";
+import useCRUD, { crud } from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
+import { IconEye, IconEdit, IconTrash } from "@tabler/icons-react";
 import dataFilter from "@/app/components/functions/dataFilter";
 import styles from "@/app/components/printing/styles.module.css";
 import { DateInput, DatePicker } from "@mantine/dates";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import moment from "moment";
 import { useForm } from "@mantine/form";
+import { DataTable } from "mantine-datatable";
+import classes from "@/app/components/tableclasses.module.css";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
+import EditPayment from "./EditPayment";
 
-export default function PaymentsReport() {
+export default function PaymentsView() {
   const [fromDate, setFromDate] = useState<Date | null>(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
   );
@@ -32,7 +51,7 @@ export default function PaymentsReport() {
       company: "" as any,
     },
   });
-
+  const queryClient = useQueryClient();
   const payments = useCRUD().fullList({
     collection: "payments_view",
     expand: "invoice,party,area,section,booker,company",
@@ -54,18 +73,30 @@ export default function PaymentsReport() {
           : ""
       }
       `,
-  });
+  }) as any;
   const parties = useCRUD().fullList({ collection: "parties", expand: "area,area.section" });
   const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
   const sections = useCRUD().fullList({ collection: "sections" });
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
   const invoices = useCRUD().fullList({ collection: "invoices", sort: "+id" });
+  const [recordData, setRecordData] = useState("");
+  const deleteRecord = useMutation({
+    mutationFn: crud.remove,
+    onSuccess: () => {
+      notifications.show({
+        title: "Success!",
+        color: "green",
+        message: "Payment Deleted",
+      });
+      queryClient.invalidateQueries();
+    },
+  });
   const tableStructure = [
     { accessor: "id", hidden: true },
     {
-      accessor: "created",
+      accessor: "payment_date",
       title: "Date",
-      render: (record) => <>{record.created.slice(0, 10)}</>,
+      render: (record) => <>{record.payment_date.slice(0, 10)}</>,
       sortable: true,
       width: "6em",
     },
@@ -97,6 +128,18 @@ export default function PaymentsReport() {
       render: (record) => <>{`${record.expand?.invoice?.invoiceNo || ""}`}</>,
     },
     {
+      accessor: "original_invoices",
+      sortable: true,
+      width: "4em",
+      render: (record) => (
+        <>{`${
+          record.original_invoices
+            ? invoices.data.find((inv) => inv.id === record.original_invoices[0])?.invoiceNo ?? ""
+            : "" || ""
+        }`}</>
+      ),
+    },
+    {
       accessor: "area",
       sortable: true,
       width: "9em",
@@ -109,6 +152,7 @@ export default function PaymentsReport() {
 
     {
       accessor: "company",
+      hidden: true,
       width: "14em",
       sortable: true,
       render: (record) =>
@@ -126,9 +170,127 @@ export default function PaymentsReport() {
       textAlign: "right" as any,
       render: (record) => <>{`${record.amount != null ? record.amount.toFixed(2) : -0}`}</>,
     },
+    {
+      accessor: "actions",
+      title: <Box mr={6}>Row actions</Box>,
+      textAlign: "right",
+      width: "5.5rem",
+      render: (data) => (
+        <Group gap={4} justify='right' wrap='nowrap'>
+          <ActionIcon
+            size='sm'
+            variant='subtle'
+            color='green'
+            onClick={() => showModal({ data, action: "view" })}
+          >
+            <IconEye size={16} />
+          </ActionIcon>
+          <ActionIcon
+            disabled={data.description !== "payment"}
+            size='sm'
+            variant='subtle'
+            color='blue'
+            onClick={() => showModal({ data, action: "edit" })}
+          >
+            <IconEdit size={16} />
+          </ActionIcon>
+          {
+            <ActionIcon
+              disabled={data.description !== "payment"}
+              size='sm'
+              variant='subtle'
+              color='red'
+              onClick={() => showModal({ data, action: "delete" })}
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
+          }
+        </Group>
+      ),
+    },
     { accessor: "description", hidden: true, sortable: true },
-  ];
+  ] as any[];
+  const [opened, { open, close }] = useDisclosure(false);
+  const showModal = ({ data, action = "view" }) => {
+    if (action === "view") {
+      modals.open({
+        title: "Payment Details",
+        children: (
+          <div>
+            {/* <TextInput label='ID' value={rowDataForm.values.id} readOnly variant="unstyled" /> */}
+            <DateInput label='Payment Date' value={new Date(data.payment_date)} readOnly variant='unstyled' />
+            <TextInput label='Type' value={data.type} readOnly variant='unstyled' />
+            <Group>
+              <TextInput label='Party' value={data.expand?.party?.name} readOnly variant='unstyled' />
+              <TextInput label='Party Type' value={data.expand?.party?.type} readOnly variant='unstyled' />
+            </Group>
+            <Group>
+              <TextInput label='Area' value={data.expand?.area?.name} readOnly variant='unstyled' />
+              <TextInput label='Section' value={data.expand?.section?.name} readOnly variant='unstyled' />
+            </Group>
+            <Group>
+              {/* <TextInput label='Invoice' value={rowDataForm.values.invoice} readOnly variant="unstyled" /> */}
+              <TextInput
+                label='Invoice No'
+                value={data.expand?.invoice?.invoiceNo}
+                readOnly
+                variant='unstyled'
+              />
+              {data.type === "return" && (
+                <TextInput
+                  label='Original Invoice'
+                  value={
+                    data.original_invoices
+                      ? `${
+                          invoices.data.find((inv) => inv.id === data.original_invoices[0])?.invoiceNo
+                        } ${invoices.data
+                          .find((inv) => inv.id === data.original_invoices[0])
+                          ?.type?.substring(0, 1)
+                          .toUpperCase()}`
+                      : ""
+                  }
+                  readOnly
+                  variant='unstyled'
+                />
+              )}
+            </Group>
+            <TextInput label='Amount' value={data.amount} readOnly variant='unstyled' />
+            {/* <TextInput label='Invoice Maker' value={rowDataForm.values.invoice_maker} readOnly variant="unstyled" /> */}
+            <Group>
+              <TextInput label='Booker' value={data.expand?.booker?.name} readOnly variant='unstyled' />
+              <Text>Company</Text>
+              <Stack gap={1}>
+                {data.expand?.company.map((cmp) => (
+                  <Badge variant={"outline"} color={"black"} key={cmp.id}>
+                    {cmp.name}
+                  </Badge>
+                ))}
+              </Stack>
+            </Group>
+            <TextInput label='Description' value={data.description} readOnly variant='unstyled' />
+          </div>
+        ),
+      });
+    } else if (action === "edit") {
+      setRecordData(data);
+      open();
+    } else if (action === "delete") {
+      modals.openConfirmModal({
+        title: "Delete Payment",
+        centered: true,
+        children: <Text>Are you sure you want to delete this payment?</Text>,
+        labels: { confirm: "Yes", cancel: "No" },
+        onCancel: () => null,
+        onConfirm: () =>
+          deleteRecord.mutate({
+            collection: "payments",
+            recordID: data.id,
+          }),
+      });
 
+      close();
+    }
+  };
   const queries = [payments, areas, sections, bookers, parties, invoices];
   if (checkSuccess(queries)) {
     const {
@@ -359,51 +521,31 @@ export default function PaymentsReport() {
             <Text size={"sm"}>{`Area: ${areas.data.find((r) => r.id === form.values.area).name}`}</Text>
           )}
         </Group>
-        <Table
-          fz={"9pt"}
-          horizontalSpacing={1}
-          verticalSpacing={0}
-          styles={{
-            td: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
-            th: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+        <DataTable
+          classNames={{
+            root: classes.root,
+            table: classes.table,
+            header: classes.header,
+            footer: classes.footer,
+            pagination: classes.pagination,
           }}
-        >
-          <Table.Thead>
-            <Table.Tr>
-              {tableStructure.map((col) =>
-                col.hidden ? null : (
-                  <Table.Td key={`thead-${col.accessor}`}>
-                    {(col.title ?? col.accessor).toUpperCase()}
-                  </Table.Td>
-                )
-              )}
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {payments.data.map((row) => (
-              <Table.Tr key={`row-${row.id}`}>
-                {tableStructure.map((col) =>
-                  col.hidden ? null : (
-                    <Table.Td
-                      key={`td-${row.id}-${col.accessor}`}
-                      style={{ textAlign: col.textAlign ?? "start", width: col.width??"auto" }}
-                    >
-                      {col.render
-                        ? col.render(row)
-                        : row.hasOwnProperty("expand")
-                        ? row.expand.hasOwnProperty(col.accessor)
-                          ? row.expand[col.accessor].name || row.expand[col.accessor].value
-                          : row[col.accessor]
-                        : row[col.accessor]}
-                    </Table.Td>
-                  )
-                )}
-              </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+          style={{ border: "1px solid gray", borderRadius: "3px" }}
+          withColumnBorders
+          // emptyState={<></>}
+          defaultColumnRender={(row, _, accessor) => {
+            return row.hasOwnProperty("expand")
+              ? row.expand.hasOwnProperty(accessor)
+                ? row.expand[accessor].name || row.expand[accessor].value
+                : row[accessor]
+              : row[accessor];
+          }}
+          horizontalSpacing={2}
+          verticalSpacing={0}
+          records={payments.data}
+          columns={tableStructure}
+        />
 
-        <Stack gap={0} align='end' style={{ width: "100%" }}>
+        <Stack gap={0} style={{ width: "100%" }}>
           {form.values.reportType !== "recieving" &&
             !form.values.booker &&
             (form.values.party
@@ -412,22 +554,22 @@ export default function PaymentsReport() {
             (form.values.invoiceFilter
               ? invoices.data.find((r) => r.id === form.values.invoiceFilter)?.type !== "sale"
               : true) && (
-              <Flex gap={0} direction={"row"}justify={"space-evenly"} align={"end"} w={"100%"}>
-                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Purchase Invoice Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{sending}</Text>
+              <Flex gap={0} direction={"row"} justify={"space-evenly"} align={"end"} w={"100%"}>
+                <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
+                  <Text>Purchase Amount</Text>
+                  <Text>{sending}</Text>
                 </Group>
-                <Group justify='space-between' w={"12rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Paid Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{sent}</Text>
+                <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
+                  <Text>Paid Amount</Text>
+                  <Text>{sent}</Text>
                 </Group>
-                <Group justify='space-between' w={"8em"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Returns</Text>
-                  <Text style={{ fontSize: "8pt" }}>{sendingReturns}</Text>
+                <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
+                  <Text>Returns</Text>
+                  <Text>{sendingReturns}</Text>
                 </Group>
-                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Total Payable Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{totalSending}</Text>
+                <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
+                  <Text>Total Amount</Text>
+                  <Text>{totalSending}</Text>
                 </Group>
               </Flex>
             )}
@@ -438,26 +580,29 @@ export default function PaymentsReport() {
             (form.values.invoiceFilter
               ? invoices.data.find((r) => r.id === form.values.invoiceFilter)?.type !== "purchase"
               : true) && (
-              <Flex gap={0} direction={"row"}justify={"space-evenly"} align={"end"} w={"100%"}>
-                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Sale Invoice Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{recieving}</Text>
+              <Flex gap={0} direction={"row"} justify={"space-evenly"} align={"end"} w={"100%"}>
+                <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
+                  <Text>Sale Amount</Text>
+                  <Text>{recieving}</Text>
                 </Group>
-                <Group justify='space-between' w={"12rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Recieved Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{recieved}</Text>
+                <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
+                  <Text>Recieved Amount</Text>
+                  <Text>{recieved}</Text>
                 </Group>
-                <Group justify='space-between' w={"8em"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Returns</Text>
-                  <Text style={{ fontSize: "8pt" }}>{recievingReturns}</Text>
+                <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
+                  <Text>Returns</Text>
+                  <Text>{recievingReturns}</Text>
                 </Group>
-                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Total Recivable Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{totalRecieving}</Text>
+                <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
+                  <Text>Total Amount</Text>
+                  <Text>{totalRecieving}</Text>
                 </Group>
               </Flex>
             )}
         </Stack>
+        <Modal opened={opened} onClose={close}>
+          <EditPayment close={close} recordData={recordData} />
+        </Modal>
       </>
     );
   } else return <StatusCheck check={queries} />;

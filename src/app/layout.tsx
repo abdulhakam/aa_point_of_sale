@@ -7,7 +7,6 @@ import "@mantine/dates/styles.css";
 import '@mantine/notifications/styles.css';
 import "mantine-datatable/styles.layer.css";
 import Providers from "./providers";
-import FetchingIndicator from "./components/global/apiCallIndicator/fetchingIndicator";
 import RouteProtector from "./routeProtector";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -18,7 +17,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <Providers>
-          {/* <FetchingIndicator/> */}
           <RouteProtector>{children}</RouteProtector>
         </Providers>
       </body>

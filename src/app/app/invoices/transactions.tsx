@@ -40,20 +40,53 @@ export default function Transactions({ invoice }) {
     {
       accessor: "ctns",
       width: "5%",
+      textAlign: "right",
       sortable: false,
       render: (record) => getQtyFromString(String(record.qty)).ctns,
     },
     {
       accessor: "units",
       width: "5%",
+      textAlign: "right",
       sortable: false,
       render: (record) => getQtyFromString(String(record.qty)).units,
     },
-    { accessor: "scheme", width: "8%", sortable: false },
-    { accessor: "price", width: "8%", sortable: false },
-    { accessor: "discount_1", width: "8%", sortable: false },
-    { accessor: "discount_2", width: "8%", sortable: false },
-    { accessor: "total", width: "10%", sortable: false },
+    { accessor: "scheme", width: "8%", textAlign: "right", sortable: false },
+    {
+      accessor: "price",
+      width: "8%",
+      textAlign: "right",
+      sortable: false,
+      render: (r) => Number(r.price).toFixed(2),
+    },
+    {
+      accessor: "discount_1",
+      width: "8%",
+      textAlign: "right",
+      sortable: false,
+      render: (r) => `${Number(r.discount_1).toFixed(2)}%`,
+    },
+    {
+      accessor: "discount_2",
+      width: "8%",
+      textAlign: "right",
+      sortable: false,
+      render: (r) => `${Number(r.discount_2).toFixed(2)}%`,
+    },
+    {
+      accessor: "discount_rs",
+      width: "8%",
+      textAlign: "right",
+      sortable: false,
+      render: (r) => `${Number(r.discount_rs).toFixed(2)}`,
+    },
+    {
+      accessor: "total",
+      width: "10%",
+      textAlign: "right",
+      sortable: false,
+      render: (r) => `${Number(r.total).toFixed(2)}`,
+    },
     {
       accessor: "actions",
       width: "4.5rem",
@@ -95,13 +128,13 @@ export default function Transactions({ invoice }) {
     return (
       <>
         <Modal centered opened={opened} onClose={close} title='edit Transaction'>
-          <TransactionEditForm items={items.data} data={formData} />
+          <TransactionEditForm close={close} items={items.data} data={formData} />
         </Modal>
         <DataViewTable
           report
           verticalSpacing={"0.1rem"}
+          horizontalSpacing={"0.1rem"}
           height={300}
-          // filter={[{ key: "invoice", value: invoice }]}
           columns={tableStructure}
           formstructure={transactionFormStructure}
           data={dataWithCount}

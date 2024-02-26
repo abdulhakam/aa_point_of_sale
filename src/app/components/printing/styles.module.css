@@ -3,9 +3,36 @@
 }
 @media print {
   .showOnPrint {
-    display: flex;
+    display: block;
   }
   .hideOnPrint {
-   display: none; 
+    display: none;
+  }
+}
+
+.printHeader {
+  display: flex;
+}
+.printFooter {
+  display: block;
+}
+@media print {
+  .printFooter {
+    /* position: fixed;
+    display: block;
+    left: 0;
+    bottom: 0; */
+    width: 100%;
+    text-align: center;
+  }
+
+  .printHeader {
+    display: flex;
+    /* padding: 0 2em;
+    position: fixed;
+    left: 0;
+    top: 0; */
+    width: 100%;
+    text-align: center;
   }
 }

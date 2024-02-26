@@ -16,6 +16,8 @@ import {
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDisclosure } from "@mantine/hooks";
+import { DateInput } from "@mantine/dates";
+import { useForm } from "@mantine/form";
 
 export default function NewPayment() {
   const queryClient = useQueryClient();
@@ -28,37 +30,43 @@ export default function NewPayment() {
     },
   });
   const [opened, { open, close }] = useDisclosure(false);
-  const [invoiceType, setInvoiceType] = useState("sale");
-  const [invoiceNo, setInvoiceNo] = useState("");
-  const [type, setType] = useState("sale");
-  const [party, setParty] = useState("");
-  const [paid, setPaid] = useState(true);
-  const [amount, setAmount] = useState(0);
-  const [description, setDescription] = useState("payment");
+  const form = useForm({
+    initialValues: {
+      invoiceType: "sale",
+      invoiceNo: "",
+      type: "sale",
+      party: "",
+      paid: true,
+      amount: 0,
+      description: "payment",
+      paymentDate: new Date(),
+    }
+  })
 
   function autoSelectType(party) {
     const partyType = parties.data?.find((pty) => pty.id === party)?.type;
-    setType(partyType === "customer" ? "recieving" : "sending");
+    form.setFieldValue("type", partyType === "customer" ? "recieving" : "sending");
   }
 
   function autoSetData(invoiceNo) {
     const invoice = invoices.data?.find((inv) => inv.id === invoiceNo);
-    setParty(invoice.party);
+    form.setFieldValue("party",invoice.party);
     autoSelectType(invoice.party);
-    setPaid(true);
+    form.setFieldValue("paid",true);
   }
   function submitHandler() {
     const data = {
-      invoice: invoiceNo,
-      booker: invoices.data?.find((inv) => inv.id === invoiceNo).booker || undefined,
-      party: party,
-      type: type,
-      paid: paid,
-      amount: amount,
-      description: description,
+      invoice: form.values.invoiceNo,
+      booker: invoices.data?.find((inv) => inv.id === form.values.invoiceNo).booker || undefined,
+      party: form.values.party,
+      payment_date: form.values.paymentDate,
+      type: form.values.type,
+      paid: form.values.paid,
+      amount: form.values.amount,
+      description: form.values.description,
     };
-    const fdata = invoices.data?.find((inv) => inv.id === invoiceNo).type === "sale"
-      ? { ...data, booker: invoices.data?.find((inv) => inv.id === invoiceNo).booker }
+    const fdata = invoices.data?.find((inv) => inv.id === form.values.invoiceNo).type === "sale"
+      ? { ...data, booker: invoices.data?.find((inv) => inv.id === form.values.invoiceNo).booker }
       : data;
     createPayment.mutate({ collection: "payments", data: fdata });
   }
@@ -69,6 +77,7 @@ export default function NewPayment() {
       <>
         <Modal centered opened={opened} onClose={close} title={`New Payment`}>
           <Stack gap={"xs"}>
+            <DateInput label='Date' value={form.values.paymentDate} onChange={(v)=>form.setFieldValue("paymentDate",v)} />
             <Select
               label='Invoice Type'
               searchable
@@ -76,20 +85,20 @@ export default function NewPayment() {
                 { value: "sale", label: "sale" },
                 { value: "purchase", label: "purchase" },
               ]}
-              value={invoiceType}
+              value={form.values.invoiceType}
               onChange={(v) => {
-                setInvoiceType(v);
+                form.setFieldValue("invoiceType", v);
               }}
               required />
             <Select
               label='InvoiceNo'
               searchable
               data={invoices.data
-                ?.filter((invoice) => invoice.type === invoiceType)
+                ?.filter((invoice) => invoice.type === form.values.invoiceType)
                 .map((invoice) => ({ value: invoice.id, label: String(invoice.invoiceNo) }))}
-              value={invoiceNo}
+              value={form.values.invoiceNo}
               onChange={(v) => {
-                setInvoiceNo(v);
+                form.setFieldValue("invoiceNo", v);
                 autoSetData(v);
               }}
               required />
@@ -99,9 +108,9 @@ export default function NewPayment() {
               label='Party'
               searchable
               data={parties.data?.map((party) => ({ value: party.id, label: party.name }))}
-              value={party}
+              value={form.values.party}
               onChange={(v) => {
-                setParty(v);
+                form.setFieldValue("party", v);
                 autoSelectType(v);
               }} />
             <Select
@@ -110,17 +119,18 @@ export default function NewPayment() {
               variant='unstyled'
               searchable
               data={["sending", "recieving"]}
-              value={type}
-              onChange={setType} />
+              value={form.values.type}
+              onChange={(v) => form.setFieldValue("type", v)} />
             <Checkbox
               label='Paid'
-              checked={paid}
-              onChange={(event) => setPaid(event.currentTarget.checked)} />
-            <NumberInput label='Amount' value={amount} onChange={(v) => setAmount(Number(v))} />
+              checked={form.values.paid}
+              onChange={(event) => form.setFieldValue("paid",event.currentTarget.checked)} />
+            <NumberInput label='Amount' value={form.values.amount} onChange={(v) => form.setFieldValue("amount",Number(v))} />
             <Textarea
               label='description'
-              value={description}
-              onChange={(event) => setDescription(event.currentTarget.value)} />
+              value={form.values.description}
+              disabled
+              onChange={(event) => form.setFieldValue("description",event.currentTarget.value)} />
             <Button
               onClick={() => {
                 submitHandler();

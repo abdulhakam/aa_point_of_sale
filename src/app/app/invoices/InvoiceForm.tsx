@@ -44,6 +44,7 @@ export default function InvoiceForm(props) {
       party: "",
       discount_1: 0,
       discount_2: 0,
+      discount_rs: 0,
       completed: false,
       date: new Date(),
       duedate: new Date(),
@@ -189,6 +190,7 @@ export default function InvoiceForm(props) {
           : props.type === "purchase"
           ? counts.data.purchase_invoices
           : counts.data.return_invoices) + 1,
+      dated: invoiceForm.values.date,
       booker: invoiceForm.values.booker,
       invoice_maker: user.data.id,
       party: invoiceForm.values.party,
@@ -201,6 +203,8 @@ export default function InvoiceForm(props) {
       party: invoiceForm.values.party,
       discount_1: invoiceForm.values.discount_1,
       discount_2: invoiceForm.values.discount_2,
+      discount_rs: invoiceForm.values.discount_rs,
+      dated: invoiceForm.values.date,
       duedate: invoiceForm.values.duedate,
       completed: invoiceForm.values.completed,
       description: invoiceForm.values.description,
@@ -215,9 +219,9 @@ export default function InvoiceForm(props) {
       invoice?.discount_1 !== invoiceForm.values.discount_1 ||
       invoice?.discount_2 !== invoiceForm.values.discount_2
     ) {
-      return (invoice?.total - dis_1 - dis_2).toFixed(2);
+      return Number(invoice?.total - dis_1 - dis_2 - invoiceForm.values.discount_rs);
     } else {
-      return invoice.final_total;
+      return Number(invoice.final_total);
     }
   };
   const getInvoiceDate = (invoice) => {
@@ -359,8 +363,8 @@ export default function InvoiceForm(props) {
                   ]}
                   {...invoiceForm.getInputProps("party")}
                 />
-                {props.type === "purchase" && <CreateSupplier />}
-                {props.type === "sale" && <CreateCustomer />}
+                {props.type === "purchase" && invoiceForm.values.invoiceNo === "new" && <CreateSupplier />}
+                {props.type === "sale" && invoiceForm.values.invoiceNo === "new" && <CreateCustomer />}
               </Group>
               {props.type === "return" && (
                 <NSelect
@@ -385,7 +389,6 @@ export default function InvoiceForm(props) {
                 </Flex>
               </Group>
             </>
-            {/* )} */}
             {!editing && invoiceForm.values.invoiceNo === "new" && (
               <Button
                 disabled={
@@ -435,7 +438,7 @@ export default function InvoiceForm(props) {
                     readOnly
                     label={"Total"}
                     defaultValue={0}
-                    value={invoice?.total || 0}
+                    value={invoice?.total.toFixed(2) || 0}
                   />
                   <Group align={"end"}>
                     <NumberInput
@@ -449,10 +452,15 @@ export default function InvoiceForm(props) {
                       {...invoiceForm.getInputProps("discount_2")}
                     />
                     <NumberInput
+                      label={"Discount_rs"}
+                      rightSection={" "}
+                      {...invoiceForm.getInputProps("discount_rs")}
+                    />
+                    <NumberInput
                       readOnly
                       label={"Total After Discount"}
                       defaultValue={0}
-                      value={final_total() || 0}
+                      value={final_total().toFixed(2) || 0}
                     />
                     <Button
                       onClick={() => {

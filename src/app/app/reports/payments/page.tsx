@@ -11,6 +11,8 @@ export default function Payments() {
   const printRef = useRef();
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
+    documentTitle: "Payment Report",
+    pageStyle: `@media print { @page { size: A4; } }`,
   });
   return (
     <>
