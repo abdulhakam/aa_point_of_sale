@@ -9,30 +9,61 @@
     display: none;
   }
 }
-
 .printHeader {
-  display: flex;
+  position: fixed;
+  width: 100%;
 }
 .printFooter {
-  display: block;
+  position:sticky;
 }
-@media print {
-  .printFooter {
-    /* position: fixed;
-    display: block;
-    left: 0;
-    bottom: 0; */
-    width: 100%;
-    text-align: center;
-  }
 
-  .printHeader {
-    display: flex;
-    /* padding: 0 2em;
-    position: fixed;
-    left: 0;
-    top: 0; */
-    width: 100%;
-    text-align: center;
+
+/* Styles go here/////////////////////////////////////////////////////////////////////////////////// */
+
+.pageHeader, .pageHeaderSpace {
+  height: 4rem;
+}
+
+.pageFooter, .pageFooterSpace {
+  height: 1.3rem;
+
+}
+
+.pageFooter {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  border-top: 1px solid black; 
+}
+
+.pageHeader {
+  display: none;
+  position: fixed;
+  top: 0mm;
+  width: 100%;
+  /* border-bottom: 1px solid black; */
+}
+
+.page {
+  width: 100%;
+  page-break-after: always;
+}
+
+/* @page {
+  margin: 5mm
+
+} */
+
+@media print {
+  .pageHeader{
+    display: block;
   }
+  .pageFooter{
+    display: block;
+  }
+   .thead {display: table-header-group;} 
+   .tfoot {display: table-footer-group;}
+   
+   .body {margin: 0;}
 }

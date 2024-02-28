@@ -18,7 +18,7 @@ const tableStructure = [
   // { accessor: "deleted", sortable: true },
 ];
 
-export default function Preas() {
+export default function Parties() {
   const [partyType,setPartyType] = useState('all')
   const [search, setSearch] = useState("");
   const parties = useCRUD().fullList({ collection: "parties", expand: "area,area.section" });
@@ -42,7 +42,7 @@ export default function Preas() {
           filter={[{ key: "", value: search }]}
           columns={tableStructure}
           data={parties.data?.filter(
-            (item) => partyType !== 'all' ? (item.expand.party.type === partyType || item.expand.party.type === "both") : true
+            (pty) => partyType !== 'all' ? (pty.type === partyType) : true
           )}
         />
       )}
