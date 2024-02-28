@@ -244,7 +244,7 @@ export default function PaymentsReport() {
               data={[
                 ...parties.data.map((pty) => ({
                   value: pty.id,
-                  label: `${pty.name} - ${pty.expand.area.name}`,
+                  label: `${pty.name} - ${pty.expand?.area?.name}`,
                 })),
               ]}
               value={form.values.party}

@@ -1,5 +1,4 @@
 "use client";
-import DataViewTable from "@/app/components/DataViewTable";
 import { useState } from "react";
 import { modals } from "@mantine/modals";
 import {
@@ -19,7 +18,6 @@ import { useDisclosure } from "@mantine/hooks";
 import useCRUD, { crud } from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import { IconEye, IconEdit, IconTrash } from "@tabler/icons-react";
-import dataFilter from "@/app/components/functions/dataFilter";
 import styles from "@/app/components/printing/styles.module.css";
 import { DateInput, DatePicker } from "@mantine/dates";
 import { NSelect } from "@/app/components/BetterComps/Select";
@@ -30,25 +28,26 @@ import classes from "@/app/components/tableclasses.module.css";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { notifications } from "@mantine/notifications";
 import EditPayment from "./EditPayment";
+import React from "react";
 
 export default function PaymentsView() {
-  const [fromDate, setFromDate] = useState<Date | null>(
+  const [fromDate, setFromDate] = useState(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
   );
-  const [toDate, setToDate] = useState<Date | null>(
+  const [toDate, setToDate] = useState(
     new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999)
   );
 
   const form = useForm({
     initialValues: {
       reportType: "",
-      booker: "" as any,
-      area: "" as any,
-      section: "" as any,
+      booker: "",
+      area: "",
+      section: "",
       party: "",
-      paymentType: "" as any,
+      paymentType: "",
       invoiceFilter: "",
-      company: "" as any,
+      company: "",
     },
   });
   const queryClient = useQueryClient();
@@ -73,7 +72,7 @@ export default function PaymentsView() {
           : ""
       }
       `,
-  }) as any;
+  });
   const parties = useCRUD().fullList({ collection: "parties", expand: "area,area.section" });
   const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
   const sections = useCRUD().fullList({ collection: "sections" });
@@ -167,7 +166,7 @@ export default function PaymentsView() {
     { accessor: "booker", hidden: form.values.reportType === "Sending", sortable: true },
     {
       accessor: "amount",
-      textAlign: "right" as any,
+      textAlign: "right" ,
       render: (record) => <>{`${record.amount != null ? record.amount.toFixed(2) : -0}`}</>,
     },
     {
@@ -209,7 +208,7 @@ export default function PaymentsView() {
       ),
     },
     { accessor: "description", hidden: true, sortable: true },
-  ] as any[];
+  ];
   const [opened, { open, close }] = useDisclosure(false);
   const showModal = ({ data, action = "view" }) => {
     if (action === "view") {
@@ -406,7 +405,7 @@ export default function PaymentsView() {
               data={[
                 ...parties.data.map((pty) => ({
                   value: pty.id,
-                  label: `${pty.name} - ${pty.expand.area.name}`,
+                  label: `${pty.name} - ${pty.expand?.area?.name}`,
                 })),
               ]}
               value={form.values.party}

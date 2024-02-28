@@ -2,17 +2,15 @@
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
-import DataViewTable from "@/app/components/DataViewTable";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
 import { ActionIcon, Group, Table, Text } from "@mantine/core";
 import { IconPrinter } from "@tabler/icons-react";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import PrintHead from "@/app/components/printing/PrintHead";
-import { useState,useRef } from "react";
+import { useState, useRef } from "react";
 import { useReactToPrint } from "react-to-print";
+import PrintContent from "@/app/components/printing/PrintContent";
 
 const columns = [
   {
@@ -83,6 +81,7 @@ const columns = [
     title: "Total",
     sortable: true,
     textAlign: "right",
+    render: (row) => Number(row.total).toFixed(2),
   },
 ];
 
@@ -90,6 +89,8 @@ export default function ItemTransactionsReport() {
   const printRef = useRef();
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
+    documentTitle: "Transaction Report",
+    pageStyle: `@page {size: A4; margin: 0.6cm 1.0cm 0.6cm 0.5cm !important;`,
   });
   const [fromDate, setFromDate] = useState(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
@@ -154,16 +155,16 @@ export default function ItemTransactionsReport() {
     const { returns, sale, total } = calculator(transactions.data);
     return (
       <>
-      <ActionIcon
-            onClick={() => {
-              handlePrint();
-            }}
-            size='xl'
-            variant='subtle'
-            color='blue'
-          >
-            <IconPrinter />
-          </ActionIcon>
+        <ActionIcon
+          onClick={() => {
+            handlePrint();
+          }}
+          size='xl'
+          variant='subtle'
+          color='blue'
+        >
+          <IconPrinter />
+        </ActionIcon>
         <Group>
           <DateInput
             value={fromDate}
@@ -254,51 +255,87 @@ export default function ItemTransactionsReport() {
           />
         </Group>
         <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
-            <PrintHead />
-        <h2>All Transactions Report</h2>
-        <DataViewTable
-          height={300}
-          fz={"7pt"}
-          horizontalSpacing={2}
-          report
-          data={transactions.data}
-          columns={columns}
-        />
-        <Group justify='end'>
-          <Table
-            w={"14rem"}
-            horizontalSpacing={2}
-            verticalSpacing={0}
-            data={{
-              body: [
-                [
-                  <Text key={"sale"} fw={700}>
-                    Total Sale
-                  </Text>,
-                  <Group key={"sale amount"} justify='end'>
-                    <Text fw={700}>{sale}</Text>
-                  </Group>,
-                ],
-                [
-                  <Text key={"returnlabel"} fw={700}>
-                    Total Returns
-                  </Text>,
-                  <Group key={"return amount"} justify='end'>
-                    <Text fw={700}>{returns}</Text>
-                  </Group>,
-                ],
-                [
-                  <Text key={"totallabel"} fw={700}>
-                    Total
-                  </Text>,
-                  <Group key={"Total Amount"} justify='end'>
-                    <Text fw={700}>{total}</Text>
-                  </Group>,
-                ],
-              ],
-            }}
-          />
-        </Group>
+          <PrintContent>
+            <h2>All Transactions Report</h2>
+            <Table
+              fz={"10pt"}
+              horizontalSpacing={1}
+              verticalSpacing={0}
+              styles={{
+                td: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+                th: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+              }}
+            >
+              <Table.Thead>
+                <Table.Tr>
+                  {columns.map((col) =>
+                    col.hidden ? null : (
+                      <Table.Td key={`thead-${col.accessor}`}>
+                        {(col.title ?? col.accessor).toUpperCase()}
+                      </Table.Td>
+                    )
+                  )}
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {transactions.data?.map((row) => (
+                  <Table.Tr key={`row-${row.id}`}>
+                    {columns.map((col) =>
+                      col.hidden ? null : (
+                        <Table.Td
+                          key={`td-${row.id}-${col.accessor}`}
+                          style={{ textAlign: col.textAlign ?? "start", width: col.width ?? "auto" }}
+                        >
+                          {col.render
+                            ? col.render(row)
+                            : row.hasOwnProperty("expand")
+                            ? row.expand.hasOwnProperty(col.accessor)
+                              ? row.expand[col.accessor].name || row.expand[col.accessor].value
+                              : row[col.accessor]
+                            : row[col.accessor]}
+                        </Table.Td>
+                      )
+                    )}
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+            <Group justify='end'>
+              <Table
+                w={"14rem"}
+                horizontalSpacing={2}
+                verticalSpacing={0}
+                data={{
+                  body: [
+                    [
+                      <Text key={"sale"} fw={700}>
+                        Total Sale
+                      </Text>,
+                      <Group key={"sale amount"} justify='end'>
+                        <Text fw={700}>{sale.toFixed(2)}</Text>
+                      </Group>,
+                    ],
+                    [
+                      <Text key={"returnlabel"} fw={700}>
+                        Total Returns
+                      </Text>,
+                      <Group key={"return amount"} justify='end'>
+                        <Text fw={700}>{returns.toFixed(2)}</Text>
+                      </Group>,
+                    ],
+                    [
+                      <Text key={"totallabel"} fw={700}>
+                        Total
+                      </Text>,
+                      <Group key={"Total Amount"} justify='end'>
+                        <Text fw={700}>{total.toFixed(2)}</Text>
+                      </Group>,
+                    ],
+                  ],
+                }}
+              />
+            </Group>
+          </PrintContent>
         </div>
       </>
     );
