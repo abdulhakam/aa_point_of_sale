@@ -19,13 +19,13 @@ interface NavbarLinkProps {
   icon: typeof IconHome2;
   label: string;
   active?: boolean;
-  onClick?(): void;
+  href?: string;
 }
 
-function NavbarLink({ icon: Icon, label, active, onClick }: NavbarLinkProps) {
+function NavbarLink({ icon: Icon, label, active, href }: NavbarLinkProps) {
   return (
     <Tooltip label={label} position="right" transitionProps={{ duration: 0 }}>
-      <UnstyledButton onClick={onClick} className={classes.link} data-active={active || undefined}>
+      <UnstyledButton component='a' href={href} className={classes.link} data-active={active || undefined}>
         <Icon style={{ width: rem(20), height: rem(20) }} stroke={1.5} />
       </UnstyledButton>
     </Tooltip>
@@ -51,7 +51,7 @@ export default function NavbarMinimal(props) {
       {...link}
       key={link.label}
       active={link.label.toLowerCase() === pathname}
-      onClick={()=>router.push(`/app/${link.target}`)}
+      href={`/app/${link.target}`}
     />
   ));
 
