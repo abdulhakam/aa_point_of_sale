@@ -2,7 +2,7 @@
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
-import { Table, ActionIcon, Button, Flex, Group } from "@mantine/core";
+import { Table, ActionIcon, Button, Flex, Group, Checkbox } from "@mantine/core";
 import { IconPrinter } from "@tabler/icons-react";
 import { useForm } from "@mantine/form";
 import { useState, useRef } from "react";
@@ -94,6 +94,7 @@ export default function ItemTransactionsReport() {
   });
   const [fromDate, setFromDate] = useState(new Date(moment().startOf("month")));
   const [toDate, setToDate] = useState(new Date(moment().endOf("day")));
+  const [applyDate, setApplyDate] = useState(true);
   const form = useForm({
     initialValues: {
       company: "",
@@ -110,13 +111,17 @@ export default function ItemTransactionsReport() {
   const companies = useCRUD().fullList({ collection: "categories" });
   const parties = useCRUD().fullList({ collection: "parties" });
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
-  const invoices = useCRUD().fullList({ collection: "invoice_view" });
+  const invoices = useCRUD().fullList({ collection: "invoice_view", filter: `type != 'purchase'` });
 
   const transactions = useCRUD().fullList({
     collection: "payments_invoices_report",
     filter: `(type = "sale" || type = "return" || type = "recieving")
-            && (dated >= '${moment.utc(fromDate).format("YYYY-MM-DD HH:mm:ss")}' 
-            && dated <= '${moment.utc(toDate).format("YYYY-MM-DD HH:mm:ss")}')
+            ${
+              applyDate
+                ? `&& (dated >= '${moment.utc(fromDate).format("YYYY-MM-DD HH:mm:ss")}' 
+                && dated <= '${moment.utc(toDate).format("YYYY-MM-DD HH:mm:ss")}')`
+                : ""
+            }
             ${form.values.company ? `&& (company = "${form.values.company}")` : ""}
             ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
             ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
@@ -144,19 +149,7 @@ export default function ItemTransactionsReport() {
         },
       },
     }));
-    const {
-      total,
-      totalSending,
-      totalRecieving,
-      sendingReturns,
-      recievingReturns,
-      invoiceTotal,
-      totalPaid,
-      recieving,
-      recieved,
-      sending,
-      sent,
-    } = calculator(allData);
+    const { total, invoiceTotal, totalPaid } = calculator(allData);
     return (
       <>
         <ActionIcon
@@ -169,7 +162,7 @@ export default function ItemTransactionsReport() {
         >
           <IconPrinter />
         </ActionIcon>
-        <Group>
+        <Group align='end'>
           <DateInput
             value={fromDate}
             onChange={(v) => setFromDate(new Date(moment(v).startOf("day")))}
@@ -179,6 +172,12 @@ export default function ItemTransactionsReport() {
             value={toDate}
             onChange={(v) => setToDate(new Date(moment(v).endOf("day")))}
             label='Date To'
+          />
+          <Checkbox
+            mb={"0.5em"}
+            label='Apply Date Filter'
+            checked={applyDate}
+            onChange={(event) => setApplyDate(event.currentTarget.checked)}
           />
         </Group>
         <Group align='end'>
@@ -229,7 +228,7 @@ export default function ItemTransactionsReport() {
             onChange={(v) => form.setFieldValue("invoice", v)}
             data={invoices.data?.map((inv) => ({
               value: inv.id,
-              label: `${inv.invoiceNo} - ${inv.type.charAt(0).toUpperCase()}`,
+              label: `${inv.invoiceNo} ${inv.type.charAt(0).toUpperCase()}`,
             }))}
             label={"Invoice"}
           />
@@ -292,7 +291,7 @@ export default function ItemTransactionsReport() {
                 verticalSpacing={0}
                 styles={{
                   td: { padding: "0.2em", border: "1px solid black" },
-                  th: {  padding: "0.2em", border: "1px solid black" },
+                  th: { padding: "0.2em", border: "1px solid black" },
                 }}
               >
                 <Table.Tr>

@@ -23,7 +23,7 @@ export default function ActionsGrid(props) {
   const router = useRouter();
   const items = mockdata.map((item) => (
     <Grid.Col span={2} key={item.title}>
-      <Link style={{textDecoration:'none'}} href={`/app/${item.target}`} className={classes.item}>
+      <Link style={{textDecoration:'none'}} href={`/app/${item.target}`} prefetch className={classes.item}>
         <item.icon color={theme.colors[item.color][6]} size='4rem' />
         <Text size='s' mt={7}>
           {item.title}

@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useState, useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import PrintContent from "@/app/components/printing/PrintContent";
+import moment from "moment";
 
 const columns = [
   {
@@ -40,7 +41,7 @@ const columns = [
   {
     accessor: "company",
   },
-  { accessor: "area", render: (r) => r.expand?.party?.expand.area?.name },
+  { accessor: "area", render: (r) => r.expand?.party?.expand?.area?.name },
   { accessor: "section", render: (r) => r.expand?.party?.expand?.area?.expand.section?.name },
   {
     accessor: "item",
@@ -74,14 +75,16 @@ const columns = [
     textAlign: "right",
     render: (record) => `${record.discount_2}%`,
   },
+  { accessor: "discount_rs", title: "Disc_Rs", textAlign: "right" },
   { accessor: "inv_d1", title: "Inv Disc1", textAlign: "right", render: (record) => `${record.inv_d1}%` },
   { accessor: "inv_d2", title: "Inv Disc2", textAlign: "right", render: (record) => `${record.inv_d2}%` },
+  { accessor: "inv_drs", title: "Inv DiscRs", textAlign: "right" },
   {
-    accessor: "total",
+    accessor: "net_amount",
     title: "Total",
     sortable: true,
     textAlign: "right",
-    render: (row) => Number(row.total).toFixed(2),
+    render: (row) => Number(row.net_amount).toFixed(2),
   },
 ];
 
@@ -92,12 +95,8 @@ export default function ItemTransactionsReport() {
     documentTitle: "Transaction Report",
     pageStyle: `@page {size: A4; margin: 0.6cm 1.0cm 0.6cm 0.5cm !important;`,
   });
-  const [fromDate, setFromDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
-  );
-  const [toDate, setToDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999)
-  );
+  const [fromDate, setFromDate] = useState(moment().startOf("month").toDate());
+  const [toDate, setToDate] = useState(moment().endOf("day").toDate());
   const form = useForm({
     initialValues: {
       company: "",
@@ -117,31 +116,9 @@ export default function ItemTransactionsReport() {
     collection: "transactions_report",
     expand: "item,company,party,party.area,party.area.section,booker",
     filter: `(type = "sale" || type = "return")
-            && (created >= '${new Date(
-              Date.UTC(
-                fromDate.getFullYear(),
-                fromDate.getMonth(),
-                fromDate.getDate(),
-                fromDate.getHours(),
-                fromDate.getMinutes(),
-                fromDate.getSeconds()
-              )
-            )
-              .toISOString()
-              .replace("T", " ")
-              .slice(0, 19)}' && created <= '${new Date(
-      Date.UTC(
-        toDate.getFullYear(),
-        toDate.getMonth(),
-        toDate.getDate(),
-        toDate.getHours(),
-        toDate.getMinutes(),
-        toDate.getSeconds()
-      )
-    )
-      .toISOString()
-      .replace("T", " ")
-      .slice(0, 19)}')
+            && (created >= '${moment(fromDate).utc().format("YYYY-MM-DD")}' && created <= '${moment(toDate)
+      .utc()
+      .format("YYYY-MM-DD")}')
             ${form.values.company ? `&& (company = "${form.values.company}")` : ""}
             ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
             ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
@@ -344,10 +321,16 @@ export default function ItemTransactionsReport() {
 
 function calculator(data) {
   const total = data.reduce(
-    (total, record) => (record.type === "sale" ? record.total + total : total - record.total),
+    (total, record) => (record.type === "sale" ? record.final_amount + total : total - record.final_amount),
     0
   );
-  const sale = data.reduce((total, record) => (record.type === "sale" ? record.total + total : total), 0);
-  const returns = data.reduce((total, record) => (record.type !== "sale" ? total + record.total : total), 0);
+  const sale = data.reduce(
+    (total, record) => (record.type === "sale" ? record.final_amount + total : total),
+    0
+  );
+  const returns = data.reduce(
+    (total, record) => (record.type !== "sale" ? total + record.final_amount : total),
+    0
+  );
   return { total, sale, returns };
 }
