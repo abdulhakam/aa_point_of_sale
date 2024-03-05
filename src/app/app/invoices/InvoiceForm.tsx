@@ -137,6 +137,7 @@ export default function InvoiceForm(props) {
       invoiceForm.setValues({
         discount_1: invoice.discount_1,
         discount_2: invoice.discount_2,
+        discount_rs: invoice.discount_rs,
         party: invoice.party,
       });
     }
@@ -217,7 +218,8 @@ export default function InvoiceForm(props) {
     const dis_2 = (invoice?.total - dis_1) * (invoiceForm.values.discount_2 / 100);
     if (
       invoice?.discount_1 !== invoiceForm.values.discount_1 ||
-      invoice?.discount_2 !== invoiceForm.values.discount_2
+      invoice?.discount_2 !== invoiceForm.values.discount_2 ||
+      invoice?.discount_rs !== invoiceForm.values.discount_rs
     ) {
       return Number(invoice?.total - dis_1 - dis_2 - invoiceForm.values.discount_rs);
     } else {
