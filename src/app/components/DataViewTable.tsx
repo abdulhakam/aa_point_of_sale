@@ -77,7 +77,6 @@ export default function DataViewTable(
     switch (action) {
       case "view":
         open();
-        console.log(data)
         setFormData(data);
         setEditable(false);
         break;
@@ -115,7 +114,7 @@ export default function DataViewTable(
         withColumnBorders
         records={records}
         columns={columns}
-        // emptyState={<></>}
+        onRowClick={props.onRowClick || null}
         defaultColumnRender={(row, _, accessor) => {
           return row.hasOwnProperty("expand")
             ? row.expand.hasOwnProperty(accessor)
