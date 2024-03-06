@@ -51,16 +51,6 @@ export default function PrintInvoice() {
   if (checkSuccess(queries)) {
     return (
       <>
-        {/* <ActionIcon
-          onClick={() => {
-            handlePrint();
-          }}
-          size='xl'
-          variant='subtle'
-          color='blue'
-        >
-          <IconPrinter />
-        </ActionIcon> */}
         <Group align="end">
           <Select
             searchable

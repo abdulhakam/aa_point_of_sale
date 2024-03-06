@@ -40,7 +40,7 @@ export function TransactionEditForm(props) {
   const [pcs, setPcs] = useState(Number(units));
   const [scheme, setScheme] = useState(props.data.scheme);
   const [purchasePrice, setPurchasePrice] = useState(props.data.expand?.item.cost_price || 0);
-  const [itemPrice, setItemPrice] = useState(props.data.expand?.item.sale_price || 0);
+  const [itemPrice, setItemPrice] = useState(props.data.price || 0);
   const [disc_1, setD1] = useState(props.data.discount_1);
   const [disc_2, setD2] = useState(props.data.discount_2);
   const [disc_rs, setDrs] = useState(props.data.discount_rs);
@@ -52,6 +52,7 @@ export function TransactionEditForm(props) {
     const data = {
       id: props.data.id,
       item: item,
+      price: props.data.type === "purchase" ? purchasePrice : itemPrice,
       qty: qtyInput(itemData, Number(boxes), Number(pcs)),
       scheme: scheme,
       discount_1: disc_1,
@@ -72,7 +73,7 @@ export function TransactionEditForm(props) {
     setItemPrice(price);
     setPurchasePrice(pp);
     discCalc(
-      props.data.type === "sale" ? price : pp,
+      props.data.type === "purchase" ? pp : price,
       qtyInput(itemData, boxes, pcs),
       disc_1,
       disc_2,
@@ -112,7 +113,7 @@ export function TransactionEditForm(props) {
             <NumberInput
               label='PP/CP'
               rightSectionWidth={0}
-              readOnly={props.data.type === "sale" ? true : false}
+              readOnly={props.data.type === "purchase" ? false : true}
               value={purchasePrice}
               onChange={(v) => {
                 setPurchasePrice(Number(v));
@@ -129,7 +130,7 @@ export function TransactionEditForm(props) {
               onChange={(v) => {
                 setItemPrice(Number(v));
                 discCalc(
-                  props.data.type === "sale" ? Number(v) : purchasePrice,
+                  Number(v),
                   qtyInput(itemData, boxes, pcs),
                   disc_1,
                   disc_2,
@@ -159,7 +160,7 @@ export function TransactionEditForm(props) {
               onChange={(v) => {
                 setBoxes(Number(v));
                 discCalc(
-                  props.data.type === "sale" ? itemPrice : purchasePrice,
+                  props.data.type === "purchase" ? purchasePrice :itemPrice,
                   qtyInput(itemData, Number(v), pcs),
                   disc_1,
                   disc_2,
@@ -175,7 +176,7 @@ export function TransactionEditForm(props) {
               onChange={(v) => {
                 setPcs(Number(v));
                 discCalc(
-                  props.data.type === "sale" ? itemPrice : purchasePrice,
+                  props.data.type === "purchase" ? purchasePrice :itemPrice,
                   qtyInput(itemData, boxes, Number(v)),
                   disc_1,
                   disc_2,
@@ -202,7 +203,7 @@ export function TransactionEditForm(props) {
               onChange={(v) => {
                 setD1(Number(v));
                 discCalc(
-                  props.data.type === "sale" ? itemPrice : purchasePrice,
+                  props.data.type === "purchase" ? purchasePrice :itemPrice,
                   qtyInput(itemData, boxes, pcs),
                   Number(v),
                   disc_2,
@@ -218,7 +219,7 @@ export function TransactionEditForm(props) {
               onChange={(v) => {
                 setD2(Number(v));
                 discCalc(
-                  props.data.type === "sale" ? itemPrice : purchasePrice,
+                  props.data.type === "purchase" ? purchasePrice :itemPrice,
                   qtyInput(itemData, boxes, pcs),
                   disc_1,
                   Number(v),
@@ -234,7 +235,7 @@ export function TransactionEditForm(props) {
               onChange={(v) => {
                 setDrs(Number(v));
                 discCalc(
-                  props.data.type === "sale" ? itemPrice : purchasePrice,
+                  props.data.type === "purchase" ? purchasePrice :itemPrice,
                   qtyInput(itemData, boxes, pcs),
                   disc_1,
                   disc_2,
@@ -260,7 +261,6 @@ export function TransactionEditForm(props) {
           OK
         </Button>
       </Modal>
-
       <Modal centered size={"auto"} opened={niOpened} onClose={niClose} title='Create New Item'>
         <FormGeneratorBasic close={niClose} editable formStructure={itemCreateForm} />
       </Modal>

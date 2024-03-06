@@ -28,7 +28,7 @@ export default function Transactions({ invoice }) {
   const items = useCRUD().fullList({ collection: "items", expand: "category" });
   const transactions = useCRUD().fullList({
     collection: "transaction_view",
-    expand: "item",
+    expand: "item,invoice",
     sort: "+created",
     filter: `invoice="${invoice}"`,
   });
@@ -128,7 +128,7 @@ export default function Transactions({ invoice }) {
     return (
       <>
         <Modal centered opened={opened} onClose={close} title='edit Transaction'>
-          <TransactionEditForm close={close} items={items.data} data={formData} />
+          <TransactionEditForm type={transactions.data[0]?.expand?.invoice?.type} close={close} items={items.data} data={formData} />
         </Modal>
         <DataViewTable
           report

@@ -37,8 +37,6 @@ export default function PaymentsReport() {
     collection: "payments_view",
     expand: "invoice,party,area,section,booker,company",
     filter: `(created >= '${moment(fromDate)
-      .add(1, "day")
-      .utc()
       .startOf("day")
       .format("YYYY-MM-DD HH:mm:ss")}' 
       && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
