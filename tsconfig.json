@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "src/app/app/parties/customers/CustomerView.tsx", "src/app/app/TimeDisplay.jsx", "src/app/auth/page.tsx", "src/app/app/reports/ReportTable.jsx", "src/app/api/customers.js", "src/app/app/parties/customers/page.tsx", "src/app/api/invoices.ts", "src/app/app/invoices/sales/page.jsx"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules","src-tauri"]
 }
