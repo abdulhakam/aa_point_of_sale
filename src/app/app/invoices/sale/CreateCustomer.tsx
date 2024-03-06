@@ -11,7 +11,7 @@ import { NSelect } from "@/app/components/BetterComps/Select";
 /**
  * Create a new customer with the given information.
  *
- * @return {void} 
+ * @return {void}
  */
 export default function CreateCustomer() {
   const queryClient = useQueryClient();
@@ -52,8 +52,12 @@ export default function CreateCustomer() {
         >
           <TextInput label='Name' {...form.getInputProps("name")} />
           <NSelect
+            searchable
             label='Area'
-            data={areas.data?.map((area) => ({ label: `${area.name} - ${area.expand?.section?.name}`, value: area.id }))}
+            data={areas.data?.map((area) => ({
+              label: `${area.name} - ${area.expand?.section?.name}`,
+              value: area.id,
+            }))}
             {...form.getInputProps("area")}
           />
           <TextInput label='Phone' {...form.getInputProps("phone")} />

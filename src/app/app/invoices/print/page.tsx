@@ -60,7 +60,7 @@ export default function InvoicePrint() {
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
     documentTitle: `${invoices.data?.type.toUpperCase()} INVOICE ${invoices.data?.invoiceNo}`,
-    pageStyle: "@page {size: A5; margin: 0.5cm 0.9cm 0.5cm 0.4cm !important;}",
+    pageStyle: "@page {size: A5; margin: 0.5cm 0.9cm 0.9cm 0.9cm !important;}",
   });
   const transactions = useCRUD().fullList({
     collection: "transaction_view",
