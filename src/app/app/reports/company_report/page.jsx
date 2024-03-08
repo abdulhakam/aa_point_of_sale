@@ -36,7 +36,7 @@ const columns = [
     accessor: "original_invoice",
     title: "Main Invoice",
     width: "4em",
-    render: (record) => `${record.expand?.original_invoice?.[0].invoiceNo ?? "-"} ${record.expand?.original_invoice?.[0].type.charAt(0).toUpperCase() ?? "-"}`,
+    render: (record) => `${record.expand?.original_invoice?.[0]?.invoiceNo ?? "-"} ${record.expand?.original_invoice?.[0]?.type.charAt(0).toUpperCase() ?? "-"}`,
   },
   {
     accessor: "area",
@@ -47,27 +47,6 @@ const columns = [
     accessor: "section",
     sortable: true,
     width: "9em",
-  },
-  {
-    accessor: "company",
-    sortable: true,
-    render: (record) =>
-      Array.isArray(record.expand?.company)
-        ? record.expand?.company?.map((cmp, i) => (
-            <span
-              style={{
-                display: "inline-block",
-                margin: "0 1px",
-                border: "1px solid black",
-                padding: "2px",
-                borderRadius: "10px",
-              }}
-              key={`company-name-chip-${i}-${cmp.id}`}
-            >
-              {cmp.name}
-            </span>
-          ))
-        : record.expand?.company?.name ?? "",
   },
   { accessor: "party", sortable: true },
   { accessor: "booker", sortable: true },
@@ -116,13 +95,8 @@ export default function ItemTransactionsReport() {
   const transactions = useCRUD().fullList({
     collection: "payments_invoices_report",
     expand: "area,section,company,party,booker,original_invoice",
-    filter: `(type = "sale" || type = "return" || type = "recieving")
-            ${
-              applyDate
-                ? `&& (dated >= '${moment.utc(fromDate).format("YYYY-MM-DD HH:mm:ss")}' 
-                && dated <= '${moment.utc(toDate).format("YYYY-MM-DD HH:mm:ss")}')`
-                : ""
-            }
+    filter: `(dated >= '${moment.utc(fromDate).format("YYYY-MM-DD HH:mm:ss")}' 
+                && dated <= '${moment.utc(toDate).format("YYYY-MM-DD HH:mm:ss")}')
             ${form.values.company ? `&& (company = "${form.values.company}")` : ""}
             ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
             ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
