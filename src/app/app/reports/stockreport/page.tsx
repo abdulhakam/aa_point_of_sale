@@ -98,12 +98,11 @@ export default function ItemsReport() {
             </Button>
             {filterValue && <Text size='sm'>Company: {categories.data?.find((cat) => cat.id === filterValue)?.name}</Text>}
             <Table
-              fz={"10pt"}
               horizontalSpacing={1}
               verticalSpacing={0}
               styles={{
-                td: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
-                th: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+                td: { padding: "0.2em", border: "1px solid black" },
+                th: { padding: "0.2em", border: "1px solid black" },
               }}
             >
               <Table.Thead>

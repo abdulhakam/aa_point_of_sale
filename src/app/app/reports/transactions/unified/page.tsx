@@ -46,44 +46,61 @@ const columns = [
   {
     accessor: "item",
     title: "Item",
-    // hidden:true,
     sortable: true,
   },
-  { accessor: "price", textAlign: "right" },
+  {
+    accessor: "price",
+    hidden: true,
+    textAlign: "right" as any,
+  },
   {
     accessor: "qty",
     title: "Qty",
     sortable: true,
     render: (row) => qtyDisplay(row.expand?.item, row.qty),
-    textAlign: "right",
+    textAlign: "right" as any,
   },
   {
     accessor: "scheme",
     title: "Free",
     sortable: true,
-    textAlign: "right",
+    textAlign: "right" as any,
   },
   {
     accessor: "discount_1",
     title: "Disc_1",
-    textAlign: "right",
+    textAlign: "right" as any,
     render: (record) => `${record.discount_1}%`,
+    hidden: true,
   },
   {
     accessor: "discount_2",
     title: "Disc_2",
-    textAlign: "right",
+    textAlign: "right" as any,
     render: (record) => `${record.discount_2}%`,
+    hidden: true,
   },
-  { accessor: "discount_rs", title: "Disc_Rs", textAlign: "right" },
-  { accessor: "inv_d1", title: "Inv Disc1", textAlign: "right", render: (record) => `${record.inv_d1}%` },
-  { accessor: "inv_d2", title: "Inv Disc2", textAlign: "right", render: (record) => `${record.inv_d2}%` },
-  { accessor: "inv_drs", title: "Inv DiscRs", textAlign: "right" },
+  { accessor: "discount_rs", title: "Disc_Rs", textAlign: "right" as any, hidden: true },
+  {
+    accessor: "inv_d1",
+    title: "Inv Disc1",
+    textAlign: "right" as any,
+    render: (record) => `${record.inv_d1}%`,
+    hidden: true,
+  },
+  {
+    accessor: "inv_d2",
+    title: "Inv Disc2",
+    textAlign: "right" as any,
+    render: (record) => `${record.inv_d2}%`,
+    hidden: true,
+  },
+  { accessor: "inv_drs", title: "Inv DiscRs", textAlign: "right" as any, hidden: true },
   {
     accessor: "net_amount",
     title: "Total",
     sortable: true,
-    textAlign: "right",
+    textAlign: "right" as any,
     render: (row) => Number(row.net_amount).toFixed(2),
   },
 ];
@@ -99,13 +116,13 @@ export default function ItemTransactionsReport() {
   const [toDate, setToDate] = useState(moment().endOf("day").toDate());
   const form = useForm({
     initialValues: {
-      company: "",
-      party: "",
-      booker: "",
-      area: "",
-      invoiceNo: "",
-      section: "",
-      item: "",
+      company: "" as any,
+      party: "" as any,
+      booker: "" as any,
+      area: "" as any,
+      invoiceNo: "" as any,
+      section: "" as any,
+      item: "" as any,
     },
   });
   const invoices = useCRUD().fullList({
@@ -233,14 +250,61 @@ export default function ItemTransactionsReport() {
         </Group>
         <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
           <PrintContent>
-            <h2>All Transactions Report</h2>
+            <Group justify='space-between'>
+              <h2>All Transactions Report</h2>
+              <Text size='md'>
+                <b>From:</b> {moment(fromDate).format("DD-MMM-YYYY")} <b>To:</b>{" "}
+                {moment(toDate).format("DD-MMM-YYYY")}
+              </Text>
+            </Group>
+            <Group justify='space-between'>
+              {form.values.item && (
+                <Text size='md'>
+                  <b>Item:</b> {transactions.data?.[0]?.expand?.item?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                </Text>
+              )}
+              {form.values.company && (
+                <Text size='md'>
+                  <b>Company:</b>{" "}
+                  {transactions.data?.[0]?.expand?.company?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                </Text>
+              )}
+              {form.values.booker && (
+                <Text size='md'>
+                  <b>Booker:</b>{" "}
+                  {transactions.data?.[0]?.expand?.booker?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                </Text>
+              )}
+              {form.values.party && (
+                <Text size='md'>
+                  <b>Party:</b> {transactions.data?.[0]?.expand?.party?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                </Text>
+              )}
+              {form.values.area && (
+                <Text size='md'>
+                  <b>Area:</b> {transactions.data?.[0]?.expand?.area?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                </Text>
+              )}
+              {form.values.section && (
+                <Text size='md'>
+                  <b>Section:</b>{" "}
+                  {transactions.data?.[0]?.expand?.section?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                </Text>
+              )}
+              {form.values.invoiceNo && (
+                <Text size='md'>
+                  <b>Invoice:</b>{" "}
+                  {transactions.data?.[0]?.expand?.invoice?.invoiceNo ?? "NO DATA OR TOO MANY FILTERS"}
+                </Text>
+              )}
+            </Group>
             <Table
               fz={"10pt"}
               horizontalSpacing={1}
               verticalSpacing={0}
               styles={{
-                td: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
-                th: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+                td: { padding: "0.2em", border: "1px solid black" },
+                th: { padding: "0.2em", border: "1px solid black" },
               }}
             >
               <Table.Thead>

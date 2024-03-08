@@ -418,9 +418,7 @@ export default function InvoiceForm(props) {
             </Stack>
           )}
           <ActionIcon
-            component='a'
-            href={`print?invoiceId=${invoiceForm.values.invoiceNo}`}
-            target='_blank'
+            onClick={()=>window.open(`print?invoiceId=${invoiceForm.values.invoiceNo}`,'_blank')}
             size='xl'
             variant='subtle'
             color='blue'

@@ -9,6 +9,7 @@ import { ActionIcon, Flex, Group, NumberInput, Stack, Table, Text } from "@manti
 import { DateInput } from "@mantine/dates";
 import { IconPrinter } from "@tabler/icons-react";
 import { DataTableColumn } from "mantine-datatable";
+import moment from "moment";
 import { useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
 
@@ -17,62 +18,49 @@ const tableStructure: DataTableColumn[] = [
   { accessor: "created", width: "7em", title: "Date", render: (row) => String(row.created).slice(0, 10) },
   { accessor: "invoiceNo", title: "Inv #", width: "5em" },
   { accessor: "description" },
-  { accessor: "transaction_type" },
-  { accessor: "account_type" },
+  { accessor: "transaction_type", title: "Type" },
+  { accessor: "account_type", title: "Account" },
   {
     accessor: "accounts_recievable",
+    title: "Recievables",
     textAlign: "right",
-    render: (record) => Number(record.accounts_recievable).toFixed(2),
+    render: (record: any) =>
+      !isNaN(record.accounts_recievable)
+        ? Number(record.accounts_recievable).toFixed(2)
+        : record.accounts_recievable,
   },
   {
     accessor: "accounts_payable",
+    title: "Payables",
     textAlign: "right",
-    render: (record) => Number(record.accounts_payable).toFixed(2),
+    render: (record: any) =>
+      !isNaN(record.accounts_payable) ? Number(record.accounts_payable).toFixed(2) : record.accounts_payable,
   },
-  { accessor: "cash", textAlign: "right", render: (record) => Number(record.cash).toFixed(2) },
-  // { accessor: "stock" },
+  {
+    accessor: "cash",
+    textAlign: "right",
+    render: (record: any) => (!isNaN(record.cash) ? Number(record.cash).toFixed(2) : record.cash),
+  },
 ];
 
 export default function LedgerReport() {
-  const [fromDate, setFromDate] = useState<Date | null>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
-  );
-  const [toDate, setToDate] = useState<Date | null>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999)
-  );
+  const [fromDate, setFromDate] = useState<Date | null>(moment().startOf("year").utc().toDate());
+  const [toDate, setToDate] = useState<Date | null>(moment().endOf("day").utc().toDate());
   const ledger = useCRUD().fullList({
     collection: "ledger_journal",
     sort: "+created",
-    filter: `(created >= '${new Date(
-      Date.UTC(
-        fromDate.getFullYear(),
-        fromDate.getMonth(),
-        fromDate.getDate(),
-        fromDate.getHours(),
-        fromDate.getMinutes(),
-        fromDate.getSeconds()
-      )
-    )
-      .toISOString()
-      .replace("T", " ")
-      .slice(0, 19)}' && created <= '${new Date(
-      Date.UTC(
-        toDate.getFullYear(),
-        toDate.getMonth(),
-        toDate.getDate(),
-        toDate.getHours(),
-        toDate.getMinutes(),
-        toDate.getSeconds()
-      )
-    )
-      .toISOString()
-      .replace("T", " ")
-      .slice(0, 19)}')`,
+    filter: `(created >= '${moment(fromDate)
+      .utc()
+      .startOf("day")
+      .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(toDate)
+      .utc()
+      .endOf("day")
+      .format("YYYY-MM-DD HH:mm:ss")}')`,
   });
   const printRef = useRef();
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
-    pageStyle:"@page {size: A4; margin: 0.6cm 1.0cm 0.6cm 0.5cm !important;",
+    pageStyle: "@page {size: A4; margin: 0.6cm 1.0cm 0.6cm 0.5cm !important;",
   });
 
   const [openingRecievables, setOpeningRecievables] = useState(0);
@@ -103,9 +91,9 @@ export default function LedgerReport() {
     created: "",
     description: "",
     id: "",
-    accounts_recievable: Number(recievable),
-    cash: Number(cash),
-    accounts_payable: Number(payable),
+    accounts_recievable: <Text fw={700}>{Number(recievable)}</Text>,
+    accounts_payable: <Text fw={700}>{Number(payable)}</Text>,
+    cash: <Text fw={700}>{Number(cash)}</Text>,
     stock: Number(stock),
     transaction_type: "",
     textAlign: "right",
@@ -129,36 +117,12 @@ export default function LedgerReport() {
           <Group>
             <DateInput
               value={fromDate}
-              onChange={(v) =>
-                setFromDate(
-                  new Date(
-                    new Date(v).getFullYear(),
-                    new Date(v).getMonth(),
-                    new Date(v).getDate(),
-                    0,
-                    0,
-                    0,
-                    0
-                  )
-                )
-              }
+              onChange={(v) => setFromDate(moment(v).startOf("day").utc().toDate())}
               label='Date From'
             />
             <DateInput
               value={toDate}
-              onChange={(v) =>
-                setToDate(
-                  new Date(
-                    new Date(v).getFullYear(),
-                    new Date(v).getMonth(),
-                    new Date(v).getDate(),
-                    23,
-                    59,
-                    59,
-                    999
-                  )
-                )
-              }
+              onChange={(v) => setToDate(moment(v).endOf("day").utc().toDate())}
               label='Date To'
             />
           </Group>
@@ -195,8 +159,8 @@ export default function LedgerReport() {
                 horizontalSpacing={1}
                 verticalSpacing={0}
                 styles={{
-                  td: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
-                  th: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+                  td: { fontSize: "md", padding: "0.2em", border: "1px solid black" },
+                  th: { fontSize: "md", padding: "0.2em", border: "1px solid black" },
                 }}
               >
                 <Table.Thead>
@@ -212,7 +176,16 @@ export default function LedgerReport() {
                 </Table.Thead>
                 <Table.Tbody>
                   {allData.map((row) => (
-                    <Table.Tr key={`row-${row.id}`}>
+                    <Table.Tr
+                      key={`row-${row.id}`}
+                      style={
+                        (row.transaction_type === "payment" || row.transaction_type === "expense")
+                          ? row.account_type === "recieving"
+                            ? { color: "green" }
+                            : { color: "red"}
+                          : row.account_type === "sending" ? { color:"blue"} : {color:"black"}
+                      }
+                    >
                       {tableStructure.map((col, i) =>
                         col.hidden ? null : (
                           <Table.Td
@@ -233,23 +206,6 @@ export default function LedgerReport() {
                   ))}
                 </Table.Tbody>
               </Table>
-              {/* <DataViewTable
-              report
-              fz={"xs"}
-              horizontalSpacing={2}
-              verticalSpacing={4}
-              formstructure={{}}
-              columns={tableStructure}
-              data={[opening, ...ledger.data, totals]}
-            /> */}
-              <Stack gap={0} align='end'>
-                <Group>
-                  <Text fw={700}>Closing Value</Text>
-                  <Text fw={600}>
-                    {(Number(recievable) - Number(payable) + Number(cash) + Number(stock)).toFixed(2)}
-                  </Text>
-                </Group>
-              </Stack>
             </PrintContent>
           </div>
         </Stack>

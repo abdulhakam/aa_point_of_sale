@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
   "build": {
-    "beforeBuildCommand": "npm run build",
+    
     "beforeDevCommand": "npm run dev",
     "devPath": "http://localhost:3000",
     "distDir": "../out"
@@ -12,7 +12,20 @@
   },
   "tauri": {
     "allowlist": {
-      "all": false
+      "all": false,
+      "shell": {
+        "all": false,
+        "execute": false,
+        "open": false,
+        "scope": [
+          {
+            "name": "pocketbase",
+            "sidecar": true,
+            "args": ["serve","dev"]
+          }
+        ],
+        "sidecar": true
+      }
     },
     "bundle": {
       "active": true,
@@ -21,7 +34,7 @@
       "deb": {
         "depends": []
       },
-      "externalBin": [],
+      "externalBin": ["../../pocketbase"],
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

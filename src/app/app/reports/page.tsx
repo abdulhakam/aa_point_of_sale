@@ -2,6 +2,7 @@
 import { Card, Text,  UnstyledButton,  useMantineTheme, Grid } from "@mantine/core";
 import {
   IconChartArea,
+  IconChartArrowsVertical,
   IconChartBar,
   IconChartLine,
   IconReportMoney, IconTrolley,
@@ -13,9 +14,10 @@ import Link from "next/link";
 const mockdata = [
   { title: "Unified Payments Report", icon: IconReportMoney, color: "blue", target: "reports/payments" },
   { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" },
-  { title: "General Ledger", icon: IconChartLine, color: "grape", target: "reports/ledgerreport" },
-  { title: "Unified Item Sales Report", icon: IconChartBar, color: "pink", target: "reports/transactions" },
+  { title: "Ledgers", icon: IconChartLine, color: "grape", target: "reports/ledgers" },
+  { title: "Item Sales Report", icon: IconChartBar, color: "pink", target: "reports/transactions/unified" },
   { title: "Payments By Company", icon: IconChartArea, color: "red", target: "reports/paymentsbycompany" },
+  { title: "Company Report", icon: IconChartArrowsVertical, color: "yellow", target: "reports/company_report" },
 ];
 
 export default function ActionsGrid(props) {

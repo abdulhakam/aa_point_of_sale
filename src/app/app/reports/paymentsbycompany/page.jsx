@@ -33,10 +33,10 @@ const columns = [
     render: (record) => `${record.invoiceNo || ""} ${record.type.charAt(0).toUpperCase()}`,
   },
   {
-    accessor: "original_invoices",
+    accessor: "original_invoice",
     title: "Main Invoice",
     width: "4em",
-    render: (record) => `${record.expand?.original_invoices?.[0].invoiceNo || ""}`,
+    render: (record) => `${record.expand?.original_invoice?.[0].invoiceNo ?? "-"} ${record.expand?.original_invoice?.[0].type.charAt(0).toUpperCase() ?? "-"}`,
   },
   {
     accessor: "area",
@@ -67,7 +67,7 @@ const columns = [
               {cmp.name}
             </span>
           ))
-        : record.expand?.company.name || "",
+        : record.expand?.company?.name ?? "",
   },
   { accessor: "party", sortable: true },
   { accessor: "booker", sortable: true },
@@ -115,6 +115,7 @@ export default function ItemTransactionsReport() {
 
   const transactions = useCRUD().fullList({
     collection: "payments_invoices_report",
+    expand: "area,section,company,party,booker,original_invoice",
     filter: `(type = "sale" || type = "return" || type = "recieving")
             ${
               applyDate
@@ -133,23 +134,11 @@ export default function ItemTransactionsReport() {
 
   const queries = [transactions, areas, sections, companies, parties, bookers];
   if (checkSuccess(queries)) {
-    const allData = transactions.data?.map((dt) => ({
-      ...dt,
-      expand: {
-        area: { name: areas.data?.find((are) => are.id === dt.area)?.name },
-        section: { name: sections.data?.find((sec) => sec.id === dt.section)?.name },
-        company: !Array.isArray(dt.company)
-          ? { name: companies.data?.find((cmp) => cmp.id === dt.company)?.name }
-          : dt.company.map((dt) => ({ name: companies.data?.find((cmpn) => cmpn.id === dt)?.name })),
-        party: {
-          name: parties.data?.find((pty) => pty.id === dt.party)?.name,
-        },
-        booker: {
-          name: bookers.data?.find((bkr) => bkr.id === dt.booker)?.name,
-        },
-      },
+    const allData = transactions.data.map((r) => ({
+      ...r,
+      expand: { ...r.expand, company: companies.data.find((c) => c.id === r.company) },
     }));
-    const { total, invoiceTotal, totalPaid } = calculator(allData);
+    const { total, invoiceTotal, totalPaid, recievingReturns } = calculator(allData);
     return (
       <>
         <ActionIcon
@@ -299,6 +288,10 @@ export default function ItemTransactionsReport() {
                   <Table.Td style={{ textAlign: "right", width: "8em" }}>{invoiceTotal}</Table.Td>
                 </Table.Tr>
                 <Table.Tr>
+                  <Table.Td style={{ width: "7em" }}>Returns</Table.Td>
+                  <Table.Td style={{ textAlign: "right", width: "8em" }}>{recievingReturns}</Table.Td>
+                </Table.Tr>
+                <Table.Tr>
                   <Table.Td style={{ width: "7em" }}>Total Paid</Table.Td>
                   <Table.Td style={{ textAlign: "right", width: "8em" }}>{totalPaid}</Table.Td>
                 </Table.Tr>
@@ -318,34 +311,45 @@ export default function ItemTransactionsReport() {
 }
 
 function calculator(payments) {
-  let invoiceTotal = 0;
-  let recieving = 0;
-  let recieved = 0;
-  let sending = 0;
-  let sent = 0;
-  let totalPaid = 0;
-  let sendingReturns = 0;
-  let recievingReturns = 0;
-  for (const pmnt of payments) {
-    if (pmnt.type === "purchase") {
-      pmnt.paid ? (sent += pmnt.amount) : (sending += pmnt.amount);
-    } else if (pmnt.type === "sale") {
-      pmnt.paid ? (recieved += pmnt.amount) : (recieving += pmnt.amount);
-    } else {
-      if (pmnt.party_type === "customer") {
-        recievingReturns += pmnt.amount;
-      } else {
-        sendingReturns += pmnt.amount;
-      }
-    }
-  }
+  
+  const recieving = payments.reduce(
+    (amnt, pmnt) => (pmnt.type === "sale" ? (!pmnt.paid ? amnt + pmnt.amount : amnt) : amnt),
+    0
+  );
+  const recieved = payments.reduce(
+    (amnt, pmnt) => (pmnt.type === "sale" ? (pmnt.paid ? amnt + pmnt.amount : amnt) : amnt),
+    0
+  );
+  const sending = payments.reduce(
+    (amnt, pmnt) => (pmnt.type === "purchase" ? (!pmnt.paid ? amnt + pmnt.amount : amnt) : amnt),
+    0
+  );
+  const sent = payments.reduce(
+    (amnt, pmnt) => (pmnt.type === "purchase" ? (pmnt.paid ? amnt + pmnt.amount : amnt) : amnt),
+    0
+  );
+  
+  const sendingReturns = payments.reduce(
+    (amnt, pmnt) => (pmnt.type === "return" ? amnt + pmnt.amount :  amnt),
+    0
+  );
+  const recievingReturns = payments.reduce(
+    (amnt, pmnt) => (pmnt.type === "return" ? amnt + pmnt.amount :  amnt),
+    0
+  );
+  const totalPaid = payments.reduce(
+    (amnt, pmnt) => (pmnt.paid ? amnt + pmnt.amount :  amnt),
+    0
+  );
+  const invoiceTotal = payments.reduce(
+    (amnt, pmnt) => ((!pmnt.paid && pmnt.type !== "return") ? amnt + pmnt.amount :  amnt),
+    0
+  );
 
-  for (const pmnt of payments) {
-    pmnt.paid ? (totalPaid += pmnt.amount) : (invoiceTotal += pmnt.amount);
-  }
+  
   const totalSending = Number((sending - sent - sendingReturns).toFixed(2));
   const totalRecieving = Number((recieving - recieved - recievingReturns).toFixed(2));
-  const total = Number((invoiceTotal - totalPaid).toFixed(2));
+  const total = Number((invoiceTotal - totalPaid - recievingReturns).toFixed(2));
   return {
     total,
     totalSending,

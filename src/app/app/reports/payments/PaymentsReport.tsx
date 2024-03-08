@@ -13,12 +13,8 @@ import moment from "moment";
 import { useForm } from "@mantine/form";
 
 export default function PaymentsReport() {
-  const [fromDate, setFromDate] = useState<Date | null>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0)
-  );
-  const [toDate, setToDate] = useState<Date | null>(
-    new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), 23, 59, 59, 999)
-  );
+  const [fromDate, setFromDate] = useState<Date | null>(moment().utc().startOf("month").toDate());
+  const [toDate, setToDate] = useState<Date | null>(moment().utc().endOf("day").toDate());
 
   const form = useForm({
     initialValues: {
@@ -35,12 +31,9 @@ export default function PaymentsReport() {
 
   const payments = useCRUD().fullList({
     collection: "payments_view",
-    expand: "invoice,party,area,section,booker,company",
-    filter: `(created >= '${moment(fromDate)
-      .startOf("day")
-      .format("YYYY-MM-DD HH:mm:ss")}' 
+    expand: "invoice,party,area,section,booker",
+    filter: `(created >= '${moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
       && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
-      ${form.values.company ? `&& (company~"${form.values.company}")` : ""}
       ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
       ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
       ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
@@ -104,19 +97,6 @@ export default function PaymentsReport() {
       sortable: true,
       width: "9em",
     },
-
-    {
-      accessor: "company",
-      width: "14em",
-      sortable: true,
-      render: (record) =>
-        record.expand?.company?.name ||
-        record.expand?.company?.map((cmp, i) => (
-          <Badge size='6pt' variant='white' color='black' key={`company-name-badge-${i}-${cmp.id}`}>
-            {cmp.name}
-          </Badge>
-        )),
-    },
     { accessor: "party", sortable: true },
     { accessor: "booker", hidden: form.values.reportType === "Sending", sortable: true },
     {
@@ -153,155 +133,112 @@ export default function PaymentsReport() {
 
     return (
       <>
+        <Group>
+          <DateInput
+            value={fromDate}
+            onChange={(v) => setFromDate(moment(v).startOf("day").utc().toDate())}
+            label='Date From'
+          />
+          <DateInput
+            value={toDate}
+            onChange={(v) => setToDate(moment(v).endOf("day").utc().toDate())}
+            label='Date To'
+          />
+        </Group>
         <Group className={styles.hideOnPrint}>
-          <Stack gap={0}>
-            <DateInput
-              value={fromDate}
-              onChange={(v) =>
-                setFromDate(
-                  new Date(
-                    new Date(v).getFullYear(),
-                    new Date(v).getMonth(),
-                    new Date(v).getDate(),
-                    0,
-                    0,
-                    0,
-                    0
-                  )
-                )
-              }
-              label='Date From'
-            />
-            <DateInput
-              value={toDate}
-              onChange={(v) =>
-                setToDate(
-                  new Date(
-                    new Date(v).getFullYear(),
-                    new Date(v).getMonth(),
-                    new Date(v).getDate(),
-                    23,
-                    59,
-                    59,
-                    999
-                  )
-                )
-              }
-              label='Date To'
-            />
-          </Stack>
-          <Stack gap={0}>
-            <NSelect
-              allowDeselect={false}
-              label={"Select Section"}
-              dataQuery={{ collectionName: "sections" }}
-              dataQueryValue='id'
-              dataLabel='name'
-              value={form.values.section}
-              searchable
-              onChange={(v) => {
-                form.setFieldValue("section", v);
-                form.setFieldValue("reportType", "section");
-              }}
-            />
-            <Select
-              label={"Select Area"}
-              data={
-                form.values.section === ""
-                  ? [...areas?.data?.map((ara) => ({ value: ara.id, label: ara.name }))]
-                  : [
-                      ...areas?.data
-                        ?.filter((ara) => ara.expand?.section?.id === form.values.section)
-                        .map((itm) => ({ label: itm.name, value: itm.id })),
-                    ]
-              }
-              value={form.values.area}
-              searchable
-              onChange={(v) => {
-                form.setFieldValue("area", v);
-                form.setFieldValue("reportType", "area");
-              }}
-            />
-          </Stack>
-          <Stack gap={0}>
-            <NSelect
-              label={"Select Booker"}
-              data={[]}
-              dataQuery={{ collectionName: "order_bookers" }}
-              dataQueryValue='id'
-              value={form.values.booker}
-              searchable
-              onChange={(v) => {
-                form.setFieldValue("booker", v);
-                form.setFieldValue("reportType", "booker");
-              }}
-            />
+          <Select
+            label={"Select Area"}
+            data={
+              form.values.section === ""
+                ? [...areas?.data?.map((ara) => ({ value: ara.id, label: ara.name }))]
+                : [
+                    ...areas?.data
+                      ?.filter((ara) => ara.expand?.section?.id === form.values.section)
+                      .map((itm) => ({ label: itm.name, value: itm.id })),
+                  ]
+            }
+            value={form.values.area}
+            searchable
+            onChange={(v) => {
+              form.setFieldValue("area", v);
+              form.setFieldValue("reportType", "area");
+            }}
+          />
+          <NSelect
+            allowDeselect={false}
+            label={"Select Section"}
+            dataQuery={{ collectionName: "sections" }}
+            dataQueryValue='id'
+            dataLabel='name'
+            value={form.values.section}
+            searchable
+            onChange={(v) => {
+              form.setFieldValue("section", v);
+              form.setFieldValue("reportType", "section");
+            }}
+          />
 
-            <Select
-              label={"Select Party"}
-              data={[
-                ...parties.data.map((pty) => ({
-                  value: pty.id,
-                  label: `${pty.name} - ${pty.expand?.area?.name}`,
-                })),
-              ]}
-              value={form.values.party}
-              searchable
-              onChange={(v) => {
-                form.setFieldValue("party", v);
-                form.setFieldValue("reportType", "party");
-              }}
-            />
-          </Stack>
-          <Stack gap={0}>
-            <Select
-              label={"Select Payment Type"}
-              data={[
-                { label: "Purchase", value: "sending" },
-                { label: "Sale", value: "recieving" },
-                { label: "Returns", value: "return" },
-              ]}
-              value={form.values.reportType}
-              onChange={(v) => {
-                form.setFieldValue("paymentType", v);
-                form.setFieldValue("reportType", v);
-              }}
-            />
-            <NSelect
-              label={"Company"}
-              value={form.values.company}
-              onChange={(v) => {
-                form.setFieldValue("company", v);
-                form.setFieldValue("reportType", "company");
-              }}
-              dataQuery={{
-                collectionName: "categories",
-              }}
-              dataQueryValue='id'
-            />
-          </Stack>
-          <Stack>
-            <Select
-              label={"Invoice"}
-              searchable
-              value={form.values.invoiceFilter}
-              onChange={(v) => {
-                form.setFieldValue("invoiceFilter", v);
-                form.setFieldValue("reportType", "invoice");
-              }}
-              data={invoices.data?.map((inv) => ({
-                value: inv.id,
-                label: `${inv.invoiceNo} ${inv.type.toUpperCase().charAt(0)}`,
-              }))}
-            />
-            <Button
-              onClick={() => {
-                form.reset();
-              }}
-            >
-              RESET
-            </Button>
-          </Stack>
+          <NSelect
+            label={"Select Booker"}
+            data={[]}
+            dataQuery={{ collectionName: "order_bookers" }}
+            dataQueryValue='id'
+            value={form.values.booker}
+            searchable
+            onChange={(v) => {
+              form.setFieldValue("booker", v);
+              form.setFieldValue("reportType", "booker");
+            }}
+          />
+
+          <Select
+            label={"Select Party"}
+            data={[
+              ...parties.data.map((pty) => ({
+                value: pty.id,
+                label: `${pty.name} - ${pty.expand?.area?.name}`,
+              })),
+            ]}
+            value={form.values.party}
+            searchable
+            onChange={(v) => {
+              form.setFieldValue("party", v);
+              form.setFieldValue("reportType", "party");
+            }}
+          />
+          <Select
+            label={"Select Payment Type"}
+            data={[
+              { label: "Purchase", value: "sending" },
+              { label: "Sale", value: "recieving" },
+              { label: "Returns", value: "return" },
+            ]}
+            value={form.values.reportType}
+            onChange={(v) => {
+              form.setFieldValue("paymentType", v);
+              form.setFieldValue("reportType", v);
+            }}
+          />
+          <Select
+            label={"Invoice"}
+            searchable
+            value={form.values.invoiceFilter}
+            onChange={(v) => {
+              form.setFieldValue("invoiceFilter", v);
+              form.setFieldValue("reportType", "invoice");
+            }}
+            data={invoices.data?.map((inv) => ({
+              value: inv.id,
+              label: `${inv.invoiceNo} ${inv.type.toUpperCase().charAt(0)}`,
+            }))}
+          />
+          <Button
+            onClick={() => {
+              form.reset();
+            }}
+          >
+            RESET
+          </Button>
         </Group>
         <Group align='center' justify='space-between'>
           <Group>
@@ -358,12 +295,12 @@ export default function PaymentsReport() {
           )}
         </Group>
         <Table
-          fz={"9pt"}
+          fz={"sm"}
           horizontalSpacing={1}
           verticalSpacing={0}
           styles={{
-            td: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
-            th: { fontSize: "7pt", padding: "0.2em", border: "1px solid black" },
+            td: { padding: "0.2em", border: "1px solid black" },
+            th: { padding: "0.2em", border: "1px solid black" },
           }}
         >
           <Table.Thead>
@@ -384,7 +321,7 @@ export default function PaymentsReport() {
                   col.hidden ? null : (
                     <Table.Td
                       key={`td-${row.id}-${col.accessor}`}
-                      style={{ textAlign: col.textAlign ?? "start", width: col.width??"auto" }}
+                      style={{ textAlign: col.textAlign ?? "start", width: col.width ?? "auto" }}
                     >
                       {col.render
                         ? col.render(row)
@@ -401,7 +338,7 @@ export default function PaymentsReport() {
           </Table.Tbody>
         </Table>
 
-        <Stack gap={0} align='end' style={{ width: "100%" }}>
+        <Flex gap={"md"} direction={"row"} justify={"end"} align={"end"} w={"100%"}>
           {form.values.reportType !== "recieving" &&
             !form.values.booker &&
             (form.values.party
@@ -410,24 +347,40 @@ export default function PaymentsReport() {
             (form.values.invoiceFilter
               ? invoices.data.find((r) => r.id === form.values.invoiceFilter)?.type !== "sale"
               : true) && (
-              <Flex gap={0} direction={"row"}justify={"space-evenly"} align={"end"} w={"100%"}>
-                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Purchase Invoice Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{sending}</Text>
-                </Group>
-                <Group justify='space-between' w={"12rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Paid Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{sent}</Text>
-                </Group>
-                <Group justify='space-between' w={"8em"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Returns</Text>
-                  <Text style={{ fontSize: "8pt" }}>{sendingReturns}</Text>
-                </Group>
-                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Total Payable Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{totalSending}</Text>
-                </Group>
-              </Flex>
+              <Table
+                w={"15rem"}
+                fz={"sm"}
+                horizontalSpacing={1}
+                verticalSpacing={0}
+                data={{
+                  body: [
+                    [
+                      <Text key={"pialabel"}>Purchase Amount</Text>,
+                      <Text style={{ textAlign: "right" }} key={"piamount"}>
+                        {sending}
+                      </Text>,
+                    ],
+                    [
+                      <Text key={"sentlabel"}>Paid Amount</Text>,
+                      <Text style={{ textAlign: "right" }} key={"sentamount"}>
+                        {sent}
+                      </Text>,
+                    ],
+                    [
+                      <Text key={"returnslabel"}>Returns</Text>,
+                      <Text style={{ textAlign: "right" }} key={"returnamount"}>
+                        {sendingReturns}
+                      </Text>,
+                    ],
+                    [
+                      <Text key={"reclabel"}>Payable Amount</Text>,
+                      <Text style={{ textAlign: "right" }} key={"recamount"}>
+                        {total}
+                      </Text>,
+                    ],
+                  ],
+                }}
+              />
             )}
           {form.values.reportType !== "sending" &&
             (form.values.party
@@ -436,26 +389,42 @@ export default function PaymentsReport() {
             (form.values.invoiceFilter
               ? invoices.data.find((r) => r.id === form.values.invoiceFilter)?.type !== "purchase"
               : true) && (
-              <Flex gap={0} direction={"row"}justify={"space-evenly"} align={"end"} w={"100%"}>
-                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Sale Invoice Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{recieving}</Text>
-                </Group>
-                <Group justify='space-between' w={"12rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Recieved Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{recieved}</Text>
-                </Group>
-                <Group justify='space-between' w={"8em"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Returns</Text>
-                  <Text style={{ fontSize: "8pt" }}>{recievingReturns}</Text>
-                </Group>
-                <Group justify='space-between' w={"14rem"} mx={"0.2rem"}>
-                  <Text style={{ fontSize: "8pt" }}>Total Recivable Amount</Text>
-                  <Text style={{ fontSize: "8pt" }}>{totalRecieving}</Text>
-                </Group>
-              </Flex>
+              <Table
+                w={"15rem"}
+                fz={"sm"}
+                horizontalSpacing={1}
+                verticalSpacing={0}
+                data={{
+                  body: [
+                    [
+                      <Text key={"sialabel"}>Sales Amount</Text>,
+                      <Text style={{ textAlign: "right" }} key={"siamount"}>
+                        {recieving}
+                      </Text>,
+                    ],
+                    [
+                      <Text key={"reclabel"}>Recieved Amount</Text>,
+                      <Text style={{ textAlign: "right" }} key={"recamount"}>
+                        {recieved}
+                      </Text>,
+                    ],
+                    [
+                      <Text key={"sreturnslabel"}>Returns</Text>,
+                      <Text style={{ textAlign: "right" }} key={"sreturnamount"}>
+                        {recievingReturns}
+                      </Text>,
+                    ],
+                    [
+                      <Text key={"stotallabel"}>Recivable Amount</Text>,
+                      <Text style={{ textAlign: "right" }} key={"stotalamount"}>
+                        {totalRecieving}
+                      </Text>,
+                    ],
+                  ],
+                }}
+              />
             )}
-        </Stack>
+        </Flex>
       </>
     );
   } else return <StatusCheck check={queries} />;
