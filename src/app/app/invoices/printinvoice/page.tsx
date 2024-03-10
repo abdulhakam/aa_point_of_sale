@@ -11,6 +11,7 @@ import { IconPrinter } from "@tabler/icons-react";
 import { useReactToPrint } from "react-to-print";
 import PrintHead from "@/app/components/printing/PrintHead";
 import { useSearchParams } from "next/navigation";
+import InvoicePrintQueue from "./queue/page";
 
 const tableStructure = [
   { accessor: "id", hidden: true },
@@ -37,7 +38,7 @@ export default function PrintInvoice() {
     expand: "invoice_maker,party,booker,party.area,party.area.section",
   });
   const [type, setType] = useState("purchase");
-  const [filterValue, setFilter] = useState("");
+  const [invoiceNo, setInvoiceNo] = useState("");
   const filteredInvoices = dataFilter(
     [
       {
@@ -51,7 +52,7 @@ export default function PrintInvoice() {
   if (checkSuccess(queries)) {
     return (
       <>
-        <Group align="end">
+        <Group align='end'>
           <Select
             searchable
             allowDeselect={false}
@@ -65,18 +66,28 @@ export default function PrintInvoice() {
             allowDeselect={false}
             label={"Invoice No:"}
             data={filteredInvoices.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) }))}
-            value={filterValue}
-            onChange={setFilter}
+            value={invoiceNo}
+            onChange={setInvoiceNo}
           />
           <Button
             mt={"sm"}
-            component="a"
-            target="_blank"
-            href={`/app/invoices/print?invoiceId=${filterValue}`}
-            variant="outline"
+            component='a'
+            target='_blank'
+            href={`/app/invoices/print?invoiceId=${invoiceNo}`}
+            variant='outline'
           >
-            OK
+            View Invoice
           </Button>
+        </Group>
+        <Group align="start">
+          <div style={{ width: "28vw" }}>
+            <InvoicePrintQueue />
+          </div>
+          <Flex mt={"sm"} style={{ height:"80vh",width:"60vw"}}>
+            {invoiceNo && (
+              <iframe style={{flex:1}} src={`/app/invoices/print?invoiceId=${invoiceNo}`} />
+            )}
+          </Flex>
         </Group>
       </>
     );

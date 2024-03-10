@@ -2,13 +2,14 @@
 import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import { useEffect, useRef, useState } from "react";
-import { ActionIcon, Button, Flex, Group, Stack, Table, Text } from "@mantine/core";
+import { ActionIcon, Button, Flex, Group, Stack, Table, Text, Tooltip } from "@mantine/core";
 import { getQty } from "@/app/components/functions/qtyParser";
-import { IconPrinter } from "@tabler/icons-react";
+import { IconPlus, IconPrinter } from "@tabler/icons-react";
 import { useReactToPrint } from "react-to-print";
 import { useSearchParams } from "next/navigation";
 import PrintContent from "@/app/components/printing/PrintContent";
 import styles from "@/app/components/printing/styles.module.css";
+import { useLocalStorage } from "@mantine/hooks";
 
 const head = (
   <Table.Thead>
@@ -47,10 +48,18 @@ const head = (
     </Table.Tr>
   </Table.Thead>
 );
+
+
 export default function InvoicePrint() {
   const searchParams = useSearchParams();
   const invoiceId = searchParams.get("invoiceId");
-
+  const [printQueue, setPrintQueue] = useLocalStorage<{}[]>({
+    key: "print-queue",
+    defaultValue: [] as {}[],
+  });
+  const addToQueue = (props:{transactions:Object[], invoice:{}}) => {
+    setPrintQueue([...printQueue, { transactions, invoice }]);
+  }
   const printRef = useRef();
   const invoices = useCRUD().read({
     collection: "invoice_view",
@@ -101,6 +110,7 @@ export default function InvoicePrint() {
   if (checkSuccess(queries)) {
     return (
       <>
+      <Tooltip label={`Print Invoice Now`} position='right' transitionProps={{ duration: 0 }}>
         <ActionIcon
           onClick={() => {
             handlePrint();
@@ -110,7 +120,22 @@ export default function InvoicePrint() {
           color='blue'
         >
           <IconPrinter />
-        </ActionIcon>
+        </ActionIcon></Tooltip>
+        <Tooltip label={`Add to Print Queue`} position='right' transitionProps={{ duration: 0 }}>
+          <ActionIcon
+            onClick={() => {
+              addToQueue({
+                transactions: transactions.data,
+                invoice: invoices.data,
+              });
+            }}
+            size='xl'
+            variant='filled'
+            color='blue'
+          >
+            <IconPrinter />+{/* <IconPlus /> */}
+          </ActionIcon>
+        </Tooltip>
         {/* //////////////////////////////////////////////////////////////////////////// */}
         <div ref={printRef}>
           <PrintContent
