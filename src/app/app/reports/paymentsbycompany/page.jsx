@@ -36,7 +36,7 @@ const columns = [
     accessor: "original_invoice",
     title: "Main Invoice",
     width: "4em",
-    render: (record) => `${record.expand?.original_invoice?.[0].invoiceNo ?? "-"} ${record.expand?.original_invoice?.[0].type.charAt(0).toUpperCase() ?? "-"}`,
+    render: (record) => `${record.expand?.original_invoice?.[0]?.invoiceNo ?? "-"} ${record.expand?.original_invoice?.[0]?.type.charAt(0).toUpperCase() ?? "-"}`,
   },
   {
     accessor: "area",
