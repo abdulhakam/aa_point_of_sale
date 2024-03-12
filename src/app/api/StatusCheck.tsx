@@ -1,4 +1,4 @@
-import { Children } from "react";
+"use client";
 
 export const checkSuccess = (arr = []) => {
   return arr.filter((q) => q.status === "success").length === arr.length;

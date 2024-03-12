@@ -34,6 +34,7 @@ export default function AuthenticationForm(props) {
           : router.push("/app/dashboard"))
         : router.push("/app/dashboard");
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const submitFunction = (data) => {

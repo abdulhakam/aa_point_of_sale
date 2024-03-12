@@ -4,6 +4,7 @@ import {
   IconChartArea,
   IconChartArrowsVertical,
   IconChartBar,
+  IconChartCandle,
   IconChartLine,
   IconReportMoney, IconTrolley,
 } from "@tabler/icons-react";
@@ -18,6 +19,7 @@ const mockdata = [
   { title: "Item Sales Report", icon: IconChartBar, color: "pink", target: "reports/transactions/unified" },
   { title: "Payments By Company", icon: IconChartArea, color: "red", target: "reports/paymentsbycompany" },
   { title: "Company Report", icon: IconChartArrowsVertical, color: "yellow", target: "reports/company_report" },
+  {title: "Profit Report", icon: IconChartCandle, color: "orange", target: "reports/profit" }
 ];
 
 export default function ActionsGrid(props) {

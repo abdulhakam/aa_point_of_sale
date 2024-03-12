@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
-import { FormStructure, OrderBooker } from "./types";
+import { FormStructure, OrderBookers } from "./types";
 
 export async function createOrderBooker(data) {
   return await pb.collection("order_bookers").create(data);

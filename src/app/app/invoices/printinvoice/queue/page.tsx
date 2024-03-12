@@ -6,6 +6,7 @@ import InvoiceBody from "./invoicebody";
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import { IconPrinter, IconPrinterOff } from "@tabler/icons-react";
+import { Invoices } from "@/app/api/types";
 
 export default function InvoicePrintQueue() {
   const printRef = useRef();
@@ -14,7 +15,7 @@ export default function InvoicePrintQueue() {
     documentTitle: `INVOICES`,
     pageStyle: "@page {size: A5; margin: 0.5cm 0.9cm 0.9cm 0.9cm !important;}",
   });
-  const [printQueue, setPrintQueue, clear] = useLocalStorage<{ invoice: {}; transactions: [] }[]>({
+  const [printQueue, setPrintQueue, clear] = useLocalStorage<any[]>({
     key: "print-queue",
     defaultValue: [],
   });
@@ -38,7 +39,7 @@ export default function InvoicePrintQueue() {
           <PrintContent>
             {noDuplicates.length === 0 && <Text>Nothing in queue</Text>}
             {noDuplicates.map((itm) => (
-              <InvoiceBody key={itm.invoice.id} invoice={itm.invoice} transactions={itm.transactions.data} />
+              <InvoiceBody key={itm.invoice?.id} invoice={itm.invoice} transactions={itm.transactions.data} />
             ))}
           </PrintContent>
         </div>

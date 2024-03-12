@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
-import { FormStructure, Area } from "./types";
+import { FormStructure, Areas } from "./types";
 import { sectionCreateForm } from "./sections";
 
 export function useAreas() {
