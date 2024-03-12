@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
-import { FormStructure, Transaction } from "./types";
+import { FormStructure, Transactions } from "./types";
 export const allTransactions = async () =>
   await pb.collection("transaction_view").getFullList({
     sort: "-created",expand:'item'
@@ -46,7 +46,7 @@ export async function deleteTransaction(rid) {
   return await pb.collection("transactions").delete(rid);
 }
 
-export const transactionFormStructure: FormStructure<Transaction> = {
+export const transactionFormStructure: FormStructure<any> = {
   fields: {
     created: { type: "datetime", hidden:true, baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
     updated: { type: "datetime", hidden:true, baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },

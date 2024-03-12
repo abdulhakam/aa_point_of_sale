@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import pb from "../pocketbase";
-import { FormStructure, Invoice } from "./types";
+import { FormStructure, Invoices } from "./types";
+
+
 
 export async function getInvoice(invNo) {
   return await pb.collection("invoices").getOne(invNo);
@@ -65,7 +67,7 @@ export async function deleteInvoice(rid) {
   return await pb.collection("invoices").delete(rid);
 }
 
-export const invoiceFormStructure: FormStructure<Invoice> = {
+export const invoiceFormStructure: FormStructure<any> = {
   fields: {
     created: { type: "datetime", baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
     updated: { type: "datetime", baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },

@@ -18,6 +18,7 @@ export default function Transactions({ invoice }) {
   const qc = useQueryClient();
   useEffect(() => {
     qc.invalidateQueries();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const remove = useMutation({
     mutationFn: crud.remove,

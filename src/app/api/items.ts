@@ -1,7 +1,7 @@
 import pb from "../pocketbase";
-import { FormStructure, Item } from "./types";
+import { FormStructure, Items } from "./types";
 
-export const itemFormStructure: FormStructure<Item> = {
+export const itemFormStructure: FormStructure<any> = {
   fields: {
     created: { type: "datetime", hidden:true, default: undefined, baseProps: { label: "Created" } },
     updated: { type: "datetime", default: undefined, baseProps: { label: "Updated" } },

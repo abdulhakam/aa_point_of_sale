@@ -1,8 +1,8 @@
 import pb from "../pocketbase";
-import { FormStructure, Payment } from "./types";
+import { FormStructure, Payments } from "./types";
 import { crud } from "./useAPI";
 
-export const paymentFormStructure: FormStructure<Payment> = {
+export const paymentFormStructure: FormStructure<any> = {
   fields: {
     id: { type: "autocomplete", default: undefined, baseProps: { label: "id", data: [] } },
     created: { type: "datetime", default: undefined, baseProps: { disabled: true, label: "Created" } },

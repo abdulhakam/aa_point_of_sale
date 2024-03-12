@@ -1,5 +1,5 @@
 import pb from "../pocketbase";
-import { Category, FormStructure } from "./types";
+import { Categories, FormStructure } from "./types";
 
 export async function createCategory(data) {
   return await pb.collection("categories").create(data);
@@ -18,7 +18,7 @@ export async function deleteCategory(data) {
   return await pb.collection('categories').delete(data.id);
 }
 
-export const categoryFormStructure: FormStructure<Category> = {
+export const categoryFormStructure: FormStructure<Categories> = {
   fields: {
     created: { type: "datetime",hidden:true, baseProps: { label: "Created", readOnly: true, variant: "unstyled" } },
     updated: { type: "datetime",hidden:true, baseProps: { label: "Updated", readOnly: true, variant: "unstyled" } },

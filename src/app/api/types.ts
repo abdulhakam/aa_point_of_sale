@@ -25,104 +25,141 @@ export type FormStructure<T> = {
   onDelete: (data: T) => void;
 };
 
-export interface CollectionItem {
-  id: string;
-  created: Date;
-  updated: Date;
-  // collectionID: string;
-  // collectionName:string;
-}
-// Define interfaces for the specific objects
-export interface Party extends CollectionItem {
-  id: string;
-  created: Date;
-  updated: Date;
-  name: string;
-  type: "customer" | "supplier" | "both";
-  area: string;
-  phone: string;
-  address: string;
-  deleted: boolean;
+export interface Users {
+	avatar: string;
+	created: string;
+	email: string;
+	emailVisibility: boolean;
+	id: string;
+	lastResetSentAt: string;
+	lastVerificationSentAt: string;
+	name: string;
+	passwordHash: string;
+	tokenKey: string;
+	updated: string;
+	username: string;
+	verified: boolean;
 }
 
-export interface Item extends CollectionItem {
-  created: Date;
-  updated: Date;
-  id: string;
-  name: string;
-  cost_price: number;
-  sale_price: number;
-  box_size_qty: number;
-  qty: number;
-  category: string;
+export interface Sections {
+	created: string;
+	id: string;
+	name: string;
+	updated: string;
 }
 
-export interface Area extends CollectionItem {
-  created: Date;
-  updated: Date;
-  id: string;
-  name: string;
-  section:string;
-  deleted: boolean;
+export interface Areas {
+	created: string;
+	id: string;
+	name: string;
+	section: string;
+	updated: string;
+	deleted: boolean;
 }
 
-export interface Category extends CollectionItem {
-  created: Date;
-  updated: Date;
-  id: string;
-  name: string;
-  deleted: boolean;
+export interface Categories {
+	created: string;
+	id: string;
+	name: string;
+	updated: string;
+	deleted: boolean;
 }
 
-export interface OrderBooker extends CollectionItem {
-  created: Date;
-  updated: Date;
-  id: string;
-  name: string;
-  phone: string;
-  deleted: boolean;
+export interface Expenses {
+	amount: number;
+	created: string;
+	description: string;
+	id: string;
+	name: string;
+	updated: string;
+	date: string;
 }
 
-export interface Invoice extends CollectionItem {
-  created: Date;
-  updated: Date;
-  id: string;
-  invoice_maker: string;
-  party: string;
-  type: "purchase" | "sale";
-  transactions: string[];
-  total: number;
-  discount_1: number;
-  discount_2: number;
-  total_after_discount: number;
-  description: string;
-  deleted: boolean;
+export interface Parties {
+	address: string;
+	area: string;
+	created: string;
+	id: string;
+	name: string;
+	phone: string;
+	type: string;
+	updated: string;
+	deleted: boolean;
+	company: any[];
 }
 
-export interface Transaction extends CollectionItem {
-  created: Date;
-  updated: Date;
-  id: string;
-  invoice: string;
-  item: string;
-  qty: number;
-  scheme: number;
-  price: number;
-  discount_1: number;
-  discount_2: number;
-  total: number;
-  deleted: boolean;
+export interface OrderBookers {
+	company: any[];
+	created: string;
+	id: string;
+	name: string;
+	phone: string;
+	updated: string;
+	deleted: boolean;
 }
 
-export interface Payment extends CollectionItem {
-  id: string;
-  created: Date;
-  updated: Date;
-  invoice: string;
-  party: string;
-  type: "recieving" | "sending";
-  amount: number;
-  paid:Boolean;
-  description:string;
-  deleted: boolean;
+export interface Invoices {
+	booker: string;
+	completed: boolean;
+	created: string;
+	description: string;
+	discount_1: number;
+	discount_2: number;
+	duedate: string;
+	id: string;
+	invoiceNo: number;
+	invoice_maker: string;
+	party: string;
+	type: string;
+	updated: string;
+	deleted: boolean;
+	dated: string;
+	discount_rs: number;
+}
+
+export interface Items {
+	category: string;
+	cost_price: number;
+	created: string;
+	id: string;
+	name: string;
+	sale_price: number;
+	updated: string;
+	box_size_qty: number;
+}
+
+export interface Payments {
+	amount: number;
+	created: string;
+	description: string;
+	id: string;
+	invoice: string;
+	paid: boolean;
+	party: string;
+	type: string;
+	updated: string;
+	payment_date: string;
+}
+
+export interface Transactions {
+	discount_1: number;
+	discount_2: number;
+	id: string;
+	invoice: string;
+	item: string;
+	price: number;
+	qty: number;
+	scheme: number;
+	updated: string;
+	deleted: boolean;
+	created: string;
+	cost_price: number;
+	discount_rs: number;
+}
+
+export interface InvoicesReturnReference {
+	created: string;
+	id: string;
+	updated: string;
+	original_invoices: string;
 }
