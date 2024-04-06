@@ -159,6 +159,9 @@ export default function PartyLedgerReport() {
                     ))}
                   </Table.Tbody>
                 </Table>
+                <Flex justify={"end"}>
+                  <Text fw={600}>Final Balance: {allData[allData.length - 1]?.balance}</Text>
+                </Flex>
               </PrintContent>
             )}
           </div>

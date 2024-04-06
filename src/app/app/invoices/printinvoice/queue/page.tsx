@@ -1,12 +1,12 @@
 "use client";
 import { useLocalStorage } from "@mantine/hooks";
 import PrintContent from "../../../../components/printing/PrintContent";
-import { ActionIcon, Button, Group, Text, Tooltip } from "@mantine/core";
+import { ActionIcon, Button, Group, Stack, Text, Tooltip } from "@mantine/core";
 import InvoiceBody from "./invoicebody";
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import { IconPrinter, IconPrinterOff } from "@tabler/icons-react";
-import { Invoices } from "@/app/api/types";
+import styles from "@/app/components/printing/styles.module.css";
 
 export default function InvoicePrintQueue() {
   const printRef = useRef();
@@ -19,7 +19,9 @@ export default function InvoicePrintQueue() {
     key: "print-queue",
     defaultValue: [],
   });
-  const noDuplicates = Array.from(new Set(printQueue));
+  const noDuplicates = printQueue.filter(
+    (value, index, self) => index === self.findIndex((t) => t.invoice.invoiceNo === value.invoice.invoiceNo)
+  );
   return (
     <>
       <Group>
@@ -34,12 +36,34 @@ export default function InvoicePrintQueue() {
           </ActionIcon>
         </Tooltip>
       </Group>
-      <div style={{height:"74vh", overflow:"scroll"}}>
+      <div style={{ height: "74vh", overflow: "scroll" }}>
         <div ref={printRef}>
-          <PrintContent>
+          <PrintContent
+            footer={
+              <footer className={styles.showOnPrint}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <Stack gap={0}>
+                    <Text size='10pt'>Checked By: ABDUL MAJID </Text>
+                    <Text size='10pt'>{process.env.NEXT_PUBLIC_PHONE}</Text>
+                    {/* {process.env.NEXT_PUBLIC_NAME} {process.env.NEXT_PUBLIC_PHONE}{" "} */}
+                  </Stack>
+                  <Stack gap={0}>
+                    <Text size='10pt'>Delivered By: OSAMA</Text>
+                    <Text size='10pt'>0315-3730881</Text>
+                  </Stack>
+                </div>
+              </footer>
+            }
+          >
             {noDuplicates.length === 0 && <Text>Nothing in queue</Text>}
-            {noDuplicates.map((itm) => (
-              <InvoiceBody key={itm.invoice?.id} invoice={itm.invoice} transactions={itm.transactions.data} />
+            {noDuplicates.map((itm, i) => (
+              <InvoiceBody
+                key={itm.invoice?.id}
+                inline
+                breakAfter={i < noDuplicates.length - 1}
+                invoice={itm.invoice}
+                transactions={itm.transactions.data}
+              />
             ))}
           </PrintContent>
         </div>

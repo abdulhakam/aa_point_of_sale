@@ -97,11 +97,11 @@ const columns = [
   },
   { accessor: "inv_drs", title: "Inv DiscRs", textAlign: "right" as any, hidden: true },
   {
-    accessor: "net_amount",
+    accessor: "final_amount",
     title: "Total",
     sortable: true,
     textAlign: "right" as any,
-    render: (row) => Number(row.net_amount).toFixed(2),
+    render: (row) => Number(row.final_amount).toFixed(2),
   },
 ];
 

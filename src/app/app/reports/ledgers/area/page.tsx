@@ -17,7 +17,7 @@ const tableStructure: DataTableColumn[] = [
   {
     accessor: "party",
     // width: "5em",
-    render: (record: any) => (record.party ? record.expand?.party?.name : ""),
+    render: (record: any) => (record.party ? (record.expand?.party?.name ?? record.party) : ""),
   },
   {
     accessor: "debit",
@@ -64,7 +64,23 @@ export default function AreaLedger() {
 
   const queries = [ledger, areas, sections];
   if (checkSuccess(queries)) {
-    const allData = [...ledger.data];
+    const totals = ledger.data.reduce(
+      (prev, curr) => ({
+        debit: prev.debit + curr.debit,
+        credit: prev.credit + curr.credit,
+        balance: prev.balance + curr.balance,
+      }),
+      { debit: 0, credit: 0, balance: 0 }
+    );
+    const allData = [
+      ...ledger.data,
+      {
+        party: <Text fw={"600"}>TOTAL</Text>,
+        debit: <Text fw={"600"}>{totals.debit}</Text>,
+        credit: <Text fw={"600"}>{totals.credit}</Text>,
+        balance: <Text fw={"600"}>{totals.balance}</Text>,
+      },
+    ] as any[];
     return (
       <>
         <Stack mb={"sm"}>

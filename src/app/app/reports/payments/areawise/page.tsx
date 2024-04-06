@@ -1,6 +1,6 @@
 "use client";
-import { ActionIcon, Button, Group, Select, Text } from "@mantine/core";
-import PaymentsReport from "./PaymentsView";
+import { ActionIcon, Button, Group, Select } from "@mantine/core";
+import PaymentsReport from "../PaymentsView";
 import { IconPrinter } from "@tabler/icons-react";
 import { useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
@@ -190,9 +190,6 @@ export default function Payments() {
         </Group>
         <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
           <PrintContent>
-            <Text size="xl" fw={700}>
-              Payments Report
-            </Text>
             <PaymentsReport
               fromDate={fromDate}
               toDate={toDate}
