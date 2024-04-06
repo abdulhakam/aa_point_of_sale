@@ -9,7 +9,7 @@ import {
   IconReportMoney, IconTrolley,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const mockdata = [
@@ -18,13 +18,13 @@ const mockdata = [
   { title: "Ledgers", icon: IconChartLine, color: "grape", target: "reports/ledgers" },
   { title: "Item Sales Report", icon: IconChartBar, color: "pink", target: "reports/transactions/unified" },
   { title: "Payments By Company", icon: IconChartArea, color: "red", target: "reports/paymentsbycompany" },
-  { title: "Company Report", icon: IconChartArrowsVertical, color: "yellow", target: "reports/company_report" },
   {title: "Profit Report", icon: IconChartCandle, color: "orange", target: "reports/profit" }
+  // { title: "Company Report", icon: IconChartArrowsVertical, color: "yellow", target: "reports/company_report" },
 ];
 
 export default function ActionsGrid(props) {
   const theme = useMantineTheme();
-  const router = useRouter();
+  // const router = useRouter();
   const items = mockdata.map((item) => (
     <Grid.Col m={'sm'} span={2} key={item.title}>
       <Link style={{textDecoration:'none'}} href={`/app/${item.target}`} className={classes.item}>
