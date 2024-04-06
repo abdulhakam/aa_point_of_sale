@@ -141,9 +141,9 @@ export default function ProfitReport() {
     collection: "transactions_report",
     expand: "item,company,party,party.area,party.area.section,booker",
     filter: `(type = "sale" || type = "return")
-            && (created >= '${moment(fromDate).utc().format("YYYY-MM-DD")}' && created <= '${moment(toDate)
+            && (created >= '${moment(fromDate).utc().format("YYYY-MM-DD 00:00:00")}' && created <= '${moment(toDate)
       .utc()
-      .format("YYYY-MM-DD")}')
+      .format("YYYY-MM-DD 23:59:59")}')
             ${form.values.company ? `&& (company = "${form.values.company}")` : ""}
             ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
             ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
@@ -182,15 +182,7 @@ export default function ProfitReport() {
             value={toDate}
             onChange={(v) =>
               setToDate(
-                new Date(
-                  new Date(v).getFullYear(),
-                  new Date(v).getMonth(),
-                  new Date(v).getDate(),
-                  23,
-                  59,
-                  59,
-                  999
-                )
+                moment(v).endOf("day").toDate()
               )
             }
             label='Date To'
