@@ -70,13 +70,16 @@ export default function InvoiceForm(props) {
   });
   const partyInvoices = useCRUD().fullList({
     collection: "invoice_view",
-    filter: `party="${invoiceForm.values.party}" && type="${
-      parties.data?.find((p) => p.id === invoiceForm.values.party)?.type === "customer" ? "sale" : "purchase"
-    }"`,
+    filter: `party="${invoiceForm.values.party}"`,
   });
   const items = useCRUD().fullList({ collection: "items", expand: "category" });
   const user = useCRUD().read({ collection: "users", recordID: pb.authStore?.model?.id });
   const counts = useCRUD().read({ collection: "counts_for_row_numbers", recordID: "1" });
+  const return_refs = useCRUD().fullList({
+    collection: "invoices_return_reference",
+    queryKey: "returnRefs",
+    expand: "original_invoices",
+  });
   const bookers = useCRUD().fullList({
     collection: "order_bookers",
   });
@@ -230,7 +233,7 @@ export default function InvoiceForm(props) {
     const invoicedata = invoices.data.find((inv) => inv.id === invoice);
     return invoicedata.date ? new Date(invoicedata.date) : new Date(invoicedata.created);
   };
-  const queries = [invoices, parties, user, items, counts, bookers];
+  const queries = [invoices, parties, user, items, counts, bookers, return_refs];
   if (checkSuccess(queries)) {
     return (
       <>
@@ -300,6 +303,10 @@ export default function InvoiceForm(props) {
                     invoices.data.find((inv) => inv.id === v)?.expand.party?.id
                   );
                   invoiceForm.setFieldValue("date", v === "new" ? new Date() : getInvoiceDate(v));
+                  props.type === "return" &&
+                    setOriginalInvoice(
+                      `${return_refs.data?.find((ref) => ref.id === v).expand.original_invoices.id}`
+                    );
                 }}
               />
               <DateInput
@@ -418,7 +425,7 @@ export default function InvoiceForm(props) {
             </Stack>
           )}
           <ActionIcon
-            onClick={()=>window.open(`print?invoiceId=${invoiceForm.values.invoiceNo}`,'_blank')}
+            onClick={() => window.open(`print?invoiceId=${invoiceForm.values.invoiceNo}`, "_blank")}
             size='xl'
             variant='subtle'
             color='blue'

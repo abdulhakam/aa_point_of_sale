@@ -25,7 +25,7 @@
 }
 
 .pageFooter, .pageFooterSpace {
-  height: 1.3rem;
+  height: 1.7rem;
 
 }
 
@@ -47,9 +47,7 @@
 
 .page {
   width: 100%;
-  page-break-after: always;
 }
-
 /* @page {
   margin: 5mm
 

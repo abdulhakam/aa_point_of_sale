@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import PrintContent from "@/app/components/printing/PrintContent";
 import styles from "@/app/components/printing/styles.module.css";
 import { useLocalStorage } from "@mantine/hooks";
+import InvoiceBody from "../printinvoice/queue/invoicebody";
 
 const head = (
   <Table.Thead>
@@ -49,7 +50,6 @@ const head = (
   </Table.Thead>
 );
 
-
 export default function InvoicePrint() {
   const searchParams = useSearchParams();
   const invoiceId = searchParams.get("invoiceId");
@@ -57,9 +57,9 @@ export default function InvoicePrint() {
     key: "print-queue",
     defaultValue: [] as {}[],
   });
-  const addToQueue = (props:{transactions:Object[], invoice:{}}) => {
+  const addToQueue = (props: { transactions: Object[]; invoice: {} }) => {
     setPrintQueue([...printQueue, { transactions, invoice }]);
-  }
+  };
   const printRef = useRef();
   const invoices = useCRUD().read({
     collection: "invoice_view",
@@ -77,50 +77,23 @@ export default function InvoicePrint() {
     filter: `invoice = '${invoiceId}'`,
     sort: "+created",
   });
-  const [type, setType] = useState("purchase");
-  const [filterValue, setFilter] = useState("");
-  useEffect(() => {
-    if (invoices.isSuccess) {
-      setFilter(invoices.data?.id);
-      setType(invoices.data?.type);
-    }
-  }, [invoices]);
   const invoice = invoices.data;
-  const rows = transactions.data?.map((r, i) => (
-    <Table.Tr key={`TRow-${i + 1}`}>
-      <Table.Td>{i + 1}</Table.Td>
-      <Table.Td scope='row' style={{ overflow: "hidden", whiteSpace: "nowrap" }}>
-        {r.expand.item.name}
-      </Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{r.expand.item.box_size_qty}</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{getQty(r.expand.item, r.qty).ctns}</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{getQty(r.expand.item, r.qty).units}</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{r.scheme}</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{Number(r.price).toFixed(2)}</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>
-        {Number(r.price * r.expand.item.box_size_qty).toFixed(2)}
-      </Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_1).toFixed(2)}%</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_2).toFixed(2)}%</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_rs).toFixed(2)}</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{Number(r.total).toFixed(2)}</Table.Td>
-    </Table.Tr>
-  ));
   const queries = [invoices, transactions];
   if (checkSuccess(queries)) {
     return (
       <>
-      <Tooltip label={`Print Invoice Now`} position='right' transitionProps={{ duration: 0 }}>
-        <ActionIcon
-          onClick={() => {
-            handlePrint();
-          }}
-          size='xl'
-          variant='subtle'
-          color='blue'
-        >
-          <IconPrinter />
-        </ActionIcon></Tooltip>
+        <Tooltip label={`Print Invoice Now`} position='right' transitionProps={{ duration: 0 }}>
+          <ActionIcon
+            onClick={() => {
+              handlePrint();
+            }}
+            size='xl'
+            variant='subtle'
+            color='blue'
+          >
+            <IconPrinter />
+          </ActionIcon>
+        </Tooltip>
         <Tooltip label={`Add to Print Queue`} position='right' transitionProps={{ duration: 0 }}>
           <ActionIcon
             onClick={() => {
@@ -155,7 +128,8 @@ export default function InvoicePrint() {
               </footer>
             }
           >
-            <h3 style={{ margin: 0 }}>{`${type.toUpperCase()} INVOICE`}</h3>
+            <InvoiceBody key={invoice?.id} invoice={invoice} transactions={transactions.data} />
+            {/* <h3 style={{ margin: 0 }}>{`${type.toUpperCase()} INVOICE`}</h3>
             <Group gap={0} justify='space-between'>
               <Stack w={"65%"}>
                 <Table
@@ -292,6 +266,7 @@ export default function InvoicePrint() {
                 )}
               </>
             )}
+            */}
           </PrintContent>
         </div>
       </>

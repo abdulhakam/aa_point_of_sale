@@ -7,7 +7,6 @@ import Link from "next/link";
 
 export default function RouteProtector({ children }) {
   const currentPath = usePathname();
-  const router = useRouter();
   console.log(currentPath);
   // useEffect(() => {
   if (!pb.authStore.isValid && currentPath.split("/").pop() !== "auth") {

@@ -18,7 +18,6 @@ export default function Payments() {
         </ActionIcon>
       </Tooltip>
 
-      {/* <NewPayment /> */}
       <PaymentsView />
     </>
   );

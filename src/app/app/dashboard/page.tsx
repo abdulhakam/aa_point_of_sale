@@ -1,9 +1,7 @@
-"use client";
-import { Card, Text, SimpleGrid, UnstyledButton, Group, useMantineTheme, Grid } from "@mantine/core";
+'use client';
+import { Card, Text, UnstyledButton, useMantineTheme, Grid } from "@mantine/core";
 import {
   IconReport,
-  IconUser,
-  IconTag,
   IconShoppingBag,
   IconSettings,
   IconCoinEuro,
@@ -12,11 +10,10 @@ import {
   IconBasketDollar,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const mockdata = [
-  { title: "Parties", icon: IconBuildingWarehouse, color: "blue", target: "parties" },
+  // { title: "Parties", icon: IconBuildingWarehouse, color: "blue", target: "parties" },
   { title: "Reports", icon: IconReport, color: "pink", target: "reports" },
   { title: "Orders", icon: IconTrolley, color: "green", target: "invoices/orders" },
   { title: "Invoices", icon: IconShoppingBag, color: "orange", target: "invoices" },
@@ -27,12 +24,11 @@ const mockdata = [
 
 export default function ActionsGrid(props) {
   const theme = useMantineTheme();
-  const router = useRouter();
   const items = mockdata.map((item) => (
     <Grid.Col span={2} key={item.title}>
       <Link prefetch style={{textDecoration:'none'}} href={`/app/${item.target}`}>
         <UnstyledButton className={classes.item}>
-          <item.icon color={theme.colors[item.color][6]} size='4rem' />
+          <item.icon color={theme.colors[item.color][4]} size='4rem' />
           <Text size='sm' mt={7}>
             {item.title}
           </Text>

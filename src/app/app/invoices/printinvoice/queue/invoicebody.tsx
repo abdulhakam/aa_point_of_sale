@@ -4,45 +4,63 @@ import { Flex, Group, Stack, Table, Text } from "@mantine/core";
 import { getQty } from "@/app/components/functions/qtyParser";
 import styles from "@/app/components/printing/styles.module.css";
 
-const head = (
-  <Table.Thead>
-    <Table.Tr>
-      <Table.Th scope='col' rowSpan={2}>
-        #
-      </Table.Th>
-      <Table.Th scope='col' rowSpan={2}>
-        ITEM
-      </Table.Th>
-      <Table.Th scope='col' style={{ width: "3em" }} rowSpan={2}>
-        BOX SIZE
-      </Table.Th>
-      <Table.Th scope='col' colSpan={3}>
-        QUANTITY
-      </Table.Th>
-      <Table.Th scope='col' colSpan={2}>
-        PRICES
-      </Table.Th>
-      <Table.Th scope='col' colSpan={3}>
-        DISCOUNTS
-      </Table.Th>
-      <Table.Th scope='col' rowSpan={2}>
-        TOTAL
-      </Table.Th>
-    </Table.Tr>
-    <Table.Tr>
-      <Table.Th scope='col'>CTN</Table.Th>
-      <Table.Th scope='col'>UNITS</Table.Th>
-      <Table.Th scope='col'>FREE</Table.Th>
-      <Table.Th scope='col'>UNIT</Table.Th>
-      <Table.Th scope='col'>CARTON</Table.Th>
-      <Table.Th scope='col'>1(%)</Table.Th>
-      <Table.Th scope='col'>2(%)</Table.Th>
-      <Table.Th scope='col'>IN RS</Table.Th>
-    </Table.Tr>
-  </Table.Thead>
-);
-export default function InvoiceBody({ transactions, invoice }) {
+export default function InvoiceBody({
+  transactions,
+  invoice,
+  breakAfter,
+  inline,
+}: {
+  transactions: any[];
+  invoice: any;
+  breakAfter?: boolean;
+  inline?: boolean;
+}) {
   const type = invoice.type;
+  const isD1 = transactions.reduce((a, b) => a + b.discount_1, 0) !== 0;
+  const isD2 = transactions.reduce((a, b) => a + b.discount_2, 0) !== 0;
+  const isDrs = transactions.reduce((a, b) => a + b.discount_rs, 0) !== 0;
+  const numDAll = (isD1 ? 1 : 0) + (isD2 ? 1 : 0) + (isDrs ? 1 : 0) ;
+  const head = (
+    <Table.Thead>
+      <Table.Tr>
+        <Table.Th scope='col' rowSpan={2}>
+          #
+        </Table.Th>
+        <Table.Th scope='col' rowSpan={2}>
+          ITEM
+        </Table.Th>
+        <Table.Th scope='col' style={{ width: "2em" }} rowSpan={2}>
+          BOX SIZE
+        </Table.Th>
+        <Table.Th scope='col' colSpan={3}>
+          QUANTITY
+        </Table.Th>
+        <Table.Th scope='col' colSpan={2}>
+          PRICES
+        </Table.Th>
+        {numDAll !== 0 && (
+          <Table.Th scope='col' colSpan={numDAll}>
+            DISCOUNTS
+          </Table.Th>
+        )}
+        <Table.Th scope='col' rowSpan={2}>
+          TOTAL
+        </Table.Th>
+      </Table.Tr>
+      <Table.Tr>
+        <Table.Th scope='col'>CTN</Table.Th>
+        <Table.Th scope='col' style={{ width: "1em" }}>
+          UNTS
+        </Table.Th>
+        <Table.Th scope='col'>FREE</Table.Th>
+        <Table.Th scope='col'>UNIT</Table.Th>
+        <Table.Th scope='col'>CTN</Table.Th>
+        {isD1 && <Table.Th scope='col'>1(%)</Table.Th>}
+        {isD2 && <Table.Th scope='col'>2(%)</Table.Th>}
+        {isDrs && <Table.Th scope='col'>IN RS</Table.Th>}
+      </Table.Tr>
+    </Table.Thead>
+  );
   const rows = transactions.map((r, i) => (
     <Table.Tr key={`TRow-${i + 1}`}>
       <Table.Td>{i + 1}</Table.Td>
@@ -57,22 +75,24 @@ export default function InvoiceBody({ transactions, invoice }) {
       <Table.Td style={{ textAlign: "end" }}>
         {Number(r.price * r.expand.item.box_size_qty).toFixed(2)}
       </Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_1).toFixed(2)}%</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_2).toFixed(2)}%</Table.Td>
-      <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_rs).toFixed(2)}</Table.Td>
+      {isD1 && <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_1).toFixed(2)}</Table.Td>}
+      {isD2 && <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_2).toFixed(2)}</Table.Td>}
+      {isDrs && <Table.Td style={{ textAlign: "end" }}>{Number(r.discount_rs).toFixed(2)}</Table.Td>}
       <Table.Td style={{ textAlign: "end" }}>{Number(r.total).toFixed(2)}</Table.Td>
     </Table.Tr>
   ));
   return (
     <>
-      <div
-        className={styles.hideOnPrint}
-        style={{ border: "1px solid lightgray", borderRadius: 4, margin: "4px", padding: 10 }}
-      >
-        <Text>{`${invoice.type.charAt(0).toUpperCase()} ${invoice.invoiceNo}`}</Text>
-        <Text>{`PARTY: ${invoice?.expand.party?.name}`}</Text>
-      </div>
-      <div className={styles.showOnPrint} style={{ breakAfter: "page" }}>
+      {inline && (
+        <div
+          className={styles.hideOnPrint}
+          style={{ border: "1px solid lightgray", borderRadius: 4, margin: "4px", padding: 10 }}
+        >
+          <Text>{`${invoice.type.charAt(0).toUpperCase()} ${invoice.invoiceNo}`}</Text>
+          <Text>{`PARTY: ${invoice?.expand.party?.name}`}</Text>
+        </div>
+      )}
+      <div className={inline && styles.showOnPrint} style={breakAfter ? { breakAfter: "page" } : {}}>
         <h3 style={{ margin: 0 }}>{`${type.toUpperCase()} INVOICE`}</h3>
         <Group gap={0} justify='space-between'>
           <Stack w={"65%"}>
@@ -151,7 +171,7 @@ export default function InvoiceBody({ transactions, invoice }) {
         <Table
           styles={{
             td: { fontSize: "xs", padding: "0.2em", border: "1px solid black" },
-            th: { fontSize: "xs", padding: "0.2em", border: "1px solid black" },
+            th: { fontSize: "8pt", padding: "0.2em", border: "1px solid black", fontWeight: 500 },
           }}
         >
           {head}
@@ -163,7 +183,6 @@ export default function InvoiceBody({ transactions, invoice }) {
           style={{
             border: "1px solid black",
           }}
-          mb={"2rem"}
         >
           <Group mr={0} w={"60%"} justify='space-between'>
             {new Date(invoice?.duedate.slice(0, 10)) >

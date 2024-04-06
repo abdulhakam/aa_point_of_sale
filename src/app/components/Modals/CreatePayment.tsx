@@ -190,12 +190,6 @@ export function CreatePayment({ close }) {
             ).toFixed(2)}
             readOnly
           />
-          {/* <Textarea
-            label='description'
-            value={form.values.description}
-            disabled
-            onChange={(event) => form.setFieldValue("description", event.currentTarget.value)}
-          /> */}
           <Button
             onClick={() => {
               submitHandler();
