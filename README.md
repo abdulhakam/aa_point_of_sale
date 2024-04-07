@@ -2,21 +2,19 @@
 ## Why PocketBase?
 - It is small.
 - It is lightweight.
-- It has it own static server so nextjs static exports shall work fine.
+- ~~It has it own static server so nextjs static exports shall work fine.~~
 - It will be easy to migrate from if requirements need a more powerful DataBase.
-- it is similar to firebase.
 
 ## Why nextjs?
 - It is fast.
-- It is superfast (compared to react).
-- It is much easier to maintain than React.
+- Personally I like it.
 - It is popular.
 
 
 ## Getting Started
 
-1. download pocketbase.
-2. run `pocketbase.exe`.
+1. git clone this repo.
+2. `cd aa_point_of_sale && npm install`
 3. goto this address `http://127.0.0.1:8090/_/` in terminal, `Ctrl` + clicking on it should work.
 3. create an admin account.
 4. import data, that would include all tables too. it is easy.
