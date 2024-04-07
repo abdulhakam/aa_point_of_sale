@@ -4,7 +4,6 @@
 - It is lightweight.
 - ~~It has it own static server so nextjs static exports shall work fine.~~
 - It will be easy to migrate from if requirements need a more powerful DataBase.
-- it is similar to firebase.
 
 ## Why nextjs?
 - It is fast.
@@ -12,8 +11,6 @@
 
 
 ## Running the App
-
-Tested on nodejs 18 on windows so you need that.
 
 1.  run this in command prompt:
 >  ```
