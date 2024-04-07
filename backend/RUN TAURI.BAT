@@ -1,0 +1,6 @@
+@echo off
+echo Starting pocketbase server...
+start "" .\pocketbase.exe serve
+echo Starting Application...
+start "" ../frontend/src-tauri/target/release/aa_pos.exe
+
