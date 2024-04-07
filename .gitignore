@@ -25,8 +25,8 @@
 /frontendyarn-debug.log*
 /frontendyarn-error.log*
 
-# local env files
-/frontend.env*.local
+# local env file
+frontend/.env.local
 
 # vercel
 /frontend.vercel
