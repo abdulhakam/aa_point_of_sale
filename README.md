@@ -12,6 +12,8 @@
 
 ## Running the App
 
+you need node 18 and git to run this.
+
 1.  run this in command prompt:
 >  ```
 >  git clone https://github.com/abdulhakam/aa_point_of_sale.git
