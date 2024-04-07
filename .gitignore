@@ -34,3 +34,6 @@
 # typescript
 /frontend/*.tsbuildinfo
 /frontend/next-env.d.ts
+
+# others
+/backend/pb_data
