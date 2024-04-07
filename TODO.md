@@ -1,4 +1,0 @@
-- Proper routing
-- Proper authentication
-- PROPER `.bat` and `.sh` file for easier startings.
-- IMPORTANT : LEDGER (GENERAL)

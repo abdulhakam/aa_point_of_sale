@@ -1,0 +1,67 @@
+.showOnPrint {
+  display: none; /* Hide by default */
+}
+@media print {
+  .showOnPrint {
+    display: block;
+  }
+  .hideOnPrint {
+    display: none;
+  }
+}
+.printHeader {
+  position: fixed;
+  width: 100%;
+}
+.printFooter {
+  position:sticky;
+}
+
+
+/* Styles go here/////////////////////////////////////////////////////////////////////////////////// */
+
+.pageHeader, .pageHeaderSpace {
+  height: 4rem;
+}
+
+.pageFooter, .pageFooterSpace {
+  height: 1.7rem;
+
+}
+
+.pageFooter {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  border-top: 1px solid black; 
+}
+
+.pageHeader {
+  display: none;
+  position: fixed;
+  top: 0mm;
+  width: 100%;
+  /* border-bottom: 1px solid black; */
+}
+
+.page {
+  width: 100%;
+}
+/* @page {
+  margin: 5mm
+
+} */
+
+@media print {
+  .pageHeader{
+    display: block;
+  }
+  .pageFooter{
+    display: block;
+  }
+   .thead {display: table-header-group;} 
+   .tfoot {display: table-footer-group;}
+   
+   .body {margin: 0;}
+}
