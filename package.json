@@ -24,6 +24,7 @@
     "@tanstack/react-query-devtools": "^5.13.5",
     "clsx": "^2.0.0",
     "dayjs": "^1.11.10",
+    "http-serve": "^1.0.1",
     "lodash.sortby": "^4.7.0",
     "mantine-datatable": "^7.3.0",
     "moment": "^2.30.1",
