@@ -1,6 +1,6 @@
 @echo off
 echo Starting pocketbase server...
-start "" .\pocketbase.exe serve
+start "" .\pocketbase.exe serve --dev
 
 timeout /t 1 >nul
 
