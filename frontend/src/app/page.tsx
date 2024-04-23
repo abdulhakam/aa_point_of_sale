@@ -19,7 +19,7 @@ export default function Home() {
     <>
       <h1>Proper Routings are Work In Progress</h1>
       <h1>
-        If you are one this screen it means something is not right, either you have manually entered the wrong
+        If you are seeing this screen it means something is not right, either you have manually entered the wrong
         url or programs routing system is not working properly.
       </h1>
       <Button color='red' onClick={logout}>
