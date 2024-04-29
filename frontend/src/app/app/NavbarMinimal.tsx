@@ -38,9 +38,9 @@ const mockdata = [
   { label: "Reports", icon: IconReport, color: "pink", target: "reports" },
   { label: "Orders", icon: IconTrolley, color: "green", target: "invoices/orders" },
   { label: "Invoices", icon: IconShoppingBag, color: "orange", target: "invoices" },
-  { label: "Payments", icon: IconCoinEuro, color: "red", target: "payments" },
+  // { label: "Payments", icon: IconCoinEuro, color: "red", target: "payments" },
+  // { label: "Expenses", icon: IconBasketDollar, color: "grape", target: "expenses" },
   { label: "Cash Memo", icon: IconCoinEuroFilled, color: "blue", target: "cashmemo" },
-  { label: "Expenses", icon: IconBasketDollar, color: "grape", target: "expenses" },
   { label: "Management", icon: IconSettings, color: "gray", target: "management" },
 ];
 
