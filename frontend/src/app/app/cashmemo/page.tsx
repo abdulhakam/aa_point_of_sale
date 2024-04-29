@@ -12,7 +12,7 @@ import Link from "next/link";
 const mockdata = [
   { title: "DA Entry - Purchases", icon: IconTrolley, color: "blue", target: "cashmemo/da_entry" },
   { title: "CRV - Cash Recieve Voucher", icon: IconArrowDownBar, color: "green", target: "cashmemo/cash_recieve_vouchers" },
-  { title: "CPV - Cash Payment Voucher", icon: IconArrowUpBar, color: "red", target: "reports/ledgers" },
+  { title: "CPV - Cash Payment Voucher", icon: IconArrowUpBar, color: "red", target: "cashmemo/cash_payment_vouchers" },
 ];
 
 export default function ActionsGrid(props) {

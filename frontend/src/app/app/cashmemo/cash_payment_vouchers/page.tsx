@@ -10,7 +10,8 @@ import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import useCRUD from "@/app/api/useAPI";
 import styles from "@/app/components/printing/styles.module.css";
 import { useForm } from "@mantine/form";
-import PurchasesReport from "./purchasesReport";
+import CRVReport from "./cpvReport";
+import CPVReport from "./cpvReport";
 
 export default function Payments() {
   const printRef = useRef();
@@ -23,20 +24,33 @@ export default function Payments() {
   const [fromDate, setFromDate] = useState<Date | null>(moment().utc().startOf("month").toDate());
   const [toDate, setToDate] = useState<Date | null>(moment().utc().endOf("day").toDate());
 
-  const [withPayments, setWithPayments] = useState(false);
+  const form = useForm({
+    initialValues: {
+      reportType: "",
+    },
+  });
 
   const payments = useCRUD().fullList({
     collection: "payments_view",
     expand: "invoice,party,area,section,booker",
     filter: `(created >= '${moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
       && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
-      && (type = "sending") ${withPayments ? "" : "&& (paid = false)"}
+      && (type = "sending") && (paid = true)
       `,
   });
+  const expenses = useCRUD().fullList({
+    collection: "expenses",
+    filter: `(created >= '${moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
+      && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')`,
+  });
 
-  const queries = [payments];
+  const queries = [payments, expenses];
 
   if (checkSuccess(queries)) {
+    const final_payments = [
+      ...payments.data,
+      ...expenses.data.map((expense) => ({ ...expense, party: expense.description, type: "expense" })),
+    ].sort((a, b) => new Date(a.created).getTime() - new Date(b.created).getTime());
     return (
       <>
         <ActionIcon
@@ -61,15 +75,12 @@ export default function Payments() {
             label='Date To'
           />
         </Group>
-        <Group className={styles.hideOnPrint}>
-          <Checkbox label='With Payments' checked={withPayments} onChange={(event) => setWithPayments(event.currentTarget.checked)} />
-        </Group>
         <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
           <PrintContent>
             <Text size='xl' fw={700}>
-              PURCHASES REPORT
+              CASH PAYMENTS REPORT
             </Text>
-            <PurchasesReport fromDate={fromDate} toDate={toDate} payments={payments.data} />
+            <CPVReport fromDate={fromDate} toDate={toDate} payments={final_payments} />
           </PrintContent>
         </div>
       </>
