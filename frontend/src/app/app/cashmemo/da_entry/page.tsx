@@ -23,12 +23,6 @@ export default function Payments() {
   const [fromDate, setFromDate] = useState<Date | null>(moment().utc().startOf("month").toDate());
   const [toDate, setToDate] = useState<Date | null>(moment().utc().endOf("day").toDate());
 
-  const form = useForm({
-    initialValues: {
-      reportType: "",
-    },
-  });
-
   const [withPayments, setWithPayments] = useState(false);
 
   const payments = useCRUD().fullList({
@@ -69,13 +63,6 @@ export default function Payments() {
         </Group>
         <Group className={styles.hideOnPrint}>
           <Checkbox label='With Payments' checked={withPayments} onChange={(event) => setWithPayments(event.currentTarget.checked)} />
-          <Button
-            onClick={() => {
-              form.reset();
-            }}
-          >
-            RESET
-          </Button>
         </Group>
         <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
           <PrintContent>

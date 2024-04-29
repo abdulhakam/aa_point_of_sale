@@ -71,9 +71,10 @@ export default function PrintInvoice() {
           />
           <Button
             mt={"sm"}
+            disabled={!invoiceNo}
             component='a'
-            target='_blank'
-            href={`/app/invoices/print?invoiceId=${invoiceNo}`}
+            target={invoiceNo ? '_blank' : ''}
+            href={`${invoiceNo ? `/app/invoices/print?invoiceId=${invoiceNo}`: "#"}`}
             variant='outline'
           >
             View Invoice
