@@ -6,6 +6,7 @@ import {
   IconChartBar,
   IconChartCandle,
   IconChartLine,
+  IconChartPie2,
   IconReportMoney,
   IconTrolley,
 } from "@tabler/icons-react";
@@ -16,6 +17,7 @@ import Link from "next/link";
 const mockdata = [
   { title: "Unified Payments Report", icon: IconReportMoney, color: "blue", target: "reports/payments" },
   { title: "Item Sales Report", icon: IconChartBar, color: "pink", target: "reports/transactions/unified" },
+  { title: "Sales Report", icon: IconChartPie2, color: "violet", target: "reports/salesreport" },
   { title: "Payments By Company", icon: IconChartArea, color: "red", target: "reports/paymentsbycompany" },
   { title: "Ledgers", icon: IconChartLine, color: "grape", target: "reports/ledgers" },
   { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" },
