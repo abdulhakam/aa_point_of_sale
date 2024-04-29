@@ -22,5 +22,3 @@ you need node 18 and git to run this.
 3. once done, run `RUN.BAT`.
 4. email is `user@user.com` and password is `admin`.
 5. pocketbase login is `admin@admin.com` and password is `1234567890`.
-
-# This branch is to modify payments for testing purposes and may be added to main branch if it feels better.
