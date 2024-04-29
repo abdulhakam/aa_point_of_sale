@@ -1,11 +1,11 @@
 "use client";
 import { useLocalStorage } from "@mantine/hooks";
 import PrintContent from "../../../../components/printing/PrintContent";
-import { ActionIcon, Button, Group, Stack, Text, Tooltip } from "@mantine/core";
+import { ActionIcon, Button, Flex, Group, Stack, Text, Tooltip } from "@mantine/core";
 import InvoiceBody from "./invoicebody";
 import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
-import { IconPrinter, IconPrinterOff } from "@tabler/icons-react";
+import { IconPrinter, IconPrinterOff, IconTrash } from "@tabler/icons-react";
 import styles from "@/app/components/printing/styles.module.css";
 
 export default function InvoicePrintQueue() {
@@ -57,13 +57,26 @@ export default function InvoicePrintQueue() {
           >
             {noDuplicates.length === 0 && <Text>Nothing in queue</Text>}
             {noDuplicates.map((itm, i) => (
-              <InvoiceBody
-                key={itm.invoice?.id}
-                inline
-                breakAfter={i < noDuplicates.length - 1}
-                invoice={itm.invoice}
-                transactions={itm.transactions.data}
-              />
+              <div key={itm.invoice?.id}>
+                <InvoiceBody
+                  inline
+                  breakAfter={i < noDuplicates.length - 1}
+                  invoice={itm.invoice}
+                  transactions={itm.transactions.data}
+                >
+                  <Flex mt={"-2rem"} justify='end'>
+                    <ActionIcon
+                      variant='outline'
+                      onClick={() => {
+                        noDuplicates.splice(i, 1)
+                        setPrintQueue(noDuplicates);
+                      }}
+                    >
+                      <IconTrash />
+                    </ActionIcon>
+                  </Flex>
+                </InvoiceBody>
+              </div>
             ))}
           </PrintContent>
         </div>

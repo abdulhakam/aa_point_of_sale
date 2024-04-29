@@ -10,6 +10,7 @@ import {
   IconCoinEuro,
   IconBuildingWarehouse,
   IconBasketDollar,
+  IconCoinEuroFilled,
 } from "@tabler/icons-react";
 import classes from "./NavbarMinimal.module.css";
 import { usePathname, useRouter } from "next/navigation";
@@ -38,6 +39,7 @@ const mockdata = [
   { label: "Orders", icon: IconTrolley, color: "green", target: "invoices/orders" },
   { label: "Invoices", icon: IconShoppingBag, color: "orange", target: "invoices" },
   { label: "Payments", icon: IconCoinEuro, color: "red", target: "payments" },
+  { label: "Cash Memo", icon: IconCoinEuroFilled, color: "blue", target: "cashmemo" },
   { label: "Expenses", icon: IconBasketDollar, color: "grape", target: "expenses" },
   { label: "Management", icon: IconSettings, color: "gray", target: "management" },
 ];
