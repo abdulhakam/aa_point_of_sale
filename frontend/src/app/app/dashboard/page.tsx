@@ -5,7 +5,7 @@ import {
   IconShoppingBag,
   IconSettings,
   IconCoinEuro,
-  IconBuildingWarehouse,
+  IconCoinEuroFilled,
   IconTrolley,
   IconBasketDollar,
 } from "@tabler/icons-react";
@@ -18,6 +18,7 @@ const mockdata = [
   { title: "Orders", icon: IconTrolley, color: "green", target: "invoices/orders" },
   { title: "Invoices", icon: IconShoppingBag, color: "orange", target: "invoices" },
   { title: "Payments", icon: IconCoinEuro, color: "grape", target: "payments" },
+  { title: "Cash Memo", icon: IconCoinEuroFilled, color: "blue", target: "cashmemo" },
   { title: "Expenses", icon: IconBasketDollar, color: "red", target: "expenses" },
   { title: "Management", icon: IconSettings, color: "gray", target: "management" },
 ];

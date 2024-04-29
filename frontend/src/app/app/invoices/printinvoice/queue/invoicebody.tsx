@@ -9,11 +9,13 @@ export default function InvoiceBody({
   invoice,
   breakAfter,
   inline,
+  children,
 }: {
   transactions: any[];
   invoice: any;
   breakAfter?: boolean;
   inline?: boolean;
+  children?: React.ReactNode;
 }) {
   const type = invoice.type;
   const isD1 = transactions.reduce((a, b) => a + b.discount_1, 0) !== 0;
@@ -90,6 +92,7 @@ export default function InvoiceBody({
         >
           <Text>{`${invoice.type.charAt(0).toUpperCase()} ${invoice.invoiceNo}`}</Text>
           <Text>{`PARTY: ${invoice?.expand.party?.name}`}</Text>
+          {children}
         </div>
       )}
       <div className={inline && styles.showOnPrint} style={breakAfter ? { breakAfter: "page" } : {}}>
