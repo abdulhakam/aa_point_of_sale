@@ -36,8 +36,8 @@ const tableStructure: DataTableColumn[] = [
   },
 ];
 export default function AreaLedger() {
-  const [fromDate, setFromDate] = useState<Date | null>(moment().startOf("year").utc().toDate());
-  const [toDate, setToDate] = useState<Date | null>(moment().endOf("day").utc().toDate());
+  const [fromDate, setFromDate] = useState<Date | null>(moment().startOf("year").toDate());
+  const [toDate, setToDate] = useState<Date | null>(moment().endOf("day").toDate());
   const [area, setArea] = useState<any>("");
   const [section, setSection] = useState<any>("");
   const areas = useCRUD().fullList({ collection: "areas" });
@@ -47,10 +47,8 @@ export default function AreaLedger() {
     expand: "invoice,party",
     sort: "+created",
     filter: `type="recieving" && (created >= '${moment(fromDate)
-      .utc()
       .startOf("day")
       .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(toDate)
-      .utc()
       .endOf("day")
       .format("YYYY-MM-DD HH:mm:ss")}' ) ${area ? `&& party.area = '${area}'` : ""} ${
       section ? `&& party.area.section = '${section}'` : ""

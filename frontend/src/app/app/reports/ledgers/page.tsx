@@ -3,15 +3,17 @@ import { Card, Text,  useMantineTheme, Grid } from "@mantine/core";
 import {
   IconMap2,
   IconReportAnalytics,
-  IconReportMoney, 
+  IconReportMoney,
+  IconUserDollar, 
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
 import Link from "next/link";
 
 const mockdata = [
+  { title: "Area", icon: IconMap2, color: "green", target: "reports/ledgers/area" },
+  // { title: "Booker", icon: IconUserDollar, color: "green", target: "reports/ledgers/booker" },
   { title: "General", icon: IconReportMoney, color: "yellow", target: "reports/ledgers/general" },
   { title: "Party", icon: IconReportAnalytics, color: "orange", target: "reports/ledgers/party" },
-  { title: "Area", icon: IconMap2, color: "green", target: "reports/ledgers/area" },
 ];
 
 export default function ActionsGrid(props) {
