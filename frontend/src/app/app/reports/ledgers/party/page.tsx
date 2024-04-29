@@ -43,18 +43,16 @@ const tableStructure: DataTableColumn[] = [
   },
 ];
 export default function PartyLedgerReport() {
-  const [fromDate, setFromDate] = useState<Date | null>(moment().startOf("year").utc().toDate());
-  const [toDate, setToDate] = useState<Date | null>(moment().endOf("day").utc().toDate());
+  const [fromDate, setFromDate] = useState<Date | null>(moment().startOf("month").toDate());
+  const [toDate, setToDate] = useState<Date | null>(moment().endOf("day").toDate());
   const [party, setParty] = useState<any>("");
   const ledger = useCRUD().fullList({
     collection: "ledger_party",
     expand: "invoice,party",
     sort: "+created",
     filter: `(created >= '${moment(fromDate)
-      .utc()
       .startOf("day")
       .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(toDate)
-      .utc()
       .endOf("day")
       .format("YYYY-MM-DD HH:mm:ss")}' ) ${party ? `&& party = '${party}'` : ""}`,
   });
