@@ -10,3 +10,5 @@ added return invoice calculations in general ledger.
 added return invoice calculations in general ledger.
 ### 29/04/2024 - New
 Created ledger by booker but is kept hidden until completed.
+### 30/04/2024 - New
+possibly completed ledger by booker, also added stock difference fixing.
