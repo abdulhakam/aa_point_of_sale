@@ -2,12 +2,14 @@
 import { Card, Text, UnstyledButton, useMantineTheme, Grid } from "@mantine/core";
 import {
   IconChartArea,
+  IconChartArrows,
   IconChartArrowsVertical,
   IconChartBar,
   IconChartCandle,
   IconChartLine,
   IconChartPie2,
   IconReportMoney,
+  IconReportSearch,
   IconTrolley,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
@@ -22,6 +24,7 @@ const mockdata = [
   { title: "Ledgers", icon: IconChartLine, color: "grape", target: "reports/ledgers" },
   { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" },
   { title: "Profit Report", icon: IconChartCandle, color: "orange", target: "reports/profit" },
+  { title: "Difference Report", icon: IconReportSearch, color: "yellow", target: "reports/difference" },
   // { title: "Company Report", icon: IconChartArrowsVertical, color: "yellow", target: "reports/company_report" },
 ];
 
