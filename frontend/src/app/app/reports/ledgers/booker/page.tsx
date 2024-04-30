@@ -36,25 +36,20 @@ const tableStructure: DataTableColumn[] = [
     textAlign: "right",
     render: (record: any) => (!isNaN(record.debit) ? Number(record.debit).toFixed(2) : record.debit),
   },
-  {
-    accessor: "balance",
-    textAlign: "right",
-    render: (record: any) => (!isNaN(record.balance) ? Number(record.balance).toFixed(2) : record.balance),
-  },
 ];
-export default function PartyLedgerReport() {
+export default function BookerLedgerReport() {
   const [fromDate, setFromDate] = useState<Date | null>(moment().startOf("month").toDate());
   const [toDate, setToDate] = useState<Date | null>(moment().endOf("day").toDate());
-  const [party, setParty] = useState<any>("");
+  const [booker, setBooker] = useState<any>("");
   const ledger = useCRUD().fullList({
-    collection: "ledger_party",
-    expand: "invoice,party",
+    collection: "ledger_booker",
+    expand: "invoice,party,invoice.booker",
     sort: "+created",
     filter: `(created >= '${moment(fromDate)
       .startOf("day")
       .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(toDate)
       .endOf("day")
-      .format("YYYY-MM-DD HH:mm:ss")}' ) ${party ? `&& party = '${party}'` : ""}`,
+      .format("YYYY-MM-DD HH:mm:ss")}' ) ${booker ? `&& invoice.booker = '${booker}'` : ""}`,
   });
   const printRef = useRef();
   const handlePrint = useReactToPrint({
@@ -65,6 +60,9 @@ export default function PartyLedgerReport() {
   const queries = [ledger];
   if (checkSuccess(queries)) {
     const allData = [...ledger.data];
+    const credit = allData.reduce((total, record) => total + record.credit, 0);
+    const debit = allData.reduce((total, record) => total + record.debit, 0);
+    const total = credit - debit;
     return (
       <>
         <Stack mb={"sm"}>
@@ -91,27 +89,27 @@ export default function PartyLedgerReport() {
             />
             <NSelect
               searchable
-              value={party}
-              onChange={setParty}
-              label='Party'
+              value={booker}
+              onChange={setBooker}
+              label='Booker'
               dataQuery={{
-                collectionName: "parties",
+                collectionName: "order_bookers",
               }}
               dataQueryValue={"id"}
               dataLabel={"name"}
             />
-            <Button onClick={() => setParty("")}>Clear</Button>
+            <Button onClick={() => setBooker("")}>Clear</Button>
           </Group>
           <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
-            {!party ? (
-              <Text size='xl'>PLEASE SELECT A PARTY TO VIEW LEDGER</Text>
+            {!booker ? (
+              <Text size='xl'>PLEASE SELECT A BOOKER TO VIEW LEDGER</Text>
             ) : (
               <PrintContent>
                 <Text size='xl' fw={700}>
                   {" "}
-                  PARTY LEDGER{" "}
+                  BOOKER SALES LEDGER{" "}
                 </Text>
-                <Text>Party: {allData[0]?.expand?.party?.name ?? "NO DATA FOUND FOR SELECTED PARTY"}</Text>
+                <Text>Booker: {allData[0]?.expand?.invoice?.expand.booker?.name ?? "NO DATA FOUND FOR SELECTED PARTY"}</Text>
                 <Table
                   stickyHeader
                   stickyHeaderOffset={50}
@@ -158,7 +156,26 @@ export default function PartyLedgerReport() {
                   </Table.Tbody>
                 </Table>
                 <Flex justify={"end"}>
-                  <Text fw={600}>Final Balance: {allData[allData.length - 1]?.balance}</Text>
+                  <Stack gap={0} w={"30%"}>
+                    <Group justify='space-between'>
+                      <Text fw={600}>Total Credit:</Text>
+                      <Text my={0} fw={600} style={{ textAlign: "end" }}>
+                        {credit.toFixed(2)}
+                      </Text>
+                    </Group>
+                    <Group justify='space-between'>
+                      <Text fw={600}>Total Debit:</Text>
+                      <Text my={0} fw={600} style={{ textAlign: "end" }}>
+                        {debit.toFixed(2)}
+                      </Text>
+                    </Group>
+                    <Group justify='space-between'>
+                      <Text fw={600}>Final Balance:</Text>
+                      <Text my={0} fw={600} style={{ textAlign: "end" }}>
+                        {total.toFixed(2)}
+                      </Text>
+                    </Group>
+                  </Stack>
                 </Flex>
               </PrintContent>
             )}
