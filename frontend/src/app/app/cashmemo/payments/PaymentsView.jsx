@@ -133,7 +133,7 @@ export default function PaymentsView() {
       render: (record) => (
         <>{`${
           record.original_invoices
-            ? invoices.data.find((inv) => inv.id === record.original_invoices[0])?.invoiceNo ?? ""
+            ? invoices.data.find((inv) => inv.id === record.original_invoices)?.invoiceNo ?? ""
             : "" || ""
         }`}</>
       ),

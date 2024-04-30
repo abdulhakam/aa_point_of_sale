@@ -3,6 +3,8 @@ import { Card, Text,  UnstyledButton,  useMantineTheme, Grid } from "@mantine/co
 import {
   IconArrowDownBar,
   IconArrowUpBar,
+  IconBasketDollar,
+  IconCoinEuro,
   IconTrolley,
 } from "@tabler/icons-react";
 import classes from "./page.module.css";
@@ -13,6 +15,8 @@ const mockdata = [
   { title: "DA Entry - Purchases", icon: IconTrolley, color: "blue", target: "cashmemo/da_entry" },
   { title: "CRV - Cash Recieve Voucher", icon: IconArrowDownBar, color: "green", target: "cashmemo/cash_recieve_vouchers" },
   { title: "CPV - Cash Payment Voucher", icon: IconArrowUpBar, color: "red", target: "cashmemo/cash_payment_vouchers" },
+  { title: "Payments", icon: IconCoinEuro, color: "grape", target: "cashmemo/payments" },
+  { title: "Expenses", icon: IconBasketDollar, color: "red", target: "cashmemo/expenses" },
 ];
 
 export default function ActionsGrid(props) {
