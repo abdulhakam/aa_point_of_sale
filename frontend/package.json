@@ -9,8 +9,7 @@
     "serve": "http-server ./out/ -p 3000",
     "lint": "next lint",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build",
-    "tauri": "tauri"
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@mantine/core": "^7.3.1",
@@ -44,7 +43,6 @@
     "@storybook/nextjs": "^7.6.7",
     "@storybook/react": "^7.6.7",
     "@storybook/test": "^7.6.7",
-    "@tauri-apps/cli": "^1.5.10",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
