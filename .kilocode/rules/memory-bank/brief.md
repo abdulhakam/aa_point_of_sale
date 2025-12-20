@@ -5,8 +5,8 @@ AA Point of Sale is a Point of Sale (POS) and ERP system designed to be lightwei
 
 ## Core Requirements
 - **Performance**: Fast and lightweight.
-- **Platform**: Web-based (modern browsers), with legacy/existing support for Tauri (Desktop).
-- **Stack**: Next.js (App Router), Mantine UI, PocketBase (Data).
+- **Platform**: Web-based (modern browsers only).
+- **Stack**: Next.js 14 (App Router), Mantine v7, PocketBase (Data).
 
 ## Project Goals
 - Maintain a robust and reliable POS system.

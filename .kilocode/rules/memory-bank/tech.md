@@ -17,7 +17,8 @@
 - **Package Manager**: npm.
 - **Linting**: ESLint.
 - **Formatting**: Prettier (implied).
-- **Storybook**: Component development (v7).
+- **Tables**: Mantine DataTable for complex data displays.
+- **Printing**: react-to-print for report generation.
 
 ## Environment Setup
 - **Frontend**: Run `npm install` in `frontend/`.
