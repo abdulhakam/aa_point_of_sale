@@ -25,6 +25,9 @@ const mockdata = [
   { title: "Stock Report", icon: IconTrolley, color: "green", target: "reports/stockreport" },
   { title: "Profit Report", icon: IconChartCandle, color: "orange", target: "reports/profit" },
   { title: "Difference Report", icon: IconReportSearch, color: "yellow", target: "reports/difference" },
+  { title: "Outstanding Payments", icon: IconReportMoney, color: "cyan", target: "reports/outstanding" },
+  { title: "Product Sale Report", icon: IconTrolley, color: "teal", target: "reports/productsale" },
+  { title: "Daily Sale Report", icon: IconChartBar, color: "indigo", target: "reports/dailysale" },
   // { title: "Company Report", icon: IconChartArrowsVertical, color: "yellow", target: "reports/company_report" },
 ];
 
