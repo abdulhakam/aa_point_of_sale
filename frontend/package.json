@@ -9,7 +9,8 @@
     "serve": "http-server ./out/ -p 3000",
     "lint": "next lint",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "build:standalone": "next build && robocopy .next\\standalone ..\\standalone /E /PURGE /NFL /NDL /NJH /NJS & robocopy .next\\static ..\\standalone\\.next\\static /E /PURGE /NFL /NDL /NJH /NJS & robocopy public ..\\standalone\\public /E /PURGE /NFL /NDL /NJH /NJS & exit /B 0"
   },
   "dependencies": {
     "@mantine/core": "^7.3.1",
