@@ -92,7 +92,7 @@ export default function OutstandingPaymentsReport() {
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Party Name</Table.Th>
-                  <Table.Th>Invoices</Table.Th>
+                  <Table.Th style={{ maxWidth: 200, width: 200 }}>Invoices</Table.Th>
                   <Table.Th style={{ textAlign: "right" }}>Total Amount</Table.Th>
                   <Table.Th style={{ textAlign: "right" }}>Total Paid</Table.Th>
                   <Table.Th style={{ textAlign: "right" }}>Balance</Table.Th>
@@ -102,7 +102,7 @@ export default function OutstandingPaymentsReport() {
                 {data.map((row) => (
                   <Table.Tr key={row.id}>
                     <Table.Td>{row.party_name}</Table.Td>
-                    <Table.Td>{row.invoice_nos ?? ""}</Table.Td>
+                    <Table.Td style={{ maxWidth: 200, width: 200, whiteSpace: "normal", wordBreak: "break-word" }}>{row.invoice_nos ?? ""}</Table.Td>
                     <Table.Td style={{ textAlign: "right" }}>{(row.invoice_total ?? 0).toFixed(2)}</Table.Td>
                     <Table.Td style={{ textAlign: "right" }}>{(row.paid_total ?? 0).toFixed(2)}</Table.Td>
                     <Table.Td style={{ textAlign: "right" }}>{(row.balance ?? 0).toFixed(2)}</Table.Td>
