@@ -11,7 +11,7 @@ import Link from "next/link";
 
 const mockdata = [
   { title: "Area", icon: IconMap2, color: "green", target: "reports/ledgers/area" },
-  // { title: "Booker", icon: IconUserDollar, color: "green", target: "reports/ledgers/booker" },
+  { title: "Booker", icon: IconUserDollar, color: "green", target: "reports/ledgers/booker" },
   { title: "General", icon: IconReportMoney, color: "yellow", target: "reports/ledgers/general" },
   { title: "Party", icon: IconReportAnalytics, color: "orange", target: "reports/ledgers/party" },
 ];
