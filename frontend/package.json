@@ -10,7 +10,7 @@
     "lint": "next lint",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "tauri": "tauri"
+    "build:standalone": "next build && robocopy .next\\standalone ..\\standalone /E /PURGE /NFL /NDL /NJH /NJS & robocopy .next\\static ..\\standalone\\.next\\static /E /PURGE /NFL /NDL /NJH /NJS & robocopy public ..\\standalone\\public /E /PURGE /NFL /NDL /NJH /NJS & exit /B 0"
   },
   "dependencies": {
     "@mantine/core": "^7.3.1",
@@ -44,7 +44,6 @@
     "@storybook/nextjs": "^7.6.7",
     "@storybook/react": "^7.6.7",
     "@storybook/test": "^7.6.7",
-    "@tauri-apps/cli": "^1.5.10",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
