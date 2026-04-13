@@ -15,7 +15,7 @@ import Link from "next/link";
 const mockdata = [
   // { title: "Parties", icon: IconBuildingWarehouse, color: "blue", target: "parties" },
   { title: "Reports", icon: IconReport, color: "pink", target: "reports" },
-  { title: "Orders", icon: IconTrolley, color: "green", target: "invoices/orders" },
+  // { title: "Orders", icon: IconTrolley, color: "green", target: "invoices/orders" },
   { title: "Invoices", icon: IconShoppingBag, color: "orange", target: "invoices" },
   // { title: "Payments", icon: IconCoinEuro, color: "grape", target: "payments" },
   // { title: "Expenses", icon: IconBasketDollar, color: "red", target: "expenses" },
