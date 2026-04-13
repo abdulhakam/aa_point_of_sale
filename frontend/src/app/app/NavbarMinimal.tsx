@@ -36,7 +36,7 @@ function NavbarLink({ icon: Icon, label, active, href }: NavbarLinkProps) {
 const mockdata = [
   { label: "Main", icon: IconDashboard, color: "blue", target: "dashboard" },
   { label: "Reports", icon: IconReport, color: "pink", target: "reports" },
-  { label: "Orders", icon: IconTrolley, color: "green", target: "invoices/orders" },
+  // { label: "Orders", icon: IconTrolley, color: "green", target: "invoices/orders" },
   { label: "Invoices", icon: IconShoppingBag, color: "orange", target: "invoices" },
   // { label: "Payments", icon: IconCoinEuro, color: "red", target: "payments" },
   // { label: "Expenses", icon: IconBasketDollar, color: "grape", target: "expenses" },
@@ -66,7 +66,13 @@ export default function NavbarMinimal(props) {
 
       <Stack justify='center' gap={0}>
         <Tooltip label={"Logout"} position='right' transitionProps={{ duration: 0 }}>
-          <UnstyledButton onClick={() => {pb.authStore.clear();router.push('/auth');}} className={classes.link} >
+          <UnstyledButton
+            onClick={() => {
+              pb.authStore.clear();
+              router.push("/auth");
+            }}
+            className={classes.link}
+          >
             <IconLogout style={{ width: rem(20), height: rem(20) }} stroke={1.5} />
           </UnstyledButton>
         </Tooltip>
