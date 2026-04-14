@@ -1,4 +1,4 @@
-CREATE TABLE "erpnext_sync_queue" (
+CREATE TABLE "fetch_from_queue" (
     'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
     'referenceType' TEXT NOT NULL DEFAULT '',
     'documentName' TEXT NOT NULL DEFAULT '',

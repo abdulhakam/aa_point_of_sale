@@ -13,7 +13,7 @@ CREATE TABLE "accounting_settings" (
     'enablePriceList' INTEGER NOT NULL DEFAULT 0,
     'enableInvoiceReturns' INTEGER NOT NULL DEFAULT 0,
     'enableFormCustomization' INTEGER NOT NULL DEFAULT 0,
-    'enableERPNextSync' INTEGER NOT NULL DEFAULT 0,
+    'enableSync' INTEGER NOT NULL DEFAULT 0,
     'enableLead' INTEGER NOT NULL DEFAULT 0,
     'enablePricingRule' INTEGER NOT NULL DEFAULT 0,
     'enableItemEnquiry' INTEGER NOT NULL DEFAULT 0,

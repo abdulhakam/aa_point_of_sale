@@ -24,7 +24,7 @@ CREATE TABLE "purchase_invoices" (
     'attachment' TEXT NOT NULL DEFAULT '',
     'isReturned' INTEGER NOT NULL DEFAULT 0,
     'isFullyReturned' INTEGER NOT NULL DEFAULT 0,
-    'isSyncedWithErp' INTEGER NOT NULL DEFAULT 0,
+    'isSynced' INTEGER NOT NULL DEFAULT 0,
     'backReference' BLOB REFERENCES 'purchase_receipts'('id'),
     'returnAgainst' BLOB REFERENCES 'purchase_invoices'('id'),
     'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
