@@ -24,7 +24,7 @@ CREATE TABLE "invoices" (
     'attachment' TEXT NOT NULL DEFAULT '',
     'isReturned' INTEGER NOT NULL DEFAULT 0,
     'isFullyReturned' INTEGER NOT NULL DEFAULT 0,
-    'isSyncedWithErp' INTEGER NOT NULL DEFAULT 0,
+    'isSynced' INTEGER NOT NULL DEFAULT 0,
     'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
     'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
 ) STRICT;

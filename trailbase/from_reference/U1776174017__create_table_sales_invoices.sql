@@ -24,7 +24,7 @@ CREATE TABLE "sales_invoices" (
     'attachment' TEXT NOT NULL DEFAULT '',
     'isReturned' INTEGER NOT NULL DEFAULT 0,
     'isFullyReturned' INTEGER NOT NULL DEFAULT 0,
-    'isSyncedWithErp' INTEGER NOT NULL DEFAULT 0,
+    'isSynced' INTEGER NOT NULL DEFAULT 0,
     'backReference' BLOB REFERENCES 'shipments'('id'),
     'quote' BLOB REFERENCES 'sales_quotes'('id'),
     'returnAgainst' BLOB REFERENCES 'sales_invoices'('id'),
