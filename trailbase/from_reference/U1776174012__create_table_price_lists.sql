@@ -1,0 +1,9 @@
+CREATE TABLE "price_lists" (
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
+    'name' TEXT NOT NULL DEFAULT '',
+    'isEnabled' INTEGER NOT NULL DEFAULT 0,
+    'isSales' INTEGER NOT NULL DEFAULT 0,
+    'isPurchase' INTEGER NOT NULL DEFAULT 0,
+    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
+    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+) STRICT;
