@@ -1,6 +1,9 @@
-CREATE TABLE "sections" (
+CREATE TABLE "expenses" (
     'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
-    'name' TEXT NOT NULL,
+    'amount' REAL NOT NULL DEFAULT 0,
+    'description' TEXT NOT NULL DEFAULT '',
+    'name' TEXT NOT NULL DEFAULT '',
+    'date' TEXT NOT NULL DEFAULT '',
     'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
     'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL),
     'created_by' BLOB REFERENCES 'users'('id'),
