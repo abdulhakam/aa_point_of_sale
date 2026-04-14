@@ -5,7 +5,7 @@ CREATE TABLE "parties" (
     'name' TEXT NOT NULL DEFAULT '',
     'phone' TEXT NOT NULL DEFAULT '',
     'type' TEXT NOT NULL DEFAULT '',
-    'company' JSON NOT NULL DEFAULT '[]',
+    'company' TEXT NOT NULL DEFAULT '{}',
     'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
     'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL),
     'created_by' BLOB REFERENCES 'users'('id'),

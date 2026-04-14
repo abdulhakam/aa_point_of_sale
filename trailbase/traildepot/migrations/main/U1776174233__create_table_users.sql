@@ -1,4 +1,15 @@
 CREATE TABLE "users" (
-  'id' BLOB PRIMARY KEY REFERENCES '_user'('id') CHECK (is_uuid_v7(id)) NOT NULL,
-  'username' TEXT NOT NULL
+    'id' BLOB PRIMARY KEY REFERENCES '_user'('id') CHECK (is_uuid_v7(id)) NOT NULL,
+    'avatar' TEXT DEFAULT '',
+    'email' TEXT NOT NULL DEFAULT '',
+    'emailVisibility' INTEGER NOT NULL DEFAULT 0,
+    'lastResetSentAt' TEXT NOT NULL DEFAULT '',
+    'lastVerificationSentAt' TEXT NOT NULL DEFAULT '',
+    'name' TEXT NOT NULL DEFAULT '',
+    'passwordHash' TEXT NOT NULL,
+    'tokenKey' TEXT NOT NULL,
+    'username' TEXT NOT NULL,
+    'verified' INTEGER NOT NULL DEFAULT 0,
+    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
+    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL),
 ) STRICT;
