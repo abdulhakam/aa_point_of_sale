@@ -9,7 +9,5 @@ CREATE TABLE "payments" (
     'payment_date' TEXT NOT NULL DEFAULT '',
     'paid_to' TEXT NOT NULL DEFAULT '',
     'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
-    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL),
-    'created_by' BLOB REFERENCES 'users'('id'),
-    'updated_by' BLOB REFERENCES 'users'('id')
+    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
 ) STRICT;
