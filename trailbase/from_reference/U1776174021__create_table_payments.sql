@@ -1,0 +1,21 @@
+CREATE TABLE "payments" (
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
+    'name' TEXT NOT NULL DEFAULT '',
+    'numberSeries' BLOB REFERENCES 'number_series'('id'),
+    'party' BLOB REFERENCES 'parties'('id'),
+    'date' TEXT NOT NULL DEFAULT '',
+    'paymentType' TEXT NOT NULL DEFAULT '',
+    'account' BLOB REFERENCES 'accounts'('id'),
+    'paymentAccount' BLOB REFERENCES 'accounts'('id'),
+    'paymentMethod' BLOB REFERENCES 'payment_methods'('id'),
+    'clearanceDate' TEXT NOT NULL DEFAULT '',
+    'referenceId' TEXT NOT NULL DEFAULT '',
+    'referenceDate' TEXT NOT NULL DEFAULT '',
+    'amount' REAL NOT NULL DEFAULT 0,
+    'writeoff' REAL NOT NULL DEFAULT 0,
+    'amountPaid' REAL NOT NULL DEFAULT 0,
+    'attachment' TEXT NOT NULL DEFAULT '',
+    'referenceType' TEXT NOT NULL DEFAULT '',
+    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
+    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+) STRICT;

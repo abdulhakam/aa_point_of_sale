@@ -1,0 +1,21 @@
+CREATE TABLE "stock_transfer_items" (
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
+    'parent' BLOB NOT NULL REFERENCES 'stock_transfers'('id'),
+    'item' BLOB REFERENCES 'items'('id'),
+    'location' BLOB REFERENCES 'locations'('id'),
+    'transferUnit' BLOB REFERENCES 'uoms'('id'),
+    'transferQuantity' REAL NOT NULL DEFAULT 0,
+    'unit' BLOB REFERENCES 'uoms'('id'),
+    'batch' BLOB REFERENCES 'batches'('id'),
+    'serialNumber' TEXT NOT NULL DEFAULT '',
+    'quantity' REAL NOT NULL DEFAULT 0,
+    'unitConversionFactor' REAL NOT NULL DEFAULT 0,
+    'rate' REAL NOT NULL DEFAULT 0,
+    'amount' REAL NOT NULL DEFAULT 0,
+    'itemDiscountAmount' REAL NOT NULL DEFAULT 0,
+    'itemDiscountPercent' REAL NOT NULL DEFAULT 0,
+    'description' TEXT NOT NULL DEFAULT '',
+    'hsnCode' TEXT NOT NULL DEFAULT '',
+    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
+    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+) STRICT;

@@ -1,0 +1,23 @@
+CREATE TABLE "pos_profile" (
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
+    'name' TEXT NOT NULL DEFAULT '',
+    'posCustomer' BLOB REFERENCES 'parties'('id'),
+    'inventory' BLOB REFERENCES 'locations'('id'),
+    'posPrintTemplate' BLOB REFERENCES 'print_templates'('id'),
+    'posUI' TEXT NOT NULL DEFAULT '',
+    'isShiftOpen' INTEGER NOT NULL DEFAULT 0,
+    'itemVisibility' TEXT NOT NULL DEFAULT '',
+    'canChangeRate' INTEGER NOT NULL DEFAULT 0,
+    'hideUnavailableItems' INTEGER NOT NULL DEFAULT 0,
+    'canEditDiscount' INTEGER NOT NULL DEFAULT 0,
+    'ignorePricingRule' INTEGER NOT NULL DEFAULT 0,
+    'saveButtonColour' TEXT NOT NULL DEFAULT '',
+    'cancelButtonColour' TEXT NOT NULL DEFAULT '',
+    'submitButtonColour' TEXT NOT NULL DEFAULT '',
+    'heldButtonColour' TEXT NOT NULL DEFAULT '',
+    'returnButtonColour' TEXT NOT NULL DEFAULT '',
+    'payButtonColour' TEXT NOT NULL DEFAULT '',
+    'payAndPrintButtonColour' TEXT NOT NULL DEFAULT '',
+    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
+    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+) STRICT;
