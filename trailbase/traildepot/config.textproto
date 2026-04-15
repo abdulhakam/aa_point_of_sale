@@ -64,12 +64,6 @@ record_apis: [{
   autofill_missing_user_id_columns: true
   acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
 }, {
-  name: "products"
-  table_name: "products"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-}, {
   name: "invoices"
   table_name: "invoices"
   conflict_resolution: REPLACE
