@@ -1,0 +1,96 @@
+# Auto-generated config.Config textproto
+email {}
+server {
+  application_name: "TrailBase"
+  logs_retention_sec: 604800
+}
+auth {
+  auth_token_ttl_sec: 3600
+  refresh_token_ttl_sec: 2592000
+}
+jobs {}
+record_apis: [{
+  name: "areas"
+  table_name: "areas"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [SCHEMA, DELETE, UPDATE, READ, CREATE]
+}, {
+  name: "sections"
+  table_name: "sections"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "categories"
+  table_name: "categories"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "users"
+  table_name: "users"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "companies"
+  table_name: "companies"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "products"
+  table_name: "products"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "expenses"
+  table_name: "expenses"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "order_bookers"
+  table_name: "order_bookers"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "parties"
+  table_name: "parties"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "products"
+  table_name: "products"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "invoices"
+  table_name: "invoices"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "invoices_return_reference"
+  table_name: "invoices_return_reference"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "payments"
+  table_name: "payments"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}, {
+  name: "transactions"
+  table_name: "transactions"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+}]
