@@ -46,12 +46,13 @@ function Sections() {
   const handleCreate = async () => {
     if (newSectionName.trim() && !loadingCreate) {
       setLoadingCreate(true);
-      await sectionsCollection.insert({
-        id: uuidv7(),
-        name: newSectionName.trim(),
-        created: new Date(),
-        updated: new Date(),
-      }, { optimistic: false });
+      await sectionsCollection.insert(
+        {
+          id: uuidv7(),
+          name: newSectionName.trim(),
+        },
+        { optimistic: false },
+      );
       setNewSectionName("");
       setCreateModalOpen(false);
       setLoadingCreate(false);
@@ -122,7 +123,12 @@ function Sections() {
                   <ActionIcon variant='subtle' onClick={() => handleEdit(section)}>
                     <IconEdit size={16} />
                   </ActionIcon>
-                  <ActionIcon variant='subtle' color='red' onClick={() => handleDelete(section.id)} disabled={loadingDelete}>
+                  <ActionIcon
+                    variant='subtle'
+                    color='red'
+                    onClick={() => handleDelete(section.id)}
+                    disabled={loadingDelete}
+                  >
                     <IconTrash size={16} />
                   </ActionIcon>
                 </Group>
@@ -138,7 +144,9 @@ function Sections() {
           onChange={(value) => setNewSectionName(value.target.value)}
         />
         <Group mt='md'>
-          <Button onClick={handleCreate} disabled={loadingCreate}>Create</Button>
+          <Button onClick={handleCreate} disabled={loadingCreate}>
+            Create
+          </Button>
           <Button variant='outline' onClick={() => setCreateModalOpen(false)}>
             Cancel
           </Button>
@@ -147,7 +155,9 @@ function Sections() {
       <Modal opened={editModalOpen} onClose={() => setEditModalOpen(false)} title='Edit Section'>
         <TextInput label='Name' value={editName} onChange={(value) => setEditName(value.target.value)} />
         <Group mt='md'>
-          <Button onClick={handleUpdate} disabled={loadingEdit}>Update</Button>
+          <Button onClick={handleUpdate} disabled={loadingEdit}>
+            Update
+          </Button>
           <Button variant='outline' onClick={() => setEditModalOpen(false)}>
             Cancel
           </Button>
