@@ -1,6 +1,6 @@
 CREATE TABLE "invoices_return_reference" (
-    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
-    'original_invoices' BLOB REFERENCES 'invoices'('id'),
+    'id' TEXT PRIMARY KEY NOT NULL,
+    'original_invoices' TEXT REFERENCES 'invoices'('id'),
     'created' INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
     'updated' INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 ) STRICT;
