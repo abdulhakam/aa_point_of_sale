@@ -4,7 +4,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { like } from "@tanstack/react-db";
 import { sectionsCollection } from "../../../../collections/sections";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon } from "@mantine/core";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
 import { uuidv7 } from "uuidv7";
 
@@ -17,11 +17,20 @@ const tableStructure = [
 
 function Sections() {
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState(null);
   const [editName, setEditName] = useState("");
+  const [loadingCreate, setLoadingCreate] = useState(false);
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 100);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const {
     data: sections,
@@ -30,20 +39,22 @@ function Sections() {
   } = useLiveQuery((q) =>
     q
       .from({ section: sectionsCollection })
-      .where(({ section }) => like(section.name, `%${search}%`))
+      .where(({ section }) => like(section.name, `%${debouncedSearch}%`))
       .orderBy(({ section }) => section.created, "desc"),
   );
 
   const handleCreate = async () => {
-    if (newSectionName.trim()) {
+    if (newSectionName.trim() && !loadingCreate) {
+      setLoadingCreate(true);
       await sectionsCollection.insert({
         id: uuidv7(),
         name: newSectionName.trim(),
         created: new Date(),
         updated: new Date(),
-      });
+      }, { optimistic: false });
       setNewSectionName("");
       setCreateModalOpen(false);
+      setLoadingCreate(false);
     }
   };
 
@@ -54,19 +65,25 @@ function Sections() {
   };
 
   const handleUpdate = async () => {
-    if (editName.trim() && editingSection) {
-      await sectionsCollection.update(editingSection.id, {
-        name: editName.trim(),
-        updated: new Date(),
+    if (editName.trim() && editingSection && !loadingEdit) {
+      setLoadingEdit(true);
+      await sectionsCollection.update(editingSection.id, { optimistic: false }, (draft) => {
+        draft.name = editName.trim();
+        draft.updated = new Date();
       });
       setEditName("");
       setEditingSection(null);
       setEditModalOpen(false);
+      setLoadingEdit(false);
     }
   };
 
   const handleDelete = async (sectionId) => {
-    await sectionsCollection.delete(sectionId);
+    if (!loadingDelete) {
+      setLoadingDelete(true);
+      await sectionsCollection.delete(sectionId, { optimistic: false });
+      setLoadingDelete(false);
+    }
   };
 
   if (isLoading) return <Text>Loading...</Text>;
@@ -105,7 +122,7 @@ function Sections() {
                   <ActionIcon variant='subtle' onClick={() => handleEdit(section)}>
                     <IconEdit size={16} />
                   </ActionIcon>
-                  <ActionIcon variant='subtle' color='red' onClick={() => handleDelete(section.id)}>
+                  <ActionIcon variant='subtle' color='red' onClick={() => handleDelete(section.id)} disabled={loadingDelete}>
                     <IconTrash size={16} />
                   </ActionIcon>
                 </Group>
@@ -121,7 +138,7 @@ function Sections() {
           onChange={(value) => setNewSectionName(value.target.value)}
         />
         <Group mt='md'>
-          <Button onClick={handleCreate}>Create</Button>
+          <Button onClick={handleCreate} disabled={loadingCreate}>Create</Button>
           <Button variant='outline' onClick={() => setCreateModalOpen(false)}>
             Cancel
           </Button>
@@ -130,7 +147,7 @@ function Sections() {
       <Modal opened={editModalOpen} onClose={() => setEditModalOpen(false)} title='Edit Section'>
         <TextInput label='Name' value={editName} onChange={(value) => setEditName(value.target.value)} />
         <Group mt='md'>
-          <Button onClick={handleUpdate}>Update</Button>
+          <Button onClick={handleUpdate} disabled={loadingEdit}>Update</Button>
           <Button variant='outline' onClick={() => setEditModalOpen(false)}>
             Cancel
           </Button>
