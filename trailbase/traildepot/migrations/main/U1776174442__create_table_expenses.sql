@@ -4,6 +4,13 @@ CREATE TABLE "expenses" (
     'description' TEXT NOT NULL DEFAULT '',
     'name' TEXT NOT NULL DEFAULT '',
     'date' TEXT NOT NULL DEFAULT '',
-    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
-    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+    'created' INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    'updated' INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 ) STRICT;
+CREATE TRIGGER update_expenses_updated
+AFTER
+UPDATE ON expenses BEGIN
+UPDATE expenses
+SET updated = strftime('%s', 'now')
+WHERE id = NEW.id;
+END;
