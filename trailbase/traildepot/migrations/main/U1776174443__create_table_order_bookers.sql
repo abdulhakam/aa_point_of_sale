@@ -3,6 +3,11 @@ CREATE TABLE "order_bookers" (
     'company' TEXT NOT NULL DEFAULT '{}',
     'name' TEXT NOT NULL DEFAULT '',
     'phone' TEXT NOT NULL DEFAULT '',
-    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
-    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+    'created' INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    'updated' INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 ) STRICT;
+
+CREATE TRIGGER update_order_bookers_updated AFTER UPDATE ON order_bookers
+BEGIN
+    UPDATE order_bookers SET updated = strftime('%s', 'now') WHERE id = NEW.id;
+END;

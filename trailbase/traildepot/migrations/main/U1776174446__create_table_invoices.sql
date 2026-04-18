@@ -12,6 +12,13 @@ CREATE TABLE "invoices" (
     'type' TEXT NOT NULL DEFAULT '',
     'dated' TEXT NOT NULL DEFAULT '',
     'discount_rs' REAL NOT NULL DEFAULT 0,
-    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
-    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+    'created' INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    'updated' INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 ) STRICT;
+CREATE TRIGGER update_invoices_updated
+AFTER
+UPDATE ON invoices BEGIN
+UPDATE invoices
+SET updated = strftime('%s', 'now')
+WHERE id = NEW.id;
+END;

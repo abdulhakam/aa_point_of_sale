@@ -9,6 +9,13 @@ CREATE TABLE "transactions" (
     'scheme' REAL NOT NULL DEFAULT 0,
     'cost_price' REAL NOT NULL DEFAULT 0,
     'discount_rs' REAL NOT NULL DEFAULT 0,
-    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
-    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+    'created' INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+    'updated' INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 ) STRICT;
+CREATE TRIGGER update_transactions_updated
+AFTER
+UPDATE ON transactions BEGIN
+UPDATE transactions
+SET updated = strftime('%s', 'now')
+WHERE id = NEW.id;
+END;
