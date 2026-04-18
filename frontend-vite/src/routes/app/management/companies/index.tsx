@@ -2,7 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useLiveQuery } from "@tanstack/react-db";
 import { like } from "@tanstack/react-db";
-import { sectionsCollection } from "../../../../collections/sections";
+import { companiesCollection } from "../../../../collections/companies";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon } from "@mantine/core";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
@@ -15,13 +15,13 @@ const tableStructure = [
   { accessor: "actions", title: "Actions" },
 ];
 
-function Sections() {
+function Companies() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [newSectionName, setNewSectionName] = useState("");
+  const [newCompanyName, setNewCompanyName] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editingSection, setEditingSection] = useState(null);
+  const [editingCompany, setEditingCompany] = useState(null);
   const [editName, setEditName] = useState("");
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingEdit, setLoadingEdit] = useState(false);
@@ -33,56 +33,55 @@ function Sections() {
   }, [search]);
 
   const {
-    data: sections,
+    data: companies,
     isLoading,
     error,
   } = useLiveQuery((q) =>
     q
-      .from({ section: sectionsCollection })
-      .where(({ section }) => like(section.name, `%${debouncedSearch}%`))
-      .orderBy(({ section }) => section.created, "desc"),
+      .from({ company: companiesCollection })
+      .where(({ company }) => like(company.name, `%${debouncedSearch}%`))
+      .orderBy(({ company }) => company.created, "desc"),
   );
 
   const handleCreate = async () => {
-    if (newSectionName.trim() && !loadingCreate) {
+    if (newCompanyName.trim() && !loadingCreate) {
       setLoadingCreate(true);
-      await sectionsCollection.insert(
-        {
-          id: uuidv7(),
-          name: newSectionName.trim(),
-        },
-        { optimistic: false },
-      );
-      setNewSectionName("");
+      await companiesCollection.insert({
+        id: uuidv7(),
+        name: newCompanyName.trim(),
+        created: new Date(),
+        updated: new Date(),
+      }, { optimistic: false });
+      setNewCompanyName("");
       setCreateModalOpen(false);
       setLoadingCreate(false);
     }
   };
 
-  const handleEdit = (section) => {
-    setEditingSection(section);
-    setEditName(section.name);
+  const handleEdit = (company) => {
+    setEditingCompany(company);
+    setEditName(company.name);
     setEditModalOpen(true);
   };
 
   const handleUpdate = async () => {
-    if (editName.trim() && editingSection && !loadingEdit) {
+    if (editName.trim() && editingCompany && !loadingEdit) {
       setLoadingEdit(true);
-      await sectionsCollection.update(editingSection.id, { optimistic: false }, (draft) => {
+      await companiesCollection.update(editingCompany.id, { optimistic: false }, (draft) => {
         draft.name = editName.trim();
         draft.updated = new Date();
       });
       setEditName("");
-      setEditingSection(null);
+      setEditingCompany(null);
       setEditModalOpen(false);
       setLoadingEdit(false);
     }
   };
 
-  const handleDelete = async (sectionId) => {
+  const handleDelete = async (companyId) => {
     if (!loadingDelete) {
       setLoadingDelete(true);
-      await sectionsCollection.delete(sectionId, { optimistic: false });
+      await companiesCollection.delete(companyId, { optimistic: false });
       setLoadingDelete(false);
     }
   };
@@ -100,7 +99,7 @@ function Sections() {
           value={search}
         />
         <Button leftSection={<IconPlus size={14} />} onClick={() => setCreateModalOpen(true)}>
-          Create New Section
+          Create New Company
         </Button>
       </Group>
       <Table>
@@ -114,21 +113,16 @@ function Sections() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {sections?.map((section) => (
-            <Table.Tr key={section.id}>
-              <Table.Td>{section.name}</Table.Td>
-              <Table.Td>{section.created.toLocaleString()}</Table.Td>
+          {companies?.map((company) => (
+            <Table.Tr key={company.id}>
+              <Table.Td>{company.name}</Table.Td>
+              <Table.Td>{company.created.toLocaleString()}</Table.Td>
               <Table.Td>
                 <Group gap='xs'>
-                  <ActionIcon variant='subtle' onClick={() => handleEdit(section)}>
+                  <ActionIcon variant='subtle' onClick={() => handleEdit(company)}>
                     <IconEdit size={16} />
                   </ActionIcon>
-                  <ActionIcon
-                    variant='subtle'
-                    color='red'
-                    onClick={() => handleDelete(section.id)}
-                    disabled={loadingDelete}
-                  >
+                  <ActionIcon variant='subtle' color='red' onClick={() => handleDelete(company.id)} disabled={loadingDelete}>
                     <IconTrash size={16} />
                   </ActionIcon>
                 </Group>
@@ -137,27 +131,23 @@ function Sections() {
           ))}
         </Table.Tbody>
       </Table>
-      <Modal opened={createModalOpen} onClose={() => setCreateModalOpen(false)} title='Create New Section'>
+      <Modal opened={createModalOpen} onClose={() => setCreateModalOpen(false)} title='Create New Company'>
         <TextInput
           label='Name'
-          value={newSectionName}
-          onChange={(value) => setNewSectionName(value.target.value)}
+          value={newCompanyName}
+          onChange={(value) => setNewCompanyName(value.target.value)}
         />
         <Group mt='md'>
-          <Button onClick={handleCreate} disabled={loadingCreate}>
-            Create
-          </Button>
+          <Button onClick={handleCreate} disabled={loadingCreate}>Create</Button>
           <Button variant='outline' onClick={() => setCreateModalOpen(false)}>
             Cancel
           </Button>
         </Group>
       </Modal>
-      <Modal opened={editModalOpen} onClose={() => setEditModalOpen(false)} title='Edit Section'>
+      <Modal opened={editModalOpen} onClose={() => setEditModalOpen(false)} title='Edit Company'>
         <TextInput label='Name' value={editName} onChange={(value) => setEditName(value.target.value)} />
         <Group mt='md'>
-          <Button onClick={handleUpdate} disabled={loadingEdit}>
-            Update
-          </Button>
+          <Button onClick={handleUpdate} disabled={loadingEdit}>Update</Button>
           <Button variant='outline' onClick={() => setEditModalOpen(false)}>
             Cancel
           </Button>
@@ -166,6 +156,6 @@ function Sections() {
     </>
   );
 }
-export const Route = createFileRoute("/app/management/sections/")({
-  component: Sections,
+export const Route = createFileRoute("/app/management/companies/")({
+  component: Companies,
 });
