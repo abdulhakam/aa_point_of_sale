@@ -17,6 +17,7 @@ import { Route as AppManagementProductsIndexRouteImport } from './routes/app/man
 import { Route as AppManagementPaymentsIndexRouteImport } from './routes/app/management/payments/index'
 import { Route as AppManagementPartiesIndexRouteImport } from './routes/app/management/parties/index'
 import { Route as AppManagementOrder_bookersIndexRouteImport } from './routes/app/management/order_bookers/index'
+import { Route as AppManagementImportIndexRouteImport } from './routes/app/management/import/index'
 import { Route as AppManagementExpensesIndexRouteImport } from './routes/app/management/expenses/index'
 import { Route as AppManagementCompaniesIndexRouteImport } from './routes/app/management/companies/index'
 import { Route as AppManagementCategoriesIndexRouteImport } from './routes/app/management/categories/index'
@@ -67,6 +68,12 @@ const AppManagementOrder_bookersIndexRoute =
     path: '/app/management/order_bookers/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AppManagementImportIndexRoute =
+  AppManagementImportIndexRouteImport.update({
+    id: '/app/management/import/',
+    path: '/app/management/import/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppManagementExpensesIndexRoute =
   AppManagementExpensesIndexRouteImport.update({
     id: '/app/management/expenses/',
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/app/management/categories/': typeof AppManagementCategoriesIndexRoute
   '/app/management/companies/': typeof AppManagementCompaniesIndexRoute
   '/app/management/expenses/': typeof AppManagementExpensesIndexRoute
+  '/app/management/import/': typeof AppManagementImportIndexRoute
   '/app/management/order_bookers/': typeof AppManagementOrder_bookersIndexRoute
   '/app/management/parties/': typeof AppManagementPartiesIndexRoute
   '/app/management/payments/': typeof AppManagementPaymentsIndexRoute
@@ -112,6 +120,7 @@ export interface FileRoutesByTo {
   '/app/management/categories': typeof AppManagementCategoriesIndexRoute
   '/app/management/companies': typeof AppManagementCompaniesIndexRoute
   '/app/management/expenses': typeof AppManagementExpensesIndexRoute
+  '/app/management/import': typeof AppManagementImportIndexRoute
   '/app/management/order_bookers': typeof AppManagementOrder_bookersIndexRoute
   '/app/management/parties': typeof AppManagementPartiesIndexRoute
   '/app/management/payments': typeof AppManagementPaymentsIndexRoute
@@ -127,6 +136,7 @@ export interface FileRoutesById {
   '/app/management/categories/': typeof AppManagementCategoriesIndexRoute
   '/app/management/companies/': typeof AppManagementCompaniesIndexRoute
   '/app/management/expenses/': typeof AppManagementExpensesIndexRoute
+  '/app/management/import/': typeof AppManagementImportIndexRoute
   '/app/management/order_bookers/': typeof AppManagementOrder_bookersIndexRoute
   '/app/management/parties/': typeof AppManagementPartiesIndexRoute
   '/app/management/payments/': typeof AppManagementPaymentsIndexRoute
@@ -143,6 +153,7 @@ export interface FileRouteTypes {
     | '/app/management/categories/'
     | '/app/management/companies/'
     | '/app/management/expenses/'
+    | '/app/management/import/'
     | '/app/management/order_bookers/'
     | '/app/management/parties/'
     | '/app/management/payments/'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/app/management/categories'
     | '/app/management/companies'
     | '/app/management/expenses'
+    | '/app/management/import'
     | '/app/management/order_bookers'
     | '/app/management/parties'
     | '/app/management/payments'
@@ -171,6 +183,7 @@ export interface FileRouteTypes {
     | '/app/management/categories/'
     | '/app/management/companies/'
     | '/app/management/expenses/'
+    | '/app/management/import/'
     | '/app/management/order_bookers/'
     | '/app/management/parties/'
     | '/app/management/payments/'
@@ -186,6 +199,7 @@ export interface RootRouteChildren {
   AppManagementCategoriesIndexRoute: typeof AppManagementCategoriesIndexRoute
   AppManagementCompaniesIndexRoute: typeof AppManagementCompaniesIndexRoute
   AppManagementExpensesIndexRoute: typeof AppManagementExpensesIndexRoute
+  AppManagementImportIndexRoute: typeof AppManagementImportIndexRoute
   AppManagementOrder_bookersIndexRoute: typeof AppManagementOrder_bookersIndexRoute
   AppManagementPartiesIndexRoute: typeof AppManagementPartiesIndexRoute
   AppManagementPaymentsIndexRoute: typeof AppManagementPaymentsIndexRoute
@@ -252,6 +266,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppManagementOrder_bookersIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/management/import/': {
+      id: '/app/management/import/'
+      path: '/app/management/import'
+      fullPath: '/app/management/import/'
+      preLoaderRoute: typeof AppManagementImportIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/management/expenses/': {
       id: '/app/management/expenses/'
       path: '/app/management/expenses'
@@ -290,6 +311,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppManagementCategoriesIndexRoute: AppManagementCategoriesIndexRoute,
   AppManagementCompaniesIndexRoute: AppManagementCompaniesIndexRoute,
   AppManagementExpensesIndexRoute: AppManagementExpensesIndexRoute,
+  AppManagementImportIndexRoute: AppManagementImportIndexRoute,
   AppManagementOrder_bookersIndexRoute: AppManagementOrder_bookersIndexRoute,
   AppManagementPartiesIndexRoute: AppManagementPartiesIndexRoute,
   AppManagementPaymentsIndexRoute: AppManagementPaymentsIndexRoute,

@@ -9,12 +9,5 @@
     "**/routeTree.gen.ts": true
   },
   "sqltools.useNodeRuntime": true,
-  "sqltools.connections": [
-    {
-      "previewLimit": 50,
-      "driver": "SQLite",
-      "name": "test",
-      "database": "${workspaceFolder:aa_point_of_sale}/trailbase/traildepot/data/main.db"
-    }
-  ]
+  "sqltools.connections": []
 }

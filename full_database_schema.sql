@@ -151,6 +151,8 @@ CREATE TABLE "users" (
 	"verified"	BOOLEAN NOT NULL DEFAULT FALSE,
 	PRIMARY KEY("id")
 );
+
+
 DROP VIEW IF EXISTS "counts_for_row_numbers";
 CREATE VIEW `counts_for_row_numbers` AS SELECT * FROM (SELECT cast(`id` as text) `id`,`areas`,`sections`,`categories`,`purchase_invoices`,`sale_invoices`,`return_invoices`,`items`,`order_bookers`,`parties`,`recieving_payments`,`sending_payments` FROM (SELECT (ROW_NUMBER() OVER()) as id,
 (SELECT COUNT (id) FROM areas) as areas,
