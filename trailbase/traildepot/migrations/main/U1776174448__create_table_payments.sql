@@ -2,7 +2,7 @@ CREATE TABLE "payments" (
     'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
     'amount' REAL NOT NULL DEFAULT 0,
     'description' TEXT NOT NULL DEFAULT '',
-    'invoice' TEXT REFERENCES 'invoices'('id'),
+    'invoice' BLOB REFERENCES 'invoices'('id'),
     'paid' INTEGER NOT NULL DEFAULT 0,
     'party' BLOB REFERENCES 'parties'('id'),
     'type' TEXT NOT NULL DEFAULT '',
