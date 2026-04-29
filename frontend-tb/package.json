@@ -17,11 +17,15 @@
     "@mantine/modals": "^9.1.1",
     "@mantine/notifications": "^9.1.1",
     "@tabler/icons-react": "^3.41.1",
+    "@tanstack/react-db": "^0.1.83",
     "@tanstack/react-router": "^1.168.25",
     "@tanstack/react-router-devtools": "^1.166.13",
+    "@tanstack/trailbase-db-collection": "^0.1.83",
     "dayjs": "^1.11.20",
     "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "react-dom": "^19.2.5",
+    "trailbase": "^0.12.1",
+    "uuidv7": "^1.2.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
