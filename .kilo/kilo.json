@@ -9,6 +9,17 @@
         "--db-path",
         "D:\\1Aeid4nI3hdH92f3D\\abdulhakam\\WORK\\WORK\\ERP_DB\\aa_point_of_sale\\PRODUCTION\\aa_point_of_sale\\backend\\backups\\db\\data.db"
       ]
+    },
+    "context7": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "environment": {
+        "DEFAULT_MINIMUM_TOKENS": "{{DEFAULT_MINIMUM_TOKENS}}"
+      }
     }
   }
 }

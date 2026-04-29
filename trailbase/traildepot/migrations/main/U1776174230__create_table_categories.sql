@@ -4,10 +4,3 @@ CREATE TABLE "categories" (
     'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     'updated' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 ) STRICT;
-CREATE TRIGGER update_categories_updated
-AFTER
-UPDATE ON categories BEGIN
-UPDATE categories
-SET updated = CURRENT_TIMESTAMP
-WHERE id = NEW.id;
-END;

@@ -23,7 +23,7 @@ export const sectionsCollection = createCollection(
       const newSection = transaction.mutations[0].modified
       console.log('Section created:', newSection)
     },
-    onUpdate: () => { },
+    onUpdate: () => { console.log("updated") },
     onDelete: () => { },
   })
 )

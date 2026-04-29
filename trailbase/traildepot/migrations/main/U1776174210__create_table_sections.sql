@@ -4,8 +4,3 @@ CREATE TABLE "sections" (
     'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     'updated' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 ) STRICT;
-
-CREATE TRIGGER update_sections_updated AFTER UPDATE ON sections
-BEGIN
-    UPDATE sections SET updated = CURRENT_TIMESTAMP WHERE id = NEW.id;
-END;

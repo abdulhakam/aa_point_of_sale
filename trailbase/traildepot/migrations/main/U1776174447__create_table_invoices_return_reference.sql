@@ -4,10 +4,3 @@ CREATE TABLE "invoices_return_reference" (
     'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     'updated' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 ) STRICT;
-CREATE TRIGGER update_invoices_return_reference_updated
-AFTER
-UPDATE ON invoices_return_reference BEGIN
-UPDATE invoices_return_reference
-SET updated = CURRENT_TIMESTAMP
-WHERE id = NEW.id;
-END;
