@@ -12,10 +12,3 @@ CREATE TABLE "transactions" (
     'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
     'updated' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 ) STRICT;
-CREATE TRIGGER update_transactions_updated
-AFTER
-UPDATE ON transactions BEGIN
-UPDATE transactions
-SET updated = CURRENT_TIMESTAMP
-WHERE id = NEW.id;
-END;

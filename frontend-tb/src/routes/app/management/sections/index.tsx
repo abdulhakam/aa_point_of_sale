@@ -70,8 +70,13 @@ function Sections() {
   const handleUpdate = async () => {
     if (editName.trim() && editingSection && !loadingEdit) {
       setLoadingEdit(true);
-      await sectionsCollection.update(editingSection.id, { optimistic: false }, (draft) => {
-        draft.name = editName.trim();
+      await fetch(`http://localhost:4000/api/records/v1/sections/${editingSection.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editName.trim(),
+          updated: Math.floor(new Date().valueOf() / 1000)
+        })
       });
       setEditName("");
       setEditingSection(null);
