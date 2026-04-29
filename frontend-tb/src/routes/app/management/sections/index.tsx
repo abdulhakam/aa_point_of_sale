@@ -72,7 +72,6 @@ function Sections() {
       setLoadingEdit(true);
       await sectionsCollection.update(editingSection.id, { optimistic: false }, (draft) => {
         draft.name = editName.trim();
-        draft.updated = new Date();
       });
       setEditName("");
       setEditingSection(null);
