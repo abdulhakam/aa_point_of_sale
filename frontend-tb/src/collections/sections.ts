@@ -2,8 +2,21 @@ import { trailbaseClient } from "../trailbaseClient";
 import { createCollection } from "@tanstack/react-db";
 import { trailBaseCollectionOptions } from '@tanstack/trailbase-db-collection'
 
+export type Section = {
+  id: string;
+  name: string;
+  created: Date;
+  updated: Date;
+}
 
-export const sectionsCollection = createCollection(
+type SelectSection = {
+  id: string;
+  name: string;
+  created: number;
+  updated: number;
+}
+
+export const sectionsCollection = createCollection<Section>(
   trailBaseCollectionOptions({
     //required options
     id: "sections",

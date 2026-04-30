@@ -5,8 +5,9 @@ import { sectionsCollection } from "../../../../collections/sections";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
-import { uuidv7 } from "uuidv7";
-import { useHotkey } from "@tanstack/react-hotkeys";
+import { RegisterableHotkey, useHotkey } from "@tanstack/react-hotkeys";
+import { CreateSectionForm } from "./-CreateSection";
+import { UpdateSectionForm } from "./-UpdateSection";
 
 const tableStructure = [
   { accessor: "id", title: "ID", hidden: false },
@@ -20,23 +21,20 @@ function Sections() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [newSectionName, setNewSectionName] = useState("");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [loadingCreate, setLoadingCreate] = useState(false);
-  const [loadingEdit, setLoadingEdit] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deletingSection, setDeletingSection] = useState(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 100);
     return () => clearTimeout(timer);
   }, [search]);
 
-  useHotkey("shift+a", () => setCreateModalOpen(true), { preventDefault: true });
-  useHotkey("e", () => {
+  useHotkey("shift+a" as RegisterableHotkey, () => setCreateModalOpen(true), { preventDefault: true });
+  useHotkey("e" as RegisterableHotkey, () => {
     if (selectedIndex >= 0 && sections[selectedIndex]) {
       handleEdit(sections[selectedIndex]);
     }
@@ -45,20 +43,21 @@ function Sections() {
     "delete",
     () => {
       if (selectedIndex >= 0 && sections[selectedIndex]) {
+        setDeletingSection(sections[selectedIndex]);
         setDeleteModalOpen(true);
       }
     },
     { preventDefault: true },
   );
   useHotkey(
-    "arrowup",
+    "arrowup" as RegisterableHotkey,
     () => {
       setSelectedIndex((prev) => Math.max(0, prev - 1));
     },
     { preventDefault: true },
   );
   useHotkey(
-    "arrowdown",
+    "arrowdown" as RegisterableHotkey,
     () => {
       setSelectedIndex((prev) => Math.min(sections.length - 1, prev + 1));
     },
@@ -83,46 +82,9 @@ function Sections() {
     }
   }, [sections, selectedIndex]);
 
-  const handleCreate = async () => {
-    if (newSectionName.trim() && !loadingCreate) {
-      setLoadingCreate(true);
-      await sectionsCollection.insert(
-        {
-          id: uuidv7(),
-          name: newSectionName.trim(),
-          created: new Date(),
-          updated: new Date(),
-        },
-        { optimistic: false },
-      );
-      setNewSectionName("");
-      setCreateModalOpen(false);
-      setLoadingCreate(false);
-    }
-  };
-
   const handleEdit = (section) => {
     setEditingSection(section);
-    setEditName(section.name);
     setEditModalOpen(true);
-  };
-
-  const handleUpdate = async () => {
-    if (editName.trim() && editingSection && !loadingEdit) {
-      setLoadingEdit(true);
-      await fetch(`http://localhost:4000/api/records/v1/sections/${editingSection.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editName.trim(),
-          updated: Math.floor(new Date().valueOf() / 1000),
-        }),
-      });
-      setEditName("");
-      setEditingSection(null);
-      setEditModalOpen(false);
-      setLoadingEdit(false);
-    }
   };
 
   const handleDelete = async (sectionId) => {
@@ -185,19 +147,20 @@ function Sections() {
                       <IconEdit size={16} />
                     </ActionIcon>
                   </Tooltip>
-                  <Tooltip label='Delete (Del)'>
-                    <ActionIcon
-                      variant='subtle'
-                      color='red'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteModalOpen(true);
-                      }}
-                      disabled={loadingDelete}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Tooltip>
+                   <Tooltip label='Delete (Del)'>
+                     <ActionIcon
+                       variant='subtle'
+                       color='red'
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         setDeletingSection(section);
+                         setDeleteModalOpen(true);
+                       }}
+                       disabled={loadingDelete}
+                     >
+                       <IconTrash size={16} />
+                     </ActionIcon>
+                   </Tooltip>
                 </Group>
               </Table.Td>
             </Table.Tr>
@@ -211,25 +174,7 @@ function Sections() {
         onClose={() => setCreateModalOpen(false)}
         title='Create New Section'
       >
-        <TextInput
-          label='Name'
-          value={newSectionName}
-          onChange={(value) => setNewSectionName(value.target.value)}
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleCreate();
-            }
-          }}
-        />
-        <Group mt='md'>
-          <Button onClick={handleCreate} disabled={loadingCreate}>
-            Create
-          </Button>
-          <Button variant='outline' onClick={() => setCreateModalOpen(false)}>
-            Cancel
-          </Button>
-        </Group>
+        <CreateSectionForm setCreateModalOpen={setCreateModalOpen} />
       </Modal>
       <Modal
         centered
@@ -238,45 +183,27 @@ function Sections() {
         onClose={() => setEditModalOpen(false)}
         title='Edit Section'
       >
-        <TextInput
-          label='Name'
-          value={editName}
-          onChange={(value) => setEditName(value.target.value)}
-          autoFocus
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleUpdate();
-            }
-          }}
-        />
-        <Group mt='md'>
-          <Button onClick={handleUpdate} disabled={loadingEdit}>
-            Update
-          </Button>
-          <Button variant='outline' onClick={() => setEditModalOpen(false)}>
-            Cancel
-          </Button>
-        </Group>
+        <UpdateSectionForm section={editingSection} setEditModalOpen={setEditModalOpen} />
       </Modal>
       <Modal
         withCloseButton={false}
         centered
         opened={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
+        onClose={() => { setDeleteModalOpen(false); setDeletingSection(null); }}
         title='Confirm Delete'
       >
         <Text>Are you sure you want to delete this section?</Text>
         <Group mt='md'>
-          <Button
-            color='red'
-            onClick={() => {
-              if (selectedIndex >= 0 && sections[selectedIndex]) {
-                handleDelete(sections[selectedIndex].id);
-              }
-              setDeleteModalOpen(false);
-            }}
-            disabled={loadingDelete}
-          >
+           <Button
+             color='red'
+             onClick={() => {
+               if (deletingSection) {
+                 handleDelete(deletingSection.id);
+               }
+               setDeleteModalOpen(false);
+             }}
+             disabled={loadingDelete}
+           >
             Delete
           </Button>
           <Button variant='outline' onClick={() => setDeleteModalOpen(false)}>
