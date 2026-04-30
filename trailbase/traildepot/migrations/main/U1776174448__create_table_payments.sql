@@ -5,7 +5,7 @@ CREATE TABLE "payments" (
     'invoice' BLOB REFERENCES 'invoices'('id'),
     'paid' INTEGER NOT NULL DEFAULT 0,
     'party' BLOB REFERENCES 'parties'('id'),
-    'type' TEXT NOT NULL DEFAULT '',
+    'type' INTEGER NOT NULL REFERENCES 'payments_enum_type'('id'),
     'payment_date' TEXT NOT NULL DEFAULT '',
     'paid_to' TEXT NOT NULL DEFAULT '',
     'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
