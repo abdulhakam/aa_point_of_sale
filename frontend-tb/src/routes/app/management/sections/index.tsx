@@ -147,20 +147,20 @@ function Sections() {
                       <IconEdit size={16} />
                     </ActionIcon>
                   </Tooltip>
-                   <Tooltip label='Delete (Del)'>
-                     <ActionIcon
-                       variant='subtle'
-                       color='red'
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         setDeletingSection(section);
-                         setDeleteModalOpen(true);
-                       }}
-                       disabled={loadingDelete}
-                     >
-                       <IconTrash size={16} />
-                     </ActionIcon>
-                   </Tooltip>
+                  <Tooltip label='Delete (Del)'>
+                    <ActionIcon
+                      variant='subtle'
+                      color='red'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingSection(section);
+                        setDeleteModalOpen(true);
+                      }}
+                      disabled={loadingDelete}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
                 </Group>
               </Table.Td>
             </Table.Tr>
@@ -189,21 +189,24 @@ function Sections() {
         withCloseButton={false}
         centered
         opened={deleteModalOpen}
-        onClose={() => { setDeleteModalOpen(false); setDeletingSection(null); }}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeletingSection(null);
+        }}
         title='Confirm Delete'
       >
         <Text>Are you sure you want to delete this section?</Text>
         <Group mt='md'>
-           <Button
-             color='red'
-             onClick={() => {
-               if (deletingSection) {
-                 handleDelete(deletingSection.id);
-               }
-               setDeleteModalOpen(false);
-             }}
-             disabled={loadingDelete}
-           >
+          <Button
+            color='red'
+            onClick={() => {
+              if (deletingSection) {
+                handleDelete(deletingSection.id);
+              }
+              setDeleteModalOpen(false);
+            }}
+            disabled={loadingDelete}
+          >
             Delete
           </Button>
           <Button variant='outline' onClick={() => setDeleteModalOpen(false)}>

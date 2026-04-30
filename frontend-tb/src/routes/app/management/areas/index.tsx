@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useLiveQuery } from "@tanstack/react-db";
+import { eq, useLiveQuery } from "@tanstack/react-db";
 import { like } from "@tanstack/react-db";
 import { areasCollection } from "../../../../collections/areas";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
@@ -8,6 +8,7 @@ import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { CreateAreaForm } from "./-CreateArea";
 import { UpdateAreaForm } from "./-UpdateArea";
+import { sectionsCollection } from "../../../../collections/sections";
 
 const tableStructure = [
   { accessor: "id", title: "ID", hidden: false },
@@ -74,7 +75,8 @@ function Areas() {
     q
       .from({ area: areasCollection })
       .where(({ area }) => like(area.name, `%${debouncedSearch}%`))
-      .orderBy(({ area }) => area.created, "desc"),
+      .orderBy(({ area }) => area.created, "desc")
+      .join({ section: sectionsCollection }, ({ area, section }) => eq(area.section, section.id)),
   );
 
   useEffect(() => {
@@ -124,19 +126,22 @@ function Areas() {
         </Table.Thead>
         <Table.Tbody>
           {areas?.map((item, index) => {
+            if (!item) return null;
             const { area, section } = item;
-            if (!area) return null;
             return (
               <Table.Tr
                 key={area.id}
                 onClick={() => setSelectedIndex(index)}
-                style={{ backgroundColor: selectedIndex === index ? "#e3f2fd" : undefined, cursor: "pointer" }}
+                style={{
+                  backgroundColor: selectedIndex === index ? "#e3f2fd" : undefined,
+                  cursor: "pointer",
+                }}
               >
                 <Table.Td>
                   <Code>{area.id}</Code>
                 </Table.Td>
                 <Table.Td>{area.name}</Table.Td>
-                <Table.Td>{section?.name || 'Unknown'}</Table.Td>
+                <Table.Td>{section.name}</Table.Td>
                 <Table.Td>{area.created.toLocaleString()}</Table.Td>
                 <Table.Td>{area.updated.toLocaleString()}</Table.Td>
                 <Table.Td>
@@ -146,7 +151,7 @@ function Areas() {
                         variant='subtle'
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEdit(item);
+                          handleEdit(area);
                         }}
                       >
                         <IconEdit size={16} />
@@ -158,7 +163,7 @@ function Areas() {
                         color='red'
                         onClick={(e) => {
                           e.stopPropagation();
-                          setDeletingArea(item);
+                          setDeletingArea(area);
                           setDeleteModalOpen(true);
                         }}
                         disabled={loadingDelete}
@@ -189,7 +194,7 @@ function Areas() {
         onClose={() => setEditModalOpen(false)}
         title='Edit Area'
       >
-        <UpdateAreaForm area={editingArea?.area} setEditModalOpen={setEditModalOpen} />
+        <UpdateAreaForm area={editingArea} setEditModalOpen={setEditModalOpen} />
       </Modal>
       <Modal
         withCloseButton={false}
@@ -207,7 +212,7 @@ function Areas() {
             color='red'
             onClick={() => {
               if (deletingArea) {
-                handleDelete(deletingArea.area.id);
+                handleDelete(deletingArea.id);
               }
               setDeleteModalOpen(false);
             }}

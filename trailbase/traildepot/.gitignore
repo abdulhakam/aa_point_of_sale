@@ -5,6 +5,7 @@ secrets/
 uploads/
 wasm/
 scripts/
+static/
 
 metadata.textproto
 
