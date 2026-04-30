@@ -80,6 +80,27 @@ record_apis: [{
   acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
   enable_subscriptions: true
 }, {
+  name:"invoices_enum_type"
+  table_name:"invoices_enum_type"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "parties_enum_type"
+  table_name: "parties_enum_type"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "payments_enum_type"
+  table_name: "payments_enum_type"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
   name: "invoices_return_reference"
   table_name: "invoices_return_reference"
   conflict_resolution: REPLACE
