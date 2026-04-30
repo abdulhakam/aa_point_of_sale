@@ -9,7 +9,7 @@ CREATE TABLE "invoices" (
     'invoiceNo' REAL NOT NULL DEFAULT 0,
     'invoice_maker' BLOB REFERENCES 'users'('id'),
     'party' BLOB REFERENCES 'parties'('id'),
-    'type' TEXT NOT NULL DEFAULT '',
+    'type' INTEGER NOT NULL REFERENCES 'invoices_enum_type'('id'),
     'dated' TEXT NOT NULL DEFAULT '',
     'discount_rs' REAL NOT NULL DEFAULT 0,
     'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
