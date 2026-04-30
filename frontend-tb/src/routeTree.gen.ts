@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppManagementSectionsIndexRouteImport } from './routes/app/management/sections/index'
+import { Route as AppManagementAreasIndexRouteImport } from './routes/app/management/areas/index'
 
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
@@ -29,34 +30,52 @@ const AppManagementSectionsIndexRoute =
     path: '/app/management/sections/',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AppManagementAreasIndexRoute = AppManagementAreasIndexRouteImport.update({
+  id: '/app/management/areas/',
+  path: '/app/management/areas/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/app/management/areas/': typeof AppManagementAreasIndexRoute
   '/app/management/sections/': typeof AppManagementSectionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/app/management/areas': typeof AppManagementAreasIndexRoute
   '/app/management/sections': typeof AppManagementSectionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/app/management/areas/': typeof AppManagementAreasIndexRoute
   '/app/management/sections/': typeof AppManagementSectionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/about' | '/app/management/sections/'
+  fullPaths:
+    | '/'
+    | '/about'
+    | '/app/management/areas/'
+    | '/app/management/sections/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/app/management/sections'
-  id: '__root__' | '/' | '/about' | '/app/management/sections/'
+  to: '/' | '/about' | '/app/management/areas' | '/app/management/sections'
+  id:
+    | '__root__'
+    | '/'
+    | '/about'
+    | '/app/management/areas/'
+    | '/app/management/sections/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AppManagementAreasIndexRoute: typeof AppManagementAreasIndexRoute
   AppManagementSectionsIndexRoute: typeof AppManagementSectionsIndexRoute
 }
 
@@ -83,12 +102,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppManagementSectionsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/management/areas/': {
+      id: '/app/management/areas/'
+      path: '/app/management/areas'
+      fullPath: '/app/management/areas/'
+      preLoaderRoute: typeof AppManagementAreasIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AppManagementAreasIndexRoute: AppManagementAreasIndexRoute,
   AppManagementSectionsIndexRoute: AppManagementSectionsIndexRoute,
 }
 export const routeTree = rootRouteImport
