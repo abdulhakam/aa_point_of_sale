@@ -80,8 +80,8 @@ record_apis: [{
   acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
   enable_subscriptions: true
 }, {
-  name:"invoices_enum_type"
-  table_name:"invoices_enum_type"
+  name: "invoices_enum_type"
+  table_name: "invoices_enum_type"
   conflict_resolution: REPLACE
   autofill_missing_user_id_columns: true
   acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
@@ -121,4 +121,9 @@ record_apis: [{
   autofill_missing_user_id_columns: true
   acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
   enable_subscriptions: true
+}, {
+  name: "companies2parties"
+  table_name: "companies2parties"
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  expand: ["party", "company"]
 }]
