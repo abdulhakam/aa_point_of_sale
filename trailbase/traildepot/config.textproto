@@ -72,6 +72,7 @@ record_apis: [{
   autofill_missing_user_id_columns: true
   acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
   enable_subscriptions: true
+  expand: ["area", "type"]
 }, {
   name: "invoices"
   table_name: "invoices"
@@ -125,5 +126,6 @@ record_apis: [{
   name: "companies2parties"
   table_name: "companies2parties"
   acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
   expand: ["party", "company"]
 }]
