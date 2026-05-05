@@ -73,10 +73,9 @@ export function CreatePartyForm({ setCreateModalOpen }: { setCreateModalOpen: (o
       for (const companyId of values.companies) {
         await companies2partiesCollection.insert(
           {
-            id: 0,
             company: companyId,
             party: partyId,
-          },
+          } as any,
           { optimistic: false },
         );
       }

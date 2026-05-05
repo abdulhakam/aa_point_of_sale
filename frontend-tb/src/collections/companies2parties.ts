@@ -13,6 +13,9 @@ export const companies2partiesCollection = createCollection<Companies2Parties>(
     id: "companies2parties",
     recordApi: trailbaseClient.records('companies2parties'),
     getKey: (record) => record.id.toString(),
+    parse: {
+      id: (val: number) => val,
+    },
     onInsert: () => { console.log("companies2parties inserted") },
     onUpdate: () => { console.log("updated") },
     onDelete: () => { },

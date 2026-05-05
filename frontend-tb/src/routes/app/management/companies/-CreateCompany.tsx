@@ -46,17 +46,16 @@ export function CreateCompanyForm({
         },
         { optimistic: false },
       );
-      // Insert associations
-      for (const partyId of values.parties) {
-        await companies2partiesCollection.insert(
-          {
-            id: 0, // auto
-            company: companyId,
-            party: partyId,
-          },
-          { optimistic: false },
-        );
-      }
+// Insert associations
+       for (const partyId of values.parties) {
+         await companies2partiesCollection.insert(
+           {
+             company: companyId,
+             party: partyId,
+           } as any,
+           { optimistic: false },
+         );
+       }
       form.reset();
       setLoadingCreate(false);
       setCreateModalOpen(false);

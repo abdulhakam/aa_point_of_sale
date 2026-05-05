@@ -4,6 +4,8 @@ import { like } from "@tanstack/react-db";
 import { partiesCollection } from "../../../../collections/parties";
 import { areasCollection } from "../../../../collections/areas";
 import { partiesEnumTypeCollection } from "../../../../collections/partiesEnumType";
+import { companiesCollection } from "../../../../collections/companies";
+import { companies2partiesCollection } from "../../../../collections/companies2parties";
 
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
 import { useState, useEffect } from "react";
@@ -19,6 +21,7 @@ const tableStructure = [
   { accessor: "phone", title: "Phone" },
   { accessor: "area", title: "Area" },
   { accessor: "type", title: "Type" },
+  { accessor: "companies", title: "Companies" },
   { accessor: "created", title: "Created" },
   { accessor: "updated", title: "Updated" },
   { accessor: "actions", title: "Actions" },
@@ -42,15 +45,15 @@ function Parties() {
 
   useHotkey("shift+a", () => setCreateModalOpen(true), { preventDefault: true });
   useHotkey("e", () => {
-    if (selectedIndex >= 0 && parties[selectedIndex]) {
-      handleEdit(parties[selectedIndex]);
+    if (selectedIndex >= 0 && partiesArray[selectedIndex]) {
+      handleEdit(partiesArray[selectedIndex]);
     }
   });
   useHotkey(
     "delete",
     () => {
-      if (selectedIndex >= 0 && parties[selectedIndex]) {
-        setDeletingParty(parties[selectedIndex]);
+      if (selectedIndex >= 0 && partiesArray[selectedIndex]) {
+        setDeletingParty(partiesArray[selectedIndex]);
         setDeleteModalOpen(true);
       }
     },
@@ -66,13 +69,13 @@ function Parties() {
   useHotkey(
     "arrowdown",
     () => {
-      setSelectedIndex((prev) => Math.min(parties.length - 1, prev + 1));
+      setSelectedIndex((prev) => Math.min(partiesArray.length - 1, prev + 1));
     },
     { preventDefault: true },
   );
 
   const {
-    data: parties,
+    data: rawParties,
     isLoading,
     isError,
     status,
@@ -82,13 +85,34 @@ function Parties() {
       .where(({ party }) => like(party.name, `%${debouncedSearch}%`))
       .orderBy(({ party }) => party.created, "desc")
       .join({ area: areasCollection }, ({ party, area }) => eq(party.area, area.id))
-      .join({ type: partiesEnumTypeCollection }, ({ party, type }) => eq(party.type, type.id)),
+      .join({ type: partiesEnumTypeCollection }, ({ party, type }) => eq(party.type, type.id))
+      .leftJoin({ assoc: companies2partiesCollection }, ({ party, assoc }) => eq(party.id, assoc.party))
+      .leftJoin({ company: companiesCollection }, ({ assoc, company }) => eq(assoc.company, company.id)),
   );
-  useEffect(() => {
-    if (parties && selectedIndex >= parties.length) {
-      setSelectedIndex(parties.length > 0 ? parties.length - 1 : -1);
+
+  // Group parties by ID and collect associated companies
+  const parties = rawParties?.reduce((acc, item) => {
+    const { party, area, type, company } = item;
+    if (!acc[party.id]) {
+      acc[party.id] = {
+        party,
+        area,
+        type,
+        companies: [],
+      };
     }
-  }, [parties, selectedIndex]);
+    if (company) {
+      acc[party.id].companies.push(company.name);
+    }
+    return acc;
+  }, {});
+
+  const partiesArray = parties ? Object.values(parties).sort((a, b) => b.party.created - a.party.created) : [];
+  useEffect(() => {
+    if (partiesArray && selectedIndex >= partiesArray.length) {
+      setSelectedIndex(partiesArray.length > 0 ? partiesArray.length - 1 : -1);
+    }
+  }, [partiesArray, selectedIndex]);
 
   const handleEdit = (party) => {
     setEditingParty(party);
@@ -130,9 +154,9 @@ function Parties() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {parties?.map((item, index) => {
+          {partiesArray?.map((item, index) => {
             if (!item) return null;
-            const { party, area, type } = item;
+            const { party, area, type, companies } = item;
             return (
               <Table.Tr
                 key={party.id}
@@ -150,6 +174,7 @@ function Parties() {
                 <Table.Td>{party.phone}</Table.Td>
                 <Table.Td>{area.name}</Table.Td>
                 <Table.Td>{type.name}</Table.Td>
+                <Table.Td>{companies.length > 0 ? companies.join(", ") : "None"}</Table.Td>
                 <Table.Td>{party.created.toLocaleString()}</Table.Td>
                 <Table.Td>{party.updated.toLocaleString()}</Table.Td>
                 <Table.Td>
