@@ -1,11 +1,12 @@
 import { Button, Group, TextInput, Select, Radio, MultiSelect, Loader } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { partiesCollection } from "../../../../collections/parties";
 import { areasCollection } from "../../../../collections/areas";
 import { companiesCollection } from "../../../../collections/companies";
 import { partiesEnumTypeCollection } from "../../../../collections/partiesEnumType";
 import { companies2partiesCollection } from "../../../../collections/companies2parties";
+import { trailbaseClient } from "../../../../trailbaseClient";
 import { useLiveQuery } from "@tanstack/react-db";
 import { eq } from "@tanstack/react-db";
 
@@ -34,8 +35,6 @@ export function UpdatePartyForm({
     q.from({ assoc: companies2partiesCollection }).where(({ assoc }) => eq(assoc.party, party.id)),
   );
 
-  const currentCompanies = associations?.map((a) => a.company) || [];
-
   const form = useForm({
     mode: "controlled",
     initialValues: {
@@ -44,7 +43,7 @@ export function UpdatePartyForm({
       phone: party.phone,
       area: party.area,
       type: party.type.toString(),
-      companies: currentCompanies,
+      companies: [] as string[],
     },
     validate: {
       name: (value) => (value ? null : "Name is required"),
@@ -55,10 +54,14 @@ export function UpdatePartyForm({
     },
   });
 
-  // Update form companies when associations load/change
+  // Initialize form companies once when associations first load — never again (avoids overwriting user edits)
+  const initializedRef = useRef(false);
   useEffect(() => {
-    form.setFieldValue("companies", currentCompanies);
-  }, [currentCompanies]);
+    if (!initializedRef.current && associations !== undefined) {
+      initializedRef.current = true;
+      form.setFieldValue("companies", associations.map((a) => a.company));
+    }
+  }, [associations]);
 
   const handleUpdate = async (values: { name: string; address: string; phone: string; area: string; type: string; companies: string[] }) => {
     if (
@@ -72,36 +75,36 @@ export function UpdatePartyForm({
       setLoadingUpdate(true);
 
       try {
-        // First, handle company associations
-        const currentCompanyIds = new Set(currentCompanies);
+        // Read current associations fresh from the live query snapshot to avoid stale closures
+        const existingAssociations = associations ?? [];
+        const existingCompanyIds = new Set(existingAssociations.map((a) => a.company));
         const newCompanyIds = new Set(values.companies);
 
         // Companies to remove (in current but not in new)
-        const companiesToRemove = associations?.filter(assoc => !newCompanyIds.has(assoc.company)) || [];
+        const companiesToRemove = existingAssociations.filter((assoc) => !newCompanyIds.has(assoc.company));
 
         // Companies to add (in new but not in current)
-        const companiesToAdd = values.companies.filter(companyId => !currentCompanyIds.has(companyId));
+        const companiesToAdd = values.companies.filter((companyId) => !existingCompanyIds.has(companyId));
 
         console.log("Companies to remove:", companiesToRemove);
         console.log("Companies to add:", companiesToAdd);
 
         // Delete removed associations in parallel
         await Promise.all(
-          companiesToRemove.map(assoc =>
+          companiesToRemove.map((assoc) =>
             companies2partiesCollection.delete(assoc.id, { optimistic: false })
           )
         );
 
         // Insert new associations in parallel
+        // Use raw client API to bypass collection's getKey (id is auto-assigned by DB, not known before insert)
         await Promise.all(
           companiesToAdd.map(async (companyId) => {
-            const result = await companies2partiesCollection.insert(
-              {
-                company: companyId,
-                party: party.id,
-              } as any,
-              { optimistic: false },
-            );
+            const result = await trailbaseClient.records('companies2parties').create({
+              company: companyId,
+              party: party.id,
+              deleted: 0,
+            });
             console.log("Inserted association:", result);
             return result;
           })
