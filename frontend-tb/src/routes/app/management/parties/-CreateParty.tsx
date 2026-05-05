@@ -6,7 +6,7 @@ import { partiesCollection } from "../../../../collections/parties";
 import { areasCollection } from "../../../../collections/areas";
 import { companiesCollection } from "../../../../collections/companies";
 import { partiesEnumTypeCollection } from "../../../../collections/partiesEnumType";
-import { companies2partiesCollection } from "../../../../collections/companies2parties";
+import { trailbaseClient } from "../../../../trailbaseClient";
 import { useLiveQuery } from "@tanstack/react-db";
 
 export function CreatePartyForm({ setCreateModalOpen }: { setCreateModalOpen: (open: boolean) => void }) {
@@ -55,33 +55,37 @@ export function CreatePartyForm({ setCreateModalOpen }: { setCreateModalOpen: (o
       !loadingCreate
     ) {
       setLoadingCreate(true);
-      const partyId = uuidv7();
-      await partiesCollection.insert(
-        {
-          id: partyId,
-          name: values.name.trim(),
-          address: values.address.trim(),
-          phone: values.phone.trim(),
-          area: values.area,
-          type: parseInt(values.type),
-          created: new Date(),
-          updated: new Date(),
-        },
-        { optimistic: false },
-      );
-      // Insert associations
-      for (const companyId of values.companies) {
-        await companies2partiesCollection.insert(
+      try {
+        const partyId = uuidv7();
+        await partiesCollection.insert(
           {
-            company: companyId,
-            party: partyId,
-          } as any,
+            id: partyId,
+            name: values.name.trim(),
+            address: values.address.trim(),
+            phone: values.phone.trim(),
+            area: values.area,
+            type: parseInt(values.type),
+            created: new Date(),
+            updated: new Date(),
+          },
           { optimistic: false },
         );
+        // Insert associations using raw client API to bypass collection's getKey
+        // (id is auto-assigned by DB, not known before insert)
+        for (const companyId of values.companies) {
+          await trailbaseClient.records('companies2parties').create({
+            company: companyId,
+            party: partyId,
+            deleted: 0,
+          });
+        }
+        form.reset();
+        setLoadingCreate(false);
+        setCreateModalOpen(false);
+      } catch (error) {
+        console.error("Error creating party:", error);
+        setLoadingCreate(false);
       }
-      form.reset();
-      setLoadingCreate(false);
-      setCreateModalOpen(false);
     }
   };
 

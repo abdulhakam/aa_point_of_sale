@@ -4,7 +4,7 @@ import { useState } from "react";
 import { uuidv7 } from "uuidv7";
 import { companiesCollection } from "../../../../collections/companies";
 import { partiesCollection } from "../../../../collections/parties";
-import { companies2partiesCollection } from "../../../../collections/companies2parties";
+import { trailbaseClient } from "../../../../trailbaseClient";
 import { useLiveQuery } from "@tanstack/react-db";
 
 export function CreateCompanyForm({
@@ -36,29 +36,33 @@ export function CreateCompanyForm({
   const handleCreate = async (values: { id: string; name: string; parties: string[]; created: Date; updated: Date }) => {
     if (values.name.trim() && !loadingCreate) {
       setLoadingCreate(true);
-      const companyId = uuidv7();
-      await companiesCollection.insert(
-        {
-          id: companyId,
-          name: values.name.trim(),
-          created: new Date(),
-          updated: new Date(),
-        },
-        { optimistic: false },
-      );
-// Insert associations
-       for (const partyId of values.parties) {
-         await companies2partiesCollection.insert(
-           {
-             company: companyId,
-             party: partyId,
-           } as any,
-           { optimistic: false },
-         );
-       }
-      form.reset();
-      setLoadingCreate(false);
-      setCreateModalOpen(false);
+      try {
+        const companyId = uuidv7();
+        await companiesCollection.insert(
+          {
+            id: companyId,
+            name: values.name.trim(),
+            created: new Date(),
+            updated: new Date(),
+          },
+          { optimistic: false },
+        );
+        // Insert associations using raw client API to bypass collection's getKey
+        // (id is auto-assigned by DB, not known before insert)
+        for (const partyId of values.parties) {
+          await trailbaseClient.records('companies2parties').create({
+            company: companyId,
+            party: partyId,
+            deleted: 0,
+          });
+        }
+        form.reset();
+        setLoadingCreate(false);
+        setCreateModalOpen(false);
+      } catch (error) {
+        console.error("Error creating company:", error);
+        setLoadingCreate(false);
+      }
     }
   };
 
