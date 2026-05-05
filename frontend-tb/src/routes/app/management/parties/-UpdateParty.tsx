@@ -1,6 +1,6 @@
 import { Button, Group, TextInput, Select, Radio, MultiSelect, Loader } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { partiesCollection } from "../../../../collections/parties";
 import { areasCollection } from "../../../../collections/areas";
 import { companiesCollection } from "../../../../collections/companies";
@@ -33,11 +33,11 @@ export function UpdatePartyForm({
   const { data: associations, isLoading: isLoadingAssociations } = useLiveQuery((q) =>
     q.from({ assoc: companies2partiesCollection }).where(({ assoc }) => eq(assoc.party, party.id)),
   );
-  console.log(associations);
+
   const currentCompanies = associations?.map((a) => a.company) || [];
-  console.log(currentCompanies);
+
   const form = useForm({
-    mode: "uncontrolled",
+    mode: "controlled",
     initialValues: {
       name: party.name,
       address: party.address,
@@ -55,7 +55,12 @@ export function UpdatePartyForm({
     },
   });
 
-  const handleUpdate = async (values) => {
+  // Update form companies when associations load/change
+  useEffect(() => {
+    form.setFieldValue("companies", currentCompanies);
+  }, [currentCompanies]);
+
+  const handleUpdate = async (values: { name: string; address: string; phone: string; area: string; type: string; companies: string[] }) => {
     if (
       values.name.trim() &&
       values.address.trim() &&
@@ -65,34 +70,64 @@ export function UpdatePartyForm({
       !loadingUpdate
     ) {
       setLoadingUpdate(true);
-      await partiesCollection.update(party.id, { optimistic: false }, (draft) => {
-        draft.name = values.name.trim();
-        draft.address = values.address.trim();
-        draft.phone = values.phone.trim();
-        draft.area = values.area;
-        draft.type = parseInt(values.type);
-        draft.updated = new Date();
-      });
-      // Delete existing associations
-      for (const assoc of associations || []) {
-        await companies2partiesCollection.delete(assoc.id, { optimistic: false });
-      }
-      // Insert new associations
-      for (const companyId of values.companies) {
-        await companies2partiesCollection.insert(
-          {
-            id: 0,
-            company: companyId,
-            party: party.id,
-          },
-          { optimistic: false },
+
+      try {
+        // First, handle company associations
+        const currentCompanyIds = new Set(currentCompanies);
+        const newCompanyIds = new Set(values.companies);
+
+        // Companies to remove (in current but not in new)
+        const companiesToRemove = associations?.filter(assoc => !newCompanyIds.has(assoc.company)) || [];
+
+        // Companies to add (in new but not in current)
+        const companiesToAdd = values.companies.filter(companyId => !currentCompanyIds.has(companyId));
+
+        console.log("Companies to remove:", companiesToRemove);
+        console.log("Companies to add:", companiesToAdd);
+
+        // Delete removed associations in parallel
+        await Promise.all(
+          companiesToRemove.map(assoc =>
+            companies2partiesCollection.delete(assoc.id, { optimistic: false })
+          )
         );
+
+        // Insert new associations in parallel
+        await Promise.all(
+          companiesToAdd.map(async (companyId) => {
+            const result = await companies2partiesCollection.insert(
+              {
+                company: companyId,
+                party: party.id,
+              } as any,
+              { optimistic: false },
+            );
+            console.log("Inserted association:", result);
+            return result;
+          })
+        );
+
+        // Then update the party
+        await partiesCollection.update(party.id, { optimistic: false }, (draft) => {
+          draft.name = values.name.trim();
+          draft.address = values.address.trim();
+          draft.phone = values.phone.trim();
+          draft.area = values.area;
+          draft.type = parseInt(values.type);
+          draft.updated = new Date();
+        });
+
+        setLoadingUpdate(false);
+        setEditModalOpen(false);
+      } catch (error) {
+        console.error("Error updating party:", error);
+        setLoadingUpdate(false);
       }
-      setLoadingUpdate(false);
-      setEditModalOpen(false);
     }
   };
+
   if (isLoadingAreas || isLoadingTypes || isLoadingCompanies || isLoadingAssociations) return <Loader />;
+
   return (
     <form
       onSubmit={form.onSubmit((values) => {

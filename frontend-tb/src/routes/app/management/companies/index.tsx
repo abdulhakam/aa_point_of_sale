@@ -1,7 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useLiveQuery } from "@tanstack/react-db";
+import { eq, useLiveQuery } from "@tanstack/react-db";
 import { like } from "@tanstack/react-db";
 import { companiesCollection } from "../../../../collections/companies";
+import { partiesCollection } from "../../../../collections/parties";
+import { companies2partiesCollection } from "../../../../collections/companies2parties";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
@@ -12,6 +14,7 @@ import { UpdateCompanyForm } from "./-UpdateCompany";
 const tableStructure = [
   { accessor: "id", title: "ID", hidden: false },
   { accessor: "name", title: "Name" },
+  { accessor: "parties", title: "Parties" },
   { accessor: "created", title: "Created" },
   { accessor: "updated", title: "Updated" },
   { accessor: "actions", title: "Actions" },
@@ -36,14 +39,14 @@ function Companies() {
   useHotkey("shift+a" as RegisterableHotkey, () => setCreateModalOpen(true), { preventDefault: true });
   useHotkey("e" as RegisterableHotkey, () => {
     if (selectedIndex >= 0 && companies[selectedIndex]) {
-      handleEdit(companies[selectedIndex]);
+      handleEdit(companies[selectedIndex].company);
     }
   });
   useHotkey(
     "delete",
     () => {
       if (selectedIndex >= 0 && companies[selectedIndex]) {
-        setDeletingCompany(companies[selectedIndex]);
+        setDeletingCompany(companies[selectedIndex].company);
         setDeleteModalOpen(true);
       }
     },
@@ -65,7 +68,7 @@ function Companies() {
   );
 
   const {
-    data: companies,
+    data: rawCompanies,
     isLoading,
     isError,
     status,
@@ -73,8 +76,29 @@ function Companies() {
     q
       .from({ company: companiesCollection })
       .where(({ company }) => like(company.name, `%${debouncedSearch}%`))
-      .orderBy(({ company }) => company.created, "desc"),
+      .orderBy(({ company }) => company.created, "desc")
+      .leftJoin({ assoc: companies2partiesCollection }, ({ company, assoc }) => eq(company.id, assoc.company))
+      .leftJoin({ party: partiesCollection }, ({ assoc, party }) => eq(assoc.party, party.id)),
   );
+
+  // Group companies by ID and collect associated parties
+  const companiesMap = rawCompanies?.reduce((acc, item) => {
+    const { company, party } = item;
+    if (!acc[company.id]) {
+      acc[company.id] = {
+        company,
+        parties: [],
+      };
+    }
+    if (party) {
+      acc[company.id].parties.push(party.name);
+    }
+    return acc;
+  }, {});
+
+  const companies = companiesMap
+    ? Object.values(companiesMap).sort((a, b) => b.company.created - a.company.created)
+    : [];
 
   useEffect(() => {
     if (companies && selectedIndex >= companies.length) {
@@ -122,49 +146,57 @@ function Companies() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {companies?.map((company, index) => (
-            <Table.Tr
-              key={company.id}
-              onClick={() => setSelectedIndex(index)}
-              style={{ backgroundColor: selectedIndex === index ? "#e3f2fd" : undefined, cursor: "pointer" }}
-            >
-              <Table.Td>
-                <Code>{company.id}</Code>
-              </Table.Td>
-              <Table.Td>{company.name}</Table.Td>
-              <Table.Td>{company.created.toLocaleString()}</Table.Td>
-              <Table.Td>{company.updated.toLocaleString()}</Table.Td>
-              <Table.Td>
-                <Group gap='xs'>
-                  <Tooltip label='Edit (E)'>
-                    <ActionIcon
-                      variant='subtle'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(company);
-                      }}
-                    >
-                      <IconEdit size={16} />
-                    </ActionIcon>
-                  </Tooltip>
-                  <Tooltip label='Delete (Del)'>
-                    <ActionIcon
-                      variant='subtle'
-                      color='red'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingCompany(company);
-                        setDeleteModalOpen(true);
-                      }}
-                      disabled={loadingDelete}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Tooltip>
-                </Group>
-              </Table.Td>
-            </Table.Tr>
-          ))}
+          {companies?.map((item, index) => {
+            if (!item) return null;
+            const { company, parties } = item;
+            return (
+              <Table.Tr
+                key={company.id}
+                onClick={() => setSelectedIndex(index)}
+                style={{
+                  backgroundColor: selectedIndex === index ? "#e3f2fd" : undefined,
+                  cursor: "pointer",
+                }}
+              >
+                <Table.Td>
+                  <Code>{company.id}</Code>
+                </Table.Td>
+                <Table.Td>{company.name}</Table.Td>
+                <Table.Td>{parties.length > 0 ? parties.join(", ") : "None"}</Table.Td>
+                <Table.Td>{company.created.toLocaleString()}</Table.Td>
+                <Table.Td>{company.updated.toLocaleString()}</Table.Td>
+                <Table.Td>
+                  <Group gap='xs'>
+                    <Tooltip label='Edit (E)'>
+                      <ActionIcon
+                        variant='subtle'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(company);
+                        }}
+                      >
+                        <IconEdit size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                    <Tooltip label='Delete (Del)'>
+                      <ActionIcon
+                        variant='subtle'
+                        color='red'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingCompany(company);
+                          setDeleteModalOpen(true);
+                        }}
+                        disabled={loadingDelete}
+                      >
+                        <IconTrash size={16} />
+                      </ActionIcon>
+                    </Tooltip>
+                  </Group>
+                </Table.Td>
+              </Table.Tr>
+            );
+          })}
         </Table.Tbody>
       </Table>
       <Modal
