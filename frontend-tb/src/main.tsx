@@ -3,12 +3,15 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import "@mantine/core/styles.css";
 import { MantineProvider } from "@mantine/core";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
 
 // Create a new router instance
 const router = createRouter({ routeTree });
+
+const queryClient = new QueryClient();
 
 // Register the router instance for type safety
 declare module "@tanstack/react-router" {
@@ -23,9 +26,11 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <MantineProvider>
-        <RouterProvider router={router} />
-      </MantineProvider>
+      <QueryClientProvider client={queryClient}>
+        <MantineProvider>
+          <RouterProvider router={router} />
+        </MantineProvider>
+      </QueryClientProvider>
     </StrictMode>,
   );
 }
