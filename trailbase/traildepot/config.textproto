@@ -126,4 +126,10 @@ record_apis: [{
   table_name: "companies2parties"
   acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
   enable_subscriptions: true
+}, {
+  name: "companies2orderbookers"
+  table_name: "companies2orderbookers"
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
 }]
