@@ -1,6 +1,5 @@
 CREATE TABLE "users" (
     'id' BLOB PRIMARY KEY REFERENCES '_user'('id') NOT NULL,
-    'email' TEXT REFERENCES '_user'('email'),
     'name' TEXT NOT NULL DEFAULT '',
     'username' TEXT UNIQUE NOT NULL DEFAULT '',
     'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
