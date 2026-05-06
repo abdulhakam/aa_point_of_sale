@@ -1,5 +1,5 @@
 CREATE TABLE "order_bookers" (
-    'id' BLOB PRIMARY KEY CHECK (is_uuid(id)) NOT NULL,
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) DEFAULT (uuid_v7()) NOT NULL,
     'company' TEXT NOT NULL DEFAULT '{}',
     'name' TEXT NOT NULL DEFAULT '',
     'phone' TEXT NOT NULL DEFAULT '',
