@@ -1,5 +1,5 @@
 CREATE TABLE "transactions" (
-    'id' BLOB PRIMARY KEY CHECK (is_uuid(id)) NOT NULL,
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) DEFAULT (uuid_v7()) NOT NULL,
     'discount_1' REAL NOT NULL DEFAULT 0,
     'discount_2' REAL NOT NULL DEFAULT 0,
     'invoice' BLOB REFERENCES 'invoices'('id'),

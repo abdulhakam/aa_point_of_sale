@@ -1,5 +1,5 @@
 CREATE TABLE "products" (
-    'id' BLOB PRIMARY KEY CHECK (is_uuid(id)) NOT NULL,
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) DEFAULT (uuid_v7()) NOT NULL,
     'category' BLOB NOT NULL REFERENCES 'categories'('id'),
     'company' BLOB NOT NULL REFERENCES 'companies'('id'),
     'cost_price' REAL NOT NULL DEFAULT 0,

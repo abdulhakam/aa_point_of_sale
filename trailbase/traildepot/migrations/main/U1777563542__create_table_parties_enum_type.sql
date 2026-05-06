@@ -6,3 +6,4 @@ CREATE TABLE "parties_enum_type" (
 INSERT INTO "parties_enum_type" ('id', 'name') VALUES
     (1, 'customer'),
     (2, 'supplier');
+
