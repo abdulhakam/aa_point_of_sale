@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useLiveQuery } from "@tanstack/react-db";
 import { Card, Text, Grid, Loader } from "@mantine/core";
 import {
   IconMap,
@@ -10,15 +9,10 @@ import {
   IconTag,
   IconPackage,
 } from "@tabler/icons-react";
-import { areasCollection } from "../../../collections/areas";
-import { companiesCollection } from "../../../collections/companies";
-import { partiesCollection } from "../../../collections/parties";
-import { sectionsCollection } from "../../../collections/sections";
-import { orderBookersCollection } from "../../../collections/order_bookers";
-import { categoriesCollection } from "../../../collections/categories";
-import { productsCollection } from "../../../collections/products";
 
 import { useQueries } from "@tanstack/react-query";
+
+import { trailbaseClient } from "../../../trailbaseClient";
 
 const ENTITIES = [
   { name: "Areas", icon: IconMap, key: "areas" },
@@ -35,12 +29,13 @@ function Management() {
   const results = useQueries({
     queries: ENTITIES.map((entity) => ({
       queryKey: ["count", entity.key],
-      queryFn: async () =>
-        await fetch(`http://localhost:4000/api/records/v1/${entity.key}`)
-          .then((res) => res.json())
-          .then((res) => res.records),
-      // Optimization: If you only need length, ensure your API has a /count endpoint
-      // to avoid downloading the entire array.
+      queryFn: async () => {
+        const response = await trailbaseClient.records(entity.key).list({
+          pagination: { limit: 0 },
+          count: true,
+        });
+        return response.total_count;
+      },
     })),
   });
 
@@ -60,7 +55,7 @@ function Management() {
                   {entity.name}
                 </Text>
                 <Text mt='xs' c='dimmed' size='sm'>
-                  {isLoading ? <Loader size='sm' /> : `${data?.length ?? 0} items`}
+                  {isLoading ? <Loader size='sm' /> : `${data ?? 0} items`}
                 </Text>
               </Card>
             </Link>
