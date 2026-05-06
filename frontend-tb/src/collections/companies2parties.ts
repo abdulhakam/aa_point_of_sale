@@ -3,7 +3,7 @@ import { createCollection } from "@tanstack/react-db";
 import { trailBaseCollectionOptions } from '@tanstack/trailbase-db-collection'
 
 export type Companies2Parties = {
-  id: number;
+  id: string;
   company: string;
   party: string;
 }

@@ -1,5 +1,15 @@
 {
   "worktrees": {},
-  "sessions": {},
+  "sessions": {
+    "ses_202bbce0dffeVYElBQjYd5UnkW": {
+      "worktreeId": null,
+      "createdAt": "2026-05-06T12:29:58.170Z"
+    }
+  },
+  "tabOrder": {
+    "local": [
+      "ses_202bbce0dffeVYElBQjYd5UnkW"
+    ]
+  },
   "sessionsCollapsed": true
 }
