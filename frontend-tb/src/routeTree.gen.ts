@@ -9,8 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AboutRouteImport } from './routes/about'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppManagementIndexRouteImport } from './routes/app/management/index'
 import { Route as AppManagementSectionsIndexRouteImport } from './routes/app/management/sections/index'
 import { Route as AppManagementProductsIndexRouteImport } from './routes/app/management/products/index'
@@ -20,66 +20,66 @@ import { Route as AppManagementCompaniesIndexRouteImport } from './routes/app/ma
 import { Route as AppManagementCategoriesIndexRouteImport } from './routes/app/management/categories/index'
 import { Route as AppManagementAreasIndexRouteImport } from './routes/app/management/areas/index'
 
-const AboutRoute = AboutRouteImport.update({
-  id: '/about',
-  path: '/about',
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
+const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AppRoute,
 } as any)
 const AppManagementIndexRoute = AppManagementIndexRouteImport.update({
-  id: '/app/management/',
-  path: '/app/management/',
-  getParentRoute: () => rootRouteImport,
+  id: '/management/',
+  path: '/management/',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppManagementSectionsIndexRoute =
   AppManagementSectionsIndexRouteImport.update({
-    id: '/app/management/sections/',
-    path: '/app/management/sections/',
-    getParentRoute: () => rootRouteImport,
+    id: '/management/sections/',
+    path: '/management/sections/',
+    getParentRoute: () => AppRoute,
   } as any)
 const AppManagementProductsIndexRoute =
   AppManagementProductsIndexRouteImport.update({
-    id: '/app/management/products/',
-    path: '/app/management/products/',
-    getParentRoute: () => rootRouteImport,
+    id: '/management/products/',
+    path: '/management/products/',
+    getParentRoute: () => AppRoute,
   } as any)
 const AppManagementPartiesIndexRoute =
   AppManagementPartiesIndexRouteImport.update({
-    id: '/app/management/parties/',
-    path: '/app/management/parties/',
-    getParentRoute: () => rootRouteImport,
+    id: '/management/parties/',
+    path: '/management/parties/',
+    getParentRoute: () => AppRoute,
   } as any)
 const AppManagementOrder_bookersIndexRoute =
   AppManagementOrder_bookersIndexRouteImport.update({
-    id: '/app/management/order_bookers/',
-    path: '/app/management/order_bookers/',
-    getParentRoute: () => rootRouteImport,
+    id: '/management/order_bookers/',
+    path: '/management/order_bookers/',
+    getParentRoute: () => AppRoute,
   } as any)
 const AppManagementCompaniesIndexRoute =
   AppManagementCompaniesIndexRouteImport.update({
-    id: '/app/management/companies/',
-    path: '/app/management/companies/',
-    getParentRoute: () => rootRouteImport,
+    id: '/management/companies/',
+    path: '/management/companies/',
+    getParentRoute: () => AppRoute,
   } as any)
 const AppManagementCategoriesIndexRoute =
   AppManagementCategoriesIndexRouteImport.update({
-    id: '/app/management/categories/',
-    path: '/app/management/categories/',
-    getParentRoute: () => rootRouteImport,
+    id: '/management/categories/',
+    path: '/management/categories/',
+    getParentRoute: () => AppRoute,
   } as any)
 const AppManagementAreasIndexRoute = AppManagementAreasIndexRouteImport.update({
-  id: '/app/management/areas/',
-  path: '/app/management/areas/',
-  getParentRoute: () => rootRouteImport,
+  id: '/management/areas/',
+  path: '/management/areas/',
+  getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/app': typeof AppRouteWithChildren
+  '/app/': typeof AppIndexRoute
   '/app/management/': typeof AppManagementIndexRoute
   '/app/management/areas/': typeof AppManagementAreasIndexRoute
   '/app/management/categories/': typeof AppManagementCategoriesIndexRoute
@@ -90,8 +90,7 @@ export interface FileRoutesByFullPath {
   '/app/management/sections/': typeof AppManagementSectionsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/app': typeof AppIndexRoute
   '/app/management': typeof AppManagementIndexRoute
   '/app/management/areas': typeof AppManagementAreasIndexRoute
   '/app/management/categories': typeof AppManagementCategoriesIndexRoute
@@ -103,8 +102,8 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/about': typeof AboutRoute
+  '/app': typeof AppRouteWithChildren
+  '/app/': typeof AppIndexRoute
   '/app/management/': typeof AppManagementIndexRoute
   '/app/management/areas/': typeof AppManagementAreasIndexRoute
   '/app/management/categories/': typeof AppManagementCategoriesIndexRoute
@@ -117,8 +116,8 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/about'
+    | '/app'
+    | '/app/'
     | '/app/management/'
     | '/app/management/areas/'
     | '/app/management/categories/'
@@ -129,8 +128,7 @@ export interface FileRouteTypes {
     | '/app/management/sections/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/about'
+    | '/app'
     | '/app/management'
     | '/app/management/areas'
     | '/app/management/categories'
@@ -141,8 +139,8 @@ export interface FileRouteTypes {
     | '/app/management/sections'
   id:
     | '__root__'
-    | '/'
-    | '/about'
+    | '/app'
+    | '/app/'
     | '/app/management/'
     | '/app/management/areas/'
     | '/app/management/categories/'
@@ -154,8 +152,86 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AboutRoute: typeof AboutRoute
+  AppRoute: typeof AppRouteWithChildren
+}
+
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/management/': {
+      id: '/app/management/'
+      path: '/management'
+      fullPath: '/app/management/'
+      preLoaderRoute: typeof AppManagementIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/management/sections/': {
+      id: '/app/management/sections/'
+      path: '/management/sections'
+      fullPath: '/app/management/sections/'
+      preLoaderRoute: typeof AppManagementSectionsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/management/products/': {
+      id: '/app/management/products/'
+      path: '/management/products'
+      fullPath: '/app/management/products/'
+      preLoaderRoute: typeof AppManagementProductsIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/management/parties/': {
+      id: '/app/management/parties/'
+      path: '/management/parties'
+      fullPath: '/app/management/parties/'
+      preLoaderRoute: typeof AppManagementPartiesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/management/order_bookers/': {
+      id: '/app/management/order_bookers/'
+      path: '/management/order_bookers'
+      fullPath: '/app/management/order_bookers/'
+      preLoaderRoute: typeof AppManagementOrder_bookersIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/management/companies/': {
+      id: '/app/management/companies/'
+      path: '/management/companies'
+      fullPath: '/app/management/companies/'
+      preLoaderRoute: typeof AppManagementCompaniesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/management/categories/': {
+      id: '/app/management/categories/'
+      path: '/management/categories'
+      fullPath: '/app/management/categories/'
+      preLoaderRoute: typeof AppManagementCategoriesIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/management/areas/': {
+      id: '/app/management/areas/'
+      path: '/management/areas'
+      fullPath: '/app/management/areas/'
+      preLoaderRoute: typeof AppManagementAreasIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+  }
+}
+
+interface AppRouteChildren {
+  AppIndexRoute: typeof AppIndexRoute
   AppManagementIndexRoute: typeof AppManagementIndexRoute
   AppManagementAreasIndexRoute: typeof AppManagementAreasIndexRoute
   AppManagementCategoriesIndexRoute: typeof AppManagementCategoriesIndexRoute
@@ -166,84 +242,8 @@ export interface RootRouteChildren {
   AppManagementSectionsIndexRoute: typeof AppManagementSectionsIndexRoute
 }
 
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/about': {
-      id: '/about'
-      path: '/about'
-      fullPath: '/about'
-      preLoaderRoute: typeof AboutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/management/': {
-      id: '/app/management/'
-      path: '/app/management'
-      fullPath: '/app/management/'
-      preLoaderRoute: typeof AppManagementIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/management/sections/': {
-      id: '/app/management/sections/'
-      path: '/app/management/sections'
-      fullPath: '/app/management/sections/'
-      preLoaderRoute: typeof AppManagementSectionsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/management/products/': {
-      id: '/app/management/products/'
-      path: '/app/management/products'
-      fullPath: '/app/management/products/'
-      preLoaderRoute: typeof AppManagementProductsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/management/parties/': {
-      id: '/app/management/parties/'
-      path: '/app/management/parties'
-      fullPath: '/app/management/parties/'
-      preLoaderRoute: typeof AppManagementPartiesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/management/order_bookers/': {
-      id: '/app/management/order_bookers/'
-      path: '/app/management/order_bookers'
-      fullPath: '/app/management/order_bookers/'
-      preLoaderRoute: typeof AppManagementOrder_bookersIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/management/companies/': {
-      id: '/app/management/companies/'
-      path: '/app/management/companies'
-      fullPath: '/app/management/companies/'
-      preLoaderRoute: typeof AppManagementCompaniesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/management/categories/': {
-      id: '/app/management/categories/'
-      path: '/app/management/categories'
-      fullPath: '/app/management/categories/'
-      preLoaderRoute: typeof AppManagementCategoriesIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app/management/areas/': {
-      id: '/app/management/areas/'
-      path: '/app/management/areas'
-      fullPath: '/app/management/areas/'
-      preLoaderRoute: typeof AppManagementAreasIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-  }
-}
-
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AboutRoute: AboutRoute,
+const AppRouteChildren: AppRouteChildren = {
+  AppIndexRoute: AppIndexRoute,
   AppManagementIndexRoute: AppManagementIndexRoute,
   AppManagementAreasIndexRoute: AppManagementAreasIndexRoute,
   AppManagementCategoriesIndexRoute: AppManagementCategoriesIndexRoute,
@@ -252,6 +252,12 @@ const rootRouteChildren: RootRouteChildren = {
   AppManagementPartiesIndexRoute: AppManagementPartiesIndexRoute,
   AppManagementProductsIndexRoute: AppManagementProductsIndexRoute,
   AppManagementSectionsIndexRoute: AppManagementSectionsIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
+const rootRouteChildren: RootRouteChildren = {
+  AppRoute: AppRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
