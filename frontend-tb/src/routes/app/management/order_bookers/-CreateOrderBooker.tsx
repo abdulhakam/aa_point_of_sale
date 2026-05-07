@@ -1,22 +1,27 @@
 import { Button, Group, TextInput, MultiSelect } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
 import { uuidv7 } from "uuidv7";
-import { orderBookersCollection } from "../../../../collections/order_bookers";
-import { companiesCollection } from "../../../../collections/companies";
 import { trailbaseClient } from "../../../../trailbaseClient";
-import { useLiveQuery } from "@tanstack/react-db";
 
 export function CreateOrderBookerForm({
   setCreateModalOpen = () => false,
 }: {
   setCreateModalOpen: (open: boolean) => void;
 }) {
-  const [loadingCreate, setLoadingCreate] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { data: companies } = useLiveQuery((q) =>
-    q.from({ company: companiesCollection }).orderBy(({ company }) => company.name)
-  );
+  const { data: companies } = useQuery({
+    queryKey: ["companies", "all"],
+    queryFn: async () => {
+      const response = await trailbaseClient.records("companies").list({
+        pagination: { limit: 0 },
+        count: true,
+      });
+      return response.records;
+    },
+  });
 
   const form = useForm({
     mode: "controlled",
@@ -34,36 +39,41 @@ export function CreateOrderBookerForm({
     },
   });
 
-  const handleCreate = async (values: { id: string; name: string; phone: string; companies: string[]; created: Date; updated: Date }) => {
-    if (values.name.trim() && !loadingCreate) {
-      setLoadingCreate(true);
-      try {
-        const orderBookerId = uuidv7();
-        await orderBookersCollection.insert(
-          {
-            id: orderBookerId,
-            name: values.name.trim(),
-            phone: values.phone.trim(),
-            created: new Date(),
-            updated: new Date(),
-          },
-          { optimistic: false },
-        );
-        // Insert associations using raw client API to bypass collection's getKey
-        // (id is auto-assigned by DB, not known before insert)
-        for (const companyId of values.companies) {
-          await trailbaseClient.records('companies2orderbookers').create({
-            order_booker: orderBookerId,
-            company: companyId,
-          });
-        }
-        form.reset();
-        setLoadingCreate(false);
-        setCreateModalOpen(false);
-      } catch (error) {
-        console.error("Error creating order booker:", error);
-        setLoadingCreate(false);
+  const createMutation = useMutation({
+    mutationFn: async (data: { name: string; phone: string; companies: string[] }) => {
+      const orderBookerId = uuidv7();
+      await trailbaseClient.records("order_bookers").create({
+        id: orderBookerId,
+        name: data.name.trim(),
+        phone: data.phone.trim(),
+        created: new Date(),
+        updated: new Date(),
+      });
+      // Insert associations
+      for (const companyId of data.companies) {
+        await trailbaseClient.records('companies2orderbookers').create({
+          order_booker: orderBookerId,
+          company: companyId,
+        });
       }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["order_bookers", "all"] });
+      form.reset();
+      setCreateModalOpen(false);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to create order booker: " + error.message,
+        color: "red",
+      });
+    },
+  });
+
+  const handleCreate = (values: { id: string; name: string; phone: string; companies: string[]; created: Date; updated: Date }) => {
+    if (values.name.trim()) {
+      createMutation.mutate({ name: values.name, phone: values.phone, companies: values.companies });
     }
   };
 
@@ -71,7 +81,6 @@ export function CreateOrderBookerForm({
     <form
       onSubmit={form.onSubmit((values) => {
         handleCreate(values);
-        console.log(values);
       })}
     >
       <TextInput
@@ -103,7 +112,7 @@ export function CreateOrderBookerForm({
       />
 
       <Group justify='flex-end' mt='md'>
-        <Button type='submit' disabled={loadingCreate}>
+        <Button type='submit' disabled={createMutation.isPending}>
           Submit
         </Button>
       </Group>

@@ -1,15 +1,16 @@
 import { Button, Group, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
 import { uuidv7 } from "uuidv7";
-import { categoriesCollection } from "../../../../collections/categories";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 export function CreateCategoryForm({
   setCreateModalOpen = () => false,
 }: {
   setCreateModalOpen: (open: boolean) => void;
 }) {
-  const [loadingCreate, setLoadingCreate] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm({
     mode: "controlled",
@@ -25,26 +26,32 @@ export function CreateCategoryForm({
     },
   });
 
-  const handleCreate = async (values: { id: string; name: string; created: Date; updated: Date }) => {
-    if (values.name.trim() && !loadingCreate) {
-      setLoadingCreate(true);
-      try {
-        await categoriesCollection.insert(
-          {
-            id: uuidv7(),
-            name: values.name.trim(),
-            created: new Date(),
-            updated: new Date(),
-          },
-          { optimistic: false },
-        );
-        form.reset();
-        setLoadingCreate(false);
-        setCreateModalOpen(false);
-      } catch (error) {
-        console.error("Error creating category:", error);
-        setLoadingCreate(false);
-      }
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      return await trailbaseClient.records("categories").create({
+        id: uuidv7(),
+        name: data.name.trim(),
+        created: new Date(),
+        updated: new Date(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories", "all"] });
+      form.reset();
+      setCreateModalOpen(false);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to create category: " + error.message,
+        color: "red",
+      });
+    },
+  });
+
+  const handleCreate = (values: { id: string; name: string; created: Date; updated: Date }) => {
+    if (values.name.trim()) {
+      createMutation.mutate({ name: values.name });
     }
   };
 
@@ -52,7 +59,6 @@ export function CreateCategoryForm({
     <form
       onSubmit={form.onSubmit((values) => {
         handleCreate(values);
-        console.log(values);
       })}
     >
       <TextInput
@@ -69,7 +75,7 @@ export function CreateCategoryForm({
       />
 
       <Group justify='flex-end' mt='md'>
-        <Button type='submit' disabled={loadingCreate}>
+        <Button type='submit' disabled={createMutation.isPending}>
           Submit
         </Button>
       </Group>

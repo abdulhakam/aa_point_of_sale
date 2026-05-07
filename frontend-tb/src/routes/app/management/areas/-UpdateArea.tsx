@@ -1,9 +1,8 @@
 import { Button, Group, TextInput, Select } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
-import { areasCollection } from "../../../../collections/areas";
-import { sectionsCollection } from "../../../../collections/sections";
-import { useLiveQuery } from "@tanstack/react-db";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 export function UpdateAreaForm({
   area,
@@ -12,11 +11,18 @@ export function UpdateAreaForm({
   area: any;
   setEditModalOpen: (open: boolean) => void;
 }) {
-  const [loadingUpdate, setLoadingUpdate] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { data: sections } = useLiveQuery((q) =>
-    q.from({ section: sectionsCollection }).orderBy(({ section }) => section.name),
-  );
+  const { data: sections } = useQuery({
+    queryKey: ["sections", "all"],
+    queryFn: async () => {
+      const response = await trailbaseClient.records("sections").list({
+        pagination: { limit: 0 },
+        count: true,
+      });
+      return response.records;
+    },
+  });
 
   const form = useForm({
     mode: "controlled",
@@ -30,16 +36,30 @@ export function UpdateAreaForm({
     },
   });
 
-  const handleUpdate = async (values: { name: string; section: string }) => {
-    if (values.name.trim() && values.section && !loadingUpdate) {
-      setLoadingUpdate(true);
-      await areasCollection.update(area.id, { optimistic: false }, (draft) => {
-        draft.name = values.name.trim();
-        draft.section = values.section;
-        draft.updated = new Date();
+  const updateMutation = useMutation({
+    mutationFn: async (data: { name: string; section: string }) => {
+      return await trailbaseClient.records("areas").update(area.id, {
+        name: data.name.trim(),
+        section: data.section,
+        updated: new Date(),
       });
-      setLoadingUpdate(false);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["areas", "all"] });
       setEditModalOpen(false);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to update area: " + error.message,
+        color: "red",
+      });
+    },
+  });
+
+  const handleUpdate = (values: { name: string; section: string }) => {
+    if (values.name.trim() && values.section) {
+      updateMutation.mutate({ name: values.name, section: values.section });
     }
   };
 
@@ -47,7 +67,6 @@ export function UpdateAreaForm({
     <form
       onSubmit={form.onSubmit((values) => {
         handleUpdate(values);
-        console.log(values);
       })}
     >
       <TextInput
@@ -72,7 +91,7 @@ export function UpdateAreaForm({
       />
 
       <Group justify='flex-end' mt='md'>
-        <Button type='submit' disabled={loadingUpdate}>
+        <Button type='submit' disabled={updateMutation.isPending}>
           Update
         </Button>
       </Group>

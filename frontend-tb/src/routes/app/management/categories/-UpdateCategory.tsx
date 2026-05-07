@@ -1,7 +1,8 @@
 import { Button, Group, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
-import { categoriesCollection } from "../../../../collections/categories";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 export function UpdateCategoryForm({
   category,
@@ -10,7 +11,7 @@ export function UpdateCategoryForm({
   category: any;
   setEditModalOpen: (open: boolean) => void;
 }) {
-  const [loadingUpdate, setLoadingUpdate] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm({
     mode: "controlled",
@@ -22,20 +23,29 @@ export function UpdateCategoryForm({
     },
   });
 
-  const handleUpdate = async (values: { name: string }) => {
-    if (values.name.trim() && !loadingUpdate) {
-      setLoadingUpdate(true);
-      try {
-        await categoriesCollection.update(category.id, { optimistic: false }, (draft) => {
-          draft.name = values.name.trim();
-          draft.updated = new Date();
-        });
-        setLoadingUpdate(false);
-        setEditModalOpen(false);
-      } catch (error) {
-        console.error("Error updating category:", error);
-        setLoadingUpdate(false);
-      }
+  const updateMutation = useMutation({
+    mutationFn: async (data: { name: string }) => {
+      return await trailbaseClient.records("categories").update(category.id, {
+        name: data.name.trim(),
+        updated: new Date(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories", "all"] });
+      setEditModalOpen(false);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to update category: " + error.message,
+        color: "red",
+      });
+    },
+  });
+
+  const handleUpdate = (values: { name: string }) => {
+    if (values.name.trim()) {
+      updateMutation.mutate({ name: values.name });
     }
   };
 
@@ -43,7 +53,6 @@ export function UpdateCategoryForm({
     <form
       onSubmit={form.onSubmit((values) => {
         handleUpdate(values);
-        console.log(values);
       })}
     >
       <TextInput
@@ -60,7 +69,7 @@ export function UpdateCategoryForm({
       />
 
       <Group justify='flex-end' mt='md'>
-        <Button type='submit' disabled={loadingUpdate}>
+        <Button type='submit' disabled={updateMutation.isPending}>
           Update
         </Button>
       </Group>

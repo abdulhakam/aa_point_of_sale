@@ -1,14 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { eq, useLiveQuery } from "@tanstack/react-db";
-import { like } from "@tanstack/react-db";
-import { areasCollection } from "../../../../collections/areas";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import { CreateAreaForm } from "./-CreateArea";
 import { UpdateAreaForm } from "./-UpdateArea";
-import { sectionsCollection } from "../../../../collections/sections";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 const tableStructure = [
   { accessor: "id", title: "ID", hidden: false },
@@ -20,12 +19,13 @@ const tableStructure = [
 ];
 
 function Areas() {
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState(null);
-  const [loadingDelete, setLoadingDelete] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingArea, setDeletingArea] = useState(null);
@@ -76,13 +76,20 @@ function Areas() {
     isLoading,
     isError,
     status,
-  } = useLiveQuery((q) =>
-    q
-      .from({ area: areasCollection })
-      .where(({ area }) => like(area.name, `%${debouncedSearch}%`))
-      .orderBy(({ area }) => area.created, "desc")
-      .join({ section: sectionsCollection }, ({ area, section }) => eq(area.section, section.id)),
-  );
+  } = useQuery({
+    queryKey: ["areas", "all", debouncedSearch],
+    queryFn: async () => {
+      const response = await trailbaseClient.records("areas").list({
+        pagination: { limit: 0 },
+        count: true,
+        filter: debouncedSearch ? `name ~ '${debouncedSearch}'` : undefined,
+        expand: { section: true },
+        order: { created: "desc" },
+      });
+      return response.records;
+    },
+    refetchInterval: 2 * 1000,
+  });
 
   useEffect(() => {
     if (areas && selectedIndex >= areas.length) {
@@ -95,13 +102,23 @@ function Areas() {
     setEditModalOpen(true);
   };
 
-  const handleDelete = async (areaId) => {
-    if (!loadingDelete) {
-      setLoadingDelete(true);
-      await areasCollection.delete(areaId, { optimistic: false });
-      setLoadingDelete(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (areaId: string) => {
+      return await trailbaseClient.records("areas").delete(areaId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["areas", "all"] });
+      setDeleteModalOpen(false);
+      setDeletingArea(null);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to delete area: " + error.message,
+        color: "red",
+      });
+    },
+  });
 
   if (isLoading) return <Text>Loading...</Text>;
   if (isError) return <Text>Error: {status}</Text>;
@@ -130,57 +147,53 @@ function Areas() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {areas?.map((item, index) => {
-            if (!item) return null;
-            const { area, section } = item;
-            return (
-              <Table.Tr
-                key={area.id}
-                onClick={() => setSelectedIndex(index)}
-                style={{
-                  backgroundColor: selectedIndex === index ? "#e3f2fd" : undefined,
-                  cursor: "pointer",
-                }}
-              >
-                <Table.Td>
-                  <Code>{area.id}</Code>
-                </Table.Td>
-                <Table.Td>{area.name}</Table.Td>
-                <Table.Td>{section.name}</Table.Td>
-                <Table.Td>{area.created.toLocaleString()}</Table.Td>
-                <Table.Td>{area.updated.toLocaleString()}</Table.Td>
-                <Table.Td>
-                  <Group gap='xs'>
-                    <Tooltip label='Edit (E)'>
-                      <ActionIcon
-                        variant='subtle'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(area);
-                        }}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label='Delete (Del)'>
-                      <ActionIcon
-                        variant='subtle'
-                        color='red'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingArea(area);
-                          setDeleteModalOpen(true);
-                        }}
-                        disabled={loadingDelete}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            );
-          })}
+          {areas?.map((area, index) => (
+            <Table.Tr
+              key={area.id}
+              onClick={() => setSelectedIndex(index)}
+              style={{
+                backgroundColor: selectedIndex === index ? "#e3f2fd" : undefined,
+                cursor: "pointer",
+              }}
+            >
+              <Table.Td>
+                <Code>{area.id}</Code>
+              </Table.Td>
+              <Table.Td>{area.name}</Table.Td>
+              <Table.Td>{area.section?.name}</Table.Td>
+              <Table.Td>{new Date(area.created * 1000).toLocaleString()}</Table.Td>
+              <Table.Td>{new Date(area.updated * 1000).toLocaleString()}</Table.Td>
+              <Table.Td>
+                <Group gap='xs'>
+                  <Tooltip label='Edit (E)'>
+                    <ActionIcon
+                      variant='subtle'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(area);
+                      }}
+                    >
+                      <IconEdit size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label='Delete (Del)'>
+                    <ActionIcon
+                      variant='subtle'
+                      color='red'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingArea(area);
+                        setDeleteModalOpen(true);
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              </Table.Td>
+            </Table.Tr>
+          ))}
         </Table.Tbody>
       </Table>
       <Modal
@@ -217,11 +230,10 @@ function Areas() {
             color='red'
             onClick={() => {
               if (deletingArea) {
-                handleDelete(deletingArea.id);
+                deleteMutation.mutate(deletingArea.id);
               }
-              setDeleteModalOpen(false);
             }}
-            disabled={loadingDelete}
+            disabled={deleteMutation.isPending}
           >
             Delete
           </Button>

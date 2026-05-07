@@ -1,17 +1,23 @@
 import { Button, Group, TextInput, Select } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
 import { uuidv7 } from "uuidv7";
-import { areasCollection } from "../../../../collections/areas";
-import { sectionsCollection } from "../../../../collections/sections";
-import { useLiveQuery } from "@tanstack/react-db";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 export function CreateAreaForm({ setCreateModalOpen }: { setCreateModalOpen: (open: boolean) => void }) {
-  const [loadingCreate, setLoadingCreate] = useState(false);
+  const queryClient = useQueryClient();
 
-  const { data: sections } = useLiveQuery((q) =>
-    q.from({ section: sectionsCollection }).orderBy(({ section }) => section.name)
-  );
+  const { data: sections } = useQuery({
+    queryKey: ["sections", "all"],
+    queryFn: async () => {
+      const response = await trailbaseClient.records("sections").list({
+        pagination: { limit: 0 },
+        count: true,
+      });
+      return response.records;
+    },
+  });
 
   const form = useForm({
     mode: "controlled",
@@ -28,22 +34,33 @@ export function CreateAreaForm({ setCreateModalOpen }: { setCreateModalOpen: (op
     },
   });
 
-  const handleCreate = async (values) => {
-    if (values.name.trim() && values.section && !loadingCreate) {
-      setLoadingCreate(true);
-      await areasCollection.insert(
-        {
-          id: uuidv7(),
-          name: values.name.trim(),
-          section: values.section,
-          created: new Date(),
-          updated: new Date(),
-        },
-        { optimistic: false },
-      );
+  const createMutation = useMutation({
+    mutationFn: async (data) => {
+      return await trailbaseClient.records("areas").create({
+        id: uuidv7(),
+        name: data.name.trim(),
+        section: data.section,
+        created: new Date(),
+        updated: new Date(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["areas", "all"] });
       form.reset();
-      setLoadingCreate(false);
       setCreateModalOpen(false);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to create area: " + error.message,
+        color: "red",
+      });
+    },
+  });
+
+  const handleCreate = (values) => {
+    if (values.name.trim() && values.section) {
+      createMutation.mutate({ name: values.name, section: values.section });
     }
   };
 
@@ -51,7 +68,6 @@ export function CreateAreaForm({ setCreateModalOpen }: { setCreateModalOpen: (op
     <form
       onSubmit={form.onSubmit((values) => {
         handleCreate(values);
-        console.log(values);
       })}
     >
       <TextInput
@@ -76,7 +92,7 @@ export function CreateAreaForm({ setCreateModalOpen }: { setCreateModalOpen: (op
       />
 
       <Group justify='flex-end' mt='md'>
-        <Button type='submit' disabled={loadingCreate}>
+        <Button type='submit' disabled={createMutation.isPending}>
           Submit
         </Button>
       </Group>
