@@ -1,0 +1,21 @@
+CREATE TABLE "pos_settings" (
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) NOT NULL,
+    'inventory' BLOB REFERENCES 'locations'('id'),
+    'posProfile' BLOB REFERENCES 'pos_profile'('id'),
+    'cashAccount' BLOB REFERENCES 'accounts'('id'),
+    'writeOffAccount' BLOB REFERENCES 'accounts'('id'),
+    'posUI' TEXT NOT NULL DEFAULT '',
+    'isShiftOpen' INTEGER NOT NULL DEFAULT 0,
+    'defaultAccount' BLOB REFERENCES 'accounts'('id'),
+    'weightEnabledBarcode' INTEGER NOT NULL DEFAULT 0,
+    'checkDigits' INTEGER NOT NULL DEFAULT 0,
+    'itemCodeDigits' INTEGER NOT NULL DEFAULT 0,
+    'itemVisibility' TEXT NOT NULL DEFAULT '',
+    'itemVisibilityERP' TEXT NOT NULL DEFAULT '',
+    'canChangeRate' INTEGER NOT NULL DEFAULT 0,
+    'hideUnavailableItems' INTEGER NOT NULL DEFAULT 0,
+    'canEditDiscount' INTEGER NOT NULL DEFAULT 0,
+    'ignorePricingRule' INTEGER NOT NULL DEFAULT 0,
+    'created' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(created) IS NOT NULL),
+    'updated' TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK (datetime(updated) IS NOT NULL)
+) STRICT;
