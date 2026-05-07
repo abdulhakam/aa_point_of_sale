@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useLiveQuery } from "@tanstack/react-db";
-import { like } from "@tanstack/react-db";
+import { useQuery } from "@tanstack/react-query";
 import { sectionsCollection } from "../../../../collections/sections";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
-import { RegisterableHotkey, useHotkey } from "@tanstack/react-hotkeys";
+import { useHotkeys } from "@mantine/hooks";
 import { CreateSectionForm } from "./-CreateSection";
 import { UpdateSectionForm } from "./-UpdateSection";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 const tableStructure = [
   { accessor: "id", title: "ID", hidden: false },
@@ -33,49 +33,59 @@ function Sections() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useHotkey("shift+a" as RegisterableHotkey, () => setCreateModalOpen(true), { preventDefault: true });
-  useHotkey("e" as RegisterableHotkey, () => {
-    if (selectedIndex >= 0 && sections[selectedIndex]) {
-      handleEdit(sections[selectedIndex]);
-    }
-  });
-  useHotkey(
-    "delete",
-    () => {
-      if (selectedIndex >= 0 && sections[selectedIndex]) {
-        setDeletingSection(sections[selectedIndex]);
-        setDeleteModalOpen(true);
-      }
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowup" as RegisterableHotkey,
-    () => {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowdown" as RegisterableHotkey,
-    () => {
-      setSelectedIndex((prev) => Math.min(sections.length - 1, prev + 1));
-    },
-    { preventDefault: true },
-  );
-
   const {
     data: sections,
     isLoading,
     isError,
     status,
-  } = useLiveQuery((q) =>
-    q
-      .from({ section: sectionsCollection })
-      .where(({ section }) => like(section.name, `%${debouncedSearch}%`))
-      .orderBy(({ section }) => section.created, "desc"),
-  );
+  } = useQuery({
+    queryKey: ["sections", "all"],
+    queryFn: async () => {
+      const response = await trailbaseClient.records("sections").list({
+        pagination: { limit: 0 },
+        count: true,
+      });
 
+      return response.records;
+    },
+    refetchInterval: 30 * 1000,
+  });
+
+  useHotkeys([
+    ["shift+A", () => setCreateModalOpen(true), { preventDefault: true }],
+    [
+      "E",
+      () => {
+        if (selectedIndex >= 0 && sections[selectedIndex]) {
+          handleEdit(sections[selectedIndex]);
+        }
+      },
+    ],
+    [
+      "Delete",
+      () => {
+        if (selectedIndex >= 0 && sections[selectedIndex]) {
+          setDeletingSection(sections[selectedIndex]);
+          setDeleteModalOpen(true);
+        }
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowUp",
+      () => {
+        setSelectedIndex((prev) => Math.max(0, prev - 1));
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowDown",
+      () => {
+        setSelectedIndex((prev) => Math.min(sections.length - 1, prev + 1));
+      },
+      { preventDefault: true },
+    ],
+  ]);
   useEffect(() => {
     if (sections && selectedIndex >= sections.length) {
       setSelectedIndex(sections.length > 0 ? sections.length - 1 : -1);
@@ -88,11 +98,7 @@ function Sections() {
   };
 
   const handleDelete = async (sectionId) => {
-    if (!loadingDelete) {
-      setLoadingDelete(true);
-      await sectionsCollection.delete(sectionId, { optimistic: false });
-      setLoadingDelete(false);
-    }
+    await sectionsCollection.delete(sectionId, { optimistic: false });
   };
 
   if (isLoading) return <Text>Loading...</Text>;
