@@ -14,17 +14,6 @@ const entities = [
 ];
 
 const AppLayout = () => {
-  const queriesResult = useQueries({
-    queries: entities.map((entity) => ({
-      queryKey: [entity.key, "all"],
-      queryFn: async () =>
-        await trailbaseClient.records(entity.key).list({
-          pagination: { limit: 0 },
-          count: true,
-        }),
-      staleTime: 5 * 60 * 1000,
-    })),
-  });
   const isFetching = useIsFetching();
   return (
     <>
