@@ -28,7 +28,7 @@ function Management() {
   // 1. Map entities to query objects
   const results = useQueries({
     queries: ENTITIES.map((entity) => ({
-      queryKey: ["count", entity.key],
+      queryKey: [entity.key, "all"],
       queryFn: async () => {
         const response = await trailbaseClient.records(entity.key).list({
           pagination: { limit: 0 },
