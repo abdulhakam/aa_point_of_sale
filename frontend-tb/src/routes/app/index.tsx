@@ -1,32 +1,24 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Card, Text, Grid } from "@mantine/core";
-import { IconSettings } from "@tabler/icons-react";
+import { IconList, IconSettings } from "@tabler/icons-react";
+import { ShortcutsGrid } from "../../Components/Dashboard/ShortcutsGrid";
+import { BasicInfoGrid } from "../../Components/Dashboard/BasicInfoGrid";
 
-const MODULES = [
-  { name: "Management", icon: IconSettings, key: "management" },
+const MODULES = [{ name: "Management", icon: IconSettings, key: "management" }];
+const ENTITIES = [
+  { name: "Areas", key: "areas" },
+  { name: "Companies", key: "companies" },
+  { name: "Parties", key: "parties" },
+  { name: "Sections", key: "sections" },
+  { name: "Order Bookers", key: "order_bookers" },
+  { name: "Categories", key: "categories" },
+  { name: "Products", key: "products" },
 ];
-
 function AppDashboard() {
   return (
-    <Grid>
-      {MODULES.map((module) => {
-        const route = `/app/${module.key}`;
-        return (
-          <Grid.Col span={3} key={module.name}>
-            <Link to={route} style={{ textDecoration: "none" }}>
-              <Card shadow='sm' padding='lg' radius='md' withBorder>
-                <Card.Section withBorder inheritPadding py='xs'>
-                  <module.icon size={48} />
-                </Card.Section>
-                <Text fw={500} size='lg' mt='md'>
-                  {module.name}
-                </Text>
-              </Card>
-            </Link>
-          </Grid.Col>
-        );
-      })}
-    </Grid>
+    <>
+      <ShortcutsGrid modules={MODULES} />;
+      <BasicInfoGrid entities={ENTITIES} type='display' />
+    </>
   );
 }
 
