@@ -3,9 +3,9 @@ import { eq, useLiveQuery } from "@tanstack/react-db";
 import { like } from "@tanstack/react-db";
 import { categoriesCollection } from "../../../../collections/categories";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
-import { RegisterableHotkey, useHotkey } from "@tanstack/react-hotkeys";
 import { CreateCategoryForm } from "./-CreateCategory";
 import { UpdateCategoryForm } from "./-UpdateCategory";
 
@@ -33,36 +33,41 @@ function Categories() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useHotkey("shift+a" as RegisterableHotkey, () => setCreateModalOpen(true), { preventDefault: true });
-  useHotkey("e" as RegisterableHotkey, () => {
-    if (selectedIndex >= 0 && categories[selectedIndex]) {
-      handleEdit(categories[selectedIndex]);
-    }
-  });
-  useHotkey(
-    "delete",
-    () => {
-      if (selectedIndex >= 0 && categories[selectedIndex]) {
-        setDeletingCategory(categories[selectedIndex]);
-        setDeleteModalOpen(true);
-      }
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowup" as RegisterableHotkey,
-    () => {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowdown" as RegisterableHotkey,
-    () => {
-      setSelectedIndex((prev) => Math.min(categories.length - 1, prev + 1));
-    },
-    { preventDefault: true },
-  );
+  useHotkeys([
+    ["shift+A", () => setCreateModalOpen(true), { preventDefault: true }],
+    [
+      "E",
+      () => {
+        if (selectedIndex >= 0 && categories[selectedIndex]) {
+          handleEdit(categories[selectedIndex]);
+        }
+      },
+    ],
+    [
+      "Delete",
+      () => {
+        if (selectedIndex >= 0 && categories[selectedIndex]) {
+          setDeletingCategory(categories[selectedIndex]);
+          setDeleteModalOpen(true);
+        }
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowUp",
+      () => {
+        setSelectedIndex((prev) => Math.max(0, prev - 1));
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowDown",
+      () => {
+        setSelectedIndex((prev) => Math.min(categories.length - 1, prev + 1));
+      },
+      { preventDefault: true },
+    ],
+  ]);
 
   const {
     data: categories,

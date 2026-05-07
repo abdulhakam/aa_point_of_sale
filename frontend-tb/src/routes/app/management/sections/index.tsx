@@ -48,7 +48,7 @@ function Sections() {
 
       return response.records;
     },
-    refetchInterval: 30 * 1000,
+    refetchInterval: 2 * 1000,
   });
 
   useHotkeys([
@@ -98,7 +98,12 @@ function Sections() {
   };
 
   const handleDelete = async (sectionId) => {
-    await sectionsCollection.delete(sectionId, { optimistic: false });
+    if (!loadingDelete) {
+      setLoadingDelete(true);
+      console.log(sectionId);
+      await sectionsCollection.delete(sectionId, { optimistic: false });
+      setLoadingDelete(false);
+    }
   };
 
   if (isLoading) return <Text>Loading...</Text>;

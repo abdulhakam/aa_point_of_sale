@@ -3,9 +3,9 @@ import { eq, useLiveQuery } from "@tanstack/react-db";
 import { like } from "@tanstack/react-db";
 import { areasCollection } from "../../../../collections/areas";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
-import { useHotkey } from "@tanstack/react-hotkeys";
 import { CreateAreaForm } from "./-CreateArea";
 import { UpdateAreaForm } from "./-UpdateArea";
 import { sectionsCollection } from "../../../../collections/sections";
@@ -35,36 +35,41 @@ function Areas() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useHotkey("shift+a", () => setCreateModalOpen(true), { preventDefault: true });
-  useHotkey("e", () => {
-    if (selectedIndex >= 0 && areas[selectedIndex]) {
-      handleEdit(areas[selectedIndex]);
-    }
-  });
-  useHotkey(
-    "delete",
-    () => {
-      if (selectedIndex >= 0 && areas[selectedIndex]) {
-        setDeletingArea(areas[selectedIndex]);
-        setDeleteModalOpen(true);
-      }
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowup",
-    () => {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowdown",
-    () => {
-      setSelectedIndex((prev) => Math.min(areas.length - 1, prev + 1));
-    },
-    { preventDefault: true },
-  );
+  useHotkeys([
+    ["shift+A", () => setCreateModalOpen(true), { preventDefault: true }],
+    [
+      "E",
+      () => {
+        if (selectedIndex >= 0 && areas[selectedIndex]) {
+          handleEdit(areas[selectedIndex]);
+        }
+      },
+    ],
+    [
+      "Delete",
+      () => {
+        if (selectedIndex >= 0 && areas[selectedIndex]) {
+          setDeletingArea(areas[selectedIndex]);
+          setDeleteModalOpen(true);
+        }
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowUp",
+      () => {
+        setSelectedIndex((prev) => Math.max(0, prev - 1));
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowDown",
+      () => {
+        setSelectedIndex((prev) => Math.min(areas.length - 1, prev + 1));
+      },
+      { preventDefault: true },
+    ],
+  ]);
 
   const {
     data: areas,

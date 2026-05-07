@@ -5,9 +5,9 @@ import { orderBookersCollection } from "../../../../collections/order_bookers";
 import { companiesCollection } from "../../../../collections/companies";
 import { companies2orderBookersCollection } from "../../../../collections/companies2orderbookers";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
-import { RegisterableHotkey, useHotkey } from "@tanstack/react-hotkeys";
 import { CreateOrderBookerForm } from "./-CreateOrderBooker";
 import { UpdateOrderBookerForm } from "./-UpdateOrderBooker";
 
@@ -37,36 +37,41 @@ function OrderBookers() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useHotkey("shift+a" as RegisterableHotkey, () => setCreateModalOpen(true), { preventDefault: true });
-  useHotkey("e" as RegisterableHotkey, () => {
-    if (selectedIndex >= 0 && orderBookers[selectedIndex]) {
-      handleEdit(orderBookers[selectedIndex].orderBooker);
-    }
-  });
-  useHotkey(
-    "delete",
-    () => {
-      if (selectedIndex >= 0 && orderBookers[selectedIndex]) {
-        setDeletingOrderBooker(orderBookers[selectedIndex].orderBooker);
-        setDeleteModalOpen(true);
-      }
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowup" as RegisterableHotkey,
-    () => {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowdown" as RegisterableHotkey,
-    () => {
-      setSelectedIndex((prev) => Math.min(orderBookers.length - 1, prev + 1));
-    },
-    { preventDefault: true },
-  );
+  useHotkeys([
+    ["shift+A", () => setCreateModalOpen(true), { preventDefault: true }],
+    [
+      "E",
+      () => {
+        if (selectedIndex >= 0 && orderBookers[selectedIndex]) {
+          handleEdit(orderBookers[selectedIndex].orderBooker);
+        }
+      },
+    ],
+    [
+      "Delete",
+      () => {
+        if (selectedIndex >= 0 && orderBookers[selectedIndex]) {
+          setDeletingOrderBooker(orderBookers[selectedIndex].orderBooker);
+          setDeleteModalOpen(true);
+        }
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowUp",
+      () => {
+        setSelectedIndex((prev) => Math.max(0, prev - 1));
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowDown",
+      () => {
+        setSelectedIndex((prev) => Math.min(orderBookers.length - 1, prev + 1));
+      },
+      { preventDefault: true },
+    ],
+  ]);
 
   const {
     data: rawOrderBookers,
