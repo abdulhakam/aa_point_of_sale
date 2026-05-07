@@ -1,7 +1,8 @@
 import { Button, Group, TextInput } from "@mantine/core";
 import { useForm } from "@mantine/form";
-import { useState } from "react";
-import { sectionsCollection } from "../../../../collections/sections";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { notifications } from "@mantine/notifications";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 export function UpdateSectionForm({
   section,
@@ -10,7 +11,7 @@ export function UpdateSectionForm({
   section: any;
   setEditModalOpen: (open: boolean) => void;
 }) {
-  const [loadingUpdate, setLoadingUpdate] = useState(false);
+  const queryClient = useQueryClient();
 
   const form = useForm({
     mode: "controlled",
@@ -22,15 +23,29 @@ export function UpdateSectionForm({
     },
   });
 
-  const handleUpdate = async (values: { name: string }) => {
-    if (values.name.trim() && !loadingUpdate) {
-      setLoadingUpdate(true);
-      await sectionsCollection.update(section.id, { optimistic: false }, (draft) => {
-        draft.name = values.name.trim();
-        draft.updated = new Date();
+  const updateMutation = useMutation({
+    mutationFn: async (data: { name: string }) => {
+      return await trailbaseClient.records("sections").update(section.id, {
+        name: data.name.trim(),
+        updated: new Date(),
       });
-      setLoadingUpdate(false);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sections", "all"] });
       setEditModalOpen(false);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to update section: " + error.message,
+        color: "red",
+      });
+    },
+  });
+
+  const handleUpdate = (values: { name: string }) => {
+    if (values.name.trim()) {
+      updateMutation.mutate({ name: values.name });
     }
   };
 
@@ -38,7 +53,6 @@ export function UpdateSectionForm({
     <form
       onSubmit={form.onSubmit((values) => {
         handleUpdate(values);
-        console.log(values);
       })}
     >
       <TextInput
@@ -55,7 +69,7 @@ export function UpdateSectionForm({
       />
 
       <Group justify='flex-end' mt='md'>
-        <Button type='submit' disabled={loadingUpdate}>
+        <Button type='submit' disabled={updateMutation.isPending}>
           Update
         </Button>
       </Group>

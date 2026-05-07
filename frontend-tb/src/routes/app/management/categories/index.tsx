@@ -1,13 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { eq, useLiveQuery } from "@tanstack/react-db";
-import { like } from "@tanstack/react-db";
-import { categoriesCollection } from "../../../../collections/categories";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import { CreateCategoryForm } from "./-CreateCategory";
 import { UpdateCategoryForm } from "./-UpdateCategory";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 const tableStructure = [
   { accessor: "id", title: "ID", hidden: false },
@@ -18,12 +18,13 @@ const tableStructure = [
 ];
 
 function Categories() {
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
-  const [loadingDelete, setLoadingDelete] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingCategory, setDeletingCategory] = useState(null);
@@ -74,12 +75,19 @@ function Categories() {
     isLoading,
     isError,
     status,
-  } = useLiveQuery((q) =>
-    q
-      .from({ category: categoriesCollection })
-      .where(({ category }) => like(category.name, `%${debouncedSearch}%`))
-      .orderBy(({ category }) => category.created, "desc")
-  );
+  } = useQuery({
+    queryKey: ["categories", "all", debouncedSearch],
+    queryFn: async () => {
+      const response = await trailbaseClient.records("categories").list({
+        pagination: { limit: 0 },
+        count: true,
+        filter: debouncedSearch ? `name ~ '${debouncedSearch}'` : undefined,
+        order: { created: "desc" },
+      });
+      return response.records;
+    },
+    refetchInterval: 2 * 1000,
+  });
 
   useEffect(() => {
     if (categories && selectedIndex >= categories.length) {
@@ -92,13 +100,23 @@ function Categories() {
     setEditModalOpen(true);
   };
 
-  const handleDelete = async (categoryId) => {
-    if (!loadingDelete) {
-      setLoadingDelete(true);
-      await categoriesCollection.delete(categoryId, { optimistic: false });
-      setLoadingDelete(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (categoryId: string) => {
+      return await trailbaseClient.records("categories").delete(categoryId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["categories", "all"] });
+      setDeleteModalOpen(false);
+      setDeletingCategory(null);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to delete category: " + error.message,
+        color: "red",
+      });
+    },
+  });
 
   if (isLoading) return <Text>Loading...</Text>;
   if (isError) return <Text>Error: {status}</Text>;
@@ -140,8 +158,8 @@ function Categories() {
                 <Code>{category.id}</Code>
               </Table.Td>
               <Table.Td>{category.name}</Table.Td>
-              <Table.Td>{category.created.toLocaleString()}</Table.Td>
-              <Table.Td>{category.updated.toLocaleString()}</Table.Td>
+              <Table.Td>{new Date(category.created * 1000).toLocaleString()}</Table.Td>
+              <Table.Td>{new Date(category.updated * 1000).toLocaleString()}</Table.Td>
               <Table.Td>
                 <Group gap='xs'>
                   <Tooltip label='Edit (E)'>
@@ -164,7 +182,7 @@ function Categories() {
                         setDeletingCategory(category);
                         setDeleteModalOpen(true);
                       }}
-                      disabled={loadingDelete}
+                      disabled={deleteMutation.isPending}
                     >
                       <IconTrash size={16} />
                     </ActionIcon>
@@ -209,11 +227,10 @@ function Categories() {
             color='red'
             onClick={() => {
               if (deletingCategory) {
-                handleDelete(deletingCategory.id);
+                deleteMutation.mutate(deletingCategory.id);
               }
-              setDeleteModalOpen(false);
             }}
-            disabled={loadingDelete}
+            disabled={deleteMutation.isPending}
           >
             Delete
           </Button>

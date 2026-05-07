@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { sectionsCollection } from "../../../../collections/sections";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
 import { useHotkeys } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
 import { CreateSectionForm } from "./-CreateSection";
 import { UpdateSectionForm } from "./-UpdateSection";
 import { trailbaseClient } from "../../../../trailbaseClient";
@@ -18,12 +18,13 @@ const tableStructure = [
 ];
 
 function Sections() {
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingSection, setEditingSection] = useState(null);
-  const [loadingDelete, setLoadingDelete] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingSection, setDeletingSection] = useState(null);
@@ -97,14 +98,23 @@ function Sections() {
     setEditModalOpen(true);
   };
 
-  const handleDelete = async (sectionId) => {
-    if (!loadingDelete) {
-      setLoadingDelete(true);
-      console.log(sectionId);
-      await sectionsCollection.delete(sectionId, { optimistic: false });
-      setLoadingDelete(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (sectionId: string) => {
+      return await trailbaseClient.records("sections").delete(sectionId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sections", "all"] });
+      setDeleteModalOpen(false);
+      setDeletingSection(null);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to delete section: " + error.message,
+        color: "red",
+      });
+    },
+  });
 
   if (isLoading) return <Text>Loading...</Text>;
   if (isError) return <Text>Error: {status}</Text>;
@@ -167,7 +177,7 @@ function Sections() {
                         setDeletingSection(section);
                         setDeleteModalOpen(true);
                       }}
-                      disabled={loadingDelete}
+                      disabled={deleteMutation.isPending}
                     >
                       <IconTrash size={16} />
                     </ActionIcon>
@@ -212,11 +222,10 @@ function Sections() {
             color='red'
             onClick={() => {
               if (deletingSection) {
-                handleDelete(deletingSection.id);
+                deleteMutation.mutate(deletingSection.id);
               }
-              setDeleteModalOpen(false);
             }}
-            disabled={loadingDelete}
+            disabled={deleteMutation.isPending}
           >
             Delete
           </Button>

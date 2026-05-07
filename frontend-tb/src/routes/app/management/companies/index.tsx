@@ -1,15 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { eq, useLiveQuery } from "@tanstack/react-db";
-import { like } from "@tanstack/react-db";
-import { companiesCollection } from "../../../../collections/companies";
-import { partiesCollection } from "../../../../collections/parties";
-import { companies2partiesCollection } from "../../../../collections/companies2parties";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
 import { useHotkeys } from "@mantine/hooks";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
+import { notifications } from "@mantine/notifications";
 import { CreateCompanyForm } from "./-CreateCompany";
 import { UpdateCompanyForm } from "./-UpdateCompany";
+import { trailbaseClient } from "../../../../trailbaseClient";
 
 const tableStructure = [
   { accessor: "id", title: "ID", hidden: false },
@@ -21,12 +19,13 @@ const tableStructure = [
 ];
 
 function Companies() {
+  const queryClient = useQueryClient();
+
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
-  const [loadingDelete, setLoadingDelete] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingCompany, setDeletingCompany] = useState(null);
@@ -42,7 +41,7 @@ function Companies() {
       "E",
       () => {
         if (selectedIndex >= 0 && companies[selectedIndex]) {
-          handleEdit(companies[selectedIndex].company);
+          handleEdit(companies[selectedIndex]);
         }
       },
     ],
@@ -50,7 +49,7 @@ function Companies() {
       "Delete",
       () => {
         if (selectedIndex >= 0 && companies[selectedIndex]) {
-          setDeletingCompany(companies[selectedIndex].company);
+          setDeletingCompany(companies[selectedIndex]);
           setDeleteModalOpen(true);
         }
       },
@@ -73,37 +72,24 @@ function Companies() {
   ]);
 
   const {
-    data: rawCompanies,
+    data: companies,
     isLoading,
     isError,
     status,
-  } = useLiveQuery((q) =>
-    q
-      .from({ company: companiesCollection })
-      .where(({ company }) => like(company.name, `%${debouncedSearch}%`))
-      .orderBy(({ company }) => company.created, "desc")
-      .leftJoin({ assoc: companies2partiesCollection }, ({ company, assoc }) => eq(company.id, assoc.company))
-      .leftJoin({ party: partiesCollection }, ({ assoc, party }) => eq(assoc.party, party.id)),
-  );
-
-  // Group companies by ID and collect associated parties
-  const companiesMap = rawCompanies?.reduce((acc, item) => {
-    const { company, party } = item;
-    if (!acc[company.id]) {
-      acc[company.id] = {
-        company,
-        parties: [],
-      };
-    }
-    if (party) {
-      acc[company.id].parties.push(party.name);
-    }
-    return acc;
-  }, {});
-
-  const companies = companiesMap
-    ? Object.values(companiesMap).sort((a, b) => b.company.created - a.company.created)
-    : [];
+  } = useQuery({
+    queryKey: ["companies", "all", debouncedSearch],
+    queryFn: async () => {
+      const response = await trailbaseClient.records("companies").list({
+        pagination: { limit: 0 },
+        count: true,
+        filter: debouncedSearch ? `name ~ '${debouncedSearch}'` : undefined,
+        expand: { companies2parties: { party: true } },
+        order: { created: "desc" },
+      });
+      return response.records;
+    },
+    refetchInterval: 2 * 1000,
+  });
 
   useEffect(() => {
     if (companies && selectedIndex >= companies.length) {
@@ -116,13 +102,23 @@ function Companies() {
     setEditModalOpen(true);
   };
 
-  const handleDelete = async (companyId) => {
-    if (!loadingDelete) {
-      setLoadingDelete(true);
-      await companiesCollection.delete(companyId, { optimistic: false });
-      setLoadingDelete(false);
-    }
-  };
+  const deleteMutation = useMutation({
+    mutationFn: async (companyId: string) => {
+      return await trailbaseClient.records("companies").delete(companyId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companies", "all"] });
+      setDeleteModalOpen(false);
+      setDeletingCompany(null);
+    },
+    onError: (error: any) => {
+      notifications.show({
+        title: "Error",
+        message: "Failed to delete company: " + error.message,
+        color: "red",
+      });
+    },
+  });
 
   if (isLoading) return <Text>Loading...</Text>;
   if (isError) return <Text>Error: {status}</Text>;
@@ -151,57 +147,53 @@ function Companies() {
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {companies?.map((item, index) => {
-            if (!item) return null;
-            const { company, parties } = item;
-            return (
-              <Table.Tr
-                key={company.id}
-                onClick={() => setSelectedIndex(index)}
-                style={{
-                  backgroundColor: selectedIndex === index ? "#e3f2fd" : undefined,
-                  cursor: "pointer",
-                }}
-              >
-                <Table.Td>
-                  <Code>{company.id}</Code>
-                </Table.Td>
-                <Table.Td>{company.name}</Table.Td>
-                <Table.Td>{parties.length > 0 ? parties.join(", ") : "None"}</Table.Td>
-                <Table.Td>{company.created.toLocaleString()}</Table.Td>
-                <Table.Td>{company.updated.toLocaleString()}</Table.Td>
-                <Table.Td>
-                  <Group gap='xs'>
-                    <Tooltip label='Edit (E)'>
-                      <ActionIcon
-                        variant='subtle'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(company);
-                        }}
-                      >
-                        <IconEdit size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                    <Tooltip label='Delete (Del)'>
-                      <ActionIcon
-                        variant='subtle'
-                        color='red'
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletingCompany(company);
-                          setDeleteModalOpen(true);
-                        }}
-                        disabled={loadingDelete}
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    </Tooltip>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            );
-          })}
+          {companies?.map((company, index) => (
+            <Table.Tr
+              key={company.id}
+              onClick={() => setSelectedIndex(index)}
+              style={{
+                backgroundColor: selectedIndex === index ? "#e3f2fd" : undefined,
+                cursor: "pointer",
+              }}
+            >
+              <Table.Td>
+                <Code>{company.id}</Code>
+              </Table.Td>
+              <Table.Td>{company.name}</Table.Td>
+              <Table.Td>{company.companies2parties?.map(a => a.party?.name).join(", ") || ""}</Table.Td>
+              <Table.Td>{new Date(company.created * 1000).toLocaleString()}</Table.Td>
+              <Table.Td>{new Date(company.updated * 1000).toLocaleString()}</Table.Td>
+              <Table.Td>
+                <Group gap='xs'>
+                  <Tooltip label='Edit (E)'>
+                    <ActionIcon
+                      variant='subtle'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(company);
+                      }}
+                    >
+                      <IconEdit size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                  <Tooltip label='Delete (Del)'>
+                    <ActionIcon
+                      variant='subtle'
+                      color='red'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingCompany(company);
+                        setDeleteModalOpen(true);
+                      }}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <IconTrash size={16} />
+                    </ActionIcon>
+                  </Tooltip>
+                </Group>
+              </Table.Td>
+            </Table.Tr>
+          ))}
         </Table.Tbody>
       </Table>
       <Modal
@@ -238,11 +230,10 @@ function Companies() {
             color='red'
             onClick={() => {
               if (deletingCompany) {
-                handleDelete(deletingCompany.id);
+                deleteMutation.mutate(deletingCompany.id);
               }
-              setDeleteModalOpen(false);
             }}
-            disabled={loadingDelete}
+            disabled={deleteMutation.isPending}
           >
             Delete
           </Button>
