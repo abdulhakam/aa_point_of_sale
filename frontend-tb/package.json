@@ -1,0 +1,49 @@
+{
+  "name": "frontend-tb",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@mantine/core": "^9.1.1",
+    "@mantine/dates": "^9.1.1",
+    "@mantine/form": "^9.1.1",
+    "@mantine/hooks": "^9.1.1",
+    "@mantine/modals": "^9.1.1",
+    "@mantine/notifications": "^9.1.1",
+    "@tabler/icons-react": "^3.41.1",
+    "@tanstack/react-db": "^0.1.83",
+    "@tanstack/react-hotkeys": "^0.10.0",
+    "@tanstack/react-query": "^5.100.9",
+    "@tanstack/react-query-devtools": "^5.100.9",
+    "@tanstack/react-router": "^1.168.25",
+    "@tanstack/react-router-devtools": "^1.166.13",
+    "@tanstack/trailbase-db-collection": "^0.1.83",
+    "dayjs": "^1.11.20",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "trailbase": "^0.12.1",
+    "uuidv7": "^1.2.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@tanstack/router-plugin": "^1.167.28",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react-swc": "^4.3.0",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "postcss": "^8.5.12",
+    "postcss-preset-mantine": "^1.18.0",
+    "postcss-simple-vars": "^7.0.1",
+    "vite": "^8.0.10"
+  }
+}

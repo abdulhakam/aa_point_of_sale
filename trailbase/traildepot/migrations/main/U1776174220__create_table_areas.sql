@@ -1,0 +1,7 @@
+CREATE TABLE "areas" (
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) DEFAULT (uuid_v7()) NOT NULL,
+    'name' TEXT NOT NULL,
+    'section' BLOB NOT NULL REFERENCES 'sections'('id'),
+    'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+    'updated' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+) STRICT;

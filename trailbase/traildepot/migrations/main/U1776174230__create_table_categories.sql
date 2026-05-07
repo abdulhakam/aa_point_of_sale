@@ -1,0 +1,6 @@
+CREATE TABLE "categories" (
+    'id' BLOB PRIMARY KEY CHECK (is_uuid_v7(id)) DEFAULT (uuid_v7()) NOT NULL,
+    'name' TEXT NOT NULL,
+    'created' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP),
+    'updated' INTEGER NOT NULL DEFAULT (CURRENT_TIMESTAMP)
+) STRICT;
