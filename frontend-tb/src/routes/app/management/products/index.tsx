@@ -5,9 +5,9 @@ import { productsCollection } from "../../../../collections/products";
 import { categoriesCollection } from "../../../../collections/categories";
 import { companiesCollection } from "../../../../collections/companies";
 import { Group, TextInput, Table, Button, Modal, Text, ActionIcon, Code, Tooltip } from "@mantine/core";
+import { useHotkeys } from "@mantine/hooks";
 import { useState, useEffect } from "react";
 import { IconPlus, IconEdit, IconTrash } from "@tabler/icons-react";
-import { RegisterableHotkey, useHotkey } from "@tanstack/react-hotkeys";
 import { CreateProductForm } from "./-CreateProduct";
 import { UpdateProductForm } from "./-UpdateProduct";
 
@@ -40,36 +40,41 @@ function Products() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  useHotkey("shift+a" as RegisterableHotkey, () => setCreateModalOpen(true), { preventDefault: true });
-  useHotkey("e" as RegisterableHotkey, () => {
-    if (selectedIndex >= 0 && products[selectedIndex]) {
-      handleEdit(products[selectedIndex].product);
-    }
-  });
-  useHotkey(
-    "delete",
-    () => {
-      if (selectedIndex >= 0 && products[selectedIndex]) {
-        setDeletingProduct(products[selectedIndex].product);
-        setDeleteModalOpen(true);
-      }
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowup" as RegisterableHotkey,
-    () => {
-      setSelectedIndex((prev) => Math.max(0, prev - 1));
-    },
-    { preventDefault: true },
-  );
-  useHotkey(
-    "arrowdown" as RegisterableHotkey,
-    () => {
-      setSelectedIndex((prev) => Math.min(products.length - 1, prev + 1));
-    },
-    { preventDefault: true },
-  );
+  useHotkeys([
+    ["shift+A", () => setCreateModalOpen(true), { preventDefault: true }],
+    [
+      "E",
+      () => {
+        if (selectedIndex >= 0 && products[selectedIndex]) {
+          handleEdit(products[selectedIndex].product);
+        }
+      },
+    ],
+    [
+      "Delete",
+      () => {
+        if (selectedIndex >= 0 && products[selectedIndex]) {
+          setDeletingProduct(products[selectedIndex].product);
+          setDeleteModalOpen(true);
+        }
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowUp",
+      () => {
+        setSelectedIndex((prev) => Math.max(0, prev - 1));
+      },
+      { preventDefault: true },
+    ],
+    [
+      "ArrowDown",
+      () => {
+        setSelectedIndex((prev) => Math.min(products.length - 1, prev + 1));
+      },
+      { preventDefault: true },
+    ],
+  ]);
 
   const {
     data: rawProducts,
