@@ -1,0 +1,124 @@
+---
+type: Project
+status: Active
+created: 2026-09-19
+updated: 2026-09-19
+tags:
+  - pos
+  - erp
+  - nextjs
+  - pocketbase
+  - offline
+---
+
+# AA Point of Sale
+
+## Outcome
+
+Maintain and extend **AA Point of Sale**, an offline-first point-of-sale and light ERP
+system for retail/distribution businesses. It records purchases, sales, and returns;
+tracks items, parties (customers/suppliers), bookers, areas, and sections; records
+payments and expenses; and produces sales, profit, stock, payment, ledger, and
+difference reports. It runs entirely on one Windows machine with no external services.
+
+## Scope
+
+In scope:
+
+- The Next.js frontend in `frontend/` (all UI, routing, and PocketBase access).
+- The PocketBase backend in `backend/` (SQLite data, collections, view queries,
+  migrations, auth).
+- Desktop packaging via Tauri (`frontend/src-tauri/`) and the prebuilt server in
+  `standalone/`.
+- Windows batch launchers at the repository root and under `backend/`.
+
+Out of scope (not implemented in this repository):
+
+- Cloud/multi-tenant deployment, payments gateways, or third-party integrations.
+- A separate application server; the frontend talks to PocketBase directly over HTTP.
+
+## Success criteria
+
+- An operator can install, run, and use the app end-to-end on a clean Windows machine.
+- Sales, purchase, return, payment, expense, and difference flows compute correct totals
+  and stock movement.
+- Report and ledger views in PocketBase stay consistent with the frontend's expectations.
+- A fresh contributor or agent can answer "how/what/where" questions from this
+  knowledgebase without reading source.
+- The knowledgebase validates cleanly: `kb.py validate vault` and `scripts/kb_check.py`.
+
+## Current state
+
+- Working application. Frontend builds (`.next` present) and PocketBase 0.22.9 ships with
+  a populated database (`backend/pb_data/data.db`).
+- 41 routes are compiled in the app router (dashboard, cash memo, invoices, management,
+  reports, auth, invoice view) — see [[Route Map]].
+- 11 base collections and 13 view collections are live — see [[Data Model]].
+- Known drift: the untracked `standalone/` build contains report pages that the current
+  source does not, and predates the Tauri additions — see
+  [[Issue — Standalone Build Drift]].
+- One uncommitted working-tree change to the Ledgers report page — see
+  [[Review the uncommitted Ledgers report change]].
+
+## Architecture at a glance
+
+The browser/desktop UI talks directly to PocketBase's REST API; report and ledger logic
+lives inside SQLite view collections, not in application code.
+
+```mermaid
+flowchart TD
+  UI["Frontend — Next.js App Router"] -->|REST /api/collections| PB["Backend — PocketBase 0.22.9"]
+  PB --> DB[("SQLite pb_data/data.db")]
+  UI --> BI["Business logic in view SQL"]
+  BI --> DB
+  Tauri["Desktop & Deployment (Tauri + standalone)"] --> UI
+```
+
+Text alternative: the Next.js frontend is the only client; it calls PocketBase over HTTP.
+PocketBase owns the SQLite database, including the report/ledger views whose SQL this
+knowledgebase documents. Tauri and the `standalone/` server host the same frontend.
+
+## Subsystems
+
+- [[Frontend — Next.js Application]] — UI, routing, auth guard, PocketBase client.
+- [[Backend — PocketBase Data Service]] — collections, view SQL, migrations, auth.
+- [[Desktop & Deployment]] — Tauri packaging and the standalone server launcher.
+
+## References
+
+- [[Route Map]] — every app route and what it does.
+- [[Data Model]] — collections, fields, and relationships.
+- [[Reports & Ledgers]] — what each report/ledger view computes and its SQL.
+- [[Build & Run Scripts]] — install, run, build, and update entry points.
+- [[Glossary]] — project vocabulary (booker, scheme, party, area, section, ...).
+- [[Knowledgebase Guide]] — how this vault is organized and how to keep it current.
+
+## Tasks
+- [ ] [[Add automated tests for report SQL views]] — Backlog
+- [ ] [[Reconcile the standalone build with source]] — Ready
+- [ ] [[Review the uncommitted Ledgers report change]] — Ready
+- [ ] [[Verify the static export path for Tauri and RUN SERVE]] — Backlog
+
+## Task dependency and progress
+Task frontmatter is authoritative; this diagram is derived from `blocked_by` (or its `depends_on` alias).
+
+```mermaid
+flowchart TD
+  T1["POS-0003 · Add automated tests for report SQL views · Backlog"]
+  T2["POS-0001 · Reconcile the standalone build with source · Ready"]
+  T3["POS-0002 · Review the uncommitted Ledgers report change · Ready"]
+  T4["POS-0004 · Verify the static export path for Tauri and RUN SERVE · Backlog"]
+```
+
+## Decisions
+
+- [[Decision — Use PocketBase and Next.js]]
+- [[Decision — Local Offline Desktop Deployment]]
+
+## Issues
+
+- [[Issue — Standalone Build Drift]]
+
+## Current checkpoint
+
+- [[Checkpoint — AA Point of Sale — 2026-09-19]]
