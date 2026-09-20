@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD, { useHydratedRefs } from "@/app/api/useAPI";
+import useCRUD, { useHydratedRefs, useAppliedFilters } from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import PrintContent from "@/app/components/printing/PrintContent";
 import { ActionIcon, Button, Group, Select, Stack, Table, Text } from "@mantine/core";
@@ -19,6 +19,16 @@ export default function DailySaleReport() {
     section: "",
   });
 
+  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
+  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
+  const { applied, apply, reset, initial } = useAppliedFilters({
+    fromDate: moment().startOf("day").toDate() as Date | null,
+    toDate: moment().endOf("day").toDate() as Date | null,
+    booker: "",
+    area: "",
+    section: "",
+  });
+
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
@@ -29,15 +39,15 @@ export default function DailySaleReport() {
   // invoice_view filter: date or created? 'dated' is the field usually used for invoice date.
   // Assuming 'dated' or 'created'. `InvoiceForm.tsx` uses `dated`.
   const filterString = useMemo(() => {
-     let f = `(dated >= '${moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
-       && dated <= '${moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss")}')`;
+     let f = `(dated >= '${moment(applied.fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
+       && dated <= '${moment(applied.toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss")}')`;
      f += ` && (type = 'sale')`;
      
-     if (filters.booker) f += ` && (booker = "${filters.booker}")`;
+     if (applied.booker) f += ` && (booker = "${applied.booker}")`;
      // For area/section, we might need to filter client side if invoice_view doesn't expand party deeply or support deep filter.
      // `invoice_view` usually has `party` which expands to `area`.
      return f;
-  }, [fromDate, toDate, filters.booker]);
+  }, [applied.fromDate, applied.toDate, applied.booker]);
 
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
@@ -59,12 +69,12 @@ export default function DailySaleReport() {
     if (!invoiceRows) return [];
 
     return invoiceRows.filter((inv) => {
-        if (filters.area && inv.expand?.party?.area !== filters.area) return false;
-        if (filters.section && inv.expand?.party?.expand?.area?.section !== filters.section) return false;
+        if (applied.area && inv.expand?.party?.area !== applied.area) return false;
+        if (applied.section && inv.expand?.party?.expand?.area?.section !== applied.section) return false;
         return true;
     });
 
-  }, [invoiceRows, filters.area, filters.section]);
+  }, [invoiceRows, applied.area, applied.section]);
 
   const queries = [invoices, areas, bookers, ...refQueries];
 
@@ -112,14 +122,26 @@ export default function DailySaleReport() {
                 searchable
                 clearable
             />
-             <Button onClick={() => setFilters({ booker: "", area: "", section: "" })}>Reset</Button>
+             {/* POS-0026 — request the data only when Apply is pressed. */}
+             <Button onClick={() => apply({ fromDate, toDate, ...filters })}>APPLY</Button>
+             <Button
+                variant='default'
+                onClick={() => {
+                    setFilters({ booker: initial.booker, area: initial.area, section: initial.section });
+                    setFromDate(initial.fromDate);
+                    setToDate(initial.toDate);
+                    reset();
+                }}
+             >
+                Reset
+             </Button>
         </Group>
 
         <div ref={printRef} style={{ padding: "0.5cm" }}>
           <PrintContent>
             <Text size="xl" fw={700} ta="center" mb="md">Daily Sale Report</Text>
              <Text size="sm" ta="center">
-                {moment(fromDate).format("DD MMM YYYY")} - {moment(toDate).format("DD MMM YYYY")}
+                {moment(applied.fromDate).format("DD MMM YYYY")} - {moment(applied.toDate).format("DD MMM YYYY")}
             </Text>
             
             <Table withTableBorder withColumnBorders striped mt="sm">

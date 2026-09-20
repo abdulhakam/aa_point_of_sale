@@ -15,7 +15,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import useCRUD, { crud, useHydratedRefs } from "@/app/api/useAPI";
+import useCRUD, { crud, useHydratedRefs, useAppliedFilters } from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import { IconEye, IconEdit, IconTrash } from "@tabler/icons-react";
 import styles from "@/app/components/printing/styles.module.css";
@@ -58,36 +58,60 @@ export default function PaymentsView() {
   // the previous full-list behaviour, computing totals client-side as before.
   const [page, setPage] = useState(1);
   const PER_PAGE = 50;
-  const summaryCompatible = !form.values.company && !form.values.invoiceFilter;
 
-  const paymentsFilter = `(created >= '${moment(fromDate)
+  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
+  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
+  const { applied, apply, reset, initial } = useAppliedFilters({
+    fromDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1, 0, 0, 0),
+    toDate: new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      new Date().getDate(),
+      23,
+      59,
+      59,
+      999
+    ),
+    reportType: "",
+    booker: "",
+    area: "",
+    section: "",
+    party: "",
+    paymentType: "",
+    invoiceFilter: "",
+    company: "",
+  });
+
+  const summaryCompatible = !applied.company && !applied.invoiceFilter;
+
+  const paymentsFilter = `(created >= '${moment(applied.fromDate)
     .add(1, "day")
     .utc()
     .startOf("day")
     .format("YYYY-MM-DD HH:mm:ss")}' 
-    && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
-    ${form.values.company ? `&& (company~"${form.values.company}")` : ""}
-    ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
-    ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
-    ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
-    ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
-    ${form.values.paymentType ? `&& (type = "${form.values.paymentType}")` : ""}
+    && created <= '${moment(applied.toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
+    ${applied.company ? `&& (company~"${applied.company}")` : ""}
+    ${applied.booker ? `&& (booker = "${applied.booker}")` : ""}
+    ${applied.area ? `&& (area = "${applied.area}")` : ""}
+    ${applied.section ? `&& (section = "${applied.section}")` : ""}
+    ${applied.party ? `&& (party = "${applied.party}")` : ""}
+    ${applied.paymentType ? `&& (type = "${applied.paymentType}")` : ""}
     ${
-      form.values.invoiceFilter
-        ? `&& ( original_invoices ~ "${form.values.invoiceFilter}" || invoice = "${form.values.invoiceFilter}")`
+      applied.invoiceFilter
+        ? `&& ( original_invoices ~ "${applied.invoiceFilter}" || invoice = "${applied.invoiceFilter}")`
         : ""
     }
     `;
 
   // payments_summary groups by `day` (created truncated to 10 chars), so timestamp date
   // bounds translate to whole days; every other predicate maps 1:1.
-  const summaryFilter = `(day >= '${moment(fromDate).add(1, "day").utc().startOf("day").format("YYYY-MM-DD")}'
-    && day <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD")}')
-    ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
-    ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
-    ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
-    ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
-    ${form.values.paymentType ? `&& (type = "${form.values.paymentType}")` : ""}
+  const summaryFilter = `(day >= '${moment(applied.fromDate).add(1, "day").utc().startOf("day").format("YYYY-MM-DD")}'
+    && day <= '${moment(applied.toDate).utc().endOf("day").format("YYYY-MM-DD")}')
+    ${applied.booker ? `&& (booker = "${applied.booker}")` : ""}
+    ${applied.area ? `&& (area = "${applied.area}")` : ""}
+    ${applied.section ? `&& (section = "${applied.section}")` : ""}
+    ${applied.party ? `&& (party = "${applied.party}")` : ""}
+    ${applied.paymentType ? `&& (type = "${applied.paymentType}")` : ""}
     `;
 
   const paged = useCRUD().pagedList({
@@ -212,7 +236,7 @@ export default function PaymentsView() {
         )),
     },
     { accessor: "party", sortable: true },
-    { accessor: "booker", hidden: form.values.reportType === "Sending", sortable: true },
+    { accessor: "booker", hidden: applied.reportType === "Sending", sortable: true },
     {
       accessor: "amount",
       textAlign: "right" ,
@@ -517,9 +541,15 @@ export default function PaymentsView() {
                 label: `${inv.invoiceNo} ${inv.type.toUpperCase().charAt(0)}`,
               }))}
             />
+            {/* POS-0026 — request the data only when Apply is pressed. */}
+            <Button onClick={() => apply({ fromDate, toDate, ...form.values })}>APPLY</Button>
             <Button
+              variant='default'
               onClick={() => {
                 form.reset();
+                setFromDate(initial.fromDate);
+                setToDate(initial.toDate);
+                reset();
               }}
             >
               RESET
@@ -529,22 +559,22 @@ export default function PaymentsView() {
         <Group align='center' justify='space-between'>
           <Group>
             <Text variant='transparent' m={0} p={0} size='compact-lg' fw={"700"} c='black'>
-              {form.values.reportType === "" && `ALL PAYMENTS`}
-              {form.values.reportType === "sending" && `PURCHASES REPORT`}
-              {form.values.reportType === "recieving" && `SALES REPORT`}
-              {form.values.reportType === "return" && `RETURNS REPORT`}
-              {form.values.reportType === "area" && `AREA REPORT`}
-              {form.values.reportType === "section" && `SECTION REPORT`}
-              {form.values.reportType === "party" && `PARTY PAYMENTS REPORT`}
-              {form.values.reportType === "company" && `COMPANY WISE REPORT`}
-              {form.values.reportType === "booker" && `BOOKER INVOICE REPORT`}
-              {form.values.reportType === "invoice" && `INVOICE PAYMENTS REPORT`}
+              {applied.reportType === "" && `ALL PAYMENTS`}
+              {applied.reportType === "sending" && `PURCHASES REPORT`}
+              {applied.reportType === "recieving" && `SALES REPORT`}
+              {applied.reportType === "return" && `RETURNS REPORT`}
+              {applied.reportType === "area" && `AREA REPORT`}
+              {applied.reportType === "section" && `SECTION REPORT`}
+              {applied.reportType === "party" && `PARTY PAYMENTS REPORT`}
+              {applied.reportType === "company" && `COMPANY WISE REPORT`}
+              {applied.reportType === "booker" && `BOOKER INVOICE REPORT`}
+              {applied.reportType === "invoice" && `INVOICE PAYMENTS REPORT`}
             </Text>
           </Group>
           <Group justify='end'>
             <Text size={"sm"}>{`DATE FROM: ${
-              fromDate !== null
-                ? fromDate.toLocaleDateString("en", {
+              applied.fromDate !== null
+                ? applied.fromDate.toLocaleDateString("en", {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
@@ -552,8 +582,8 @@ export default function PaymentsView() {
                 : "-"
             }`}</Text>
             <Text size={"sm"}>{`DATE TO: ${
-              toDate !== null
-                ? toDate.toLocaleDateString("en", {
+              applied.toDate !== null
+                ? applied.toDate.toLocaleDateString("en", {
                     day: "2-digit",
                     month: "short",
                     year: "numeric",
@@ -563,21 +593,21 @@ export default function PaymentsView() {
           </Group>
         </Group>
         <Group justify='start' gap={"4rem"}>
-          {form.values.booker && (
+          {applied.booker && (
             <Text size={"sm"}>{`BOOKER: ${
-              bookers.data.find((r) => r.id === form.values.booker)?.name
+              bookers.data.find((r) => r.id === applied.booker)?.name
             }`}</Text>
           )}
-          {form.values.party && (
-            <Text size={"sm"}>{`Party: ${parties.data.find((r) => r.id === form.values.party)?.name}`}</Text>
+          {applied.party && (
+            <Text size={"sm"}>{`Party: ${parties.data.find((r) => r.id === applied.party)?.name}`}</Text>
           )}
-          {form.values.section && (
+          {applied.section && (
             <Text size={"sm"}>{`Section: ${
-              sections.data.find((r) => r.id === form.values.section)?.name
+              sections.data.find((r) => r.id === applied.section)?.name
             }`}</Text>
           )}
-          {form.values.area && (
-            <Text size={"sm"}>{`Area: ${areas.data.find((r) => r.id === form.values.area).name}`}</Text>
+          {applied.area && (
+            <Text size={"sm"}>{`Area: ${areas.data.find((r) => r.id === applied.area).name}`}</Text>
           )}
         </Group>
         <DataTable
@@ -614,13 +644,13 @@ export default function PaymentsView() {
         />
 
         <Stack gap={0} style={{ width: "100%" }}>
-          {form.values.reportType !== "recieving" &&
-            !form.values.booker &&
-            (form.values.party
-              ? parties.data.find((r) => r.id === form.values.party)?.type !== "customer"
+          {applied.reportType !== "recieving" &&
+            !applied.booker &&
+            (applied.party
+              ? parties.data.find((r) => r.id === applied.party)?.type !== "customer"
               : true) &&
-            (form.values.invoiceFilter
-              ? invoices.data.find((r) => r.id === form.values.invoiceFilter)?.type !== "sale"
+            (applied.invoiceFilter
+              ? invoices.data.find((r) => r.id === applied.invoiceFilter)?.type !== "sale"
               : true) && (
               <Flex gap={0} direction={"row"} justify={"space-evenly"} align={"end"} w={"100%"}>
                 <Group justify='space-between' w={"25%"} mx={"0.5rem"}>
@@ -641,12 +671,12 @@ export default function PaymentsView() {
                 </Group>
               </Flex>
             )}
-          {form.values.reportType !== "sending" &&
-            (form.values.party
-              ? parties.data.find((r) => r.id === form.values.party)?.type !== "supplier"
+          {applied.reportType !== "sending" &&
+            (applied.party
+              ? parties.data.find((r) => r.id === applied.party)?.type !== "supplier"
               : true) &&
-            (form.values.invoiceFilter
-              ? invoices.data.find((r) => r.id === form.values.invoiceFilter)?.type !== "purchase"
+            (applied.invoiceFilter
+              ? invoices.data.find((r) => r.id === applied.invoiceFilter)?.type !== "purchase"
               : true) && (
               <Flex gap={0} direction={"row"} justify={"space-evenly"} align={"end"} w={"100%"}>
                 <Group justify='space-between' w={"25%"} mx={"0.5rem"}>

@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD, { useHydratedRefs } from "@/app/api/useAPI";
+import useCRUD, { useHydratedRefs, useAppliedFilters } from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import { Table, ActionIcon, Button, Flex, Group, Checkbox } from "@mantine/core";
 import { IconPrinter } from "@tabler/icons-react";
@@ -106,6 +106,20 @@ export default function ItemTransactionsReport() {
     },
   });
 
+  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
+  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
+  const { applied, apply, reset, initial } = useAppliedFilters({
+    fromDate: new Date(moment().startOf("month")),
+    toDate: new Date(moment().endOf("day")),
+    applyDate: true,
+    company: "",
+    party: "",
+    area: "",
+    section: "",
+    booker: "",
+    invoice: "",
+  });
+
   const areas = useCRUD().fullList({ collection: "areas" });
   const sections = useCRUD().fullList({ collection: "sections" });
   const companies = useCRUD().fullList({ collection: "categories" });
@@ -117,17 +131,17 @@ export default function ItemTransactionsReport() {
     collection: "payments_invoices_report",
     filter: `(type = "sale" || type = "return" || type = "recieving")
             ${
-              applyDate
-                ? `&& (dated >= '${moment.utc(fromDate).format("YYYY-MM-DD HH:mm:ss")}' 
-                && dated <= '${moment.utc(toDate).format("YYYY-MM-DD HH:mm:ss")}')`
+              applied.applyDate
+                ? `&& (dated >= '${moment.utc(applied.fromDate).format("YYYY-MM-DD HH:mm:ss")}' 
+                && dated <= '${moment.utc(applied.toDate).format("YYYY-MM-DD HH:mm:ss")}')`
                 : ""
             }
-            ${form.values.company ? `&& (company = "${form.values.company}")` : ""}
-            ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
-            ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
-            ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
-            ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
-            ${form.values.invoice ? `&& (invoice = "${form.values.invoice}")` : ""}
+            ${applied.company ? `&& (company = "${applied.company}")` : ""}
+            ${applied.party ? `&& (party = "${applied.party}")` : ""}
+            ${applied.area ? `&& (area = "${applied.area}")` : ""}
+            ${applied.section ? `&& (section = "${applied.section}")` : ""}
+            ${applied.booker ? `&& (booker = "${applied.booker}")` : ""}
+            ${applied.invoice ? `&& (invoice = "${applied.invoice}")` : ""}
             `,
   });
 
@@ -230,7 +244,20 @@ export default function ItemTransactionsReport() {
             }))}
             label={"Invoice"}
           />
-          <Button onClick={() => form.reset()}>Reset</Button>
+          {/* POS-0026 — request the data only when Apply is pressed. */}
+          <Button onClick={() => apply({ fromDate, toDate, applyDate, ...form.values })}>APPLY</Button>
+          <Button
+            variant='default'
+            onClick={() => {
+              form.reset();
+              setFromDate(initial.fromDate);
+              setToDate(initial.toDate);
+              setApplyDate(initial.applyDate);
+              reset();
+            }}
+          >
+            Reset
+          </Button>
         </Group>
         <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
           <PrintContent>

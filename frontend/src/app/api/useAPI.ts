@@ -1,6 +1,6 @@
 import pb from "@/app/pocketbase";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 /**
  * POS-0009 / POS-0011 — shared data-access layer.
@@ -314,4 +314,21 @@ export function useHydratedRefs(rows, relations) {
     [rows, maps, relationsKey]
   );
   return { data, maps, queries, isLoading, isSuccess };
+}
+
+///////////////////////// APPLIED FILTERS /////////////////////////
+/**
+ * POS-0026 — hold the filter values a report query actually reads, so editing inputs does not
+ * fire a request until the user presses Apply.
+ *
+ * The page builds its PocketBase `filter` from `applied`, not from live form state;
+ * `apply(next)` snapshots the current inputs and `reset()` returns to the initial snapshot.
+ * The first snapshot is the page's defaults, so the page still loads once on mount.
+ */
+export function useAppliedFilters<T extends Record<string, any>>(initial: T) {
+  const initialRef = useRef(initial);
+  const [applied, setApplied] = useState<T>(initial);
+  const apply = useCallback((next: T) => setApplied(next), []);
+  const reset = useCallback(() => setApplied(initialRef.current), []);
+  return { applied, apply, reset, initial: initialRef.current };
 }

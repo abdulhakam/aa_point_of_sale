@@ -115,6 +115,7 @@ knowledgebase documents. Tauri and the `standalone/` server host the same fronte
 - [ ] [[POS-0023 PocketBase v0.40.4 migration test]] — Backlog
 - [ ] [[POS-0024 Record performance optimization decisions]] — Ready
 - [x] [[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]] — Done (trim + browser-verified)
+- [x] [[POS-0026 Add an Apply button to report filters]] — Done (reports fetch only on Apply)
 
 ## Task dependency and progress
 
@@ -149,6 +150,7 @@ flowchart LR
     P23["POS-0023 · PB v0.40.4 test · Backlog"]
     P24["POS-0024 · Record perf decisions · Ready"]
     P25["POS-0025 · Extra reports trim + verify · Done"]
+    P26["POS-0026 · Apply button on report filters · Done"]
   end
 
   P5 --> P7
@@ -159,6 +161,7 @@ flowchart LR
   P9 --> P11
   P11 --> P12
   P11 --> P25
+  P11 --> P26
   P5 --> P13
   P6 --> P13
   P13 --> P14

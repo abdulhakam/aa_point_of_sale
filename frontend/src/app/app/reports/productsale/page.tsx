@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD from "@/app/api/useAPI";
+import useCRUD, { useAppliedFilters } from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import PrintContent from "@/app/components/printing/PrintContent";
 import { ActionIcon, Button, Group, Select, Stack, Table, Text } from "@mantine/core";
@@ -24,6 +24,16 @@ export default function ProductSaleReport() {
     },
   });
 
+  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
+  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
+  const { applied, apply, reset, initial } = useAppliedFilters({
+    fromDate: moment().startOf("day").toDate() as Date | null,
+    toDate: moment().endOf("day").toDate() as Date | null,
+    booker: "",
+    area: "",
+    section: "",
+  });
+
   const printRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
@@ -36,11 +46,11 @@ export default function ProductSaleReport() {
   const transactions = useCRUD().fullList({
     collection: "transaction_view",
     filter: `(type = "sale")
-            && (created >= '${moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
-            && created <= '${moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
-            ${form.values.booker ? `&& (invoice.booker = "${form.values.booker}")` : ""}
-            ${form.values.area ? `&& (invoice.party.area = "${form.values.area}")` : ""}
-            ${form.values.section ? `&& (invoice.party.area.section = "${form.values.section}")` : ""}`
+            && (created >= '${moment(applied.fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
+            && created <= '${moment(applied.toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
+            ${applied.booker ? `&& (invoice.booker = "${applied.booker}")` : ""}
+            ${applied.area ? `&& (invoice.party.area = "${applied.area}")` : ""}
+            ${applied.section ? `&& (invoice.party.area.section = "${applied.section}")` : ""}`
   });
   
   const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
@@ -94,14 +104,26 @@ export default function ProductSaleReport() {
                 searchable
                 clearable
             />
-             <Button onClick={() => form.setValues({ booker: "", area: "", section: "" })}>Reset</Button>
+             {/* POS-0026 — request the data only when Apply is pressed. */}
+             <Button onClick={() => apply({ fromDate, toDate, ...form.values })}>APPLY</Button>
+             <Button
+                variant='default'
+                onClick={() => {
+                    form.setValues({ booker: initial.booker, area: initial.area, section: initial.section });
+                    setFromDate(initial.fromDate);
+                    setToDate(initial.toDate);
+                    reset();
+                }}
+             >
+                Reset
+             </Button>
         </Group>
 
         <div ref={printRef} style={{ padding: "0.5cm" }}>
           <PrintContent>
             <Text size="xl" fw={700} ta="center" mb="md">Product Supply Summary</Text>
              <Text size="sm" ta="center">
-                {moment(fromDate).format("DD MMM YYYY")} - {moment(toDate).format("DD MMM YYYY")}
+                {moment(applied.fromDate).format("DD MMM YYYY")} - {moment(applied.toDate).format("DD MMM YYYY")}
             </Text>
             
             <Table withTableBorder withColumnBorders striped mt="sm">

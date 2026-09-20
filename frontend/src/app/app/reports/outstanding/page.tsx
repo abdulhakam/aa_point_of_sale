@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD from "@/app/api/useAPI";
+import useCRUD, { useAppliedFilters } from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import PrintContent from "@/app/components/printing/PrintContent";
 import { ActionIcon, Button, Group, Select, Stack, Table, Text } from "@mantine/core";
@@ -10,6 +10,14 @@ import { useReactToPrint } from "react-to-print";
 
 export default function OutstandingPaymentsReport() {
   const [filters, setFilters] = useState({
+    booker: "",
+    area: "",
+    section: "",
+  });
+
+  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
+  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
+  const { applied, apply, reset, initial } = useAppliedFilters({
     booker: "",
     area: "",
     section: "",
@@ -27,11 +35,11 @@ export default function OutstandingPaymentsReport() {
     collection: "outstanding_summary",
     filter:
       `
-      ${filters.booker ? `(booker = "${filters.booker}")` : ""}
-      ${filters.booker && filters.area ? " && " : ""}
-      ${filters.area ? `(area = "${filters.area}")` : ""}
-      ${(filters.booker || filters.area) && filters.section ? " && " : ""}
-      ${filters.section ? `(section = "${filters.section}")` : ""}
+      ${applied.booker ? `(booker = "${applied.booker}")` : ""}
+      ${applied.booker && applied.area ? " && " : ""}
+      ${applied.area ? `(area = "${applied.area}")` : ""}
+      ${(applied.booker || applied.area) && applied.section ? " && " : ""}
+      ${applied.section ? `(section = "${applied.section}")` : ""}
     `.trim() || "",
     sort: "party_name",
   });
@@ -79,7 +87,17 @@ export default function OutstandingPaymentsReport() {
             searchable
             clearable
           />
-          <Button onClick={() => setFilters({ booker: "", area: "", section: "" })}>Reset</Button>
+          {/* POS-0026 — request the data only when Apply is pressed. */}
+          <Button onClick={() => apply({ ...filters })}>APPLY</Button>
+          <Button
+            variant='default'
+            onClick={() => {
+              setFilters({ booker: initial.booker, area: initial.area, section: initial.section });
+              reset();
+            }}
+          >
+            Reset
+          </Button>
         </Group>
 
         <div ref={printRef} style={{ padding: "0.5cm" }}>

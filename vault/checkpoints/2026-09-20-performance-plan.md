@@ -27,7 +27,7 @@ checkpoint current enough that a fresh session can resume without chat history.
 ## Status at a glance
 
 Backend data-layer work (POS-0005 → POS-0014) is **done and verified on the live DB**.
-**POS-0015, POS-0016, POS-0017, POS-0018, POS-0019, POS-0020 and POS-0025 are all done** —
+**POS-0015 → POS-0020, POS-0025 and POS-0026 are all done** —
 the backend, report pages, payments list and invoice entry pages are optimized, the capstone
 regression suite runs **7/7 PASS**, and the server was upgraded to **PocketBase 0.22.55** (the
 whole suite stays green and request times roughly halved). Remaining: POS-0021 (materialize hot
@@ -42,6 +42,12 @@ views), POS-0024 (decision records) and the deferred POS-0022/0023.
 
 ## Completed since previous checkpoint
 
+- **POS-0026 (done)** Apply button on report filters. Added `useAppliedFilters` to `useAPI.ts`
+  and rolled the draft-vs-applied pattern out across 16 pages (every `app/reports/**` page plus
+  `cashmemo/payments/PaymentsView.jsx`): the query's `filter` now reads the APPLIED snapshot, an
+  **APPLY** button snapshots the draft, RESET restores inputs + snapshot, and data-describing
+  labels/headers read `applied`. Verified in-browser: choosing an Area fired **0** new
+  `payments_view` requests; APPLY fetched with the applied filter. `tsc` + build clean.
 - **POS-0019 + POS-0020 (done)** PocketBase **0.22.9 → 0.22.55**. Verified the release SHA-256,
   backed up the old binary, swapped `backend/pocketbase.exe`, ran `migrate up` (applied one
   built-in system migration `add_login_alert_column`; project migrations already recorded).
@@ -128,9 +134,9 @@ shows no working-tree change to `frontend/src/app/app/reports/ledgers/page.tsx` 
 previously flagged change was committed in `4ac911c` (see
 [[Review the uncommitted Ledgers report change]]).
 
-**Uncommitted (POS-0019/0020):** `backend/pocketbase.exe` (the 41 MB binary, now 0.22.55) and
-`scripts/tests/test_upgrade_smoke.py`, plus the vault changes (the version refs across the
-project note / Data Model / Backend subsystem, the POS-0019/0020 tasks, this checkpoint and the
+**Uncommitted (POS-0026):** `frontend/src/app/api/useAPI.ts` (the new `useAppliedFilters`) and
+the 16 report/cash-memo pages under `frontend/src/app/app/`, plus the vault changes
+([[POS-0026 Add an Apply button to report filters]], the project note, this checkpoint and the
 work session). Pre-existing/unrelated: `.commandcode/taste/taste.md` and
 `vault/.noteriv/workspace.json` (Tolaria-generated).
 
