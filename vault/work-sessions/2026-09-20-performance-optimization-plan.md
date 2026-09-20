@@ -18,10 +18,12 @@ tags:
 # Work Session — Performance Optimization Plan — 2026-09-20
 
 > **RESUME HERE:** backend data-layer work (POS-0005 → POS-0014) is Done and verified on
-> the live DB. Frontend adoption (POS-0015 → POS-0017) and the PocketBase v0.22.55 upgrade
-> (POS-0019) are **not started**. See
-> [[Checkpoint — AA Point of Sale — 2026-09-20]] for the exact next action, current git
-> state, and the backend cheat-sheet.
+> the live DB. POS-0010 (cache) and POS-0012 (pagination) tests are Done and passing.
+> **POS-0015 is In Progress** — the deep server expands are removed from 7 report pages and
+> verified equivalent; pagination of the transactional payments list is the remainder (blocked
+> on summary-backed totals). POS-0016/POS-0017 and the PocketBase v0.22.55 upgrade (POS-0019)
+> are **not started**. See [[Checkpoint — AA Point of Sale — 2026-09-20]] for the exact next
+> action, current git state, and the backend cheat-sheet.
 
 ## Objective
 
@@ -58,6 +60,15 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
 
 ## Activity log
 
+- 2026-09-20 — POS-0015 (partial, In Progress): added `useRefMaps`/`hydrateRefs`/`useHydratedRefs`
+  to `useAPI.ts` (client-side reference resolver + expand synthesiser, low-churn adapter);
+  removed the deep server expand from 7 pages (`reports/transactions/unified`, `reports/profit`,
+  `reports/payments`, `reports/payments/areawise`, `reports/salesreport`,
+  `cashmemo/payments/PaymentsView`, `reports/paymentsbycompany`).
+  `scripts/tests/test_expand_trim.py` PASS — 0 mismatches on 4,800 values; payload 70.1%/74.8%/64.9%
+  smaller. `npx tsc --noEmit` clean; `npm run build` OK. Pagination of the transactional list
+  remains (blocked on sourcing totals from `payments_summary` for the Company/Invoice filters).
+- 2026-09-20 — POS-0012 Done: wrote `scripts/tests/test_pagination.py`, ran against live API (port 8090). All 5 checks PASS.
 - 2026-09-20 — Inspected code, live DB, and view SQL; confirmed scale and root causes.
 - 2026-09-20 — Verified PB release lines (0.22.55 drop-in; 0.40.4 latest w/ breaking changes).
 - 2026-09-20 — Authored granular Task documents POS-0005..POS-0024 with test companions.
@@ -96,17 +107,27 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
   log/Verification sections) and ran `kb_check.py`. Current verified validation:
   **PASS**, quality 99/100, 442 resolved links / 0 unresolved, 55 distinct tags,
   8 Done tasks (7 verified).
+- 2026-09-20 — POS-0010 Done: wrote `scripts/tests/test_cache_behavior.py`, ran against live API.
+  Section A (config inspection): all 10 checks pass. Section B (write-read
+  consistency): create/update/delete all reflected immediately. totalItems=8927.
 - 2026-09-20 — Repo hygiene: `backend/pb_data_bench/` (the scratch DB copy used for the
-  A/B benchmark) was **accidentally git-tracked**; it is now covered by `.gitignore`
-  along with the bench server logs. NB the copy is still tracked in history from commit
-  `4ac911c` and will show as a deletion until that is committed — see the Checkpoint.
+    A/B benchmark) was **accidentally git-tracked**; it is now covered by `.gitignore`
+    along with the bench server logs. NB the copy is still tracked in history from commit
+    `4ac911c` and will show as a deletion until that is committed — see the Checkpoint.
 
 ## Exact next action
 
-1. Write `scripts/tests/test_pagination.py` and run it ([[POS-0012 Pagination test]]).
-2. Run the cache behaviour check ([[POS-0010 Cache behavior test]]).
-3. Start [[POS-0015 Trim expands + adopt pagination in report pages]] — the biggest
-   remaining user-visible win (invoice picker + report expand trimming).
+1. ~~Write `scripts/tests/test_pagination.py` and run it ([[POS-0012 Pagination test]]).~~
+   **DONE** — written and run; RESULT: PASS (disjoint pages, totalItems=8927, filter
+   narrows, perPage changes size, sort honored). Task closed.
+2. ~~Run the cache behaviour check ([[POS-0010 Cache behavior test]]).~~ **DONE** —
+   config inspection (10/10 checks) + HTTP write-read consistency (create/update/delete all
+   immediately visible). Task closed.
+3. [[POS-0015 Trim expands + adopt pagination in report pages]] — **expand trim done**
+   (7 pages, `scripts/tests/test_expand_trim.py` PASS, build clean). Remaining: browser render
+   check ([[POS-0016 Report pages render test]]) and the `payments_summary`-backed totals
+   path needed before adopting `usePagedList` on the transactional payments list.
 
-Note: `scripts/tests/test_pagination.py` does **not** exist yet; an earlier note in this
-session claimed it did. The claim was corrected in [[POS-0012 Pagination test]].
+Status of `scripts/tests/test_pagination.py`: **it now exists** and passes (see
+[[POS-0012 Pagination test]]). An earlier note in this session that claimed it existed was
+premature; it is no longer accurate to say the script is missing.

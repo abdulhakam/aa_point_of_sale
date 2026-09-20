@@ -1,5 +1,6 @@
 import pb from "@/app/pocketbase";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 /**
  * POS-0009 / POS-0011 — shared data-access layer.
@@ -200,4 +201,111 @@ export default function useCRUD() {
     fullList: useFullList,
     pagedList: usePagedList,
   };
+}
+
+///////////////////////// REFERENCE MAPS /////////////////////////
+/**
+ * POS-0015 — client-side reference resolver.
+ *
+ * Report views denormalize their foreign keys as plain ids (`party`, `area`,
+ * `section`, `company`, `booker`, `item`). Asking PocketBase to `expand` them —
+ * especially the chain `party.area.section` — makes the server serialize the
+ * related records for every row (~1 MB per 500 rows). Instead we fetch the small
+ * reference collections once (they are cached for REFERENCE_STALE_TIME) and
+ * resolve ids to records in the client, then re-attach them as `row.expand`.
+ */
+function indexById(rows) {
+  const map = {};
+  for (const row of rows ?? []) map[row.id] = row;
+  return map;
+}
+
+export function useRefMaps(enabled = true) {
+  const queryOpts = (collection) => ({
+    queryKey: ["refmap", collection],
+    queryFn: () => pb.collection(collection).getFullList(),
+    staleTime: REFERENCE_STALE_TIME,
+    enabled,
+  });
+  const areasQ = useQuery(queryOpts("areas"));
+  const sectionsQ = useQuery(queryOpts("sections"));
+  const categoriesQ = useQuery(queryOpts("categories"));
+  const itemsQ = useQuery(queryOpts("items"));
+  const partiesQ = useQuery(queryOpts("parties"));
+  const bookersQ = useQuery(queryOpts("order_bookers"));
+
+  // Stable identity keyed on the underlying data, so consumers can memoize on `maps`.
+  const maps = useMemo(
+    () => ({
+      areas: indexById(areasQ.data),
+      sections: indexById(sectionsQ.data),
+      categories: indexById(categoriesQ.data),
+      items: indexById(itemsQ.data),
+      parties: indexById(partiesQ.data),
+      bookers: indexById(bookersQ.data),
+    }),
+    [areasQ.data, sectionsQ.data, categoriesQ.data, itemsQ.data, partiesQ.data, bookersQ.data]
+  );
+
+  const queries = [areasQ, sectionsQ, categoriesQ, itemsQ, partiesQ, bookersQ];
+  return {
+    maps,
+    queries,
+    isLoading: queries.some((q) => q.isLoading),
+    isSuccess: queries.every((q) => q.isSuccess),
+  };
+}
+
+/**
+ * Synthesize a PocketBase-style `expand` object on rows fetched WITHOUT a server
+ * expand, so existing `row.expand?...` render code keeps working unchanged.
+ *
+ * `relations` lists the top-level foreign keys to hydrate. `party` also hydrates
+ * the nested `party.area.section` chain the deep expands used to provide.
+ * A relation is only attached when the target record is actually present, so a
+ * partially-loaded map degrades to the raw id rather than throwing.
+ */
+export function hydrateRefs(rows: any[], maps: any, relations: string[]) {
+  if (!rows || !maps) return rows ?? [];
+  return rows.map((row) => {
+    const expand: Record<string, any> = {};
+    for (const rel of relations) {
+      const id = row[rel];
+      if (!id) continue;
+      if (rel === "party") {
+        const party = maps.parties[id];
+        if (!party) continue;
+        const area = party.area ? maps.areas[party.area] : null;
+        const section = area && area.section ? maps.sections[area.section] : null;
+        expand.party = { ...party, expand: { area: area ? { ...area, expand: { section } } : null } };
+      } else if (rel === "item") {
+        const item = maps.items[id];
+        if (item) expand.item = item;
+      } else if (rel === "company" || rel === "category") {
+        const ids = Array.isArray(id) ? id : [id];
+        const recs = ids.map((one) => maps.categories[one]).filter(Boolean);
+        if (recs.length) expand[rel] = Array.isArray(id) ? recs : recs[0];
+      } else if (rel === "booker") {
+        const booker = maps.bookers[id];
+        if (booker) expand.booker = booker;
+      } else if (rel === "area") {
+        const area = maps.areas[id];
+        if (area) expand.area = area;
+      } else if (rel === "section") {
+        const section = maps.sections[id];
+        if (section) expand.section = section;
+      } else if (rel === "invoice") {
+        // Views carry the invoice number inline, so no extra lookup is needed.
+        expand.invoice = { id: row.invoice, invoiceNo: row.invoiceNo };
+      }
+    }
+    return { ...row, expand };
+  });
+}
+
+/** Convenience hook: fetch the reference maps and hydrate a fetched list. */
+export function useHydratedRefs(rows, relations) {
+  const { maps, queries, isLoading, isSuccess } = useRefMaps();
+  const data = useMemo(() => hydrateRefs(rows, maps, relations), [rows, maps, relations.join(",")]);
+  return { data, maps, queries, isLoading, isSuccess };
 }

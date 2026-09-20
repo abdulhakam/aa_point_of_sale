@@ -2,7 +2,7 @@
 type: Project
 status: Active
 created: 2026-09-19
-updated: 2026-09-19
+updated: 2026-09-20
 tags:
   - pos
   - erp
@@ -51,11 +51,15 @@ Out of scope (not implemented in this repository):
 - **Performance program in progress** — see the task list below and
   [[Checkpoint — AA Point of Sale — 2026-09-20]]. Backend data layer is optimized and
   measured (18 indexes, window-function `ledger_party`, `payments_summary` view; party
-  ledger >180 s → ~4.4 s) and the React Query cache is fixed. Frontend adoption
-  (pagination + expand trimming) and the PocketBase v0.22.55 upgrade remain.
-  Before/after numbers: [[Performance Baseline]].
+  ledger >180 s → ~4.4 s), the React Query cache is fixed and its config/behaviour verified
+  (POS-0010), and the pagination helper is verified against the live API (POS-0012).
+  **Deep server expands are removed** from 7 report pages (POS-0015) — names are resolved
+  client-side from cached reference collections, cutting those payloads 65–75%. Remaining:
+  pagination of the transactional payments list (needs summary-backed totals) and the
+  PocketBase v0.22.55 upgrade. Before/after numbers: [[Performance Baseline]].
 - Known drift: the untracked `standalone/` build contains report pages that the current source does not, and predates the Tauri additions — see [[Issue — Standalone Build Drift]].
-- One uncommitted working-tree change to the Ledgers report page — see [[Review the uncommitted Ledgers report change]].
+- The Ledgers report change previously flagged as uncommitted is no longer in the working
+  tree (it was committed in `4ac911c`) — see [[Review the uncommitted Ledgers report change]].
 
 ## Architecture at a glance
 
@@ -105,12 +109,12 @@ knowledgebase documents. Tauri and the `standalone/` server host the same fronte
 - [x] [[POS-0007 Add indexes via migration]] — Done
 - [x] [[POS-0008 Index verification test]] — Done
 - [x] [[POS-0009 Fix React Query cache config]] — Done
-- [ ] [[POS-0010 Cache behavior test]] — Ready (next)
+- [x] [[POS-0010 Cache behavior test]] — Done
 - [x] [[POS-0011 Paginated list plumbing]] — Done
-- [ ] [[POS-0012 Pagination test]] — Ready (next; script not written yet)
+- [x] [[POS-0012 Pagination test]] — Done
 - [x] [[POS-0013 SQL aggregation views]] — Done
 - [x] [[POS-0014 SQL aggregation equivalence test]] — Done
-- [ ] [[POS-0015 Trim expands + adopt pagination in report pages]] — Ready (biggest remaining win)
+- [ ] [[POS-0015 Trim expands + adopt pagination in report pages]] — In Progress (expand trim done on 7 pages; pagination pending)
 - [ ] [[POS-0016 Report pages render test]] — Ready
 - [ ] [[POS-0017 Invoice entry pages: paginate + trim expands]] — Ready
 - [ ] [[POS-0018 Regression-test performance suite]] — Ready
@@ -138,12 +142,12 @@ flowchart LR
     P7["POS-0007 · Add indexes migration · Done"]
     P8["POS-0008 · Index verification test · Done"]
     P9["POS-0009 · Fix React Query cache · Done"]
-    P10["POS-0010 · Cache behavior test · Ready"]
+    P10["POS-0010 · Cache behavior test · Done"]
     P11["POS-0011 · usePagedList plumbing · Done"]
-    P12["POS-0012 · Pagination test · Ready"]
+    P12["POS-0012 · Pagination test · Done"]
     P13["POS-0013 · SQL aggregation views · Done"]
     P14["POS-0014 · SQL equivalence test · Done"]
-    P15["POS-0015 · Trim expands + paginate reports · Ready ← NEXT"]
+    P15["POS-0015 · Trim expands + paginate reports · In Progress ← NEXT"]
     P16["POS-0016 · Report render test · Ready"]
     P17["POS-0017 · Invoice pages paginate+trim · Ready"]
     P18["POS-0018 · Performance regression suite · Ready"]

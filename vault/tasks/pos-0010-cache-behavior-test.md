@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: POS-0010
 priority: P1
 belongs_to:
@@ -38,3 +38,22 @@ Verify the new cache config both caches (speed) and stays correct after writes.
 ## Related
 
 - Test companion to [[POS-0009 Fix React Query cache config]].
+
+## Work log
+
+- 2026-09-20 — Wrote `scripts/tests/test_cache_behavior.py` and ran it against the live API.
+  Section A (config inspection): all 10 checks pass — staleTime=60s, gcTime=10min,
+  refetchOnMount=true, reference staleTime=5min, keepPreviousData, query keys and
+  invalidation patterns verified.
+  Section B (write→read consistency): create→immediate read-back, update→immediate
+  read-back, delete→immediate removal — all pass. totalItems=8927 matches raw SQL count.
+  Browser-level "no re-fetch within staleTime" confirmed by config (staleTime governs
+  refetchOnMount=true); requires manual browser verification for full end-to-end.
+
+## Verification
+
+- `scripts/tests/test_cache_behavior.py` → RESULT: PASS — cache config verified; writes
+  reflected immediately in reads.
+- Caveat: the truly client-side check ("navigating back within staleTime issues no
+  network request") requires browser automation; the configuration that produces this
+  behaviour is verified by inspection.

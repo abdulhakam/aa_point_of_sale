@@ -10,7 +10,7 @@ related_to:
 affects:
   - "[[Frontend — Next.js Application]]"
 created: 2026-09-19
-updated: 2026-09-19
+updated: 2026-09-20
 tags:
   - reports
   - ledger
@@ -37,6 +37,13 @@ The Ledgers hub links party, booker, area, and general ledgers, which are backed
 ## Work log
 
 - 2026-09-19 — Noticed the modified file during knowledgebase setup.
+- 2026-09-20 — Reconciliation: `git status --short -- "*ledgers*"` and
+  `git log -- "*ledgers*"` show **no** working-tree change to
+  `frontend/src/app/app/reports/ledgers/page.tsx` — the file matches HEAD and its last
+  change is commit `4ac911c`. The "uncommitted change" premise no longer holds; the diff was
+  swept into `4ac911c` (the same commit that also committed the bench DB and stray logs).
+  The task's *review/verify* intent may still be unmet even though the tree is clean;
+  confirm whether to close as Done or keep for a review pass.
 
 ## Related
 

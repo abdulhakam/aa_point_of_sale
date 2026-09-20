@@ -8,7 +8,7 @@ import PrintContent from "@/app/components/printing/PrintContent";
 import moment from "moment";
 import { DateInput } from "@mantine/dates";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD from "@/app/api/useAPI";
+import useCRUD, { useHydratedRefs } from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import styles from "@/app/components/printing/styles.module.css";
 import { useForm } from "@mantine/form";
@@ -39,7 +39,6 @@ export default function Payments() {
 
   const payments = useCRUD().fullList({
     collection: "payments_view",
-    expand: "invoice,party,area,section,booker",
     filter: `(created >= '${moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
       && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
       ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
@@ -60,7 +59,16 @@ export default function Payments() {
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
   const invoices = useCRUD().fullList({ collection: "invoices", sort: "+id" });
 
-  const queries = [payments, areas, sections, bookers, parties, invoices];
+  // POS-0015 — names resolved client-side; see reports/payments/page.tsx.
+  const { data: rows, queries: refQueries } = useHydratedRefs(payments.data, [
+    "invoice",
+    "party",
+    "area",
+    "section",
+    "booker",
+  ]);
+
+  const queries = [payments, areas, sections, bookers, parties, invoices, ...refQueries];
 
   if (checkSuccess(queries)) {
     const party = parties.data.find((parties) => form.values.party === parties.id)?.name;
@@ -193,7 +201,7 @@ export default function Payments() {
             <PaymentsReport
               fromDate={fromDate}
               toDate={toDate}
-              payments={payments.data}
+              payments={rows}
               area={area}
               section={section}
               booker={booker}

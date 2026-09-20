@@ -15,7 +15,7 @@ import {
   TextInput,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import useCRUD, { crud } from "@/app/api/useAPI";
+import useCRUD, { crud, useHydratedRefs } from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import { IconEye, IconEdit, IconTrash } from "@tabler/icons-react";
 import styles from "@/app/components/printing/styles.module.css";
@@ -53,7 +53,6 @@ export default function PaymentsView() {
   const queryClient = useQueryClient();
   const payments = useCRUD().fullList({
     collection: "payments_view",
-    expand: "invoice,party,area,section,booker,company",
     filter: `(created >= '${moment(fromDate)
       .add(1, "day")
       .utc()
@@ -78,6 +77,17 @@ export default function PaymentsView() {
   const sections = useCRUD().fullList({ collection: "sections" });
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
   const invoices = useCRUD().fullList({ collection: "invoices", sort: "+id" });
+
+  // POS-0015 — resolve party/area/section/booker/invoice/company names from cached
+  // reference collections instead of a per-row server expand over ~26k payments.
+  const { data: rows, queries: refQueries } = useHydratedRefs(payments.data, [
+    "invoice",
+    "party",
+    "area",
+    "section",
+    "booker",
+    "company",
+  ]);
   const [recordData, setRecordData] = useState("");
   const deleteRecord = useMutation({
     mutationFn: crud.remove,
@@ -290,7 +300,7 @@ export default function PaymentsView() {
       close();
     }
   };
-  const queries = [payments, areas, sections, bookers, parties, invoices];
+  const queries = [payments, areas, sections, bookers, parties, invoices, ...refQueries];
   if (checkSuccess(queries)) {
     const {
       total,
@@ -305,7 +315,7 @@ export default function PaymentsView() {
       sendingReturns,
       recievingReturns,
     } = calculator(
-      payments.data?.map((pmnt) => ({
+      rows?.map((pmnt) => ({
         ...pmnt,
         expand: {
           ...pmnt.expand,
@@ -540,7 +550,7 @@ export default function PaymentsView() {
           }}
           horizontalSpacing={2}
           verticalSpacing={0}
-          records={payments.data}
+          records={rows}
           columns={tableStructure}
         />
 

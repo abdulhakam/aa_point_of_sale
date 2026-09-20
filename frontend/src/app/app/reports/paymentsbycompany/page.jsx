@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD from "@/app/api/useAPI";
+import useCRUD, { useHydratedRefs } from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import { Table, ActionIcon, Button, Flex, Group, Checkbox } from "@mantine/core";
 import { IconPrinter } from "@tabler/icons-react";
@@ -115,7 +115,6 @@ export default function ItemTransactionsReport() {
 
   const transactions = useCRUD().fullList({
     collection: "payments_invoices_report",
-    expand: "area,section,company,party,booker,original_invoice",
     filter: `(type = "sale" || type = "return" || type = "recieving")
             ${
               applyDate
@@ -132,9 +131,19 @@ export default function ItemTransactionsReport() {
             `,
   });
 
-  const queries = [transactions, areas, sections, companies, parties, bookers];
+  // POS-0015 — resolve names client-side; `original_invoice` is intentionally not
+  // hydrated (the column reads it as an array and renders "-", preserving current output).
+  const { data: rows, queries: refQueries } = useHydratedRefs(transactions.data, [
+    "area",
+    "section",
+    "company",
+    "party",
+    "booker",
+  ]);
+
+  const queries = [transactions, areas, sections, companies, parties, bookers, ...refQueries];
   if (checkSuccess(queries)) {
-    const allData = transactions.data.map((r) => ({
+    const allData = rows.map((r) => ({
       ...r,
       expand: { ...r.expand, company: companies.data.find((c) => c.id === r.company) },
     }));

@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD from "@/app/api/useAPI";
+import useCRUD, { useHydratedRefs } from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
 import { ActionIcon, Group, Table, Text } from "@mantine/core";
@@ -131,7 +131,6 @@ export default function ItemTransactionsReport() {
   });
   const transactions = useCRUD().fullList({
     collection: "transactions_report",
-    expand: "item,company,party,party.area,party.area.section,booker",
     filter: `(type = "sale" || type = "return")
             && (created >= '${moment(fromDate).utc().format("YYYY-MM-DD")}' && created <= '${moment(toDate)
       .utc()
@@ -144,9 +143,20 @@ export default function ItemTransactionsReport() {
             ${form.values.item ? `&& (item = "${form.values.item}")` : ""}
             ${form.values.invoiceNo ? `&& (invoice = "${form.values.invoiceNo}")` : ""}`,
   });
-  const queries = [transactions];
+  // POS-0015 — names are resolved client-side from cached reference collections
+  // instead of a server-side `party.area.section` deep expand (which serializes the
+  // related records for every row; ~1 MB per 500 rows).
+  const { data: rows, queries: refQueries } = useHydratedRefs(transactions.data, [
+    "item",
+    "company",
+    "party",
+    "booker",
+    "area",
+    "section",
+  ]);
+  const queries = [transactions, ...refQueries];
   if (checkSuccess(queries)) {
-    const { returns, sale, total } = calculator(transactions.data);
+    const { returns, sale, total } = calculator(rows);
     return (
       <>
         <ActionIcon
@@ -260,41 +270,41 @@ export default function ItemTransactionsReport() {
             <Group justify='space-between'>
               {form.values.item && (
                 <Text size='md'>
-                  <b>Item:</b> {transactions.data?.[0]?.expand?.item?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  <b>Item:</b> {rows?.[0]?.expand?.item?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
               {form.values.company && (
                 <Text size='md'>
                   <b>Company:</b>{" "}
-                  {transactions.data?.[0]?.expand?.company?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  {rows?.[0]?.expand?.company?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
               {form.values.booker && (
                 <Text size='md'>
                   <b>Booker:</b>{" "}
-                  {transactions.data?.[0]?.expand?.booker?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  {rows?.[0]?.expand?.booker?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
               {form.values.party && (
                 <Text size='md'>
-                  <b>Party:</b> {transactions.data?.[0]?.expand?.party?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  <b>Party:</b> {rows?.[0]?.expand?.party?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
               {form.values.area && (
                 <Text size='md'>
-                  <b>Area:</b> {transactions.data?.[0]?.expand?.area?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  <b>Area:</b> {rows?.[0]?.expand?.area?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
               {form.values.section && (
                 <Text size='md'>
                   <b>Section:</b>{" "}
-                  {transactions.data?.[0]?.expand?.section?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  {rows?.[0]?.expand?.section?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
               {form.values.invoiceNo && (
                 <Text size='md'>
                   <b>Invoice:</b>{" "}
-                  {transactions.data?.[0]?.expand?.invoice?.invoiceNo ?? "NO DATA OR TOO MANY FILTERS"}
+                  {rows?.[0]?.expand?.invoice?.invoiceNo ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
             </Group>
@@ -319,7 +329,7 @@ export default function ItemTransactionsReport() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {transactions.data?.map((row) => (
+                {rows?.map((row) => (
                   <Table.Tr key={`row-${row.id}`}>
                     {columns.map((col) =>
                       col.hidden ? null : (
