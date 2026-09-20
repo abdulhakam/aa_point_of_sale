@@ -21,10 +21,10 @@ export default function OutstandingPaymentsReport() {
     pageStyle: "@page {size: A4; margin: 0.6cm 1.0cm 0.6cm 0.5cm !important;",
   });
 
-  // Fetch pre-aggregated summary from the database view (single fast query)
+  // Fetch pre-aggregated summary from the database view (single fast query).
+  // POS-0025 — the view already exposes `party_name`, so the `expand: "party"` was unused payload.
   const summary = useCRUD().fullList({
     collection: "outstanding_summary",
-    expand: "party",
     filter:
       `
       ${filters.booker ? `(booker = "${filters.booker}")` : ""}

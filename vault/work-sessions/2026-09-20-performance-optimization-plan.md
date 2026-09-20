@@ -18,11 +18,11 @@ tags:
 # Work Session — Performance Optimization Plan — 2026-09-20
 
 > **RESUME HERE:** backend data-layer work (POS-0005 → POS-0014) is Done and verified on
-> the live DB. POS-0010/0012 tests pass. **POS-0015 and POS-0016 are Done** — deep expands
-> removed from 7 report pages, the cash memo payments list paginated with
-> `payments_summary`-backed totals, and all seven routes verified in a headless browser
-> (one defect found and fixed). Next is POS-0017. POS-0018 (re-measure), POS-0019 (PocketBase
-> v0.22.55) and later tasks are **not started**. See
+> the live DB. POS-0010/0012 tests pass. **POS-0015, POS-0016 and POS-0025 are Done** — deep
+> expands removed from the report pages (including the Daily Sale / Outstanding / Product Sale
+> trio), the cash memo payments list paginated with `payments_summary`-backed totals, and all
+> routes verified in a headless browser. Next is POS-0017. POS-0018 (re-measure), POS-0019
+> (PocketBase v0.22.55) and later tasks are **not started**. See
 > [[Checkpoint — AA Point of Sale — 2026-09-20]] for the exact next action, current git state,
 > and the backend cheat-sheet.
 
@@ -61,6 +61,13 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
 
 ## Activity log
 
+- 2026-09-20 — POS-0025 Done: Daily Sale / Outstanding / Product Sale reports. Premise was
+  stale (these three were already in source via `261a56c`, linked in the hub, and built), so
+  [[Issue — Standalone Build Drift]] and [[Reconcile the standalone build with source]] were
+  corrected. Trimmed dailysale (deep `party.area.section` → `useHydratedRefs`), removed
+  productsale's wholly-unused `invoice.*` expand (+ a stray `console.log`) and outstanding's
+  unused `party` expand. Browser-verified at 2025-11-12: row counts 78/83/602 and every total
+  match direct DB queries exactly; build + tsc clean.
 - 2026-09-20 — POS-0015 + POS-0016 **Done**: ran the browser render pass over CDP (headless
   Chrome 153; the `chrome-devtools` MCP is not exposed to the session and `agent-browser` is
   not installed). All 7 rewired routes rendered with live data and resolved names; the cash
@@ -141,7 +148,9 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
 3. ~~[[POS-0015 Trim expands + adopt pagination in report pages]] + [[POS-0016 Report pages render test]]~~
    **DONE** — implementation + in-browser verification; `payments_summary` bad-sort bug found
    and fixed.
-4. Next: [[POS-0017 Invoice entry pages: paginate + trim expands]], then
+4. ~~[[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]]~~
+   **DONE** — trims + browser verification; stale drift docs corrected.
+5. Next: [[POS-0017 Invoice entry pages: paginate + trim expands]], then
    [[POS-0018 Regression-test performance suite]], then
    [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]].
 

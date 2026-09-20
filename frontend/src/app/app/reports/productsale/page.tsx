@@ -30,9 +30,11 @@ export default function ProductSaleReport() {
     pageStyle: "@page {size: A4; margin: 0.6cm 1.0cm 0.6cm 0.5cm !important;",
   });
 
+  // POS-0025 — this report only needs each line's item/qty/total (names come from the `items`
+  // collection), so the former `item,invoice,invoice.party,invoice.party.area,...` expand was
+  // pure payload and has been removed.
   const transactions = useCRUD().fullList({
     collection: "transaction_view",
-    expand: "item,invoice,invoice.party,invoice.party.area,invoice.party.area.section", 
     filter: `(type = "sale")
             && (created >= '${moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
             && created <= '${moment(toDate).endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
@@ -163,7 +165,6 @@ function aggregateProductData(transactions, items) {
       
       productStats[itemId].totalUnits += t.qty;
       productStats[itemId].amount += t.total || 0;
-      console.log(productStats[itemId]);
   });
 
   return Object.values(productStats).map(p => {

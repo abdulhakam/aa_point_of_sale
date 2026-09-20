@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD from "@/app/api/useAPI";
+import useCRUD, { useHydratedRefs } from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import PrintContent from "@/app/components/printing/PrintContent";
 import { ActionIcon, Button, Group, Select, Stack, Table, Text } from "@mantine/core";
@@ -41,26 +41,32 @@ export default function DailySaleReport() {
 
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
-    expand: "party,party.area,party.area.section,booker", 
     filter: filterString,
-    sort: "+invoiceNo"
+    sort: "+invoiceNo",
   });
-  
+
+  // POS-0025 — resolve party/area/section/booker names client-side from the cached reference
+  // collections instead of the deep `party.area.section` server expand (useAPI.ts).
+  const { data: invoiceRows, queries: refQueries } = useHydratedRefs(invoices.data, [
+    "party",
+    "booker",
+  ]);
+
   const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
 
   const filteredInvoices = useMemo(() => {
-    if (!invoices.data) return [];
-    
-    return invoices.data.filter((inv) => {
+    if (!invoiceRows) return [];
+
+    return invoiceRows.filter((inv) => {
         if (filters.area && inv.expand?.party?.area !== filters.area) return false;
         if (filters.section && inv.expand?.party?.expand?.area?.section !== filters.section) return false;
         return true;
     });
 
-  }, [invoices.data, filters.area, filters.section]);
+  }, [invoiceRows, filters.area, filters.section]);
 
-  const queries = [invoices, areas, bookers];
+  const queries = [invoices, areas, bookers, ...refQueries];
 
   if (checkSuccess(queries)) {
     return (

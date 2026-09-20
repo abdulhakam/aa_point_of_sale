@@ -114,6 +114,7 @@ knowledgebase documents. Tauri and the `standalone/` server host the same fronte
 - [ ] [[POS-0022 Upgrade PocketBase to v0.40.4]] — Backlog (deferred major migration)
 - [ ] [[POS-0023 PocketBase v0.40.4 migration test]] — Backlog
 - [ ] [[POS-0024 Record performance optimization decisions]] — Ready
+- [x] [[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]] — Done (trim + browser-verified)
 
 ## Task dependency and progress
 
@@ -147,6 +148,7 @@ flowchart LR
     P22["POS-0022 · PB v0.40.4 migration · Backlog"]
     P23["POS-0023 · PB v0.40.4 test · Backlog"]
     P24["POS-0024 · Record perf decisions · Ready"]
+    P25["POS-0025 · Extra reports trim + verify · Done"]
   end
 
   P5 --> P7
@@ -156,6 +158,7 @@ flowchart LR
   P9 --> P10
   P9 --> P11
   P11 --> P12
+  P11 --> P25
   P5 --> P13
   P6 --> P13
   P13 --> P14

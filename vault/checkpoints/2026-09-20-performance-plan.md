@@ -47,6 +47,14 @@ resolve, page controls work, totals match the DB). The browser pass also caught 
 
 ## Completed since previous checkpoint
 
+- **POS-0025 (done)** Daily Sale / Outstanding / Product Sale reports trimmed + verified. The
+  premise ("source lacks these three") was stale — they were added by `261a56c` and are linked
+  in the reports hub, so [[Issue — Standalone Build Drift]] and
+  [[Reconcile the standalone build with source]] were corrected. Trimmed: `dailysale`'s
+  `party.area.section` chain now resolves via `useHydratedRefs`; `productsale`'s wholly-unused
+  `invoice.*` expand removed (plus a stray `console.log`); `outstanding`'s unused `party`
+  expand removed. Browser-verified at 2025-11-12: row counts (78/83/602) and every total match
+  direct DB queries exactly.
 - **POS-0015 + POS-0016 (done)** Deep-expand trim + pagination + summary totals, verified in a
   browser. Added `useRefMaps`/`hydrateRefs`/`useHydratedRefs` to `useAPI.ts` and removed the
   server expand from 7 pages (`reports/transactions/unified`, `reports/profit`,
@@ -95,21 +103,18 @@ copy and the scratch artifacts, but the already-committed files remain tracked a
 be removed from tracking (`git rm -r --cached backend/pb_data_bench` and the stray logs)
 in a deliberate hygiene commit.
 
-**Uncommitted working tree** (after the 2026-09-20 continuation session):
+**Committed this session:** `6e99c14` (POS-0015 expand trim + POS-0010/0012 verification
+tests) and `6c7bce4` (POS-0015 pagination + browser-verified POS-0015/0016). `git status`
+shows no working-tree change to `frontend/src/app/app/reports/ledgers/page.tsx` — the
+previously flagged change was committed in `4ac911c` (see
+[[Review the uncommitted Ledgers report change]]).
 
-- POS-0015 expand trim: `frontend/src/app/api/useAPI.ts` and 7 report pages —
-  `frontend/src/app/app/reports/{transactions/unified,profit,payments/page,payments/areawise/page,salesreport/page,paymentsbycompany/page}`
-  and `frontend/src/app/app/cashmemo/payments/PaymentsView.jsx`.
-- New tests: `scripts/tests/test_pagination.py`, `test_cache_behavior.py`,
-  `test_expand_trim.py`, `test_summary_totals.py`.
-- Vault: `vault/checkpoints/…`, `vault/projects/aa-point-of-sale.md`,
-  `vault/tasks/pos-0010…`, `pos-0012…`, `pos-0015…`, `pos-0002…` (reconciliation),
-  `vault/work-sessions/…`.
-- Pre-existing/unrelated: `.commandcode/taste/taste.md`.
-
-Nothing has been committed this session. `git status` shows no working-tree change to
-`frontend/src/app/app/reports/ledgers/page.tsx` — the previously flagged change was
-committed in `4ac911c` (see [[Review the uncommitted Ledgers report change]]).
+**Uncommitted (POS-0025):**
+`frontend/src/app/app/reports/{dailysale,productsale,outstanding}/page.tsx`, plus the vault
+changes ([[Issue — Standalone Build Drift]], [[Reconcile the standalone build with source]],
+[[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]], the
+project note, this checkpoint and the work session). Pre-existing/unrelated:
+`.commandcode/taste/taste.md`.
 
 - Live DB `backend/pb_data/data.db` (production):
   - 18 secondary indexes (verified by `scripts/tests/test_indexes.py`: 18/18 present;
@@ -168,7 +173,11 @@ committed in `4ac911c` (see [[Review the uncommitted Ledgers report change]]).
 2. ~~Run [[POS-0010 Cache behavior test]].~~ **DONE** (PASS).
 3. ~~[[POS-0015 Trim expands + adopt pagination in report pages]] + [[POS-0016 Report pages render test]]~~
    **DONE** — implementation + in-browser verification; one defect found and fixed.
-4. Next: [[POS-0017 Invoice entry pages: paginate + trim expands]] (paginate the invoice entry
+4. ~~[[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]]~~
+   **DONE** — trims applied and browser-verified; the "missing reports" premise was stale and
+   the [[Issue — Standalone Build Drift]] / [[Reconcile the standalone build with source]]
+   evidence corrected.
+5. Next: [[POS-0017 Invoice entry pages: paginate + trim expands]] (paginate the invoice entry
    lists + trim their expands), then [[POS-0018 Regression-test performance suite]] to
    re-measure, then the [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] upgrade.
 

@@ -2,7 +2,7 @@
 type: Issue
 status: Open
 created: 2026-09-19
-updated: 2026-09-19
+updated: 2026-09-20
 belongs_to:
   - "[[AA Point of Sale]]"
 related_to:
@@ -63,10 +63,29 @@ behaves differently from the source.
 
 Use `RUN.BAT` (source build) rather than `RUN MINI.BAT` until reconciled.
 
+## Update (2026-09-20) — the extra-report discrepancy is resolved
+
+Re-checked against the current checkout: **the source now has all three reports.** They were
+added by commit `261a56c` ("Introduce new reporting pages for daily, outstanding, and product
+sales, and add a reusable Select component"), `reports/page.tsx` links all three, and the
+current `frontend/` build emits 18 report routes — the same count this Issue attributed to
+`standalone/`. The Evidence bullet claiming the source "contain[s] none of those three"
+was written from a stale observation and is **withdrawn**.
+
+What remains of this Issue is the build-artifact drift only: a different `BUILD_ID`, a
+`server.js` tracing root pointing at another checkout (`...\WORK\WORK\ERP_DB\production\...`),
+and a `package.json` that predates the Tauri work — i.e. `standalone/` is still not
+regenerated from this source (see [[Reconcile the standalone build with source]]).
+
+A follow-up consequence: those three pages had never been through
+[[POS-0015 Trim expands + adopt pagination in report pages]], so they still over-fetch — tracked
+as [[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]].
+
 ## Related work
 
 - [[Reconcile the standalone build with source]]
 - [[Verify the static export path for Tauri and RUN SERVE]]
+- [[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]]
 
 ## Notes
 
