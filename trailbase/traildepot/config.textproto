@@ -1,0 +1,135 @@
+# Auto-generated config.Config textproto
+email {}
+server {
+  application_name: "TrailBase"
+  logs_retention_sec: 604800
+}
+auth {
+  auth_token_ttl_sec: 3600
+  refresh_token_ttl_sec: 2592000
+}
+jobs {}
+record_apis: [{
+  name: "areas"
+  table_name: "areas"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [SCHEMA, DELETE, UPDATE, READ, CREATE]
+  enable_subscriptions: true
+}, {
+  name: "sections"
+  table_name: "sections"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "categories"
+  table_name: "categories"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "users"
+  table_name: "users"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "companies"
+  table_name: "companies"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "products"
+  table_name: "products"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "expenses"
+  table_name: "expenses"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "order_bookers"
+  table_name: "order_bookers"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "parties"
+  table_name: "parties"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "invoices"
+  table_name: "invoices"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "invoices_enum_type"
+  table_name: "invoices_enum_type"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "parties_enum_type"
+  table_name: "parties_enum_type"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "payments_enum_type"
+  table_name: "payments_enum_type"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "invoices_return_reference"
+  table_name: "invoices_return_reference"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "payments"
+  table_name: "payments"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "transactions"
+  table_name: "transactions"
+  conflict_resolution: REPLACE
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "companies2parties"
+  table_name: "companies2parties"
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}, {
+  name: "companies2orderbookers"
+  table_name: "companies2orderbookers"
+  autofill_missing_user_id_columns: true
+  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
+  enable_subscriptions: true
+}]

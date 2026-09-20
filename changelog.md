@@ -12,3 +12,6 @@ added return invoice calculations in general ledger.
 Created ledger by booker but is kept hidden until completed.
 ### 30/04/2024 - New
 possibly completed ledger by booker, also added stock difference fixing.
+### 20/12/2025 - Dependency & AI initialization
+- initialized memory bank
+- removed tauri
