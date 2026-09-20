@@ -84,6 +84,6 @@ day). All three rendered live data, and every row count and total matches a dire
 
 Names render correctly in every column (e.g. daily sale Customer `RAUF NADEEM KARYANA`, Area
 `MAHAJIR COLONY`, Booker `ATTIQUE`; product `TWINKLE` with `0 ctns 210 units`), confirming the
-expands were replaced without loss. The hydration warnings seen during the pass are the
-clock-shim artifact documented in [[POS-0016 Report pages render test]] (a control run on an
-untouched page showed the same).
+expands were replaced without loss. The React hydration warnings seen during the pass are
+**pre-existing app behaviour**, not caused by this work — see the correction in
+[[POS-0016 Report pages render test]] (a later pass with no clock shim showed them too).

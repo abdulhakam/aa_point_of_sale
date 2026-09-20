@@ -51,9 +51,10 @@ export default function InvoiceForm(props) {
       description: "",
     },
   });
+  // POS-0017 — the `party,invoice_maker,booker` expand was redundant: the view row already
+  // carries the `party`/`booker` foreign keys (used to populate the form on selection).
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
-    expand: "party,invoice_maker,booker",
     filter: `type="difference"`,
     queryKey: `differenceInvoices`,
   });
@@ -218,11 +219,11 @@ export default function InvoiceForm(props) {
                   invoiceForm.setFieldValue("invoiceNo", v);
                   invoiceForm.setFieldValue(
                     "booker",
-                    invoices.data.find((inv) => inv.id === v)?.expand.booker?.id
+                    invoices.data.find((inv) => inv.id === v)?.booker
                   );
                   invoiceForm.setFieldValue(
                     "party",
-                    invoices.data.find((inv) => inv.id === v)?.expand.party?.id
+                    invoices.data.find((inv) => inv.id === v)?.party
                   );
                   invoiceForm.setFieldValue("date", v === "new" ? new Date() : getInvoiceDate(v));
                 }}

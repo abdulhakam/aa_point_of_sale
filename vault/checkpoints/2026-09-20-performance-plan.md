@@ -27,17 +27,17 @@ checkpoint current enough that a fresh session can resume without chat history.
 ## Status at a glance
 
 Backend data-layer work (POS-0005 → POS-0014) is **done and verified on the live DB**.
-The cache and pagination-helper tests (POS-0010, POS-0012) pass. **POS-0015 and POS-0016 are
-done**: deep expands removed from 7 report pages, the cash memo payments list paginated with
-`payments_summary`-backed totals, and all seven routes verified in a headless browser (names
-resolve, page controls work, totals match the DB). The browser pass also caught and fixed a
-400-causing bad sort on the `payments_summary` request. The PocketBase v0.22.55 upgrade
-(POS-0019) is the main remaining item.
+The cache and pagination-helper tests (POS-0010, POS-0012) pass. **POS-0015, POS-0016,
+POS-0017 and POS-0025 are done and browser-verified**: deep expands removed from the report
+pages, the cash memo payments list paginated with `payments_summary`-backed totals, and the
+invoice entry pages no longer fetch the whole `invoice_view` (the selector is paged +
+server-searchable). The browser passes also caught and fixed a 400-causing bad sort on the
+`payments_summary` request. Next: the regression re-measure (POS-0018); the PocketBase
+v0.22.55 upgrade (POS-0019) is the main remaining item.
 
 ## Active tasks
 
-- [[POS-0017 Invoice entry pages: paginate + trim expands]] — Ready (NEXT)
-- [[POS-0018 Regression-test performance suite]] — Ready (final re-measure)
+- [[POS-0018 Regression-test performance suite]] — Ready (NEXT, final re-measure)
 - [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Ready
 - [[POS-0020 PocketBase v0.22.55 regression test]] — Ready
 - [[POS-0021 Materialize hot report views into tables]] — Ready (conditional on POS-0018)
@@ -47,6 +47,16 @@ resolve, page controls work, totals match the DB). The browser pass also caught 
 
 ## Completed since previous checkpoint
 
+- **POS-0017 (done)** Invoice entry pages. `InvoiceForm.tsx` no longer runs
+  `getFullList(invoice_view, expand: "party,invoice_maker,booker")`: the selector is a
+  `usePagedList` (50 newest, server-search by `invoiceNo`), the id-generation count is a 1-row
+  `usePagedList` on the same view/filter, and the selected invoice is a `getOne`. `difference`
+  dropped its redundant expand; `orders` dropped `expand: "booker,invoice_maker,party"` and
+  resolves names via `useHydratedRefs`. Verified in-browser by capturing the real requests: the
+  entry pages now issue `perPage=50` + `perPage=1` (no expand), and `orders` renders 8,927 rows
+  with party/booker names. Residual: the interactive dropdown→edit flow was not exercised by
+  the harness; `orders` still fetches the full `invoice_view` (no expand) because
+  `DataViewTable` lacks server-pagination props.
 - **POS-0025 (done)** Daily Sale / Outstanding / Product Sale reports trimmed + verified. The
   premise ("source lacks these three") was stale — they were added by `261a56c` and are linked
   in the reports hub, so [[Issue — Standalone Build Drift]] and
@@ -109,12 +119,12 @@ shows no working-tree change to `frontend/src/app/app/reports/ledgers/page.tsx` 
 previously flagged change was committed in `4ac911c` (see
 [[Review the uncommitted Ledgers report change]]).
 
-**Uncommitted (POS-0025):**
-`frontend/src/app/app/reports/{dailysale,productsale,outstanding}/page.tsx`, plus the vault
-changes ([[Issue — Standalone Build Drift]], [[Reconcile the standalone build with source]],
-[[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]], the
-project note, this checkpoint and the work session). Pre-existing/unrelated:
-`.commandcode/taste/taste.md`.
+**Uncommitted (POS-0017):**
+`frontend/src/app/app/invoices/{InvoiceForm.tsx,difference/page.tsx,orders/page.tsx}`, plus the
+vault changes ([[POS-0017 Invoice entry pages: paginate + trim expands]], the hydration-note
+correction in [[POS-0016 Report pages render test]], the project note, this checkpoint and the
+work session). Pre-existing/unrelated: `.commandcode/taste/taste.md` and
+`vault/.noteriv/workspace.json` (Tolaria-generated).
 
 - Live DB `backend/pb_data/data.db` (production):
   - 18 secondary indexes (verified by `scripts/tests/test_indexes.py`: 18/18 present;
@@ -177,9 +187,10 @@ project note, this checkpoint and the work session). Pre-existing/unrelated:
    **DONE** — trims applied and browser-verified; the "missing reports" premise was stale and
    the [[Issue — Standalone Build Drift]] / [[Reconcile the standalone build with source]]
    evidence corrected.
-5. Next: [[POS-0017 Invoice entry pages: paginate + trim expands]] (paginate the invoice entry
-   lists + trim their expands), then [[POS-0018 Regression-test performance suite]] to
-   re-measure, then the [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] upgrade.
+5. ~~[[POS-0017 Invoice entry pages: paginate + trim expands]]~~ **DONE** — selector paged +
+   server-searchable, expands dropped; verified by capturing the real requests.
+6. Next: [[POS-0018 Regression-test performance suite]] (re-measure page-load timing and
+   finalise before/after), then the [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] upgrade.
 
 ## Verification still required
 

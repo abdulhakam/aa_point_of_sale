@@ -18,10 +18,10 @@ tags:
 # Work Session — Performance Optimization Plan — 2026-09-20
 
 > **RESUME HERE:** backend data-layer work (POS-0005 → POS-0014) is Done and verified on
-> the live DB. POS-0010/0012 tests pass. **POS-0015, POS-0016 and POS-0025 are Done** — deep
-> expands removed from the report pages (including the Daily Sale / Outstanding / Product Sale
-> trio), the cash memo payments list paginated with `payments_summary`-backed totals, and all
-> routes verified in a headless browser. Next is POS-0017. POS-0018 (re-measure), POS-0019
+> the live DB. POS-0010/0012 tests pass. **POS-0015, POS-0016, POS-0017 and POS-0025 are Done**
+> — deep expands removed from the report pages (incl. Daily Sale / Outstanding / Product Sale),
+> the cash memo payments list paginated with `payments_summary`-backed totals, and the invoice
+> entry pages no longer fetch the whole `invoice_view`. Next is POS-0018 (re-measure). POS-0019
 > (PocketBase v0.22.55) and later tasks are **not started**. See
 > [[Checkpoint — AA Point of Sale — 2026-09-20]] for the exact next action, current git state,
 > and the backend cheat-sheet.
@@ -61,6 +61,15 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
 
 ## Activity log
 
+- 2026-09-20 — POS-0017 Done: invoice entry pages. `InvoiceForm.tsx` no longer fetches the
+  whole `invoice_view` with `expand: "party,invoice_maker,booker"` — the selector is
+  `usePagedList` (50 newest + server `invoiceNo ~ search`), the id count is a 1-row
+  `usePagedList` on the same filter, and the selected invoice is a `getOne`; `parties` expand
+  trimmed to `area`. `difference` dropped its redundant expand; `orders` dropped the expand and
+  resolves names client-side. Verified in-browser by capturing the real requests (`perPage=50`
+  + `perPage=1`, no expand; orders renders 8,927 rows with names). Also corrected the earlier
+  POS-0016 note: the React hydration warnings are pre-existing (they appear with no clock shim
+  too), not shim-induced.
 - 2026-09-20 — POS-0025 Done: Daily Sale / Outstanding / Product Sale reports. Premise was
   stale (these three were already in source via `261a56c`, linked in the hub, and built), so
   [[Issue — Standalone Build Drift]] and [[Reconcile the standalone build with source]] were
@@ -150,8 +159,9 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
    and fixed.
 4. ~~[[POS-0025 Optimize + verify the Daily Sale, Outstanding, and Product Sale reports]]~~
    **DONE** — trims + browser verification; stale drift docs corrected.
-5. Next: [[POS-0017 Invoice entry pages: paginate + trim expands]], then
-   [[POS-0018 Regression-test performance suite]], then
+5. ~~[[POS-0017 Invoice entry pages: paginate + trim expands]]~~ **DONE** — selector paged +
+   server-searchable; expands dropped; verified by capturing the real requests.
+6. Next: [[POS-0018 Regression-test performance suite]], then
    [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]].
 
 Status of `scripts/tests/test_pagination.py`: **it now exists** and passes (see

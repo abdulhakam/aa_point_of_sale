@@ -70,9 +70,12 @@ Two gotchas worth remembering:
 - **Default date range is empty** — the pages default to the current month, but the DB ends
   ~2026-04. Real density is best in **Dec 2025** (~1.6k payments, ~1.5k transactions), so the
   script shifts the clock there; no seed rows or DB writes are needed.
-- The clock shift causes React hydration warnings (#418/#423) on **every** page, including
-  untouched ones — verified by a control run on `/app/reports/stockreport`. They are an
-  artifact of the shim (server HTML uses the real date), not a defect.
+- React hydration warnings (#418/#423, 6 per page) appear on **every** page, including
+  untouched ones. They are **pre-existing app behaviour, not caused by the performance work**:
+  a later POS-0017 pass with **no clock shim at all** still showed the same 6 warnings per
+  page. (An earlier note here attributed them to the clock shim — that was wrong and is
+  corrected.) Likely cause: components whose initial state calls `new Date()` / reads
+  `pb.authStore` render differently on the server than on the client. Worth a separate Issue.
 
 ## Work log
 
