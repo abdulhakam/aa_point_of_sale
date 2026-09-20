@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { modals } from "@mantine/modals";
 import {
   Badge,
@@ -51,27 +51,70 @@ export default function PaymentsView() {
     },
   });
   const queryClient = useQueryClient();
-  const payments = useCRUD().fullList({
+
+  // POS-0015 — server-side pagination for this transactional list. Totals come from the
+  // `payments_summary` view when every active filter is one of its columns. The Company
+  // and Invoice filters are NOT in that view, so for those (rarer) cases we fall back to
+  // the previous full-list behaviour, computing totals client-side as before.
+  const [page, setPage] = useState(1);
+  const PER_PAGE = 50;
+  const summaryCompatible = !form.values.company && !form.values.invoiceFilter;
+
+  const paymentsFilter = `(created >= '${moment(fromDate)
+    .add(1, "day")
+    .utc()
+    .startOf("day")
+    .format("YYYY-MM-DD HH:mm:ss")}' 
+    && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
+    ${form.values.company ? `&& (company~"${form.values.company}")` : ""}
+    ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
+    ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
+    ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
+    ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
+    ${form.values.paymentType ? `&& (type = "${form.values.paymentType}")` : ""}
+    ${
+      form.values.invoiceFilter
+        ? `&& ( original_invoices ~ "${form.values.invoiceFilter}" || invoice = "${form.values.invoiceFilter}")`
+        : ""
+    }
+    `;
+
+  // payments_summary groups by `day` (created truncated to 10 chars), so timestamp date
+  // bounds translate to whole days; every other predicate maps 1:1.
+  const summaryFilter = `(day >= '${moment(fromDate).add(1, "day").utc().startOf("day").format("YYYY-MM-DD")}'
+    && day <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD")}')
+    ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
+    ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
+    ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
+    ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
+    ${form.values.paymentType ? `&& (type = "${form.values.paymentType}")` : ""}
+    `;
+
+  const paged = useCRUD().pagedList({
     collection: "payments_view",
-    filter: `(created >= '${moment(fromDate)
-      .add(1, "day")
-      .utc()
-      .startOf("day")
-      .format("YYYY-MM-DD HH:mm:ss")}' 
-      && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
-      ${form.values.company ? `&& (company~"${form.values.company}")` : ""}
-      ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
-      ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
-      ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
-      ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
-      ${form.values.paymentType ? `&& (type = "${form.values.paymentType}")` : ""}
-      ${
-        form.values.invoiceFilter
-          ? `&& ( original_invoices ~ "${form.values.invoiceFilter}" || invoice = "${form.values.invoiceFilter}")`
-          : ""
-      }
-      `,
+    page: page,
+    perPage: PER_PAGE,
+    filter: paymentsFilter,
+    enabled: summaryCompatible,
   });
+  const summary = useCRUD().fullList({
+    collection: "payments_summary",
+    filter: summaryFilter,
+    // payments_summary has no `created` column, so the default sort would be rejected (400).
+    sort: "day",
+    enabled: summaryCompatible,
+  });
+  const fullPayments = useCRUD().fullList({
+    collection: "payments_view",
+    filter: paymentsFilter,
+    enabled: !summaryCompatible,
+  });
+
+  // Return to the first page whenever the filter changes.
+  useEffect(() => {
+    setPage(1);
+  }, [paymentsFilter, summaryCompatible]);
+
   const parties = useCRUD().fullList({ collection: "parties", expand: "area,area.section" });
   const areas = useCRUD().fullList({ collection: "areas", expand: "section" });
   const sections = useCRUD().fullList({ collection: "sections" });
@@ -80,14 +123,10 @@ export default function PaymentsView() {
 
   // POS-0015 — resolve party/area/section/booker/invoice/company names from cached
   // reference collections instead of a per-row server expand over ~26k payments.
-  const { data: rows, queries: refQueries } = useHydratedRefs(payments.data, [
-    "invoice",
-    "party",
-    "area",
-    "section",
-    "booker",
-    "company",
-  ]);
+  const { data: rows, queries: refQueries } = useHydratedRefs(
+    summaryCompatible ? paged.records : fullPayments.data,
+    ["invoice", "party", "area", "section", "booker", "company"]
+  );
   const [recordData, setRecordData] = useState("");
   const deleteRecord = useMutation({
     mutationFn: crud.remove,
@@ -300,7 +339,16 @@ export default function PaymentsView() {
       close();
     }
   };
-  const queries = [payments, areas, sections, bookers, parties, invoices, ...refQueries];
+  const queries = [
+    summaryCompatible ? paged : fullPayments,
+    summaryCompatible ? summary : null,
+    areas,
+    sections,
+    bookers,
+    parties,
+    invoices,
+    ...refQueries,
+  ].filter(Boolean);
   if (checkSuccess(queries)) {
     const {
       total,
@@ -314,15 +362,17 @@ export default function PaymentsView() {
       sent,
       sendingReturns,
       recievingReturns,
-    } = calculator(
-      rows?.map((pmnt) => ({
-        ...pmnt,
-        expand: {
-          ...pmnt.expand,
-          party: { ...parties.data?.find((pty) => pty.id === pmnt.party) },
-        },
-      }))
-    );
+    } = summaryCompatible
+      ? summaryCalculator(summary.data)
+      : calculator(
+          rows?.map((pmnt) => ({
+            ...pmnt,
+            expand: {
+              ...pmnt.expand,
+              party: { ...parties.data?.find((pty) => pty.id === pmnt.party) },
+            },
+          }))
+        );
 
     return (
       <>
@@ -531,6 +581,15 @@ export default function PaymentsView() {
           )}
         </Group>
         <DataTable
+          {...(summaryCompatible
+            ? {
+                page: page,
+                onPageChange: setPage,
+                totalRecords: paged.totalRecords,
+                recordsPerPage: PER_PAGE,
+                fetching: paged.isFetching,
+              }
+            : {})}
           classNames={{
             root: classes.root,
             table: classes.table,
@@ -615,6 +674,35 @@ export default function PaymentsView() {
       </>
     );
   } else return <StatusCheck check={queries} />;
+}
+/**
+ * POS-0015 — totals from the `payments_summary` view. The view precomputes the same
+ * aggregates the JS calculator derives, so summing its grouped rows is equivalent;
+ * see scripts/tests/test_summary_totals.py for the DB-level equivalence proof.
+ */
+function summaryCalculator(groups = []) {
+  const sum = (key) => groups.reduce((acc, row) => acc + (Number(row[key]) || 0), 0);
+  const sending = sum("sending");
+  const sent = sum("sent");
+  const recieving = sum("recieving");
+  const recieved = sum("recieved");
+  const sendingReturns = sum("sending_returns");
+  const recievingReturns = sum("recieving_returns");
+  const invoiceTotal = sum("invoice_total");
+  const totalPaid = sum("total_paid");
+  return {
+    total: Number((invoiceTotal - totalPaid).toFixed(2)),
+    totalSending: Number((sending - sent - sendingReturns).toFixed(2)),
+    totalRecieving: Number((recieving - recieved - recievingReturns).toFixed(2)),
+    sendingReturns: Number(sendingReturns).toFixed(2),
+    recievingReturns: Number(recievingReturns).toFixed(2),
+    invoiceTotal: Number(invoiceTotal).toFixed(2),
+    totalPaid: Number(totalPaid).toFixed(2),
+    recieving: Number(recieving).toFixed(2),
+    recieved: Number(recieved).toFixed(2),
+    sending: Number(sending).toFixed(2),
+    sent: Number(sent).toFixed(2),
+  };
 }
 function calculator(payments) {
   let invoiceTotal = 0;

@@ -46,20 +46,10 @@ Out of scope (not implemented in this repository):
 
 - Working application. Frontend builds (`.next` present) and PocketBase 0.22.9 ships with a populated database (`backend/pb_data/data.db`).
 - 41 routes are compiled in the app router (dashboard, cash memo, invoices, management, reports, auth, invoice view) — see [[Route Map]].
-- 11 base collections and 14 view collections are live — see [[Data Model]].
-  (`payments_summary` was added 2026-09-20.)
-- **Performance program in progress** — see the task list below and
-  [[Checkpoint — AA Point of Sale — 2026-09-20]]. Backend data layer is optimized and
-  measured (18 indexes, window-function `ledger_party`, `payments_summary` view; party
-  ledger >180 s → ~4.4 s), the React Query cache is fixed and its config/behaviour verified
-  (POS-0010), and the pagination helper is verified against the live API (POS-0012).
-  **Deep server expands are removed** from 7 report pages (POS-0015) — names are resolved
-  client-side from cached reference collections, cutting those payloads 65–75%. Remaining:
-  pagination of the transactional payments list (needs summary-backed totals) and the
-  PocketBase v0.22.55 upgrade. Before/after numbers: [[Performance Baseline]].
+- 11 base collections and 15 view collections are live — see [[Data Model]]. (`payments_summary` was added 2026-09-20.)
+- **Performance program in progress** — see the task list below and [[Checkpoint — AA Point of Sale — 2026-09-20]]. Backend data layer is optimized and measured (18 indexes, window-function `ledger_party`, `payments_summary` view; party ledger >180 s → ~4.4 s), the React Query cache is fixed and its config/behaviour verified (POS-0010), and the pagination helper is verified against the live API (POS-0012). **POS-0015 is done and verified in-browser (POS-0016)**: deep server expands are removed from 7 report pages (names resolved client-side from cached reference collections, cutting payloads 65–75%) and the cash memo payments list is paginated with `payments_summary`-backed totals (page controls work; totals stable across pages and matching the DB). Remaining in the program: the PocketBase v0.22.55 upgrade and later tasks. Before/after numbers: [[Performance Baseline]].
 - Known drift: the untracked `standalone/` build contains report pages that the current source does not, and predates the Tauri additions — see [[Issue — Standalone Build Drift]].
-- The Ledgers report change previously flagged as uncommitted is no longer in the working
-  tree (it was committed in `4ac911c`) — see [[Review the uncommitted Ledgers report change]].
+- The Ledgers report change previously flagged as uncommitted is no longer in the working tree (it was committed in `4ac911c`) — see [[Review the uncommitted Ledgers report change]].
 
 ## Architecture at a glance
 
@@ -114,8 +104,8 @@ knowledgebase documents. Tauri and the `standalone/` server host the same fronte
 - [x] [[POS-0012 Pagination test]] — Done
 - [x] [[POS-0013 SQL aggregation views]] — Done
 - [x] [[POS-0014 SQL aggregation equivalence test]] — Done
-- [ ] [[POS-0015 Trim expands + adopt pagination in report pages]] — In Progress (expand trim done on 7 pages; pagination pending)
-- [ ] [[POS-0016 Report pages render test]] — Ready
+- [x] [[POS-0015 Trim expands + adopt pagination in report pages]] — Done
+- [x] [[POS-0016 Report pages render test]] — Done (all 7 routes verified in-browser)
 - [ ] [[POS-0017 Invoice entry pages: paginate + trim expands]] — Ready
 - [ ] [[POS-0018 Regression-test performance suite]] — Ready
 - [ ] [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Ready
@@ -147,9 +137,9 @@ flowchart LR
     P12["POS-0012 · Pagination test · Done"]
     P13["POS-0013 · SQL aggregation views · Done"]
     P14["POS-0014 · SQL equivalence test · Done"]
-    P15["POS-0015 · Trim expands + paginate reports · In Progress ← NEXT"]
-    P16["POS-0016 · Report render test · Ready"]
-    P17["POS-0017 · Invoice pages paginate+trim · Ready"]
+    P15["POS-0015 · Trim expands + paginate reports · Done"]
+    P16["POS-0016 · Report render test · Done"]
+    P17["POS-0017 · Invoice pages paginate+trim · Ready ← NEXT"]
     P18["POS-0018 · Performance regression suite · Ready"]
     P19["POS-0019 · PB v0.22.55 upgrade · Ready"]
     P20["POS-0020 · PB v0.22.55 regression test · Ready"]

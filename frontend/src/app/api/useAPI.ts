@@ -127,6 +127,7 @@ export function useFullList({
   filter = "",
   sort = "-created",
   queryKey = collection,
+  enabled = true,
 }) {
   return useQuery({
     queryKey: [queryKey, expand, filter],
@@ -136,6 +137,7 @@ export function useFullList({
         expand: expand,
         filter: filter,
       }),
+    enabled: enabled,
     ...referenceQueryOptions(collection),
   });
 }
@@ -306,6 +308,10 @@ export function hydrateRefs(rows: any[], maps: any, relations: string[]) {
 /** Convenience hook: fetch the reference maps and hydrate a fetched list. */
 export function useHydratedRefs(rows, relations) {
   const { maps, queries, isLoading, isSuccess } = useRefMaps();
-  const data = useMemo(() => hydrateRefs(rows, maps, relations), [rows, maps, relations.join(",")]);
+  const relationsKey = relations.join(",");
+  const data = useMemo(
+    () => hydrateRefs(rows, maps, relationsKey ? relationsKey.split(",") : []),
+    [rows, maps, relationsKey]
+  );
   return { data, maps, queries, isLoading, isSuccess };
 }

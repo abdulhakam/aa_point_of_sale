@@ -27,17 +27,16 @@ checkpoint current enough that a fresh session can resume without chat history.
 ## Status at a glance
 
 Backend data-layer work (POS-0005 → POS-0014) is **done and verified on the live DB**.
-The cache-config and pagination-helper verification tests (POS-0010, POS-0012) are **done
-and passing**. **POS-0015 is In Progress**: the deep server expands have been removed from
-seven report pages and replaced with client-side reference resolution (verified equivalent,
-65–75% smaller payloads). Pagination of the transactional payments list and the PocketBase
-upgrade remain.
+The cache and pagination-helper tests (POS-0010, POS-0012) pass. **POS-0015 and POS-0016 are
+done**: deep expands removed from 7 report pages, the cash memo payments list paginated with
+`payments_summary`-backed totals, and all seven routes verified in a headless browser (names
+resolve, page controls work, totals match the DB). The browser pass also caught and fixed a
+400-causing bad sort on the `payments_summary` request. The PocketBase v0.22.55 upgrade
+(POS-0019) is the main remaining item.
 
 ## Active tasks
 
-- [[POS-0015 Trim expands + adopt pagination in report pages]] — In Progress (expand trim done; pagination pending)
-- [[POS-0016 Report pages render test]] — Ready
-- [[POS-0017 Invoice entry pages: paginate + trim expands]] — Ready
+- [[POS-0017 Invoice entry pages: paginate + trim expands]] — Ready (NEXT)
 - [[POS-0018 Regression-test performance suite]] — Ready (final re-measure)
 - [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Ready
 - [[POS-0020 PocketBase v0.22.55 regression test]] — Ready
@@ -48,13 +47,18 @@ upgrade remain.
 
 ## Completed since previous checkpoint
 
-- **POS-0015 (partial)** Deep-expand trim — added `useRefMaps`/`hydrateRefs`/`useHydratedRefs`
-  to `useAPI.ts` and removed the server expand from 7 pages (`reports/transactions/unified`,
-  `reports/profit`, `reports/payments`, `reports/payments/areawise`, `reports/salesreport`,
-  `cashmemo/payments/PaymentsView`, `reports/paymentsbycompany`). Verified by
-  `scripts/tests/test_expand_trim.py` → PASS, 0 mismatches on 4,800 values; payload 70.1% /
-  74.8% / 64.9% smaller on the three views. `npx tsc --noEmit` clean; `npm run build` OK.
-  Pagination of the transactional list remains (blocked on summary-backed totals).
+- **POS-0015 + POS-0016 (done)** Deep-expand trim + pagination + summary totals, verified in a
+  browser. Added `useRefMaps`/`hydrateRefs`/`useHydratedRefs` to `useAPI.ts` and removed the
+  server expand from 7 pages (`reports/transactions/unified`, `reports/profit`,
+  `reports/payments`, `reports/payments/areawise`, `reports/salesreport`,
+  `cashmemo/payments/PaymentsView`, `reports/paymentsbycompany`); the cash memo payments list
+  now uses `usePagedList` (50/page) with `payments_summary`-backed totals (full-list fallback
+  for the Company/Invoice filters). Verified: `test_expand_trim.py` PASS (0 mismatches on
+  4,800 values; payload −70.1/−74.8/−64.9%), `test_summary_totals.py` PASS (9 filter shapes);
+  `tsc` + `npm run build` clean; **headless-Chrome pass on all 7 routes** — names resolve,
+  pagination navigates (50/page, 18 pages), totals stable and equal to the DB. The browser pass
+  caught a real defect: `useFullList`'s default `sort=-created` is invalid on
+  `payments_summary` (no `created` column) → 400 → page crash; fixed with `sort: "day"`.
 - **POS-0010** Cache behavior verified — `scripts/tests/test_cache_behavior.py` → PASS.
   Section A: 10/10 config checks (staleTime 60 s, gcTime 10 min, refetchOnMount true,
   reference 5 min, keepPreviousData, query-key + invalidation patterns). Section B: HTTP
@@ -96,7 +100,8 @@ in a deliberate hygiene commit.
 - POS-0015 expand trim: `frontend/src/app/api/useAPI.ts` and 7 report pages —
   `frontend/src/app/app/reports/{transactions/unified,profit,payments/page,payments/areawise/page,salesreport/page,paymentsbycompany/page}`
   and `frontend/src/app/app/cashmemo/payments/PaymentsView.jsx`.
-- New tests: `scripts/tests/test_pagination.py`, `test_cache_behavior.py`, `test_expand_trim.py`.
+- New tests: `scripts/tests/test_pagination.py`, `test_cache_behavior.py`,
+  `test_expand_trim.py`, `test_summary_totals.py`.
 - Vault: `vault/checkpoints/…`, `vault/projects/aa-point-of-sale.md`,
   `vault/tasks/pos-0010…`, `pos-0012…`, `pos-0015…`, `pos-0002…` (reconciliation),
   `vault/work-sessions/…`.
@@ -139,18 +144,17 @@ committed in `4ac911c` (see [[Review the uncommitted Ledgers report change]]).
 
 ## Blockers and unresolved questions
 
-- **Deep expands are gone (POS-0015, verified).** The Unified/Profit reports and the payments
-  family no longer request the per-row server expand (the 1 MB/500-rows payload); names are
-  resolved client-side from cached reference collections. Measured reduction 65–75%. Still
-  outstanding from POS-0015: adopting `usePagedList` on the transactional payments list, which
-  is blocked on sourcing its totals from `payments_summary` for the Company/Invoice filters
-  (that view has no such columns) — see the POS-0015 task for the decision.
+- **Browser rendering of POS-0015 is verified** (see "Completed since"). The
+  `agent-browser` CLI is not installed and the `chrome-devtools` MCP is not exposed to the
+  agent session, so future browser passes must drive Chrome over CDP directly — the exact
+  recipe (auth injection, clock shift to a data-dense month, control test) is recorded in
+  [[POS-0016 Report pages render test]].
 - **Cache + pagination behaviour now verified.** [[POS-0010 Cache behavior test]] and
   [[POS-0012 Pagination test]] both PASS (see "Completed since previous checkpoint").
   Caveat: the browser-level "no re-fetch within staleTime" check is inferred from verified
   configuration, not from browser automation.
-- **`payments_summary` is built but still unused.** No page reads it yet; wiring it into the
-  payment totals is the pagination follow-up in [[POS-0015 Trim expands + adopt pagination in report pages]].
+- **`payments_summary` is now used** by the cash memo payments list for its totals
+  (see [[POS-0015 Trim expands + adopt pagination in report pages]]).
 - **Repo hygiene debt:** `4ac911c` committed the scratch bench DB (~18 MB) plus stray
   `*.err.txt`/`pb_bench*`/`pb_live_smoke*` logs. `.gitignore` now covers them, but they need
   `git rm --cached` in a deliberate commit.
@@ -162,10 +166,11 @@ committed in `4ac911c` (see [[Review the uncommitted Ledgers report change]]).
 
 1. ~~Write `scripts/tests/test_pagination.py` …~~ **DONE** (PASS).
 2. ~~Run [[POS-0010 Cache behavior test]].~~ **DONE** (PASS).
-3. [[POS-0015 Trim expands + adopt pagination in report pages]] — expand trim is **done and
-   verified** (7 pages, `scripts/tests/test_expand_trim.py` PASS). Next: run the
-   [[POS-0016 Report pages render test]] in the browser to confirm the pages still render, then
-   decide the `payments_summary`-backed totals path before adopting `usePagedList` on the list.
+3. ~~[[POS-0015 Trim expands + adopt pagination in report pages]] + [[POS-0016 Report pages render test]]~~
+   **DONE** — implementation + in-browser verification; one defect found and fixed.
+4. Next: [[POS-0017 Invoice entry pages: paginate + trim expands]] (paginate the invoice entry
+   lists + trim their expands), then [[POS-0018 Regression-test performance suite]] to
+   re-measure, then the [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] upgrade.
 
 ## Verification still required
 

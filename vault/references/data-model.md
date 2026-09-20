@@ -2,7 +2,7 @@
 type: Reference
 status: Active
 created: 2026-09-19
-updated: 2026-09-19
+updated: 2026-09-20
 belongs_to:
   - "[[AA Point of Sale]]"
 related_to:
@@ -158,6 +158,7 @@ original invoice.
 | `ledger_journal` | Double-entry journal (receivable/payable/cash/stock). | [[Reports & Ledgers]] |
 | `net_price` | Per-transaction net unit price after all discounts. | [[Reports & Ledgers]] |
 | `counts_for_row_numbers` | Dashboard counters for the landing page. | [[Reports & Ledgers]] |
+| `outstanding_summary` | Per-party outstanding balances (`invoice_total`, `paid_total`, `return_total`, `balance`, plus `party_name`/`invoice_nos`); only parties with `abs(balance) >= 1`. Drives the Outstanding report. | [[Reports & Ledgers]] |
 | `payments_summary`* | Pre-aggregated payment totals grouped by day/party/area/section/booker/party_type/type/paid (added 2026-09-20). | [[Performance Baseline]] |
 
 `*` Added by the performance program ([[POS-0013 SQL aggregation views]]): a single

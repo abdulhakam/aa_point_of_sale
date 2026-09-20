@@ -1,6 +1,6 @@
 ---
 type: Task
-status: In Progress
+status: Done
 ticket: POS-0015
 priority: P1
 belongs_to:
@@ -75,18 +75,48 @@ Cut over-fetching in report pages and switch detail lists to the paginated helpe
 - Findings worth keeping: `payments_view.company` is a **multiple** relation (array) while
   `payments_invoices_report.company` is a **scalar** PocketBase never expands (the page maps
   it from `categories` itself — unchanged). The hydrator handles scalar and array shapes.
+- 2026-09-20 — **Pagination adopted** on the cash memo payments list
+  (`cashmemo/payments/PaymentsView.jsx`): the table now uses `useCRUD().pagedList`
+  (`usePagedList`, 50/page) with `mantine-datatable` page controls, replacing `getFullList`.
+- 2026-09-20 — **Summary-view totals.** Totals come from `payments_summary` via
+  `summaryCalculator()` when every active filter is a column of that view
+  (day/party/area/section/booker/type/paid); the Company and Invoice filters are not in the
+  view, so those cases fall back to the previous full-list behaviour to keep totals correct.
+  Added an `enabled` option to `useFullList` to gate the two paths.
+- 2026-09-20 — Wrote `scripts/tests/test_summary_totals.py` → PASS: summing `payments_summary`
+  matches the payments calculator across 9 filter shapes (all rows; per-type; party/area/
+  section/booker; date range + type). `npx tsc --noEmit` clean; `npm run build` OK.
 
-## Remaining (pagination + summary totals) — decision
+## Verification
 
-- **Print reports stay full-list.** `transactions/unified`, `profit`, `dailysale`,
-  `paymentsbycompany`, `salesreport`, `payments`, `areawise` render inside `<PrintContent>`
-  and print the whole filtered set; paginating them would truncate the printed report.
-- **`cashmemo/payments/PaymentsView` pagination is blocked on totals, not on plumbing.**
-  The page shows client-side totals over the full filtered set. `payments_summary` can serve
-  those totals for every filter it covers (day/party/area/section/booker/type/paid) but it has
-  no `company` or `original_invoices` column, so the page's Company and Invoice filters cannot
-  get correct totals from it. Adopting `usePagedList` there without a totals source for those
-  two filters would show wrong totals. The clean fix is a summary-backed totals path with a
-  full-list fallback only when `company`/`invoiceFilter` is set — tracked as follow-up work.
-- `usePagedList` / `crud.listPage` therefore remain unused by the app; [[POS-0012 Pagination test]]
-  verified the helper itself against the live API.
+Browser render pass ([[POS-0016 Report pages render test]]), 2026-09-20, headless Chrome 153
+over CDP. All seven rewired routes rendered with live data and **client-resolved names**
+(party/area/section/company/booker/item):
+
+| Route | Result |
+|---|---|
+| `/app/reports/transactions/unified` | 823 rows; BOOKER/COMPANY/AREA/SECTION/ITEM names present |
+| `/app/reports/profit` | 889 rows; names + Profit column |
+| `/app/reports/payments` | 898 rows; INVOICE/AREA/SECTION/PARTY/BOOKER names |
+| `/app/reports/payments/areawise` | 898 rows |
+| `/app/reports/salesreport` | 296 rows |
+| `/app/reports/paymentsbycompany` | 1,135 rows; COMPANY names present |
+| `/app/cashmemo/payments` | 50 rows/page, 18 pages; page 2 navigates; totals stable across pages |
+
+Totals cross-checked: the page showed Purchase 496187.58 / Paid 624407.00 / Sale 479034.50 /
+Recieved 480240.50 for Dec 1–15 2025, identical to both `payments_summary` and the raw
+`payments_view` aggregation.
+
+### Bug found and fixed by this pass
+
+The first browser run crashed `/app/cashmemo/payments`: `useFullList` defaults to
+`sort="-created"`, but `payments_summary` has **no `created` column**, so PocketBase answered
+**400 Bad Request** and the page threw. Fixed by passing `sort: "day"` to the summary query.
+Re-verified: the page renders and paginates. (This is why the browser pass was worth doing —
+the data-level tests could not catch a request-shape rejection.)
+
+Design note: the print report pages (`transactions/unified`, `profit`, `dailysale`,
+`payments`, `areawise`, `salesreport`, `paymentsbycompany`) deliberately stay full-list — they
+render inside `<PrintContent>` and print the whole filtered set, so paginating them would
+truncate the printed report. Only the cash memo payments list (a management list with row
+actions, no print) was paginated.

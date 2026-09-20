@@ -18,12 +18,13 @@ tags:
 # Work Session — Performance Optimization Plan — 2026-09-20
 
 > **RESUME HERE:** backend data-layer work (POS-0005 → POS-0014) is Done and verified on
-> the live DB. POS-0010 (cache) and POS-0012 (pagination) tests are Done and passing.
-> **POS-0015 is In Progress** — the deep server expands are removed from 7 report pages and
-> verified equivalent; pagination of the transactional payments list is the remainder (blocked
-> on summary-backed totals). POS-0016/POS-0017 and the PocketBase v0.22.55 upgrade (POS-0019)
-> are **not started**. See [[Checkpoint — AA Point of Sale — 2026-09-20]] for the exact next
-> action, current git state, and the backend cheat-sheet.
+> the live DB. POS-0010/0012 tests pass. **POS-0015 and POS-0016 are Done** — deep expands
+> removed from 7 report pages, the cash memo payments list paginated with
+> `payments_summary`-backed totals, and all seven routes verified in a headless browser
+> (one defect found and fixed). Next is POS-0017. POS-0018 (re-measure), POS-0019 (PocketBase
+> v0.22.55) and later tasks are **not started**. See
+> [[Checkpoint — AA Point of Sale — 2026-09-20]] for the exact next action, current git state,
+> and the backend cheat-sheet.
 
 ## Objective
 
@@ -60,6 +61,20 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
 
 ## Activity log
 
+- 2026-09-20 — POS-0015 + POS-0016 **Done**: ran the browser render pass over CDP (headless
+  Chrome 153; the `chrome-devtools` MCP is not exposed to the session and `agent-browser` is
+  not installed). All 7 rewired routes rendered with live data and resolved names; the cash
+  memo payments list paginated (50/page, 18 pages, page 2 navigates) with totals stable across
+  pages and equal to the DB. **Bug found and fixed:** the `payments_summary` query inherited
+  `useFullList`'s default `sort=-created`, which that view cannot sort by → 400 → page crash;
+  fixed with `sort: "day"`. Also cleaned up an ESLint dep warning in `useHydratedRefs`.
+  Harness recipe recorded in [[POS-0016 Report pages render test]].
+- 2026-09-20 — POS-0015 pagination + summary totals: cash memo payments list now uses
+  `usePagedList` (50/page) with `mantine-datatable` controls; totals come from
+  `payments_summary` via `summaryCalculator()` when filters are summary-compatible, falling
+  back to the full list for the Company/Invoice filters (added `enabled` to `useFullList`).
+  `scripts/tests/test_summary_totals.py` PASS (9 filter shapes); `tsc` + build clean.
+  Print reports deliberately stay full-list (they print the whole set).
 - 2026-09-20 — POS-0015 (partial, In Progress): added `useRefMaps`/`hydrateRefs`/`useHydratedRefs`
   to `useAPI.ts` (client-side reference resolver + expand synthesiser, low-churn adapter);
   removed the deep server expand from 7 pages (`reports/transactions/unified`, `reports/profit`,
@@ -123,10 +138,12 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
 2. ~~Run the cache behaviour check ([[POS-0010 Cache behavior test]]).~~ **DONE** —
    config inspection (10/10 checks) + HTTP write-read consistency (create/update/delete all
    immediately visible). Task closed.
-3. [[POS-0015 Trim expands + adopt pagination in report pages]] — **expand trim done**
-   (7 pages, `scripts/tests/test_expand_trim.py` PASS, build clean). Remaining: browser render
-   check ([[POS-0016 Report pages render test]]) and the `payments_summary`-backed totals
-   path needed before adopting `usePagedList` on the transactional payments list.
+3. ~~[[POS-0015 Trim expands + adopt pagination in report pages]] + [[POS-0016 Report pages render test]]~~
+   **DONE** — implementation + in-browser verification; `payments_summary` bad-sort bug found
+   and fixed.
+4. Next: [[POS-0017 Invoice entry pages: paginate + trim expands]], then
+   [[POS-0018 Regression-test performance suite]], then
+   [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]].
 
 Status of `scripts/tests/test_pagination.py`: **it now exists** and passes (see
 [[POS-0012 Pagination test]]). An earlier note in this session that claimed it existed was
