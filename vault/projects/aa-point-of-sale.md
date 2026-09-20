@@ -44,10 +44,10 @@ Out of scope (not implemented in this repository):
 
 ## Current state
 
-- Working application. Frontend builds (`.next` present) and PocketBase 0.22.9 ships with a populated database (`backend/pb_data/data.db`).
+- Working application. Frontend builds (`.next` present) and PocketBase **0.22.55** ships with a populated database (`backend/pb_data/data.db`).
 - 41 routes are compiled in the app router (dashboard, cash memo, invoices, management, reports, auth, invoice view) — see [[Route Map]].
 - 11 base collections and 15 view collections are live — see [[Data Model]]. (`payments_summary` was added 2026-09-20.)
-- **Performance program in progress** — see the task list below and [[Checkpoint — AA Point of Sale — 2026-09-20]]. Backend data layer is optimized and measured (18 indexes, window-function `ledger_party`, `payments_summary` view; party ledger >180 s → ~4.4 s), the React Query cache is fixed and its config/behaviour verified (POS-0010), and the pagination helper is verified against the live API (POS-0012). **POS-0015/0016/0017/0025 are done and browser-verified**: deep server expands are removed from the report pages (including the Daily Sale / Outstanding / Product Sale trio) with names resolved client-side from cached reference collections, the cash memo payments list is paginated with `payments_summary`-backed totals, and the invoice entry pages no longer fetch the whole `invoice_view` (the selector is paged + server-searchable). The capstone regression suite ([[POS-0018 Regression-test performance suite]]) passes 7/7 with before/after captured: `transactions_report` payload −70%, `payments_view` −75%, party ledger 180 s+ → **0.95 s**, opening the Sale invoice page 26 s → **~1 s**. Remaining in the program: the PocketBase v0.22.55 upgrade and later tasks. Before/after numbers: [[Performance Baseline]].
+- **Performance program in progress** — see the task list below and [[Checkpoint — AA Point of Sale — 2026-09-20]]. Backend data layer is optimized and measured (18 indexes, window-function `ledger_party`, `payments_summary` view; party ledger >180 s → ~4.4 s), the React Query cache is fixed and its config/behaviour verified (POS-0010), and the pagination helper is verified against the live API (POS-0012). **POS-0015/0016/0017/0025 are done and browser-verified**: deep server expands are removed from the report pages (including the Daily Sale / Outstanding / Product Sale trio) with names resolved client-side from cached reference collections, the cash memo payments list is paginated with `payments_summary`-backed totals, and the invoice entry pages no longer fetch the whole `invoice_view` (the selector is paged + server-searchable). The capstone regression suite ([[POS-0018 Regression-test performance suite]]) passes 7/7 with before/after captured: `transactions_report` payload −70%, `payments_view` −75%, party ledger 180 s+ → **0.95 s**, opening the Sale invoice page 26 s → **~1 s**. The server was upgraded to **PocketBase 0.22.55** (POS-0019/0020) with the whole suite still green and roughly halved request times. Remaining in the program: POS-0021 (materialize hot views), POS-0024 (decision records) and the deferred POS-0022/0023. Before/after numbers: [[Performance Baseline]].
 - Known drift: `standalone/` is a prebuilt artifact not regenerated from this source (different `BUILD_ID`, a `server.js` tracing root pointing at another checkout, and a `package.json` predating the Tauri work). The "extra report pages" part of the originally reported drift is **resolved** — the source has `dailysale`/`outstanding`/`productsale` too — see [[Issue — Standalone Build Drift]].
 - The Ledgers report change previously flagged as uncommitted is no longer in the working tree (it was committed in `4ac911c`) — see [[Review the uncommitted Ledgers report change]].
 
@@ -58,7 +58,7 @@ lives inside SQLite view collections, not in application code.
 
 ```mermaid
 flowchart TD
-  UI["Frontend — Next.js App Router"] -->|REST /api/collections| PB["Backend — PocketBase 0.22.9"]
+  UI["Frontend — Next.js App Router"] -->|REST /api/collections| PB["Backend — PocketBase 0.22.55"]
   PB --> DB[("SQLite pb_data/data.db")]
   UI --> BI["Business logic in view SQL"]
   BI --> DB
@@ -108,8 +108,8 @@ knowledgebase documents. Tauri and the `standalone/` server host the same fronte
 - [x] [[POS-0016 Report pages render test]] — Done (all 7 routes verified in-browser)
 - [x] [[POS-0017 Invoice entry pages: paginate + trim expands]] — Done (selector paged; expands dropped)
 - [x] [[POS-0018 Regression-test performance suite]] — Done (7/7 suites PASS; before/after measured)
-- [ ] [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Ready
-- [ ] [[POS-0020 PocketBase v0.22.55 regression test]] — Ready
+- [x] [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Done (binary swapped; suite green)
+- [x] [[POS-0020 PocketBase v0.22.55 regression test]] — Done (auth + CRUD + all 15 views + app pages)
 - [ ] [[POS-0021 Materialize hot report views into tables]] — Ready
 - [ ] [[POS-0022 Upgrade PocketBase to v0.40.4]] — Backlog (deferred major migration)
 - [ ] [[POS-0023 PocketBase v0.40.4 migration test]] — Backlog
@@ -142,9 +142,9 @@ flowchart LR
     P16["POS-0016 · Report render test · Done"]
     P17["POS-0017 · Invoice pages paginate+trim · Done"]
     P18["POS-0018 · Performance regression suite · Done"]
-    P19["POS-0019 · PB v0.22.55 upgrade · Ready ← NEXT"]
-    P20["POS-0020 · PB v0.22.55 regression test · Ready"]
-    P21["POS-0021 · Materialize hot views · Ready"]
+    P19["POS-0019 · PB v0.22.55 upgrade · Done"]
+    P20["POS-0020 · PB v0.22.55 regression test · Done"]
+    P21["POS-0021 · Materialize hot views · Ready ← NEXT"]
     P22["POS-0022 · PB v0.40.4 migration · Backlog"]
     P23["POS-0023 · PB v0.40.4 test · Backlog"]
     P24["POS-0024 · Record perf decisions · Ready"]

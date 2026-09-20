@@ -27,24 +27,28 @@ checkpoint current enough that a fresh session can resume without chat history.
 ## Status at a glance
 
 Backend data-layer work (POS-0005 → POS-0014) is **done and verified on the live DB**.
-The cache and pagination-helper tests (POS-0010, POS-0012) pass. **POS-0015, POS-0016,
-POS-0017, POS-0018 and POS-0025 are done** — the backend, report pages, payments list and
-invoice entry pages are optimized, and the capstone regression suite runs **7/7 PASS** with
-before/after measured (`transactions_report` −70% payload, `payments_view` −75%, party ledger
-180 s+ → 0.95 s, Sale invoice page 26 s → ~1 s). The PocketBase v0.22.55 upgrade (POS-0019) is
-the main remaining item.
+**POS-0015, POS-0016, POS-0017, POS-0018, POS-0019, POS-0020 and POS-0025 are all done** —
+the backend, report pages, payments list and invoice entry pages are optimized, the capstone
+regression suite runs **7/7 PASS**, and the server was upgraded to **PocketBase 0.22.55** (the
+whole suite stays green and request times roughly halved). Remaining: POS-0021 (materialize hot
+views), POS-0024 (decision records) and the deferred POS-0022/0023.
 
 ## Active tasks
 
-- [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Ready (NEXT)
-- [[POS-0020 PocketBase v0.22.55 regression test]] — Ready
-- [[POS-0021 Materialize hot report views into tables]] — Ready (conditional on POS-0018)
+- [[POS-0021 Materialize hot report views into tables]] — Ready (NEXT; targets the ~2.4 s `outstanding_summary`)
 - [[POS-0022 Upgrade PocketBase to v0.40.4]] — Backlog (deferred, separate migration)
 - [[POS-0023 PocketBase v0.40.4 migration test]] — Backlog
 - [[POS-0024 Record performance optimization decisions]] — Ready
 
 ## Completed since previous checkpoint
 
+- **POS-0019 + POS-0020 (done)** PocketBase **0.22.9 → 0.22.55**. Verified the release SHA-256,
+  backed up the old binary, swapped `backend/pocketbase.exe`, ran `migrate up` (applied one
+  built-in system migration `add_login_alert_column`; project migrations already recorded).
+  Regression: `test_upgrade_smoke.py` PASS — auth, a cleaned-up CRUD round-trip, **all 15 view
+  collections**, and the dashboard/report/invoice pages load in a browser; `run_all.py` stays
+  **7/7 PASS**. Request times roughly halved (`ledger_party` 0.95 → **0.47 s**, Sale page API
+  2.01 → **1.23 s**). See [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]].
 - **POS-0018 (done)** Regression suite. `scripts/perf_regression.py` measures the app's real
   request shapes over HTTP and `scripts/tests/run_all.py` runs every per-change companion in
   one command — **7/7 PASS**. Before → after: `transactions_report` 1,021.6 KB → 309.3 KB
@@ -124,10 +128,11 @@ shows no working-tree change to `frontend/src/app/app/reports/ledgers/page.tsx` 
 previously flagged change was committed in `4ac911c` (see
 [[Review the uncommitted Ledgers report change]]).
 
-**Uncommitted (POS-0018):** `scripts/perf_regression.py`, `scripts/tests/run_all.py`, plus the
-vault changes ([[POS-0018 Regression-test performance suite]], [[Performance Baseline]], the
-project note, this checkpoint and the work session). Pre-existing/unrelated:
-`.commandcode/taste/taste.md` and `vault/.noteriv/workspace.json` (Tolaria-generated).
+**Uncommitted (POS-0019/0020):** `backend/pocketbase.exe` (the 41 MB binary, now 0.22.55) and
+`scripts/tests/test_upgrade_smoke.py`, plus the vault changes (the version refs across the
+project note / Data Model / Backend subsystem, the POS-0019/0020 tasks, this checkpoint and the
+work session). Pre-existing/unrelated: `.commandcode/taste/taste.md` and
+`vault/.noteriv/workspace.json` (Tolaria-generated).
 
 - Live DB `backend/pb_data/data.db` (production):
   - 18 secondary indexes (verified by `scripts/tests/test_indexes.py`: 18/18 present;
@@ -147,8 +152,8 @@ project note, this checkpoint and the work session). Pre-existing/unrelated:
   printf-formatted `invoice_view.final_total`.
 - Frontend `npm run build` compiles cleanly (48 static pages) with the new cache config and
   the new `usePagedList` helper — log in `scripts/frontend_build2.txt`.
-- PocketBase server: 0.22.9 (unchanged — the v0.22.55 upgrade is
-  [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]], not started).
+- PocketBase server: **0.22.55** (upgraded this session — the old 0.22.9 binary is backed up in
+  the session scratchpad; the pre-upgrade DB snapshot is `backend/pb_data/backups/20260920-1232/`).
   No server is currently running (ports 8090/8095 free); `backend/pb_data_bench` holds a
   **pre-migration** snapshot restored by a `git checkout`.
 
@@ -194,10 +199,12 @@ project note, this checkpoint and the work session). Pre-existing/unrelated:
    server-searchable, expands dropped; verified by capturing the real requests.
 6. ~~[[POS-0018 Regression-test performance suite]]~~ **DONE** — 7/7 suites pass; before/after
    captured in [[Performance Baseline]].
-7. Next: [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] (drop-in), then
-   [[POS-0020 PocketBase v0.22.55 regression test]], then
-   [[POS-0021 Materialize hot report views into tables]] (targets the still-slow
-   `outstanding_summary`).
+7. ~~[[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] + [[POS-0020 PocketBase v0.22.55 regression test]]~~
+   **DONE** — binary swapped, migrations applied, smoke test + full suite green.
+8. Next: [[POS-0021 Materialize hot report views into tables]] (targets the still-slow
+   `outstanding_summary`), then [[POS-0024 Record performance optimization decisions]]; the
+   deferred [[POS-0022 Upgrade PocketBase to v0.40.4]] / [[POS-0023 PocketBase v0.40.4 migration test]]
+   remain backlog.
 
 ## Verification still required
 

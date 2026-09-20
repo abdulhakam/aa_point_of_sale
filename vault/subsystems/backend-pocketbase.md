@@ -34,7 +34,8 @@ view collections.
 
 ## Runtime
 
-- Engine: **PocketBase 0.22.9** (`backend/pocketbase.exe`), single self-contained binary.
+- Engine: **PocketBase 0.22.55** (`backend/pocketbase.exe`), single self-contained binary
+  (upgraded from 0.22.9 in [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]]).
 - Data directory: `backend/pb_data/` (live database); `backend/p_data/` is the seed/working
   copy copied by `FIRST_RUN.BAT`.
 - Default port: `8090` (the frontend's `NEXT_PUBLIC_PB_URL` default).

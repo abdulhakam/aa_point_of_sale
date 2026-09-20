@@ -18,7 +18,7 @@ tags:
 
 PocketBase schema as read from the live database (`backend/pb_data/data.db`,
 `_collections`). Field lists exclude PocketBase system fields (`id`, `created`,
-`updated`, `collectionId`, `collectionName`, `expand`). Versions: PocketBase 0.22.9.
+`updated`, `collectionId`, `collectionName`, `expand`). Versions: PocketBase 0.22.55.
 
 ## Base collections (writable)
 
