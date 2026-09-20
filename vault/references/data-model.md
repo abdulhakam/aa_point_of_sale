@@ -158,6 +158,24 @@ original invoice.
 | `ledger_journal` | Double-entry journal (receivable/payable/cash/stock). | [[Reports & Ledgers]] |
 | `net_price` | Per-transaction net unit price after all discounts. | [[Reports & Ledgers]] |
 | `counts_for_row_numbers` | Dashboard counters for the landing page. | [[Reports & Ledgers]] |
+| `payments_summary`* | Pre-aggregated payment totals grouped by day/party/area/section/booker/party_type/type/paid (added 2026-09-20). | [[Performance Baseline]] |
+
+`*` Added by the performance program ([[POS-0013 SQL aggregation views]]): a single
+function call per column is all PocketBase's view parser accepts, and every view must expose
+an `id` column.
+
+## Indexes (added 2026-09-20 by [[POS-0007 Add indexes via migration]])
+
+18 secondary indexes were added, because previously only primary-key
+`sqlite_autoindex_*_1` existed on the hot tables:
+
+- `transactions(invoice)`, `transactions(item)`
+- `invoices(party)`, `invoices(booker)`, `invoices(type)`, `invoices(dated)`,
+  `invoices(created)`, `invoices(type, created)`
+- `payments(party)`, `payments(paid)`, `payments(type)`, `payments(invoice)`,
+  `payments(created)`, `payments(type, paid)`, `payments(party, paid, type)`
+- `parties(area)`, `parties(type)`
+- `items(category)`
 
 ## Conventions and gotchas
 

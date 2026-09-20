@@ -37,5 +37,23 @@ frontend/.env.local
 
 # others
 /backend/pb_data
+/backend/pb_data_bench
 standalone
 /trailbase/static
+
+# performance-plan scratch artifacts (local evidence, not source)
+/pb_bench_serve.out.txt
+/pb_bench_serve.err.txt
+/scripts/*.err.txt
+/scripts/baseline_sql.txt
+/scripts/baseline_sql_full.txt
+/scripts/baseline_http.txt
+/scripts/after_indexes_http.txt
+/scripts/after_indexes_sql.txt
+/scripts/equiv.txt
+/scripts/ledger_party_sql.txt
+/scripts/frontend_build.txt
+/scripts/frontend_build2.txt
+/scripts/pg_before.txt
+/scripts/pg_after.txt
+/scripts/views_dump.txt

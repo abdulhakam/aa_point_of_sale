@@ -46,7 +46,14 @@ Out of scope (not implemented in this repository):
 
 - Working application. Frontend builds (`.next` present) and PocketBase 0.22.9 ships with a populated database (`backend/pb_data/data.db`).
 - 41 routes are compiled in the app router (dashboard, cash memo, invoices, management, reports, auth, invoice view) — see [[Route Map]].
-- 11 base collections and 13 view collections are live — see [[Data Model]].
+- 11 base collections and 14 view collections are live — see [[Data Model]].
+  (`payments_summary` was added 2026-09-20.)
+- **Performance program in progress** — see the task list below and
+  [[Checkpoint — AA Point of Sale — 2026-09-20]]. Backend data layer is optimized and
+  measured (18 indexes, window-function `ledger_party`, `payments_summary` view; party
+  ledger >180 s → ~4.4 s) and the React Query cache is fixed. Frontend adoption
+  (pagination + expand trimming) and the PocketBase v0.22.55 upgrade remain.
+  Before/after numbers: [[Performance Baseline]].
 - Known drift: the untracked `standalone/` build contains report pages that the current source does not, and predates the Tauri additions — see [[Issue — Standalone Build Drift]].
 - One uncommitted working-tree change to the Ledgers report page — see [[Review the uncommitted Ledgers report change]].
 
@@ -93,17 +100,17 @@ knowledgebase documents. Tauri and the `standalone/` server host the same fronte
 
 ### Performance optimization program (2026-09-20)
 
-- [ ] [[POS-0005 Baseline performance metrics]] — Ready
-- [ ] [[POS-0006 Backup database and repo snapshot]] — Ready
-- [ ] [[POS-0007 Add indexes via migration]] — Ready
-- [ ] [[POS-0008 Index verification test]] — Ready
-- [ ] [[POS-0009 Fix React Query cache config]] — Ready
-- [ ] [[POS-0010 Cache behavior test]] — Ready
-- [ ] [[POS-0011 Paginated list plumbing]] — Ready
-- [ ] [[POS-0012 Pagination test]] — Ready
-- [ ] [[POS-0013 SQL aggregation views]] — Ready
-- [ ] [[POS-0014 SQL aggregation equivalence test]] — Ready
-- [ ] [[POS-0015 Trim expands + adopt pagination in report pages]] — Ready
+- [x] [[POS-0005 Baseline performance metrics]] — Done
+- [x] [[POS-0006 Backup database and repo snapshot]] — Done
+- [x] [[POS-0007 Add indexes via migration]] — Done
+- [x] [[POS-0008 Index verification test]] — Done
+- [x] [[POS-0009 Fix React Query cache config]] — Done
+- [ ] [[POS-0010 Cache behavior test]] — Ready (next)
+- [x] [[POS-0011 Paginated list plumbing]] — Done
+- [ ] [[POS-0012 Pagination test]] — Ready (next; script not written yet)
+- [x] [[POS-0013 SQL aggregation views]] — Done
+- [x] [[POS-0014 SQL aggregation equivalence test]] — Done
+- [ ] [[POS-0015 Trim expands + adopt pagination in report pages]] — Ready (biggest remaining win)
 - [ ] [[POS-0016 Report pages render test]] — Ready
 - [ ] [[POS-0017 Invoice entry pages: paginate + trim expands]] — Ready
 - [ ] [[POS-0018 Regression-test performance suite]] — Ready
@@ -126,17 +133,17 @@ flowchart LR
   T4["POS-0004 · Verify the static export path for Tauri and RUN SERVE · Backlog"]
 
   subgraph PERF["Performance optimization program"]
-    P5["POS-0005 · Baseline metrics · Ready"]
-    P6["POS-0006 · Backup DB + repo · Ready"]
-    P7["POS-0007 · Add indexes migration · Ready"]
-    P8["POS-0008 · Index verification test · Ready"]
-    P9["POS-0009 · Fix React Query cache · Ready"]
+    P5["POS-0005 · Baseline metrics · Done"]
+    P6["POS-0006 · Backup DB + repo · Done"]
+    P7["POS-0007 · Add indexes migration · Done"]
+    P8["POS-0008 · Index verification test · Done"]
+    P9["POS-0009 · Fix React Query cache · Done"]
     P10["POS-0010 · Cache behavior test · Ready"]
-    P11["POS-0011 · usePagedList plumbing · Ready"]
+    P11["POS-0011 · usePagedList plumbing · Done"]
     P12["POS-0012 · Pagination test · Ready"]
-    P13["POS-0013 · SQL aggregation views · Ready"]
-    P14["POS-0014 · SQL equivalence test · Ready"]
-    P15["POS-0015 · Trim expands + paginate reports · Ready"]
+    P13["POS-0013 · SQL aggregation views · Done"]
+    P14["POS-0014 · SQL equivalence test · Done"]
+    P15["POS-0015 · Trim expands + paginate reports · Ready ← NEXT"]
     P16["POS-0016 · Report render test · Ready"]
     P17["POS-0017 · Invoice pages paginate+trim · Ready"]
     P18["POS-0018 · Performance regression suite · Ready"]

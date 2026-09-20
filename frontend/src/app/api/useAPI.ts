@@ -169,6 +169,18 @@ export function usePagedList({
     enabled: enabled,
   });
 
+  // NOTE: `refetchOnMount` is governed by the default staleTime in providers.tsx, not by
+  // the explicit false setting the app used for every query before POS-0009. Letting it fold
+  // in means a page that leaves the cache window re-fetches (correct after a write); inside
+  // staleTime it serves from cache and never cancels the in-flight request. If you instead
+  // want stale-time-backed pages to *not* re-fetch on mount, set refetchOnMount: false
+  // **and** ensure mutations invalidate by [collection] key so QueryClient.invalidateQueries
+  // actually finds the active query. The app currently calls bare
+  // `queryClient.invalidateQueries()` (no key) plus bare `invalidateQueries(collection)` in
+  // some mutation onSuccess handlers; under v5 `invalidateQueries(string)` is treated as an
+  // exact query-key match and will not match `[queryKey, "page", ...]`, so stale data would
+  // survive. Until that is fixed globally (see POS-0009), do not change the default here.
+
   return {
     ...query,
     records: query.data?.items ?? [],

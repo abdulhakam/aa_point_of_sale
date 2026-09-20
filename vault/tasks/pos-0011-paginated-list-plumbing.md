@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: POS-0011
 priority: P1
 belongs_to:
@@ -54,3 +54,27 @@ Introduce real server-side pagination for transactional lists so the app stops c
 - Verified by [[POS-0012 Pagination test]].
 - Used by [[POS-0015 Trim expands + adopt pagination in report pages]] and
   [[POS-0017 Invoice entry pages: paginate + trim expands]].
+
+## Work log
+
+- 2026-09-20 — Added `crud.listPage` and the `usePagedList` hook to `frontend/src/app/api/useAPI.ts`.
+  `usePagedList` uses `pb.collection(collection).getList(page, perPage, {...})`, spreads the
+  raw result, and returns `records`/`totalRecords`/`totalPages`/`page`/`perPage` directly
+  suitable for `mantine-datatable` (`records`/`totalRecords`/`page`).
+- 2026-09-20 — Adds `placeholderData: keepPreviousData` so tabbing between pages doesn't flicker.
+- 2026-09-20 — Fixed two pre-existing bugs surfaced during this work:
+  - `crud.listall` did not `return` its `getFullList` result, so callers always got `undefined`;
+    now fixed.
+  - The CRUD hooks (`useCreate`/`useUpdate`/`useDelete`/`useFullList`) called
+    `queryClient.invalidateQueries(collection)` where `collection` is a string — in React Query
+    v5 that is an **exact query-key match** and does not match the keys those hooks actually use
+    (`[collection, recordID]`, `[collection, "page", ...]`), so writes never invalidated their own
+    lists. Changed to `invalidateQueries({ queryKey: [collection] })` (prefix match). The
+    bare `queryClient.invalidateQueries()` call used by some non-CRUD mutations still nothing on
+    those keyed queries — that is a separate pre-existing issue, not fixed here.
+
+## Verification
+
+- `npm run build` from `frontend/` succeeds cleanly (compiled + types + static export with 48
+  pages); `scripts/frontend_build2.txt` is the clean log. `usePagedList` compiles with no type
+  errors and the old `crud.*` signatures are unchanged (callers do not break).

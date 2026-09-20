@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: POS-0009
 priority: P0
 belongs_to:
@@ -51,6 +51,33 @@ a short staleTime with `refetchOnMount: true`. Decide and document in the WorkSe
 
 - `providers.tsx` defaults updated; reference-data queries use the aggressive cache.
 - No stale-after-write regression (verified per the design note).
+
+## Work log
+
+- 2026-09-20 — `frontend/src/app/providers.tsx`: `staleTime` 0.5 s → **60 s**, added
+  `gcTime: 10 * 60 * 1000`; `refetchOnWindowFocus: false` and `refetchOnReconnect: true`
+  kept.
+- 2026-09-20 — `refetchOnMount` **left `true` on purpose** (deliberate deviation from the
+  original plan): the app's mutations call a bare `queryClient.invalidateQueries()`, which
+  only refetches *active* queries; with `refetchOnMount: false` an invalidated-but-inactive
+  query would never refresh and a screen could show pre-write data. Re-fetching is instead
+  governed by `staleTime`, so navigation inside the window is still instant. The reasoning
+  is documented in the code comments in `providers.tsx` and `useAPI.ts`.
+- 2026-09-20 — `frontend/src/app/api/useAPI.ts`: added `REFERENCE_COLLECTIONS`,
+  `REFERENCE_STALE_TIME` (5 min) and `referenceQueryOptions()`; `useFullList` and `useRead`
+  now apply the 5-minute window automatically for reference collections (areas, sections,
+  categories, items, parties, order_bookers, users).
+- 2026-09-20 — Also fixed the CRUD hooks' invalidation calls to the React Query v5 form
+  `invalidateQueries({ queryKey: [collection] })` (see [[POS-0011 Paginated list plumbing]]
+  for the full explanation of the string-vs-object bug).
+
+## Verification
+
+- `npm run build` from `frontend/` compiles cleanly with the new config
+  (`scripts/frontend_build2.txt`: "Compiled successfully", 48 static pages, no type errors).
+- The runtime behaviour check (no re-fetch inside `staleTime`, correct refresh after a
+  write) is [[POS-0010 Cache behavior test]] and is still **outstanding** — this task is
+  Done as a code change, with that behaviour test tracked separately.
 
 ## Related
 

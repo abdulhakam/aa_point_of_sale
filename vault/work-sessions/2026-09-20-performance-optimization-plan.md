@@ -6,7 +6,9 @@ updated: 2026-09-20
 belongs_to:
   - "[[AA Point of Sale]]"
 works_on:
-  - "[[POS-0005 Baseline performance metrics]]"
+  - "[[POS-0010 Cache behavior test]]"
+  - "[[POS-0012 Pagination test]]"
+  - "[[POS-0015 Trim expands + adopt pagination in report pages]]"
 created: 2026-09-20
 tags:
   - performance
@@ -14,6 +16,12 @@ tags:
 ---
 
 # Work Session — Performance Optimization Plan — 2026-09-20
+
+> **RESUME HERE:** backend data-layer work (POS-0005 → POS-0014) is Done and verified on
+> the live DB. Frontend adoption (POS-0015 → POS-0017) and the PocketBase v0.22.55 upgrade
+> (POS-0019) are **not started**. See
+> [[Checkpoint — AA Point of Sale — 2026-09-20]] for the exact next action, current git
+> state, and the backend cheat-sheet.
 
 ## Objective
 
@@ -84,13 +92,21 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
 - 2026-09-20 — Latent frontend bug found: `payments_view.amount` falls back to
   `invoice_view.final_total` (printf → STRING), so the old JS `+=` concatenated
   strings for unset-amount payments. The SQL aggregation does real arithmetic.
-- 2026-09-20 — Vault health pass: fixed the POS-0014 verification warning (added
-  Work log/Verification sections), added backlink edges (Glossary, subsystems, both
-  Decisions, Knowledgebase Guide, POS-0014), and enriched tags (route-map, glossary,
-  reports-and-ledgers, frontend, desktop). `kb.py validate` + `kb_check.py` → PASS,
-  quality 100/100, 437 resolved links, 55 distinct tags.
+- 2026-09-20 — Vault health pass: fixed the POS-0014 verification warning (added Work
+  log/Verification sections) and ran `kb_check.py`. Current verified validation:
+  **PASS**, quality 99/100, 442 resolved links / 0 unresolved, 55 distinct tags,
+  8 Done tasks (7 verified).
+- 2026-09-20 — Repo hygiene: `backend/pb_data_bench/` (the scratch DB copy used for the
+  A/B benchmark) was **accidentally git-tracked**; it is now covered by `.gitignore`
+  along with the bench server logs. NB the copy is still tracked in history from commit
+  `4ac911c` and will show as a deletion until that is committed — see the Checkpoint.
 
 ## Exact next action
 
-Apply the three migrations to the live DB (`pocketbase migrate up`), smoke-test serve,
-then proceed to [[POS-0015 Trim expands + adopt pagination in report pages]].
+1. Write `scripts/tests/test_pagination.py` and run it ([[POS-0012 Pagination test]]).
+2. Run the cache behaviour check ([[POS-0010 Cache behavior test]]).
+3. Start [[POS-0015 Trim expands + adopt pagination in report pages]] — the biggest
+   remaining user-visible win (invoice picker + report expand trimming).
+
+Note: `scripts/tests/test_pagination.py` does **not** exist yet; an earlier note in this
+session claimed it did. The claim was corrected in [[POS-0012 Pagination test]].

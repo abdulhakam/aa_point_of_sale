@@ -1,18 +1,16 @@
 {
-  "mcpServers": {
-    "tolaria": {
-      "args": [
-        "C:\\Users\\wajiz.pk\\AppData\\Local\\Tolaria\\mcp-server\\index.js"
-      ],
-      "command": "C:\\Program Files\\nodejs\\node.exe",
-      "env": {
-        "WS_UI_PORT": "9711"
-      },
-      "type": "stdio"
+  "tolaria": {
+    "args": [
+      "C:\\Users\\wajiz.pk\\AppData\\Local\\Tolaria\\mcp-server\\index.js"
+    ],
+    "command": "C:\\Program Files\\nodejs\\node.exe",
+    "env": {
+      "WS_UI_PORT": "9711"
     },
-    "chrome-devtools": {
-      "command": "npx",
-      "args": ["-y", "chrome-devtools-mcp@latest", "--autoConnect"]
-    }
+    "type": "stdio"
+  },
+  "chrome-devtools": {
+    "command": "npx",
+    "args": ["-y", "chrome-devtools-mcp@latest", "--autoConnect"]
   }
 }
