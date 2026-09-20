@@ -69,3 +69,6 @@ data must stay on the machine.
 ## Related
 
 - Mechanics: [[Build & Run Scripts]], [[Desktop & Deployment]].
+- Companion stack decision: [[Decision — Use PocketBase and Next.js]].
+- The drift this packaging enables: [[Issue — Standalone Build Drift]] → fix in
+  [[Reconcile the standalone build with source]].

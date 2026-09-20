@@ -80,3 +80,6 @@ Field-level detail and relationships live in [[Data Model]]; the SQL each view r
 
 - [[Data Model]] — full schema.
 - [[Reports & Ledgers]] — report/ledger SQL and semantics.
+- [[Glossary]] — domain terms used in view/column names.
+- Ongoing performance work touching this subsystem: [[POS-0007 Add indexes via migration]],
+  [[POS-0013 SQL aggregation views]], [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]].

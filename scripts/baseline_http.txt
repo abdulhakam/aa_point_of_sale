@@ -1,0 +1,18 @@
+========================================================================
+HTTP BASELINE — http://127.0.0.1:8095  perPage=500
+========================================================================
+invoice_view sort=-created                                 rows=    30      15.1KB    1.37s
+invoice_view single invoice (filter)                       rows=    50      24.7KB    0.64s
+transactions_report sort=-created                          rows=    30      17.9KB    1.68s
+transactions_report expand item,company,party,party.area   rows=   500    1021.6KB    2.49s
+payments_view sort=-created expand 5                       rows=    30      56.7KB    1.46s
+ledger_party sort=+created expand invoice,party            rows=    30      32.3KB    1.87s
+ledger_journal sort=+created                               rows=    30       9.7KB    1.17s
+counts_for_row_numbers/1                                   rows=     1       0.3KB    0.03s
+
+--- getFullList-style full pagination (all pages) ---
+invoice_view             rows=  8927 pages= 18    26.00s
+transactions_report      rows= 23413 pages= 47   107.36s
+payments_view            rows= 26526 pages= 54   110.74s
+
+Done.

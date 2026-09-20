@@ -1,0 +1,19 @@
+==========================================================================
+POS-0014 report SQL equivalence — backend\pb_data_bench\data.db
+==========================================================================
+
+[1] ledger_party running balance: window function vs correlated subquery
+    rows: old=26526 new=26526
+    missing from new view: 0   mismatched values: 0
+    OK - identical balance for every record id
+
+[2] payments_summary totals: SQL aggregate vs JS calculator()
+    all rows
+      raw rows=26526 -> summary groups=23790 -> OK
+    date range + unpaid recieving/return (sales report filter)
+      raw rows=6299 -> summary groups=5868 -> OK
+    one party + unpaid recieving/return
+      raw rows=8 -> summary groups=8 -> OK
+
+==========================================================================
+RESULT: PASS — aggregated SQL matches the previous implementation

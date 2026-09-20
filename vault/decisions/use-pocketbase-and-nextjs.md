@@ -70,3 +70,6 @@ surface for schema work, and a fast, familiar UI stack, with minimal operational
 
 - Subsystems: [[Backend — PocketBase Data Service]], [[Frontend — Next.js Application]].
 - Report logic consequences: [[Reports & Ledgers]].
+- Companion deployment decision: [[Decision — Local Offline Desktop Deployment]].
+- Upcoming version decision in this stack's lifetime: [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]]
+  and the deferred [[POS-0022 Upgrade PocketBase to v0.40.4]].

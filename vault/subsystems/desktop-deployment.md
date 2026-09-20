@@ -12,6 +12,8 @@ tags:
   - deployment
   - tauri
   - standalone
+  - windows
+  - build
 ---
 
 # Desktop & Deployment
@@ -63,3 +65,6 @@ prebuilt standalone server.
 
 - Script-by-script detail: [[Build & Run Scripts]].
 - Why this shape was chosen: [[Decision — Local Offline Desktop Deployment]].
+- Known drift in the packaged build: [[Issue — Standalone Build Drift]] and the fix task
+  [[Reconcile the standalone build with source]].
+- Static-export gap tracked in [[Verify the static export path for Tauri and RUN SERVE]].

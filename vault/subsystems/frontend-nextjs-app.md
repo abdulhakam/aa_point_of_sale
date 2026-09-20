@@ -11,6 +11,8 @@ related_to:
 tags:
   - frontend
   - nextjs
+  - react-query
+  - ui
 ---
 
 # Frontend — Next.js Application
@@ -76,3 +78,7 @@ authentication, data access, and printing.
 
 - Backend contract: [[Backend — PocketBase Data Service]].
 - Report semantics consumed by these pages: [[Reports & Ledgers]].
+- Terminology used by the UI: [[Glossary]].
+- Every route this app serves: [[Route Map]].
+- Ongoing performance work touching this subsystem: [[POS-0009 Fix React Query cache config]],
+  [[POS-0011 Paginated list plumbing]], [[POS-0015 Trim expands + adopt pagination in report pages]].

@@ -1,0 +1,113 @@
+
+> frontend@0.1.0 build
+> next build
+
+   ▲ Next.js 14.0.4
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/45) ...
+/_not-found
+/app/cashmemo/cash_recieve_vouchers
+/app/cashmemo/expenses
+/app/cashmemo
+/app/cashmemo/da_entry
+/app/cashmemo/payments
+/app/invoices
+/app/invoices/orders
+/app/invoices/difference
+/app/dashboard
+   Generating static pages (11/45) 
+/app/invoices/print
+/app/invoices/printinvoice
+/app/invoices/printinvoice/queue
+/app/invoices/purchase
+/app/invoices/return
+/app/invoices/sale
+/app/management/bookers
+/app/management/areas
+/app/management/items
+/app/management/categories
+   Generating static pages (22/45) 
+/app/management
+/app/management/parties
+/app/reports/difference
+/app/management/sections
+/app/reports/ledgers/area
+/app/reports/ledgers/booker
+/app/reports/ledgers
+/app/reports/ledgers/general
+/app/reports/ledgers/party
+/app/reports/payments/areawise
+/app/reports/payments
+   Generating static pages (33/45) 
+/app/reports/profit
+/app/reports/paymentsbycompany
+/app/reports/salesreport
+/app/reports/stockreport/itemTransactionsReport
+/app/reports/stockreport
+/app/reports/transactions/unified
+/auth
+/
+/views/invoice
+/app/cashmemo/cash_payment_vouchers
+/app/reports
+ ✓ Generating static pages (45/45) 
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                          Size     First Load JS
+┌ ○ /                                                1.03 kB        92.3 kB
+├ ○ /_not-found                                      875 B          83.4 kB
+├ ○ /app/cashmemo                                    1.33 kB         102 kB
+├ ○ /app/cashmemo/cash_payment_vouchers              5.35 kB         187 kB
+├ ○ /app/cashmemo/cash_recieve_vouchers              5.26 kB         187 kB
+├ ○ /app/cashmemo/da_entry                           7.08 kB         185 kB
+├ ○ /app/cashmemo/expenses                           3.68 kB         214 kB
+├ ○ /app/cashmemo/payments                           7.66 kB         235 kB
+├ ○ /app/dashboard                                   2.02 kB         103 kB
+├ ○ /app/invoices                                    1.29 kB         102 kB
+├ ○ /app/invoices/difference                         3.22 kB         221 kB
+├ ○ /app/invoices/orders                             3.04 kB         213 kB
+├ ○ /app/invoices/print                              7.62 kB         148 kB
+├ ○ /app/invoices/printinvoice                       3.44 kB         164 kB
+├ ○ /app/invoices/printinvoice/queue                 3.35 kB         132 kB
+├ ○ /app/invoices/purchase                           351 B           224 kB
+├ ○ /app/invoices/return                             344 B           224 kB
+├ ○ /app/invoices/sale                               347 B           224 kB
+├ ○ /app/management                                  2.12 kB        99.6 kB
+├ ○ /app/management/areas                            2.24 kB         212 kB
+├ ○ /app/management/bookers                          3.43 kB         213 kB
+├ ○ /app/management/categories                       1.03 kB         214 kB
+├ ○ /app/management/items                            1.48 kB         215 kB
+├ ○ /app/management/parties                          2.35 kB         212 kB
+├ ○ /app/management/sections                         2.02 kB         212 kB
+├ ○ /app/reports                                     1.54 kB         103 kB
+├ ○ /app/reports/difference                          3.85 kB         171 kB
+├ ○ /app/reports/ledgers                             1.16 kB         102 kB
+├ ○ /app/reports/ledgers/area                        6.22 kB         220 kB
+├ ○ /app/reports/ledgers/booker                      6.34 kB         227 kB
+├ ○ /app/reports/ledgers/general                     5.13 kB         190 kB
+├ ○ /app/reports/ledgers/party                       6.25 kB         227 kB
+├ ○ /app/reports/payments                            1.93 kB         222 kB
+├ ○ /app/reports/payments/areawise                   1.9 kB          221 kB
+├ ○ /app/reports/paymentsbycompany                   7.09 kB         221 kB
+├ ○ /app/reports/profit                              7.51 kB         228 kB
+├ ○ /app/reports/salesreport                         7.38 kB         221 kB
+├ ○ /app/reports/stockreport                         4.38 kB         172 kB
+├ ○ /app/reports/stockreport/itemTransactionsReport  2.35 kB         219 kB
+├ ○ /app/reports/transactions/unified                7.58 kB         228 kB
+├ ○ /auth                                            6.15 kB         117 kB
+└ ○ /views/invoice                                   2.92 kB         118 kB
++ First Load JS shared by all                        82.5 kB
+  ├ chunks/4938-7fc809780643c383.js                  26.8 kB
+  ├ chunks/fd9d1056-22aeb1e891c4993d.js              53.3 kB
+  ├ chunks/main-app-906855561f29cf2f.js              227 B
+  └ chunks/webpack-d2e3a4a3caacd45d.js               2.17 kB
+
+
+○  (Static)  prerendered as static content
+

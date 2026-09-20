@@ -1,0 +1,84 @@
+========================================================================
+BASELINE — backend\pb_data_bench\data.db
+========================================================================
+
+--- row counts ---
+invoice_view                 rows=8927
+transaction_view             rows=23413
+transactions_report          rows=23413
+payments_view                rows=26526
+payments_invoices_report     rows=33556
+items_report                 rows=207
+items_difference_report      rows=207
+ledger_booker                rows=26526
+ledger_journal               rows=26614
+ledger_party                 rows=26526
+ledger_area                  rows=924
+
+--- full-view scan time (what getFullList pulls) ---
+invoice_view                 rows=   8927     1.27s
+transaction_view             rows=  23413     0.83s
+transactions_report          rows=  23413     2.29s
+payments_view                rows=  26526     1.70s
+payments_invoices_report     rows=  33556     7.24s
+items_report                 rows=    207     1.56s
+items_difference_report      rows=    207     1.11s
+ledger_booker                rows=  26526     1.24s
+ledger_journal               rows=  26614     1.87s
+ledger_party                 rows=  26526    35.73s
+ledger_area                  rows=    924     2.55s
+
+--- EXPLAIN QUERY PLAN (SCAN = no index) ---
+
+[invoice_view (GROUP BY invoice)]
+    MATERIALIZE (subquery-3)
+    SCAN transactions USING INDEX sqlite_autoindex_transactions_1
+    SEARCH invoices USING INDEX sqlite_autoindex_invoices_1 (id=?) LEFT-JOIN
+    SEARCH parties USING INDEX sqlite_autoindex_parties_1 (id=?) LEFT-JOIN
+    SEARCH areas USING INDEX sqlite_autoindex_areas_1 (id=?) LEFT-JOIN
+    SCAN invoices USING COVERING INDEX sqlite_autoindex_invoices_1
+    SEARCH (subquery-3) USING AUTOMATIC COVERING INDEX (invoice=?) LEFT-JOIN
+
+[transaction_view filtered by invoice]
+    CO-ROUTINE (subquery-3)
+    SCAN transactions USING INDEX sqlite_autoindex_transactions_1
+    SEARCH invoices USING INDEX sqlite_autoindex_invoices_1 (id=?) LEFT-JOIN
+    SEARCH parties USING INDEX sqlite_autoindex_parties_1 (id=?) LEFT-JOIN
+    SEARCH areas USING INDEX sqlite_autoindex_areas_1 (id=?) LEFT-JOIN
+    SCAN (subquery-3)
+
+[payments filtered by party+paid+type]
+    SEARCH payments USING INDEX idx_payments_party_paid_type (party=? AND paid=? AND type=?)
+
+[ledger_party running balance (correlated)]
+    MATERIALIZE (subquery-6)
+    MATERIALIZE (subquery-8)
+    SCAN transactions USING INDEX sqlite_autoindex_transactions_1
+    SEARCH invoices USING INDEX sqlite_autoindex_invoices_1 (id=?) LEFT-JOIN
+    SEARCH parties USING INDEX sqlite_autoindex_parties_1 (id=?) LEFT-JOIN
+    SEARCH areas USING INDEX sqlite_autoindex_areas_1 (id=?) LEFT-JOIN
+    SCAN invoices USING INDEX sqlite_autoindex_invoices_1
+    SEARCH (subquery-8) USING AUTOMATIC COVERING INDEX (invoice=?) LEFT-JOIN
+    SCAN payments
+    SEARCH (subquery-6) USING AUTOMATIC COVERING INDEX (id=?) LEFT-JOIN
+    SEARCH parties USING INDEX sqlite_autoindex_parties_1 (id=?) LEFT-JOIN
+    SEARCH areas USING INDEX sqlite_autoindex_areas_1 (id=?) LEFT-JOIN
+    CORRELATED SCALAR SUBQUERY 1
+    MATERIALIZE (subquery-12)
+    MATERIALIZE (subquery-14)
+    SCAN transactions USING INDEX sqlite_autoindex_transactions_1
+    SEARCH invoices USING INDEX sqlite_autoindex_invoices_1 (id=?) LEFT-JOIN
+    SEARCH parties USING INDEX sqlite_autoindex_parties_1 (id=?) LEFT-JOIN
+    SEARCH areas USING INDEX sqlite_autoindex_areas_1 (id=?) LEFT-JOIN
+    SCAN invoices USING INDEX sqlite_autoindex_invoices_1
+    SEARCH (subquery-14) USING AUTOMATIC COVERING INDEX (invoice=?) LEFT-JOIN
+    SEARCH payments USING INDEX idx_payments_party (party=?)
+    SEARCH (subquery-12) USING AUTOMATIC COVERING INDEX (id=?) LEFT-JOIN
+    SEARCH parties USING INDEX sqlite_autoindex_parties_1 (id=?) LEFT-JOIN
+    SEARCH areas USING INDEX sqlite_autoindex_areas_1 (id=?) LEFT-JOIN
+    SEARCH sections USING COVERING INDEX sqlite_autoindex_sections_1 (id=?) LEFT-JOIN
+    SEARCH order_bookers USING COVERING INDEX sqlite_autoindex_order_bookers_1 (id=?) LEFT-JOIN
+    SEARCH invoices_return_reference USING COVERING INDEX sqlite_autoindex_invoices_return_reference_1 (id=?) LEFT-JOIN
+    USE TEMP B-TREE FOR ORDER BY
+
+Done.

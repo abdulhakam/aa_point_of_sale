@@ -11,6 +11,8 @@ related_to:
 tags:
   - routes
   - navigation
+  - frontend
+  - reports
 ---
 
 # Route Map

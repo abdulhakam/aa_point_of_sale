@@ -64,3 +64,5 @@ canonical, and derived views (Project index/graph) are regenerated.
 
 - Root contract: `AGENT.md` (project root).
 - Skill routing: `.agents/skills/README.md`.
+- Execution continuity this guide describes: [[Checkpoint — AA Point of Sale — 2026-09-20]],
+  [[Work Session — Performance Optimization Plan — 2026-09-20]].

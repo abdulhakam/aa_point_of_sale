@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: POS-0006
 priority: P0
 belongs_to:
@@ -34,6 +34,21 @@ Guarantee a safe rollback point before any migration or binary change.
 
 - This is the gate for every subsequent task. Do not run migrations or swap the
   PocketBase binary before this is Done.
+
+## Work log
+
+- 2026-09-20 — Created `backend/pb_data/backups/20260920-1232/` (data.db 11,182,080 B,
+  logs.db 57,126,912 B, types.d.ts) before any migration.
+- 2026-09-20 — Verified the backup opens read-only with identical row counts
+  (transactions 23,413 / payments 26,526 / invoices 8,927).
+- 2026-09-20 — Confirmed `/backend/pb_data` is already in `.gitignore`, so backups are
+  not committed. Working tree intentionally left with pre-existing unrelated changes
+  (documented in the Checkpoint), which are not part of this work.
+
+## Verification
+
+- `python scripts/inspect_db.py backend/pb_data/backups/20260920-1232/data.db` returns
+  the same row counts as the live DB; backup restore path = copy the two .db files back.
 
 ## Related
 

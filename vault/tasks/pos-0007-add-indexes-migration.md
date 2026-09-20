@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: POS-0007
 priority: P0
 belongs_to:
@@ -61,3 +61,18 @@ matching down-migration that drops them. Follow the existing migration style in
 - Verified by [[POS-0008 Index verification test]].
 - Unblocks meaningful gains from [[POS-0011 Paginated list plumbing]] and
   [[POS-0021 Materialize hot report views into tables]].
+
+## Work log
+
+- 2026-09-20 — Added `backend/pb_migrations/1789890189_add_performance_indexes.js`
+  (18 indexes declared via `collection.indexes`, idempotent, with down-migration).
+- 2026-09-20 — Applied to the scratch copy, then to the live DB
+  (`pocketbase migrate up`). Verified with `scripts/verify_live.py` (18 indexes).
+
+## Verification
+
+- `python scripts/tests/test_indexes.py backend/pb_data/data.db` → PASS: all 18 indexes
+  present; every hot plan is `SEARCH ... USING INDEX` (e.g. payments by
+  party+paid+type uses `idx_payments_party_paid_type`).
+- Measured effect: `ledger_party` correlated subquery 180s+ → 35.7s. Whole-view scans
+  unchanged (21.6s → 23.2s A/B, within noise) — see [[Performance Baseline]].

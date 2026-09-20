@@ -10,6 +10,8 @@ related_to:
   - "[[Reports & Ledgers]]"
 tags:
   - glossary
+  - terminology
+  - reference
 ---
 
 # Glossary
@@ -84,3 +86,6 @@ Project vocabulary. Where a term maps to a schema field, the field is named.
 
 - Schema detail: [[Data Model]].
 - Formula detail: [[Reports & Ledgers]].
+- Screen/route names for the report terms above: [[Route Map]].
+- Terms used across the subsystems: [[Frontend — Next.js Application]],
+  [[Backend — PocketBase Data Service]], [[Desktop & Deployment]].

@@ -13,6 +13,8 @@ tags:
   - reports
   - ledgers
   - sql
+  - views
+  - backend
 ---
 
 # Reports & Ledgers

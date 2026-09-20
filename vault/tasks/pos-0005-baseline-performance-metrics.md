@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: POS-0005
 priority: P0
 belongs_to:
@@ -44,3 +44,18 @@ recorded baseline.
 ## Related
 
 - Feeds [[POS-0018 Regression-test performance suite]].
+
+## Work log
+
+- 2026-09-20 — Wrote `scripts/perf_baseline.py` (SQL timings + EXPLAIN QUERY PLAN) and
+  `scripts/perf_http.py` (REST timings incl. a getFullList-style pagination loop), plus
+  `scripts/bench_pagination.py` for A/B checks.
+- 2026-09-20 — Captured SQL baseline (`scripts/baseline_sql_full.txt`) and HTTP baseline
+  (`scripts/baseline_http.txt`) against a scratch copy (`pb_data_bench`).
+
+## Verification
+
+- Results recorded in [[Performance Baseline]]. Headlines: `ledger_party` full scan
+  ABORTED at 180s; `invoice_view` full list 26s HTTP / 21.6s SQL; `transactions_report`
+  107s; `payments_view` 111s; deep expand 1,021 KB per 500 rows; only PK auto-indexes
+  existed; every hot plan was a full SCAN.

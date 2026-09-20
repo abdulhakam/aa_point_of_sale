@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: POS-0013
 priority: P0
 belongs_to:
@@ -61,3 +61,29 @@ thousands of raw rows. Move the client-side `reduce`/`SUM`/running-balance into 
 - Verified by [[POS-0014 SQL aggregation equivalence test]].
 - Consumed by [[POS-0015 Trim expands + adopt pagination in report pages]].
 - If a heavy report is still slow after indexing, materialize it: [[POS-0021 Materialize hot report views into tables]].
+
+## Work log
+
+- 2026-09-20 — `backend/pb_migrations/1789890300_ledger_party_window_function.js`:
+  replaced the O(n²) correlated subquery with
+  `SUM(...) OVER (PARTITION BY party ORDER BY payment_date RANGE UNBOUNDED PRECEDING)`.
+  `RANGE` (not `ROWS`) preserves the original `<=` peer semantics. Columns unchanged →
+  no schema edit needed.
+- 2026-09-20 — `backend/pb_migrations/1789890310_payments_summary_view.js`: new
+  `payments_summary` view, `GROUP BY day, party, area, section, booker, party_type,
+  type, paid`, exposing the 8 category sums the reports previously computed in JS.
+  Two iterations were required: PB's view parser rejects bare arithmetic columns
+  (wrap derived values in a single function call) and PB requires an `id` column
+  (added `(ROW_NUMBER() OVER())` in a subquery wrapper, per the
+  counts_for_row_numbers pattern).
+- 2026-09-20 — Applied to the scratch copy, then the live DB; `scripts/verify_live.py`
+  confirms both views live.
+- 2026-09-20 — Measured: party-ledger request >180s (old) → ~4.4s (new). The view still
+  re-materializes per request; further gains via the cache (POS-0009) and
+  [[POS-0021 Materialize hot report views into tables]].
+
+## Verification
+
+- `python scripts/tests/test_report_sql.py backend/pb_data_bench/data.db` →
+  `RESULT: PASS`: window balance identical for all 26,526 rows (0 mismatches); summary
+  totals match the JS calculator for all-rows, date-range, and single-party filters.

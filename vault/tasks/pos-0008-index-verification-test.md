@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: POS-0008
 priority: P1
 belongs_to:
@@ -38,3 +38,12 @@ Automated check that the performance indexes exist and are used by the hot queri
 
 - Test companion to [[POS-0007 Add indexes via migration]].
 - Rolled into [[POS-0018 Regression-test performance suite]].
+
+## Work log
+
+- 2026-09-20 — Wrote `scripts/tests/test_indexes.py` (presence + query-plan assertions).
+
+## Verification
+
+- Against the migrated live DB: `RESULT: PASS — all indexes present and used`
+  (18/18 present; 6/6 plan cases SEARCH..USING INDEX, no bare SCAN).
