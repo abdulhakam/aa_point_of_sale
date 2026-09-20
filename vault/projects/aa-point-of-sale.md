@@ -10,7 +10,6 @@ tags:
   - pocketbase
   - offline
 ---
-
 # AA Point of Sale
 
 ## Outcome
@@ -26,10 +25,8 @@ difference reports. It runs entirely on one Windows machine with no external ser
 In scope:
 
 - The Next.js frontend in `frontend/` (all UI, routing, and PocketBase access).
-- The PocketBase backend in `backend/` (SQLite data, collections, view queries,
-  migrations, auth).
-- Desktop packaging via Tauri (`frontend/src-tauri/`) and the prebuilt server in
-  `standalone/`.
+- The PocketBase backend in `backend/` (SQLite data, collections, view queries, migrations, auth).
+- Desktop packaging via Tauri (`frontend/src-tauri/`) and the prebuilt server in `standalone/`.
 - Windows batch launchers at the repository root and under `backend/`.
 
 Out of scope (not implemented in this repository):
@@ -40,25 +37,18 @@ Out of scope (not implemented in this repository):
 ## Success criteria
 
 - An operator can install, run, and use the app end-to-end on a clean Windows machine.
-- Sales, purchase, return, payment, expense, and difference flows compute correct totals
-  and stock movement.
+- Sales, purchase, return, payment, expense, and difference flows compute correct totals and stock movement.
 - Report and ledger views in PocketBase stay consistent with the frontend's expectations.
-- A fresh contributor or agent can answer "how/what/where" questions from this
-  knowledgebase without reading source.
+- A fresh contributor or agent can answer "how/what/where" questions from this knowledgebase without reading source.
 - The knowledgebase validates cleanly: `kb.py validate vault` and `scripts/kb_check.py`.
 
 ## Current state
 
-- Working application. Frontend builds (`.next` present) and PocketBase 0.22.9 ships with
-  a populated database (`backend/pb_data/data.db`).
-- 41 routes are compiled in the app router (dashboard, cash memo, invoices, management,
-  reports, auth, invoice view) — see [[Route Map]].
+- Working application. Frontend builds (`.next` present) and PocketBase 0.22.9 ships with a populated database (`backend/pb_data/data.db`).
+- 41 routes are compiled in the app router (dashboard, cash memo, invoices, management, reports, auth, invoice view) — see [[Route Map]].
 - 11 base collections and 13 view collections are live — see [[Data Model]].
-- Known drift: the untracked `standalone/` build contains report pages that the current
-  source does not, and predates the Tauri additions — see
-  [[Issue — Standalone Build Drift]].
-- One uncommitted working-tree change to the Ledgers report page — see
-  [[Review the uncommitted Ledgers report change]].
+- Known drift: the untracked `standalone/` build contains report pages that the current source does not, and predates the Tauri additions — see [[Issue — Standalone Build Drift]].
+- One uncommitted working-tree change to the Ledgers report page — see [[Review the uncommitted Ledgers report change]].
 
 ## Architecture at a glance
 
@@ -73,6 +63,7 @@ flowchart TD
   BI --> DB
   Tauri["Desktop & Deployment (Tauri + standalone)"] --> UI
 ```
+
 
 Text alternative: the Next.js frontend is the only client; it calls PocketBase over HTTP.
 PocketBase owns the SQLite database, including the report/ledger views whose SQL this
@@ -94,21 +85,96 @@ knowledgebase documents. Tauri and the `standalone/` server host the same fronte
 - [[Knowledgebase Guide]] — how this vault is organized and how to keep it current.
 
 ## Tasks
+
 - [ ] [[Add automated tests for report SQL views]] — Backlog
 - [ ] [[Reconcile the standalone build with source]] — Ready
 - [ ] [[Review the uncommitted Ledgers report change]] — Ready
 - [ ] [[Verify the static export path for Tauri and RUN SERVE]] — Backlog
 
+### Performance optimization program (2026-09-20)
+
+- [ ] [[POS-0005 Baseline performance metrics]] — Ready
+- [ ] [[POS-0006 Backup database and repo snapshot]] — Ready
+- [ ] [[POS-0007 Add indexes via migration]] — Ready
+- [ ] [[POS-0008 Index verification test]] — Ready
+- [ ] [[POS-0009 Fix React Query cache config]] — Ready
+- [ ] [[POS-0010 Cache behavior test]] — Ready
+- [ ] [[POS-0011 Paginated list plumbing]] — Ready
+- [ ] [[POS-0012 Pagination test]] — Ready
+- [ ] [[POS-0013 SQL aggregation views]] — Ready
+- [ ] [[POS-0014 SQL aggregation equivalence test]] — Ready
+- [ ] [[POS-0015 Trim expands + adopt pagination in report pages]] — Ready
+- [ ] [[POS-0016 Report pages render test]] — Ready
+- [ ] [[POS-0017 Invoice entry pages: paginate + trim expands]] — Ready
+- [ ] [[POS-0018 Regression-test performance suite]] — Ready
+- [ ] [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Ready
+- [ ] [[POS-0020 PocketBase v0.22.55 regression test]] — Ready
+- [ ] [[POS-0021 Materialize hot report views into tables]] — Ready
+- [ ] [[POS-0022 Upgrade PocketBase to v0.40.4]] — Backlog (deferred major migration)
+- [ ] [[POS-0023 PocketBase v0.40.4 migration test]] — Backlog
+- [ ] [[POS-0024 Record performance optimization decisions]] — Ready
+
 ## Task dependency and progress
+
 Task frontmatter is authoritative; this diagram is derived from `blocked_by` (or its `depends_on` alias).
 
 ```mermaid
-flowchart TD
+flowchart LR
   T1["POS-0003 · Add automated tests for report SQL views · Backlog"]
   T2["POS-0001 · Reconcile the standalone build with source · Ready"]
   T3["POS-0002 · Review the uncommitted Ledgers report change · Ready"]
   T4["POS-0004 · Verify the static export path for Tauri and RUN SERVE · Backlog"]
+
+  subgraph PERF["Performance optimization program"]
+    P5["POS-0005 · Baseline metrics · Ready"]
+    P6["POS-0006 · Backup DB + repo · Ready"]
+    P7["POS-0007 · Add indexes migration · Ready"]
+    P8["POS-0008 · Index verification test · Ready"]
+    P9["POS-0009 · Fix React Query cache · Ready"]
+    P10["POS-0010 · Cache behavior test · Ready"]
+    P11["POS-0011 · usePagedList plumbing · Ready"]
+    P12["POS-0012 · Pagination test · Ready"]
+    P13["POS-0013 · SQL aggregation views · Ready"]
+    P14["POS-0014 · SQL equivalence test · Ready"]
+    P15["POS-0015 · Trim expands + paginate reports · Ready"]
+    P16["POS-0016 · Report render test · Ready"]
+    P17["POS-0017 · Invoice pages paginate+trim · Ready"]
+    P18["POS-0018 · Performance regression suite · Ready"]
+    P19["POS-0019 · PB v0.22.55 upgrade · Ready"]
+    P20["POS-0020 · PB v0.22.55 regression test · Ready"]
+    P21["POS-0021 · Materialize hot views · Ready"]
+    P22["POS-0022 · PB v0.40.4 migration · Backlog"]
+    P23["POS-0023 · PB v0.40.4 test · Backlog"]
+    P24["POS-0024 · Record perf decisions · Ready"]
+  end
+
+  P5 --> P7
+  P6 --> P7
+  P7 --> P8
+  P5 --> P9
+  P9 --> P10
+  P9 --> P11
+  P11 --> P12
+  P5 --> P13
+  P6 --> P13
+  P13 --> P14
+  P11 --> P15
+  P13 --> P15
+  P15 --> P16
+  P11 --> P17
+  P15 --> P18
+  P17 --> P18
+  P6 --> P19
+  P18 --> P19
+  P19 --> P20
+  P13 --> P21
+  P18 --> P21
+  P20 --> P22
+  P22 --> P23
+  P18 --> P24
+  P20 --> P24
 ```
+
 
 ## Decisions
 
@@ -121,4 +187,4 @@ flowchart TD
 
 ## Current checkpoint
 
-- [[Checkpoint — AA Point of Sale — 2026-09-19]]
+- [[Checkpoint — AA Point of Sale — 2026-09-20]] (performance plan; supersedes [[Checkpoint — AA Point of Sale — 2026-09-19]])
