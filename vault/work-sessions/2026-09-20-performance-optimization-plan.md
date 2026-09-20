@@ -17,12 +17,12 @@ tags:
 
 # Work Session — Performance Optimization Plan — 2026-09-20
 
-> **RESUME HERE:** backend data-layer work (POS-0005 → POS-0014) is Done and verified on
-> the live DB. POS-0010/0012 tests pass. **POS-0015, POS-0016, POS-0017 and POS-0025 are Done**
-> — deep expands removed from the report pages (incl. Daily Sale / Outstanding / Product Sale),
-> the cash memo payments list paginated with `payments_summary`-backed totals, and the invoice
-> entry pages no longer fetch the whole `invoice_view`. Next is POS-0018 (re-measure). POS-0019
-> (PocketBase v0.22.55) and later tasks are **not started**. See
+> **RESUME HERE:** the performance program is essentially complete on the frontend/backend:
+> POS-0005→POS-0018 and POS-0025 are all **Done**, and the capstone regression suite runs
+> **7/7 PASS** (party ledger 180 s+ → 0.95 s; report payloads −70/−75%; Sale invoice page
+> 26 s → ~1 s). Remaining: [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] next, then
+> POS-0020 (its regression test), POS-0021 (materialize hot views — targets the ~4.2 s
+> `outstanding_summary`), POS-0024 (decision records) and the deferred POS-0022/0023. See
 > [[Checkpoint — AA Point of Sale — 2026-09-20]] for the exact next action, current git state,
 > and the backend cheat-sheet.
 
@@ -61,6 +61,14 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
 
 ## Activity log
 
+- 2026-09-20 — POS-0018 Done: wrote `scripts/perf_regression.py` (measures the app's real
+  request shapes over HTTP) and `scripts/tests/run_all.py` (one-command runner for the POS-0008/
+  0014/0018 summary-totals/0012/0010/0016 companions + the perf suite). **7/7 suites PASS.**
+  Before → after: `transactions_report` 1,021.6 KB → 309.3 KB (−70.1%), `payments_view`
+  1,089 KB → 274.8 KB (−74.8%), `ledger_party` (one party) 180 s+ → **0.95 s**, Sale invoice
+  page 26.00 s → **~1 s** of API work (2.01 s / 414 KB), `payments_summary` one day → 1 group.
+  Residual: `outstanding_summary` ~4.2 s → POS-0021. Numbers recorded in
+  [[Performance Baseline]] and the task.
 - 2026-09-20 — POS-0017 Done: invoice entry pages. `InvoiceForm.tsx` no longer fetches the
   whole `invoice_view` with `expand: "party,invoice_maker,booker"` — the selector is
   `usePagedList` (50 newest + server `invoiceNo ~ search`), the id count is a 1-row
@@ -161,8 +169,11 @@ See the Project [[AA Point of Sale]] task index and dependency graph for POS-000
    **DONE** — trims + browser verification; stale drift docs corrected.
 5. ~~[[POS-0017 Invoice entry pages: paginate + trim expands]]~~ **DONE** — selector paged +
    server-searchable; expands dropped; verified by capturing the real requests.
-6. Next: [[POS-0018 Regression-test performance suite]], then
-   [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]].
+6. ~~[[POS-0018 Regression-test performance suite]]~~ **DONE** — 7/7 suites pass; before/after
+   recorded in [[Performance Baseline]].
+7. Next: [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]], then
+   [[POS-0020 PocketBase v0.22.55 regression test]], then
+   [[POS-0021 Materialize hot report views into tables]].
 
 Status of `scripts/tests/test_pagination.py`: **it now exists** and passes (see
 [[POS-0012 Pagination test]]). An earlier note in this session that claimed it existed was

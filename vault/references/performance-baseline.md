@@ -103,7 +103,23 @@ Sources: `scripts/perf_baseline.py` (SQL, `scripts/baseline_sql_full.txt`) and
   printf-formatted `invoice_view.final_total`); the old JS `calculator()` `+=` concatenated
   those strings. Aborted as part of the redesign — no new bug introduced.
 
-## Related
+## POS-0018 final re-measure (2026-09-20)
+
+Captured by `scripts/perf_regression.py` after all the frontend trims + pagination, against
+the live server. Run the whole suite with `python scripts/tests/run_all.py` (7/7 PASS).
+
+| Shape | Baseline (POS-0005) | After (POS-0018) |
+|---|---|---|
+| `transactions_report` perPage 500 — deep expand → none | 1,021.6 KB / 2.49 s | **309.3 KB (−70.1%)** / 1.80 s |
+| `payments_view` perPage 500 — expand 6 → none | 1,089 KB | **274.8 KB (−74.8%)** |
+| `ledger_party` filtered to one party | ABORTED after 180 s | **0.95 s** |
+| Opening the Sale invoice page (invoice_view) | 26.00 s (full pagination) | **0.97 s** for the 50-row selector; the page's whole API work 2.01 s / 414 KB |
+| `payments_summary` for a single day | n/a | **1 group** (was: tens of thousands of raw rows) |
+| `outstanding_summary` | n/a | 602 party rows, ~4.2 s |
+
+Still worth attention: `outstanding_summary` recomputes its whole aggregate per request
+(~4.2 s) — the target for [[POS-0021 Materialize hot report views into tables]].
+
 ## Related
 
 - [[Reports & Ledgers]], [[Data Model]].

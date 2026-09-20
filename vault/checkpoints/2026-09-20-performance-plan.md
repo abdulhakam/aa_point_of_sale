@@ -28,17 +28,15 @@ checkpoint current enough that a fresh session can resume without chat history.
 
 Backend data-layer work (POS-0005 → POS-0014) is **done and verified on the live DB**.
 The cache and pagination-helper tests (POS-0010, POS-0012) pass. **POS-0015, POS-0016,
-POS-0017 and POS-0025 are done and browser-verified**: deep expands removed from the report
-pages, the cash memo payments list paginated with `payments_summary`-backed totals, and the
-invoice entry pages no longer fetch the whole `invoice_view` (the selector is paged +
-server-searchable). The browser passes also caught and fixed a 400-causing bad sort on the
-`payments_summary` request. Next: the regression re-measure (POS-0018); the PocketBase
-v0.22.55 upgrade (POS-0019) is the main remaining item.
+POS-0017, POS-0018 and POS-0025 are done** — the backend, report pages, payments list and
+invoice entry pages are optimized, and the capstone regression suite runs **7/7 PASS** with
+before/after measured (`transactions_report` −70% payload, `payments_view` −75%, party ledger
+180 s+ → 0.95 s, Sale invoice page 26 s → ~1 s). The PocketBase v0.22.55 upgrade (POS-0019) is
+the main remaining item.
 
 ## Active tasks
 
-- [[POS-0018 Regression-test performance suite]] — Ready (NEXT, final re-measure)
-- [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Ready
+- [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] — Ready (NEXT)
 - [[POS-0020 PocketBase v0.22.55 regression test]] — Ready
 - [[POS-0021 Materialize hot report views into tables]] — Ready (conditional on POS-0018)
 - [[POS-0022 Upgrade PocketBase to v0.40.4]] — Backlog (deferred, separate migration)
@@ -47,6 +45,13 @@ v0.22.55 upgrade (POS-0019) is the main remaining item.
 
 ## Completed since previous checkpoint
 
+- **POS-0018 (done)** Regression suite. `scripts/perf_regression.py` measures the app's real
+  request shapes over HTTP and `scripts/tests/run_all.py` runs every per-change companion in
+  one command — **7/7 PASS**. Before → after: `transactions_report` 1,021.6 KB → 309.3 KB
+  (−70.1%), `payments_view` 1,089 KB → 274.8 KB (−74.8%), `ledger_party` (one party)
+  180 s+ → **0.95 s**, opening the Sale invoice page 26.00 s → **~1 s** (page API work
+  2.01 s / 414 KB), `payments_summary` for one day → **1 group**. Residual: `outstanding_summary`
+  still ~4.2 s (recomputes per request) → [[POS-0021 Materialize hot report views into tables]].
 - **POS-0017 (done)** Invoice entry pages. `InvoiceForm.tsx` no longer runs
   `getFullList(invoice_view, expand: "party,invoice_maker,booker")`: the selector is a
   `usePagedList` (50 newest, server-search by `invoiceNo`), the id-generation count is a 1-row
@@ -119,12 +124,10 @@ shows no working-tree change to `frontend/src/app/app/reports/ledgers/page.tsx` 
 previously flagged change was committed in `4ac911c` (see
 [[Review the uncommitted Ledgers report change]]).
 
-**Uncommitted (POS-0017):**
-`frontend/src/app/app/invoices/{InvoiceForm.tsx,difference/page.tsx,orders/page.tsx}`, plus the
-vault changes ([[POS-0017 Invoice entry pages: paginate + trim expands]], the hydration-note
-correction in [[POS-0016 Report pages render test]], the project note, this checkpoint and the
-work session). Pre-existing/unrelated: `.commandcode/taste/taste.md` and
-`vault/.noteriv/workspace.json` (Tolaria-generated).
+**Uncommitted (POS-0018):** `scripts/perf_regression.py`, `scripts/tests/run_all.py`, plus the
+vault changes ([[POS-0018 Regression-test performance suite]], [[Performance Baseline]], the
+project note, this checkpoint and the work session). Pre-existing/unrelated:
+`.commandcode/taste/taste.md` and `vault/.noteriv/workspace.json` (Tolaria-generated).
 
 - Live DB `backend/pb_data/data.db` (production):
   - 18 secondary indexes (verified by `scripts/tests/test_indexes.py`: 18/18 present;
@@ -189,8 +192,12 @@ work session). Pre-existing/unrelated: `.commandcode/taste/taste.md` and
    evidence corrected.
 5. ~~[[POS-0017 Invoice entry pages: paginate + trim expands]]~~ **DONE** — selector paged +
    server-searchable, expands dropped; verified by capturing the real requests.
-6. Next: [[POS-0018 Regression-test performance suite]] (re-measure page-load timing and
-   finalise before/after), then the [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] upgrade.
+6. ~~[[POS-0018 Regression-test performance suite]]~~ **DONE** — 7/7 suites pass; before/after
+   captured in [[Performance Baseline]].
+7. Next: [[POS-0019 Upgrade PocketBase v0.22.9 → v0.22.55]] (drop-in), then
+   [[POS-0020 PocketBase v0.22.55 regression test]], then
+   [[POS-0021 Materialize hot report views into tables]] (targets the still-slow
+   `outstanding_summary`).
 
 ## Verification still required
 
