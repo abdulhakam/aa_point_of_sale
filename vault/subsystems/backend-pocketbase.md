@@ -2,7 +2,7 @@
 type: Subsystem
 status: Active
 created: 2026-09-19
-updated: 2026-09-19
+updated: 2026-09-24
 belongs_to:
   - "[[AA Point of Sale]]"
 related_to:
@@ -53,10 +53,10 @@ view collections.
   `invoices_return_reference`, `items`, `order_bookers`, `parties`, `payments`,
   `sections`, `transactions`.
 - Auth (1): `users`.
-- Views (13, read-only): `counts_for_row_numbers`, `invoice_view`, `items_difference_report`,
+- Views (15, read-only): `counts_for_row_numbers`, `invoice_view`, `items_difference_report`,
   `items_report`, `ledger_area`, `ledger_booker`, `ledger_journal`, `ledger_party`,
-  `net_price`, `payments_invoices_report`, `payments_view`, `transaction_view`,
-  `transactions_report`.
+  `net_price`, `outstanding_summary`, `payments_invoices_report`, `payments_summary`,
+  `payments_view`, `transaction_view`, `transactions_report`.
 
 Field-level detail and relationships live in [[Data Model]]; the SQL each view runs is in
 [[Reports & Ledgers]].
@@ -65,8 +65,8 @@ Field-level detail and relationships live in [[Data Model]]; the SQL each view r
 
 - `backend/pocketbase.exe` — engine.
 - `backend/pb_data/data.db` — live SQLite database.
-- `backend/pb_migrations/*.js` — 18 schema migrations (timestamp-prefixed).
-- `backend/DEV.BAT`, `RUN NEXTJS.BAT`, `RUN SERVE.BAT`, `TAURI *.BAT` — launchers.
+- `backend/pb_migrations/*.js` — 23 schema migrations (timestamp-prefixed).
+- `backend/DEV.BAT`, `backend/RUN NEXTJS.BAT`, `backend/RUN SERVE.BAT` — launchers.
 
 ## Constraints and caveats
 
