@@ -1,2 +1,4 @@
-# Auto-generated metadata.Metadata textproto
-last_executed_version: "v0.26.7-0-gcbce5a1a"
+# Auto-generated `metadata.Metadata` textproto.
+#
+# Schema: https://github.com/trailbaseio/trailbase/blob/main/crates/core/proto/metadata.proto
+last_executed_version: "v0.33.15-0-g2b867e5a"

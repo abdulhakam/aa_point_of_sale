@@ -5,6 +5,9 @@ secrets/
 uploads/
 wasm/
 scripts/
+# Placeholder for a future `--public-dir` bundle. NOTE: `trail` regenerates this
+# file when it repairs the depot and drops unknown lines, so re-add this after
+# upgrading TrailBase (or move the rule to the repo-root .gitignore).
 static/
 
 metadata.textproto

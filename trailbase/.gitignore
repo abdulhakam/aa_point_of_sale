@@ -1,0 +1,8 @@
+# TrailBase runtime state. Only config.textproto and migrations/ are source.
+traildepot/data/
+traildepot/backups/
+traildepot/uploads/
+traildepot/secrets/
+traildepot/wasm/
+traildepot/metadata.textproto
+*.log

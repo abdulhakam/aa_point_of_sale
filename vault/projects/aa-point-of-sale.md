@@ -76,6 +76,12 @@ knowledgebase documents. Tauri and the `standalone/` server host the same fronte
 - [[Backend — PocketBase Data Service]] — collections, view SQL, migrations, auth.
 - [[Desktop & Deployment]] — Tauri packaging and the standalone server launcher.
 
+## Related projects
+
+- [[TrailBase Backend]] — a separate backend for the *same domain* built on TrailBase instead of
+  PocketBase, with its own schema, auth and API shape. It does not replace the stack below and its specs
+  are still in flux; see [[Backend — TrailBase Server]] for what exists today.
+
 ## References
 
 - [[Route Map]] — every app route and what it does.

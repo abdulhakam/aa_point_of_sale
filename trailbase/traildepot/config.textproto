@@ -1,135 +1,99 @@
-# Auto-generated config.Config textproto
+# TrailBase configuration for the AA Point of Sale backend.
+#
+# Schema: https://github.com/trailbaseio/trailbase/blob/main/crates/core/proto/config.proto
+#
+# `email`, `server`, `auth` and `jobs` are top-level required fields, so the
+# empty ones are declared explicitly.
+#
+# Secrets (SMTP password, OAuth client secrets, ...) must NOT be written here.
+# Put them in `secrets/secrets.textproto`, which is git-ignored.
+
 email {}
+
 server {
-  application_name: "TrailBase"
+  application_name: "AA Point of Sale"
+  # Change this to the real public URL before going to production; it is used
+  # to build links in emails and OAuth redirects.
+  site_url: "http://localhost:4000"
+  # Lets a single request insert an invoice and its transactions atomically.
+  enable_record_transactions: true
+  # 7 days, matching the TrailBase default but stated explicitly.
   logs_retention_sec: 604800
+  # Hard cap on request bodies. Default is 10MB; invoices are far smaller and
+  # the print/queue endpoints are the only chatty ones.
+  request_size_limit_bytes: 5242880
+  # Rate-limit auth POSTs per IP (login is also rate-limited per credentials).
+  auth_ip_rate_limit: 20
 }
+
 auth {
+  # Email required, username optional. Change to REQUIRE_USERNAME or
+  # ONLY_USERNAME if staff sign in with a username only.
+  user_identifier: REQUIRE_EMAIL
+  password_minimal_length: 8
+  password_must_contain_upper_and_lower_case: false
+  password_must_contain_digits: false
+  # Ephemeral/anonymous users are not wanted for a POS backend.
+  enable_anonymous_signin: false
+  # OTP sign-in requires working SMTP (see `email {}` above).
+  enable_otp_signin: false
+  # 1h stateless access token + 30d opaque refresh token.
   auth_token_ttl_sec: 3600
   refresh_token_ttl_sec: 2592000
 }
+
+# System jobs keep their built-in defaults (BACKUP, HEARTBEAT, LOG_CLEANER,
+# QUERY_OPTIMIZER, ...). Declare a `system_jobs: [{ id: ..., schedule: ... }]`
+# entry here to change a schedule, e.g. to run BACKUP more often.
 jobs {}
-record_apis: [{
-  name: "areas"
-  table_name: "areas"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [SCHEMA, DELETE, UPDATE, READ, CREATE]
-  enable_subscriptions: true
-}, {
-  name: "sections"
-  table_name: "sections"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "categories"
-  table_name: "categories"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "users"
-  table_name: "users"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "companies"
-  table_name: "companies"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "products"
-  table_name: "products"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "expenses"
-  table_name: "expenses"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "order_bookers"
-  table_name: "order_bookers"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "parties"
-  table_name: "parties"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "invoices"
-  table_name: "invoices"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "invoices_enum_type"
-  table_name: "invoices_enum_type"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "parties_enum_type"
-  table_name: "parties_enum_type"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "payments_enum_type"
-  table_name: "payments_enum_type"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "invoices_return_reference"
-  table_name: "invoices_return_reference"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "payments"
-  table_name: "payments"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "transactions"
-  table_name: "transactions"
-  conflict_resolution: REPLACE
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "companies2parties"
-  table_name: "companies2parties"
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}, {
-  name: "companies2orderbookers"
-  table_name: "companies2orderbookers"
-  autofill_missing_user_id_columns: true
-  acl_world: [CREATE, READ, UPDATE, DELETE, SCHEMA]
-  enable_subscriptions: true
-}]
+
+# ---------------------------------------------------------------------------
+# Record APIs
+# ---------------------------------------------------------------------------
+# Base tables are writable by authenticated staff. There are no VIEWs, so there
+# are no read-only report APIs: every endpoint below is a real table.
+#
+# NOTE: the old PocketBase collection rules were `""`, i.e. world-accessible.
+# Nothing here is public: an unauthenticated request gets 401. To open a
+# specific API up (e.g. a kitchen display that only reads orders), add
+# `acl_world: [READ]` to that entry.
+#
+# SCHEMA is granted to authenticated users so that
+# `GET /api/records/v1/<name>/schema` works and clients can be generated from a
+# running server instead of from hand-written types.
+#
+# `expand` only allow-lists the foreign keys that *may* be inlined with
+# `?expand=col`. It costs nothing until a client asks for it, and it is how a
+# client gets an enum's label or a party's name in the same request instead of
+# issuing a second one. Foreign keys pointing at TrailBase's hidden `_user`
+# table cannot be expanded.
+#
+# `_user` is provided by TrailBase itself and is deliberately not declared here;
+# use the built-in /api/auth/v1 endpoints to manage staff accounts.
+
+record_apis: [
+  # --- Enumeration vocabularies (labels are editable, codes are migration-only)
+  { name: "party_types"   table_name: "party_types"   acl_authenticated: [READ, UPDATE, SCHEMA] },
+  { name: "invoice_types" table_name: "invoice_types" acl_authenticated: [READ, UPDATE, SCHEMA] },
+  { name: "payment_types" table_name: "payment_types" acl_authenticated: [READ, UPDATE, SCHEMA] },
+
+  # --- Master data ------------------------------------------------------
+  { name: "sections"       table_name: "sections"       acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] },
+  { name: "categories"     table_name: "categories"     acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] },
+  { name: "companies"      table_name: "companies"      acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] },
+  { name: "areas"          table_name: "areas"          acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["section"] },
+  { name: "parties"        table_name: "parties"        acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["area", "type"] },
+  { name: "order_bookers"  table_name: "order_bookers"  acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] },
+  { name: "items"          table_name: "items"          acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["category"] },
+  { name: "expenses"       table_name: "expenses"       acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] },
+
+  # --- Link tables ------------------------------------------------------
+  { name: "party_companies"          table_name: "party_companies"          acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["party", "company"] },
+  { name: "order_booker_companies"   table_name: "order_booker_companies"   acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["order_booker", "company"] },
+
+  # --- Transactions -----------------------------------------------------
+  { name: "invoices"     table_name: "invoices"     acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["type", "party", "booker"] },
+  { name: "invoices_return_reference" table_name: "invoices_return_reference" acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["original_invoices"] },
+  { name: "transactions" table_name: "transactions" acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["invoice", "item"] },
+  { name: "payments"     table_name: "payments"     acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["invoice", "party", "paid_to", "type"] }
+]
