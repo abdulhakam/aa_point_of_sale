@@ -19,7 +19,7 @@ tags:
 
 ## What it is
 
-A [TrailBase](https://trailbase.io) server (`trail v0.33.15`) exposing the point-of-sale data as
+A [TrailBase](https://trailbase.io) server (`trail v0.33.22`, validated on `v0.33.15` first) exposing the point-of-sale data as
 typed REST record APIs over SQLite. It is the counterpart to [[Backend — PocketBase Data Service]] for
 the same business domain, built in `trailbase/` — a different system with its own schema, its own auth
 and its own API shape, not a drop-in replacement of PocketBase.

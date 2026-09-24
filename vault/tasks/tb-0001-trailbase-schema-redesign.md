@@ -81,6 +81,10 @@ custom JSON-schema feature for validation and, if possible, UI metadata.
   [[Issue — TrailBase view type-inference limits]].
 - The scratch/verification depots were deleted afterwards, and `traildepot/data/` was removed so the
   first real run is a clean first run.
+- Re-verified on `trail v0.33.22` after the binary was upgraded mid-session: migration, config, all 17
+  record APIs, server boot and the unauthenticated `403` behave exactly as on `v0.33.15`, and the scalar
+  JSON-schema write path was re-probed with unchanged results (see
+  [[Issue — TrailBase rejects scalar JSON-schema columns]]).
 
 ## Related
 

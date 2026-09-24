@@ -74,6 +74,19 @@ line by line.
 Use the vocabulary table for enums, and reserve `jsonschema(...)` for genuinely object/array-valued
 `TEXT` columns (a settings blob, `std.FileUpload`), where it works as documented.
 
+## Update (2026-09-24) — re-probed on v0.33.22, unchanged
+
+The binary was upgraded to `trail v0.33.22-0-g3dfb2f70` during this session, so the probe was repeated on
+the new version against a fresh depot. `probe_int_cast` (`INTEGER` + `CAST(...)`) still returns
+`400 Invalid Parameters` for both a valid `{"type":1}` and an invalid `{"type":9}`; `probe_text_js`
+still rejects `{"type":"sale"}` and accepts the pre-serialised `{"type":"\"sale\""}`; and the real
+authenticated-only APIs still answer `403` unauthenticated.
+
+The limitation is therefore not specific to `v0.33.15`. The `v0.33.16`–`v0.33.22` changelog contains
+nothing touching this write path (only an adjacent "empty/all-default inserts and empty updates"
+fix in `v0.33.18`), so
+[[Decision — Encode enumerations as integer codes with vocabulary tables]] stands.
+
 ## Related
 
 - [[Decision — Encode enumerations as integer codes with vocabulary tables]]

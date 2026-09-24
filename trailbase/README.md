@@ -154,7 +154,7 @@ it to a column with `CHECK (jsonschema('<name>', <column>))`, and TrailBase vali
 it *and* republishes it through `/api/records/v1/<name>/schema` for client codegen and UI rendering.
 That is exactly the "define the validation schema and the UI schema in the database" idea, so it was
 tried first — and it does not work for scalar columns such as an enum code. Measured against
-`trail v0.33.15` on a scratch depot:
+`trail v0.33.15` on a scratch depot, and re-measured with identical results on `v0.33.22`:
 
 | Shape | Result |
 |---|---|
@@ -270,8 +270,9 @@ Value translations:
 
 ## Validation
 
-Verified against a running `trail v0.33.15` server, not by inspection. `traildepot/data/` was deleted
-afterwards so the first real run is the documented clean first run.
+Verified against a running `trail` server, not by inspection: first on `v0.33.15`, then re-verified on
+`v0.33.22` after the binary was upgraded mid-session, with the same results. `traildepot/data/` was
+deleted afterwards so the first real run is the documented clean first run.
 
 Schema and startup:
 
@@ -308,7 +309,9 @@ removed afterwards.
 
 ## Known TrailBase limitations
 
-Determined empirically against `trail v0.33.15`.
+Determined empirically against `trail v0.33.15`, and re-checked on `v0.33.22`: both limitations behaved
+identically, and the releases in between (`v0.33.16`–`v0.33.22`) changed WASM guests, the admin UI,
+schema-name parsing and batch error propagation — none of which touch these paths.
 
 - **A view can only be exposed if every output column is statically typeable**, which rules out
   `WITH`, `UNION`, reading from another view, and any grain whose `id` is not a base-table primary

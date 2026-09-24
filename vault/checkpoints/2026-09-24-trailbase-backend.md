@@ -41,6 +41,9 @@ shaped it so the next session does not rediscover TrailBase's limits the hard wa
 - README rewritten as the design + findings + frontend-impact record.
 - Knowledgebase extended: this project, a subsystem, four decisions, three issues, three tasks, the
   WorkSession, this checkpoint.
+- Committed the schema and the knowledgebase capture as `10b60fd` (40 files), scoped by pathspec so
+  unrelated in-flight work (the `frontend-tb/` deletions, `scripts/*.txt`, the PocketBase checkpoint) was
+  deliberately left uncommitted.
 
 ## Current verified state
 
@@ -52,7 +55,11 @@ shaped it so the next session does not rediscover TrailBase's limits the hard wa
 - Enum validation, link uniqueness, the partial unique barcode index and `expand` inlining were each
   exercised over HTTP with the expected results (full table under
   [[TB-0001 Redesign the TrailBase schema]] `## Verification`).
-- Installed server is `trail v0.33.15-0-g2b867e5a`; nothing was verified against a newer version.
+- Installed server is now `trail v0.33.22-0-g3dfb2f70`; the binary was upgraded mid-session, after the
+  design work had been validated on `v0.33.15`. The depot was then re-verified on the new version: the
+  migration applies to an empty depot, all 17 record APIs resolve, the server boots
+  (`Listening on http://[::1]:4000`), and unauthenticated requests still return `403`.
+- `traildepot/data/` is still absent after all of that, so the first real run remains a clean first run.
 
 ## Files and artifacts changed
 
@@ -84,8 +91,10 @@ shaped it so the next session does not rediscover TrailBase's limits the hard wa
 
 - None blocking. Unresolved: is `REAL` money acceptable, or should it become integer cents before any
   data is loaded? Is `parties`↔`companies` really many-to-many?
-- Both recorded TrailBase limitations are version-specific (`v0.33.15`) and should be re-probed after an
-  upgrade, especially the scalar JSON-schema behaviour, which would restore a self-describing enum.
+- Both recorded TrailBase limitations were re-probed on `v0.33.22`, not just the older binary: the
+  scalar JSON-schema behaviour is unchanged (`400` on every scalar write), so the enum decision holds.
+  The view type-inference limit was **not** re-probed — the views no longer exist to test; re-probe from
+  the preserved SQL in `full_database_schema.sql` if that ever becomes load-bearing.
 
 ## Exact next action
 
@@ -98,8 +107,9 @@ spec, start from `trailbase/README.md`.
 
 - Nothing for the completed redesign; its verification is recorded and reproducible from
   `trailbase/README.md`.
-- `python scripts/kb_check.py vault` after this knowledgebase change (it passed at 100/100 before, and
-  this session added 13 notes).
+- `python scripts/kb_check.py vault`: **PASS, 100/100 (A)** — 673 links resolved / 0 unresolved / 0
+  ambiguous, 0 orphans, 29 tasks with 19 Done and all 19 verified, continuity 1.00. The vault gained 13
+  objects in this session.
 
 ## Resume procedure
 

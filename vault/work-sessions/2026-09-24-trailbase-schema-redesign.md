@@ -39,7 +39,8 @@ its custom JSON-schema feature, which the owner asked for explicitly.
   TrailBase's features, and ideally UI schema from the same place as validation schema.
 - The system's specs and structure are expected to change drastically soon, so the durable output of
   this session is the decisions and the measurement record, not a fixed product spec.
-- No installed `v0.33.22`; everything was measured on the installed `v0.33.15`.
+- The binary was `v0.33.15` for the design work and was upgraded to `v0.33.22` before the session ended,
+  so every finding was re-checked on the new version before being recorded.
 
 ## Execution plan (as executed)
 
@@ -72,6 +73,11 @@ its custom JSON-schema feature, which the owner asked for explicitly.
   allow-listed for `expand`. `invoice_maker` is deliberately excluded because TrailBase forbids expanding
   a hidden `_user` table.
 - Verified on a seeded throw-away depot and then on the real depot, then removed all scratch state.
+- Committed the schema plus the knowledgebase capture as `10b60fd` (40 files), with a pathspec so the
+  unrelated in-flight work in the tree stayed out of the commit.
+- Re-verified everything on the upgraded `v0.33.22` binary: the migration applies and the server boots,
+  all 17 record APIs resolve, unauthenticated requests return `403`, and the scalar JSON-schema probe
+  returns exactly the same results as on `v0.33.15`.
 
 ## Changed artifacts
 
