@@ -1,0 +1,14 @@
+{% macro simple(columns, rows) -%}
+<table class="data">
+<thead><tr>
+{% for c in columns %}<th class="{{ c.cls }}">{{ c.label }}</th>{% endfor %}
+</tr></thead>
+<tbody>
+{% for r in rows -%}
+<tr class="{{ r.tone }}">{% for c in columns %}<td class="{{ c.cls }}">{{ r[c.key] }}</td>{% endfor %}</tr>
+{% else -%}
+<tr><td class="empty" colspan="{{ columns|length }}">No data for the selected filters.</td></tr>
+{% endfor -%}
+</tbody>
+</table>
+{%- endmacro %}

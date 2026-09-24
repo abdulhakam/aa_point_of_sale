@@ -1,0 +1,10 @@
+<header class="topbar">
+  <div class="brand">{{ appName }}</div>
+  <div class="clock" data-clock></div>
+  <div class="who">
+    <span class="who-name">{{ user.name }}</span>
+    <form method="post" action="/logout">
+      <button class="btn small" type="submit">Logout</button>
+    </form>
+  </div>
+</header>

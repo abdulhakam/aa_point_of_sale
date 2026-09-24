@@ -8,6 +8,8 @@ belongs_to:
 related_to:
   - "[[Backend — TrailBase Server]]"
   - "[[Frontend — Next.js Application]]"
+  - "[[Frontend — TrailBase Server-Rendered App]]"
+  - "[[TB-0004 Build the server-rendered TrailBase frontend]]"
   - "[[Route Map]]"
 created: 2026-09-24
 updated: 2026-09-24
@@ -40,6 +42,14 @@ needs either the `trailbase` client or a thin adapter shim. A previous TrailBase
 (`frontend-tb/`) exists in git history but is deleted from the working tree and targets the *earlier*
 scaffold's names (`products`, `companies2parties`, `partiesEnumType`, TEXT enums), so it is a reference
 for structure, not a starting point.
+
+**Partly overtaken.** [[TB-0004 Build the server-rendered TrailBase frontend]] built a *new*
+server-rendered client in `frontend-ssr/` that authenticates against TrailBase and aggregates the
+reports itself, so the goal above is met for that app. What remains here is the same wiring for the
+**Next.js** client — or the decision to retire it in favour of the new one. The report-aggregation
+warning below is now answered in practice by `frontend-ssr/src/lib/reports/views.js`, which rebuilds the
+preserved view SQL in JavaScript and is verified numerically against it; that approach is the reference
+if the Next.js client is wired up later.
 
 Held deliberately: see [[TrailBase Backend]]. The TrailBase system's specs and structure are expected to
 change substantially, so this should not be started until they are re-stated.

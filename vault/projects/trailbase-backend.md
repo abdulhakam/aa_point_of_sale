@@ -72,8 +72,15 @@ Out of scope:
 - Two TrailBase limitations shape the design and are recorded as issues:
   [[Issue — TrailBase rejects scalar JSON-schema columns]] (why enums are codes + foreign keys rather than
   declared enum schemas) and [[Issue — TrailBase view type-inference limits]] (why there are no views).
-- `frontend-tb/` exists in git but is deleted from the working tree; it targets the *earlier* scaffold
-  (`products`, `companies2parties`, `partiesEnumType`, `TEXT` enums) and is a structural reference only.
+- A **server-rendered frontend** for the dashboard, reports and management now exists in
+  `frontend-ssr/`: an Express app that renders MiniJinja templates from the filesystem and computes
+  every report itself on worker threads, using TrailBase only for CRUD and auth. See
+  [[Frontend — TrailBase Server-Rendered App]] and
+  [[TB-0004 Build the server-rendered TrailBase frontend]]; `npm run smoke` passes 55/55.
+- The earlier React/Vite TrailBase scaffold remains deleted from the working tree (and present in git
+  history) as `frontend-tb/`; it targets the *older* schema (`products`, `companies2parties`,
+  `partiesEnumType`, `TEXT` enums) and is a structural reference only. The new app deliberately lives
+  at a different path so the two never share files.
 
 ## Architecture at a glance
 
@@ -97,6 +104,8 @@ cannot expose the PocketBase-style report views.
 ## Subsystems
 
 - [[Backend — TrailBase Server]] — depot layout, record APIs, auth, configuration, and the gotchas.
+- [[Frontend — TrailBase Server-Rendered App]] — the dashboard/reports/management client, its report
+  engine and its verification.
 
 ## References
 
@@ -120,6 +129,7 @@ cannot expose the PocketBase-style report views.
 ## Tasks
 
 - [x] [[TB-0001 Redesign the TrailBase schema]] — Done
+- [x] [[TB-0004 Build the server-rendered TrailBase frontend]] — Done (55/55 smoke checks)
 - [ ] [[TB-0002 Wire a frontend to the TrailBase server]] — Backlog (held pending re-specification)
 - [ ] [[TB-0003 Migrate PocketBase data into the TrailBase schema]] — Backlog (held pending re-specification)
 
@@ -132,16 +142,19 @@ restated, not because a task blocks them.
 ```mermaid
 flowchart TD
   T1["TB-0001 · Redesign the TrailBase schema · Done"]
+  T4["TB-0004 · Build the server-rendered frontend · Done"]
   T2["TB-0002 · Wire a frontend to the TrailBase server · Backlog"]
   T3["TB-0003 · Migrate PocketBase data into the TrailBase schema · Backlog"]
+  T1 --> T4
   T1 -.->|"held: specs to be restated"| T2
   T1 -.->|"held: specs to be restated"| T3
 ```
 
-Text alternative: the redesign (TB-0001) is complete. Wiring a client and migrating real data are the two
-known follow-ons; both are deliberately parked until the TrailBase specification is settled, because the
-schema they would target is expected to change.
+Text alternative: the redesign (TB-0001) is complete, and the server-rendered frontend (TB-0004) was
+built on top of it and verified. Wiring the *Next.js* client and migrating real data remain the two open
+follow-ons; both are parked until the TrailBase specification is settled, because the schema they would
+target is expected to change.
 
 ## Current checkpoint
 
-- [[Checkpoint — TrailBase Backend — 2026-09-24]]
+- [[Checkpoint — TrailBase Frontend — 2026-09-24]] (supersedes [[Checkpoint — TrailBase Backend — 2026-09-24]])

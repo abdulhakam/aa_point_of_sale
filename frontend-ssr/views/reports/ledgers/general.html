@@ -1,0 +1,11 @@
+{% extends 'reports/report.html' %}
+{% block extra_inputs %}
+<label class="field"><span>Opening Recievables</span><input type="number" step="0.01" name="openingRecievables" value="{{ filters.openingRecievables }}"></label>
+<label class="field"><span>Opening Payables</span><input type="number" step="0.01" name="openingPayables" value="{{ filters.openingPayables }}"></label>
+<label class="field"><span>Opening Cash</span><input type="number" step="0.01" name="openingCash" value="{{ filters.openingCash }}"></label>
+{% endblock %}
+{% block before_table %}
+{% if opening %}
+<p class="report-opening">Opening Balance — Recievables: {{ opening.recievableText }} · Payables: {{ opening.payableText }} · Cash: {{ opening.cashText }}</p>
+{% endif %}
+{% endblock %}

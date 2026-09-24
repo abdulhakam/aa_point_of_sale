@@ -1,0 +1,9 @@
+{% extends 'layout.html' %}
+{% block body %}
+<h1 class="page-title">Management</h1>
+<section class="grid">
+{% for e in entities %}
+  <a class="tile tone-gray" href="/management/{{ e.key }}"><span class="tile-title">{{ e.label }}</span></a>
+{% endfor %}
+</section>
+{% endblock %}

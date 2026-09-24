@@ -1,0 +1,18 @@
+{% macro render_field(field, filters, options) -%}
+{% if field.type == 'date' -%}
+<label class="field"><span>{{ field.label }}</span><input type="date" name="{{ field.name }}" value="{{ filters[field.name] }}"></label>
+{% elif field.type == 'select' -%}
+<label class="field"><span>{{ field.label }}</span>
+<select name="{{ field.name }}" data-searchable>
+<option value="">All</option>
+{% for o in options[field.source] -%}
+<option value="{{ o.value }}"{% if filters[field.name] == o.value %} selected{% endif %}>{{ o.label }}</option>
+{% endfor -%}
+</select>
+</label>
+{% elif field.type == 'check' -%}
+<label class="field check"><input type="checkbox" name="{{ field.name }}"{% if filters[field.name] %} checked{% endif %}> <span>{{ field.label }}</span></label>
+{% else -%}
+<label class="field"><span>{{ field.label }}</span><input type="text" name="{{ field.name }}" value="{{ filters[field.name] }}" autocomplete="off"></label>
+{% endif -%}
+{%- endmacro %}
