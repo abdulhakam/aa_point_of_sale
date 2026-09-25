@@ -1,0 +1,10 @@
+{
+  "disabledSkills": [
+    "archify",
+    "caveman",
+    "caveman-commit",
+    "caveman-compress",
+    "caveman-help",
+    "caveman-review"
+  ]
+}

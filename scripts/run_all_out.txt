@@ -1,0 +1,24 @@
+==============================================================================
+POS-0018 consolidated suite — D:\1Aeid4nI3hdH92f3D\abdulhakam\WORK\AA\ERP_DB\aa_point_of_sale\PRODUCTION\PRODUCTION_FULL\aa_point_of_sale
+==============================================================================
+PocketBase at http://127.0.0.1:8090: reachable — running all suites
+
+  PASS  POS-0008  index verification                    0.1s   RESULT: PASS — all indexes present and used
+  PASS  POS-0014  report SQL equivalence               28.0s   RESULT: PASS — aggregated SQL matches the previous implementation
+  PASS  POS-0018  summary-totals equivalence           18.7s   RESULT: PASS — payments_summary totals match the payments calculator
+  PASS  POS-0012  pagination behaviour                  7.0s   RESULT: PASS — pagination behaves correctly
+  PASS  POS-0010  cache config + write/read             1.9s   RESULT: PASS — cache config verified; writes reflected immediately in reads
+  PASS  POS-0016  expand-trim equivalence              10.5s   RESULT: PASS — client-resolved names are equivalent to the removed deep expand
+  PASS  POS-0018  performance regression               12.8s   RESULT: PASS — no performance regression; heavy shapes reduced, ledger under 60 s
+
+==============================================================================
+Summary
+  PASS  POS-0008  index verification
+  PASS  POS-0014  report SQL equivalence
+  PASS  POS-0018  summary-totals equivalence
+  PASS  POS-0012  pagination behaviour
+  PASS  POS-0010  cache config + write/read
+  PASS  POS-0016  expand-trim equivalence
+  PASS  POS-0018  performance regression
+==============================================================================
+RESULT: PASS — 7 suite(s) passed
