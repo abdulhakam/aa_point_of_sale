@@ -27,9 +27,11 @@ browser ──HTTP──▶ Express (this app)                       ──REST�
 - **Auth is TrailBase's JWT only.** The browser posts credentials to this app, which exchanges
   them at `/api/auth/v1/login` and stores the returned `auth_token`/`refresh_token` in a
   signed, httpOnly cookie. The token is refreshed automatically when it is close to expiry.
-- **Reports are aggregated on worker threads.** The base tables are read once and cached
-  (`CACHE_TTL_SECONDS`); the derived views and each report are computed in a
-  `worker_threads` pool sized to the CPU count (see `src/lib/reports/`).
+- **Reports are aggregated on worker threads.** A background job keeps an in-memory snapshot of
+  the base tables and derived views (see `src/lib/reports/`). Each tick fingerprints every table
+  (row count + newest `updated`) and only re-reads, rebuilds and re-renders what actually changed;
+  a management write invalidates just the tables it touched. Report aggregation runs in a
+  `worker_threads` pool sized to the CPU count.
 
 ## Quick start
 
@@ -57,7 +59,7 @@ or the credentials printed on the backend's first run).
 | `SESSION_SECRET` | HMAC key for the session cookie | *(insecure dev default)* |
 | `APP_NAME` | title shown in the header | `AA Point of Sale` |
 | `WORKER_THREADS` | report threads; `0` = CPUs − 1 | `0` |
-| `CACHE_TTL_SECONDS` | base-table/derived-view cache TTL | `60` |
+| `REFRESH_INTERVAL_SECONDS` | background refresh tick; `0` disables it | `60` |
 | `COOKIE_SECURE` | set `true` when served over HTTPS | unset |
 
 ## What is implemented

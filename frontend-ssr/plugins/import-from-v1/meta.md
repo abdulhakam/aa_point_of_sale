@@ -43,7 +43,8 @@ are used only for the requests made while the import runs; nothing is stored.
 ## Notes
 
 - Re-running without *Clear existing data* will duplicate rows.
-- The report screens cache their base tables for `CACHE_TTL_SECONDS` (60s by
-  default) after an import, so new data may take up to a minute to appear.
+- The report screens keep an in-memory snapshot that a background job refreshes every
+  `REFRESH_INTERVAL_SECONDS` (60s by default), so data imported straight into TrailBase appears
+  within that interval.
 - The default TrailBase URL is `http://127.0.0.1:4000`; the default PocketBase
   URL is `http://127.0.0.1:8090`.

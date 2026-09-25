@@ -1,6 +1,6 @@
 ---
 type: Checkpoint
-status: Current
+status: Superseded
 belongs_to:
   - "[[TrailBase Backend]]"
 work_session:

@@ -1,0 +1,23 @@
+{
+  "title": "Outstanding Payments Report",
+  "template": "page.html",
+  "needs": { "views": ["outstanding"] },
+  "compute": { "report": "outstanding" },
+  "filters": [
+    { "name": "booker", "label": "Booker", "type": "select", "source": "order_bookers" },
+    { "name": "area", "label": "Area", "type": "select", "source": "areas" },
+    { "name": "section", "label": "Section", "type": "select", "source": "sections" }
+  ],
+  "columns": [
+    { "key": "party_name", "label": "Party Name" },
+    { "key": "invoice_nos", "label": "Invoices" },
+    { "key": "invoice_totalText", "label": "Total Amount", "right": true },
+    { "key": "paid_totalText", "label": "Total Paid", "right": true },
+    { "key": "balanceText", "label": "Balance", "right": true }
+  ],
+  "totals": [
+    { "label": "Invoices", "key": "invoice" },
+    { "label": "Paid", "key": "paid" },
+    { "label": "Balance", "key": "balance" }
+  ]
+}

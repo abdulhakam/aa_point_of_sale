@@ -1,8 +1,8 @@
 import express from "express";
 import { requireAuth } from "../lib/auth.js";
 import { page, qs, qsb, ah } from "../lib/http.js";
-import { monthStart, today, yearStart } from "../lib/format.js";
-import { REPORTS } from "../lib/reports/reports.js";
+import { monthStart, today, yearStart } from "../../compute/format.js";
+import { REPORTS } from "../../compute/reports.js";
 
 /** Reports index tiles (same set and labels as the old REPORTS screen). */
 export const REPORT_INDEX = [
@@ -345,6 +345,9 @@ export function reportRoutes({ config, render, reports }) {
       })
     );
   });
+
+  // Background refresh job state, for the colour indicator in the top bar.
+  router.get("/reports/status", auth, (req, res) => res.json(reports.status()));
 
   router.get("/reports/ledgers", auth, (req, res) => {
     res.send(page(shell(req, "reports", "Ledgers"), "reports/ledgers/index.html", { tiles: LEDGER_INDEX }));

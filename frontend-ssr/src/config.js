@@ -17,10 +17,12 @@ export const config = {
   port: num(process.env.PORT, 3100),
   sessionSecret: process.env.SESSION_SECRET || "dev-insecure-secret-change-me",
   appName: process.env.APP_NAME || "AA Point of Sale",
-  cacheTtlMs: num(process.env.CACHE_TTL_SECONDS, 60) * 1000,
+  refreshIntervalMs: num(process.env.REFRESH_INTERVAL_SECONDS, 60) * 1000,
   viewsDir: path.join(rootDir, "views"),
   publicDir: path.join(rootDir, "public"),
   pluginsDir: path.join(rootDir, "plugins"),
+  pagesDir: path.join(rootDir, "pages"),
+  computeDir: path.join(rootDir, "compute"),
 };
 
 /** Worker threads for report aggregation: explicit setting, else CPUs - 1 (min 1). */

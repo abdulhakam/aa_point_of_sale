@@ -161,7 +161,7 @@ async function startFrontend() {
       SESSION_SECRET,
       APP_NAME: "AA Point of Sale (smoke)",
       WORKER_THREADS: "2",
-      CACHE_TTL_SECONDS: "5",
+      REFRESH_INTERVAL_SECONDS: "5",
     },
   });
   let log = "";

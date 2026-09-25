@@ -1,6 +1,6 @@
 import { parentPort } from "node:worker_threads";
-import { runReport } from "./reports.js";
-import { buildViews } from "./views.js";
+import { runReport } from "../../../compute/reports.js";
+import { buildViews } from "../../../compute/views.js";
 
 /**
  * Report worker. Runs CPU-bound aggregation off the request thread so several

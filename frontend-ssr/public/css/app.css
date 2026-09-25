@@ -69,6 +69,21 @@ a { color: var(--accent); }
 .who { display: flex; align-items: center; gap: 0.6rem; }
 .who-name { color: var(--muted); }
 .who form { margin: 0; }
+.topbar-meta { display: flex; align-items: center; gap: 1rem; }
+
+/* ------------------------------------------- background refresh indicator */
+
+/* idle gray · fetching blue · processing red · rendering yellow */
+.job { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+.job-dot { width: 0.62rem; height: 0.62rem; border-radius: 50%; background: #9aa3ad; flex: 0 0 auto; }
+.job--fetch .job-dot { background: #1c5fd4; }
+.job--process .job-dot, .job--error .job-dot { background: #c62828; }
+.job--render .job-dot { background: #d19a00; }
+.job--fetch .job-text { color: #1c5fd4; }
+.job--process .job-text, .job--error .job-text { color: #c62828; }
+.job--render .job-text { color: #d19a00; }
+@media print { .job { display: none; } }
+@media (max-width: 640px) { .job-text { display: none; } }
 
 .main { padding: 1rem; flex: 1; min-width: 0; }
 
@@ -221,6 +236,11 @@ table.data td.actions form { display: inline; margin: 0 0 0 0.25rem; }
 .tag { display: inline-block; padding: 0.05rem 0.5rem; border: 1px solid var(--border); border-radius: 999px; background: #eef1f4; color: var(--muted); font-size: 0.75rem; }
 
 .notice { padding: 1rem; background: #fff8e1; border: 1px solid #f0d9a0; border-radius: 6px; }
+
+/* ------------------------------------------------- declarative page status */
+
+.notice[data-state="ok"] { background: #eef7ee; border-color: #bfe0bf; }
+.notice[data-state="error"] { background: #fdecea; border-color: #f0b3ad; color: var(--danger); }
 
 /* ------------------------------------------------------------------- flash */
 

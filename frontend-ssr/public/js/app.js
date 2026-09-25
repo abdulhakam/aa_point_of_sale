@@ -1,6 +1,7 @@
 /*
  * Minimal progressive enhancement — the app works without this file.
  *  - clock in the top bar
+ *  - background refresh indicator (gray idle / blue fetching / red processing / yellow rendering)
  *  - PRINT buttons
  *  - confirmation on destructive forms
  *  - type-to-filter for long <select> lists (data-searchable)
@@ -54,9 +55,68 @@
     });
   }
 
+  /**
+   * Background refresh state, polled from /reports/status and shown as a dot:
+   * gray = idle, blue = fetching from TrailBase, red = processing views,
+   * yellow = rendering reports.
+   */
+  function initJobIndicator() {
+    var el = document.querySelector("[data-job]");
+    if (!el) return;
+    var text = el.querySelector("[data-job-text]");
+    var LABELS = { idle: "idle", fetch: "fetching", process: "processing", render: "rendering", error: "error" };
+
+    function ago(ms) {
+      if (!ms) return "";
+      var s = Math.round((Date.now() - ms) / 1000);
+      if (s < 60) return s + "s ago";
+      if (s < 3600) return Math.round(s / 60) + "m ago";
+      return Math.round(s / 3600) + "h ago";
+    }
+
+    function detail(state) {
+      var n;
+      if (state.phase === "fetch") return "";
+      if (state.phase === "process") { n = (state.rebuiltViews || []).length; return n ? " " + n + " view(s)" : ""; }
+      if (state.phase === "render") { n = (state.rebuiltReports || []).length; return n ? " " + n + " report(s)" : ""; }
+      if (state.phase === "error") return state.error ? " " + state.error : "";
+      return state.lastRunAt || state.lastCheckedAt ? " · " + ago(state.lastRunAt || state.lastCheckedAt) : " · not loaded";
+    }
+
+    function tooltip(state) {
+      if (!state) return "";
+      if (state.phase && state.phase !== "idle") return "Background refresh: " + state.phase;
+      var bits = [];
+      if (state.lastRunAt) bits.push("last change " + ago(state.lastRunAt));
+      if (state.changed && state.changed.length) bits.push("changed: " + state.changed.join(", "));
+      if (state.rebuiltViews && state.rebuiltViews.length) bits.push("views rebuilt: " + state.rebuiltViews.join(", "));
+      if (state.durationMs != null) bits.push("took " + state.durationMs + "ms");
+      bits.push((state.rows || 0).toLocaleString() + " rows in memory");
+      return bits.join(" · ");
+    }
+
+    function paint(state) {
+      var phase = state && state.phase ? state.phase : "idle";
+      el.className = "job job--" + phase;
+      if (text) text.textContent = (LABELS[phase] || phase) + (state ? detail(state) : "");
+      el.title = tooltip(state) || "Background data refresh";
+    }
+
+    function poll() {
+      fetch("/reports/status", { headers: { accept: "application/json" } })
+        .then(function (res) { return res.ok ? res.json() : null; })
+        .then(function (state) { if (state) paint(state); })
+        .catch(function () {});
+    }
+
+    poll();
+    setInterval(poll, 3000);
+  }
+
   function init() {
     tick();
     setInterval(tick, 30000);
+    initJobIndicator();
     enhancePrint();
     enhanceConfirm();
     enhanceSelects();

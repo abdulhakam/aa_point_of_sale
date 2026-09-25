@@ -55,6 +55,12 @@ const multiValues = (form, name) => {
   return list.map((v) => String(v)).filter(Boolean);
 };
 
+/** The base tables a write to this entity can change: the record plus its link tables. */
+const touchedTables = (entity) => [
+  entity.api,
+  ...entity.fields.filter((field) => field.type === "multi" && field.link).map((field) => field.link),
+];
+
 /** Replace a link table's rows for one parent with exactly `ids`. */
 async function syncLinks(tb, token, field, parentId, ids) {
   const existing = await tb.listAll(field.link, { token, filter: { [field.field]: parentId } });
@@ -214,7 +220,7 @@ export function managementRoutes({ config, render, reports, tb }) {
       if (field.type !== "multi") continue;
       await syncLinks(tb, req.token, field, recordId, multiValues(req.body, field.name));
     }
-    reports.invalidate();
+    reports.invalidate(touchedTables(entity));
     res.redirect(`/management/${req.params.entity}?status=ok&message=${id ? "Updated" : "Created"}`);
   }
 
@@ -238,7 +244,7 @@ export function managementRoutes({ config, render, reports, tb }) {
       if (!entity) return res.status(404).send("Unknown entity");
       if (entity.softDelete) await tb.update(entity.api, req.params.id, { deleted: 1 }, req.token);
       else await tb.remove(entity.api, req.params.id, req.token);
-      reports.invalidate();
+      reports.invalidate(touchedTables(entity));
       res.redirect(`/management/${req.params.entity}?status=ok&message=Deleted`);
     })
   );

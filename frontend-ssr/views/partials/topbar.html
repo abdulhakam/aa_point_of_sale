@@ -1,10 +1,16 @@
 <header class="topbar">
   <div class="brand">{{ appName }}</div>
-  <div class="clock" data-clock></div>
-  <div class="who">
-    <span class="who-name">{{ user.name }}</span>
-    <form method="post" action="/logout">
-      <button class="btn small" type="submit">Logout</button>
-    </form>
+  <div class="topbar-meta">
+    <div class="job" data-job title="Background data refresh">
+      <span class="job-dot" data-job-dot></span>
+      <span class="job-text" data-job-text>idle</span>
+    </div>
+    <div class="clock" data-clock></div>
+    <div class="who">
+      <span class="who-name">{{ user.name }}</span>
+      <form method="post" action="/logout">
+        <button class="btn small" type="submit">Logout</button>
+      </form>
+    </div>
   </div>
 </header>

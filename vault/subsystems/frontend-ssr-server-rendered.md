@@ -30,7 +30,9 @@ server-held credential.
 
 It exists because TrailBase has no report views (see
 [[Decision — Drop SQL views; aggregate reports client-side]]), so every derived number has to be
-computed somewhere. Here that somewhere is the Node process, not the browser and not the database.
+computed somewhere. Originally that somewhere was the Node process; the declarative page host now offers to
+move the report computation into the browser while Node keeps the views warm, which is currently slower
+(see Declarative pages).
 
 Scope is deliberately narrow — the three screens that do not need interactive or high-frequency data
 updates: **dashboard, reports and management**. Invoices, cash memo and printing are untouched.
@@ -44,25 +46,32 @@ frontend-ssr/
   .env.example
   src/
     server.js                # Express app, middleware wiring, graceful shutdown
-    config.js                # env-driven configuration; worker count
+    config.js                # env-driven configuration; worker count; refresh interval
     lib/
       trailbase.js           # TrailBase REST client (auth + records)
       session.js             # signed httpOnly cookie session; JWT decode/expiry
       auth.js                # session middleware, token refresh, requireAuth
       http.js                # page rendering helper, error handler, async wrapper
-      render.js              # MiniJinja environment + filesystem loader + filters
-      format.js              # money/qty/date helpers (mirrors the old frontend)
+      render.js              # MiniJinja environment + multi-root loader + filters
       entities.js            # management screen definitions (fields, columns)
       plugins.js             # plugin registry: scans plugins/ and parses each meta.md
+      pages.js               # page registry: scans pages/ and normalises each meta.json
       reports/
-        data.js              # base tables read + relation normalisation
-        views.js             # the PocketBase view SQL rebuilt in JavaScript
-        reports.js           # one function per report (filters, rows, totals)
+        data.js              # base tables read, relation normalisation, change probe
         worker.js / pool.js  # worker_threads pool
-        index.js             # cached views + dispatch facade
-    routes/                  # auth, dashboard, reports, management, plugins
-  views/                     # the Jinja templates (layout, partials, pages)
-  public/                    # app.css, app.js, favicon
+        index.js             # incremental snapshot + dispatch facade
+    routes/                  # auth, dashboard, reports, management, plugins, pages
+  compute/                   # environment-neutral compute, shared with the browser
+    views.js                 # the PocketBase view SQL rebuilt in JavaScript
+    reports.js               # one function per report (filters, rows, totals)
+    format.js                # money/qty/date helpers (mirrors the old frontend)
+    ids.js                   # read-side relation accessor
+  pages/                     # one folder per page (meta.json + template); see Declarative pages
+  views/                     # the Jinja templates (layout, partials, legacy report pages)
+  public/
+    css/app.css
+    js/app.js                # progressive enhancement + the refresh indicator
+    js/runtime/              # the browser page runtime (pool, worker, driver)
   plugins/                   # one folder per plugin (meta.md + index.html); see Plugins below
 ```
 
@@ -80,6 +89,9 @@ Routes (all except `/login` require a session):
 | `POST /management/<entity>/create`, `…/<id>/update`, `…/<id>/delete` | writes |
 | `GET /plugins` | plugin hub, one card per directory under `plugins/` |
 | `GET /plugins/<slug>/` | a plugin's static page (login required) |
+| `GET /p`, `GET /p/<slug>`, `GET /p/<slug>/data` | the declarative page host — see Declarative pages |
+| `GET /compute/*` | the shared compute modules, served to the browser runtime |
+| `GET /reports/status` | the refresh job's phase and last-run summary (top-bar indicator) |
 | `GET /healthz` | liveness + worker-pool stats |
 
 ## Plugins
@@ -101,6 +113,37 @@ Plugin pages link the shared stylesheet at `/static/css/app.css` to look like pa
 Bundled: **Import from v1** — [[Import from v1 Plugin]], a backend-free PocketBase→TrailBase migration
 ([[TB-0007 Add the plugins hub and the Import from v1 migration plugin]]).
 
+## Declarative pages
+
+Adding a page is adding a folder under `pages/`:
+
+```text
+pages/<slug>/
+  meta.json      # title, needs.views (+ raw tables), compute.report, requires, filters, columns, totals
+  page.html      # Jinja template (usually two lines: extend the layout, include the shared body)
+```
+
+Node exposes three generic routes and a static mount: `GET /p` lists the pages, `GET /p/<slug>` renders the
+declared template with the manifest embedded as JSON, `GET /p/<slug>/data` serves the views the manifest names
+(gzipped, `ETag` = payload revision + snapshot build) plus any raw tables, and `GET /compute/*` serves the
+shared compute modules. **No page-specific code exists in Node**: `src/lib/pages.js` discovers folders and
+normalises manifests, and the report is only ever a *name* (`compute.report`) resolved from
+`compute/reports.js` by whoever runs it.
+
+The browser runtime (`public/js/runtime/`) is a flat worker pool: the driver fetches the data, fills `select`
+options from the declared source tables, hands `{views, filters}` to a worker, and fills rows and totals. A
+flat pool is deliberate — worker-inside-worker is a Safari compatibility trap and buys nothing over dispatching
+from the main thread.
+
+The compute layer is shared, not duplicated: `compute/` touches no Node API, so Node imports the same files the
+browser fetches at `/compute/`.
+
+All 14 reports have pages — [[TB-0011 Add the declarative page host and migrate the reports to it]] and
+[[Decision — Declarative pages: a folder is a page, the server is a generic host]]. **The page host is currently
+slower than the server-rendered routes**, because it ships the whole view set to the browser
+([[Issue — Declarative pages ship whole views and are slower than server rendering]]), so `/reports/*` remains
+the production path until [[TB-0008 Serve report results from the page host instead of whole views]] lands.
+
 ## How it works
 
 - TrailBase is used **only** for CRUD (`/api/records/v1/*`) and auth (`/api/auth/v1/*`). Verified
@@ -110,8 +153,15 @@ Bundled: **Import from v1** — [[Import from v1 Plugin]], a backend-free Pocket
   written as canonical UUID text, and unauthenticated requests are answered `403`.
 - The browser holds a signed, httpOnly session cookie carrying the TrailBase tokens; the access token
   is refreshed automatically when it is within 60 s of expiry.
-- Base tables are read once and cached (`CACHE_TTL_SECONDS`); a management write invalidates the
-  cache. The derived views are rebuilt in-process.
+- A background job keeps an in-memory snapshot of the base tables and the derived views. Each tick it probes
+  every table for a fingerprint (row count + newest `updated`), re-reads only tables that changed, rebuilds
+  only the views they feed, and re-renders only the reports that read one. A management write invalidates
+  exactly the tables it touched, and the snapshot is published before the warm re-render so a request never
+  waits on it. A quiet tick costs 17 cheap requests and no CPU. `REFRESH_INTERVAL_SECONDS` (default 60 s)
+  replaces the old `CACHE_TTL_SECONDS` TTL — see
+  [[Decision — Refresh the report snapshot incrementally from table fingerprints]].
+- **The legacy `/reports/<report>` routes still serve** every report page from Node. Their replacements live
+  in `pages/` but are currently slower — see Declarative pages below.
 - Each report is dispatched to a `worker_threads` pool with only the view arrays it declares, so
   aggregation runs off the request thread; if the pool cannot start, the same pure function runs
   in-process.
@@ -121,7 +171,7 @@ Bundled: **Import from v1** — [[Import from v1 Plugin]], a backend-free Pocket
 
 ## Report arithmetic
 
-`src/lib/reports/views.js` reproduces the PocketBase view SQL — `transaction_view`, `invoice_view`,
+`compute/views.js` reproduces the PocketBase view SQL — `transaction_view`, `invoice_view`,
 `transactions_report`, `payments_view`, `payments_invoices_report`, `items_report`,
 `items_difference_report`, `ledger_journal`, `ledger_party`, `ledger_booker`, `ledger_area`,
 `outstanding_summary`, `counts_for_row_numbers` — and `reports.js` reproduces the per-page
@@ -154,6 +204,12 @@ assertions pass**, including hand-computed amounts that must equal the preserved
 `91.00`, stock `4510.00`, outstanding `150.00`, and the `403.85 / 161.54` revenue-share split).
 Details and the expectation table are in `frontend-ssr/README.md`.
 
+The declarative page host has its own parity evidence: on a seeded throwaway depot, the profit page renders
+`400.00` over 1 row and 13 columns and the stock page `-600.00`, **identical** to the server-rendered routes,
+with filters applying and resetting correctly and revalidation returning `304`. On the live 60k-row dataset
+the two paths were measured against each other — the page host is slower everywhere, with the numbers and the
+method in [[Issue — Declarative pages ship whole views and are slower than server rendering]].
+
 ## Constraints and gotchas
 
 - **The backend has to be reachable on IPv4 loopback.** `TRAILBASE_URL` defaults to
@@ -169,6 +225,13 @@ Details and the expectation table are in `frontend-ssr/README.md`.
   is `lenient` but chained attribute access on a missing object still raises, `{% set %}` inside a
   `{% for %}` does not escape the loop, and a panic in the engine corrupts the runtime for the whole
   process. Totals are therefore computed in JavaScript and passed in, never accumulated in a template.
+- **MiniJinja hands templates a proxy, so `| json` on a value produces `{}`.** A page manifest must be
+  serialised in Node (`metaJson`) and embedded with `| safe`; the `json` filter is only safe on values that are
+  real JavaScript objects.
+- **A module worker's script is cached aggressively.** Changing `public/js/runtime/worker.js` is not picked up
+  by a plain revalidation; the worker URL in `pool.js` carries a version query that must be bumped with it.
+- **`compute/` must stay free of Node APIs.** It is served to the browser at `/compute/`; one `Buffer` there
+  breaks the page host.
 - `expand`, `excluded_columns` and hidden columns are validated by TrailBase at startup, so a config
   typo fails fast.
 - `/reports/payments/areawise` is not implemented: in the old frontend it is a duplicate of the
@@ -182,3 +245,8 @@ Details and the expectation table are in `frontend-ssr/README.md`.
 - [[TB-0004 Build the server-rendered TrailBase frontend]] — the work that built it.
 - [[Import from v1 Plugin]] — the bundled migration plugin.
 - [[Issue — Report cache lag after a client-side import]] — the one loose end of a browser-only import.
+- [[Decision — Refresh the report snapshot incrementally from table fingerprints]] — how the snapshot stays
+  fresh without re-reading everything.
+- [[Decision — Declarative pages: a folder is a page, the server is a generic host]] — the page host.
+- [[Issue — Declarative pages ship whole views and are slower than server rendering]] — the measured defect.
+- [[TB-0008 Serve report results from the page host instead of whole views]] — its fix.

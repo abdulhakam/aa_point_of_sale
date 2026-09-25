@@ -8,7 +8,7 @@
  * (`frontend/src/app/app/reports/**`).
  */
 
-import { num, round2, qtyDisplay, dateOnly } from "../format.js";
+import { num, round2, qtyDisplay, dateOnly } from "./format.js";
 
 export const INVOICE_TYPE = { purchase: 0, sale: 1, return: 2, difference: 3 };
 export const PARTY_TYPE = { customer: 0, supplier: 1 };

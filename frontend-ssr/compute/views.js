@@ -13,8 +13,8 @@
  *  - `transaction_view.profit` is total cost, not margin.
  */
 
-import { num, round2, qtyDisplay } from "../format.js";
-import { relId } from "../uuid.js";
+import { num, round2, qtyDisplay } from "./format.js";
+import { relId } from "./ids.js";
 
 const byId = (rows) => {
   const m = new Map();
@@ -456,41 +456,170 @@ export function buildCounts(base) {
   };
 }
 
+/** refs — the reference lists the templates and filter dropdowns read. */
+export function buildRefs(base) {
+  return {
+    sections: base.sections,
+    categories: base.categories,
+    companies: base.companies,
+    areas: base.areas,
+    parties: base.parties,
+    bookers: base.order_bookers,
+    items: base.items,
+    partyTypes: base.party_types,
+    invoiceTypes: base.invoice_types,
+    paymentTypes: base.payment_types,
+  };
+}
+
+/**
+ * What each derived view reads: base tables directly, and the earlier views it
+ * consumes. `refs` and `counts` are listed too, because both point into the
+ * base arrays and so go stale when those arrays are replaced.
+ */
+export const VIEW_DEPS = {
+  transactionView: { tables: ["transactions", "invoices", "parties", "areas"], views: [] },
+  invoiceView: { tables: ["invoices"], views: ["transactionView"] },
+  transactionsReport: { tables: ["items"], views: ["transactionView", "invoiceView"] },
+  paymentsView: {
+    tables: ["payments", "invoices_return_reference", "order_booker_companies", "parties", "areas"],
+    views: ["invoiceView"],
+  },
+  paymentsInvoicesReport: { tables: [], views: ["paymentsView", "transactionsReport", "invoiceView"] },
+  itemsReport: { tables: ["items"], views: ["transactionView"] },
+  itemsDifferenceReport: { tables: ["items"], views: ["transactionView"] },
+  ledgerJournal: { tables: ["expenses"], views: ["paymentsView"] },
+  ledgerBooker: { tables: [], views: ["paymentsView"] },
+  ledgerParty: { tables: [], views: ["paymentsView"] },
+  ledgerArea: { tables: [], views: ["paymentsView"] },
+  outstanding: { tables: ["parties", "areas"], views: ["paymentsView"] },
+  counts: {
+    tables: ["invoices", "payments", "areas", "sections", "categories", "items", "order_bookers", "parties"],
+    views: [],
+  },
+  refs: {
+    tables: [
+      "sections",
+      "categories",
+      "companies",
+      "areas",
+      "parties",
+      "order_bookers",
+      "items",
+      "party_types",
+      "invoice_types",
+      "payment_types",
+    ],
+    views: [],
+  },
+};
+
+/** Topological order: every view comes after the views it consumes. */
+export const VIEW_ORDER = Object.keys(VIEW_DEPS);
+
+/** Build one view from the base tables plus the views already built. */
+export function buildView(name, base, built) {
+  switch (name) {
+    case "transactionView":
+      return buildTransactionView(base);
+    case "invoiceView":
+      return buildInvoiceView(base, built.transactionView);
+    case "transactionsReport":
+      return buildTransactionsReport(base, built.transactionView, built.invoiceView);
+    case "paymentsView":
+      return buildPaymentsView(base, built.invoiceView);
+    case "paymentsInvoicesReport":
+      return buildPaymentsInvoicesReport(base, built.paymentsView, built.transactionsReport, built.invoiceView);
+    case "itemsReport":
+      return buildItemsReport(base, built.transactionView);
+    case "itemsDifferenceReport":
+      return buildItemsDifferenceReport(base, built.transactionView);
+    case "ledgerJournal":
+      return buildLedgerJournal(base, built.paymentsView);
+    case "ledgerBooker":
+      return buildLedgerBooker(built.paymentsView);
+    case "ledgerParty":
+      return buildLedgerParty(built.paymentsView);
+    case "ledgerArea":
+      return buildLedgerArea(built.paymentsView);
+    case "outstanding":
+      return buildOutstanding(base, built.paymentsView);
+    case "counts":
+      return buildCounts(base);
+    case "refs":
+      return buildRefs(base);
+    default:
+      throw new Error(`Unknown view: ${name}`);
+  }
+}
+
+/** The views a set of changed base tables invalidates, in rebuild order. */
+export function viewsAffectedBy(tables) {
+  const changed = new Set(tables);
+  const dirty = new Set();
+  for (const name of VIEW_ORDER) {
+    const dep = VIEW_DEPS[name];
+    if (dep.tables.some((t) => changed.has(t)) || dep.views.some((v) => dirty.has(v))) dirty.add(name);
+  }
+  return dirty;
+}
+
+/**
+ * The views `names` need, plus their transitive view dependencies, in rebuild
+ * order. Used to build only what a page asked for.
+ */
+export function viewClosure(names) {
+  const need = new Set();
+  const visit = (name) => {
+    if (need.has(name)) return;
+    const dep = VIEW_DEPS[name];
+    if (!dep) return;
+    need.add(name);
+    for (const next of dep.views) visit(next);
+  };
+  for (const name of names) visit(name);
+  return VIEW_ORDER.filter((name) => need.has(name));
+}
+
+/**
+ * The base tables the given views read (transitively). Lets a page declare only
+ * the views it needs and still get exactly the right data over the wire.
+ */
+export function tablesForViews(names) {
+  const tables = new Set();
+  const seen = new Set();
+  const visit = (name) => {
+    if (seen.has(name)) return;
+    seen.add(name);
+    const dep = VIEW_DEPS[name];
+    if (!dep) return;
+    for (const table of dep.tables) tables.add(table);
+    for (const next of dep.views) visit(next);
+  };
+  for (const name of names) visit(name);
+  return [...tables];
+}
+
 /**
  * Build every derived view once. `party_types`/`invoice_types`/`payment_types`
  * codes are read from the database (0 customer, 1 supplier; 0 purchase, 1 sale,
  * 2 return, 3 difference; 0 sending, 1 recieving, 2 return).
  */
 export function buildViews(base) {
-  const transactionView = buildTransactionView(base);
-  const invoiceView = buildInvoiceView(base, transactionView);
-  const transactionsReport = buildTransactionsReport(base, transactionView, invoiceView);
-  const paymentsView = buildPaymentsView(base, invoiceView);
-  return {
-    transactionView,
-    invoiceView,
-    transactionsReport,
-    paymentsView,
-    paymentsInvoicesReport: buildPaymentsInvoicesReport(base, paymentsView, transactionsReport, invoiceView),
-    itemsReport: buildItemsReport(base, transactionView),
-    itemsDifferenceReport: buildItemsDifferenceReport(base, transactionView),
-    ledgerJournal: buildLedgerJournal(base, paymentsView),
-    ledgerBooker: buildLedgerBooker(paymentsView),
-    ledgerParty: buildLedgerParty(paymentsView),
-    ledgerArea: buildLedgerArea(paymentsView),
-    outstanding: buildOutstanding(base, paymentsView),
-    counts: buildCounts(base),
-    refs: {
-      sections: base.sections,
-      categories: base.categories,
-      companies: base.companies,
-      areas: base.areas,
-      parties: base.parties,
-      bookers: base.order_bookers,
-      items: base.items,
-      partyTypes: base.party_types,
-      invoiceTypes: base.invoice_types,
-      paymentTypes: base.payment_types,
-    },
-  };
+  const built = {};
+  for (const name of VIEW_ORDER) built[name] = buildView(name, base, built);
+  return built;
+}
+
+/**
+ * Rebuild only the `dirty` views (a Set of names, e.g. from `viewsAffectedBy`),
+ * reusing `previous` for every view that is still valid. Dirty views are rebuilt
+ * in `VIEW_ORDER`, so a view always sees its dependencies already fresh.
+ */
+export function buildSelectedViews(base, previous, dirty) {
+  const built = previous ? { ...previous } : {};
+  for (const name of VIEW_ORDER) {
+    if (dirty.has(name)) built[name] = buildView(name, base, built);
+  }
+  return built;
 }

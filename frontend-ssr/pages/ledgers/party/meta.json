@@ -1,0 +1,21 @@
+{
+  "title": "Party Ledger",
+  "template": "page.html",
+  "needs": { "views": ["ledgerParty", "invoiceView", "refs"] },
+  "compute": { "report": "ledgers/party" },
+  "requires": ["party"],
+  "filters": [
+    { "name": "from", "label": "Date From", "type": "date", "default": { "fn": "monthStart" } },
+    { "name": "to", "label": "Date To", "type": "date", "default": { "fn": "today" } },
+    { "name": "party", "label": "Party", "type": "select", "source": "parties" }
+  ],
+  "columns": [
+    { "key": "date", "label": "Date" },
+    { "key": "invoice", "label": "Inv #" },
+    { "key": "entry", "label": "Entry" },
+    { "key": "creditText", "label": "Credit", "right": true },
+    { "key": "debitText", "label": "Debit", "right": true },
+    { "key": "balanceText", "label": "Balance", "right": true }
+  ],
+  "totals": [{ "label": "Final Balance", "key": "balance" }]
+}

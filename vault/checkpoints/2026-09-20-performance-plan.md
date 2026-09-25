@@ -214,11 +214,17 @@ work session). Pre-existing/unrelated: `.commandcode/taste/taste.md` and
 
 ## Verification still required
 
-- Final `python scripts/kb_check.py vault` after the last edits.
-- Re-run `scripts/tests/test_indexes.py` / `verify_live.py` / `test_report_sql.py` if the
-  live DB or migrations change again.
-- `scripts/tests/test_pagination.py` / `test_cache_behavior.py` require the live server on
-  port 8090 (already running for this session).
+- Final `python scripts/kb_check.py vault`:
+  **RESULT: PASS** — quality 100/100, 470+ resolved links / 0 unresolved, 0 orphans,
+  tasks 26 (18 Done, 18 of those verified), 27 dependency edges.
+- Fresh consolidated suite re-run (`python scripts/tests/run_all.py`, server on :8090):
+  **7/7 PASS** — POS-0008 index verification, POS-0014 report SQL equivalence,
+  POS-0018 summary-totals equivalence, POS-0012 pagination behaviour,
+  POS-0010 cache config + write/read, POS-0016 expand-trim equivalence,
+  POS-0018 performance regression.
+- Re-run the suite after any further backend change: `python scripts/tests/run_all.py`
+  (needs the server on port 8090).
+- Re-run `scripts/tests/test_upgrade_smoke.py` if PocketBase is upgraded again.
 
 ## Resume procedure
 
