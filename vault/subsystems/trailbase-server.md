@@ -57,6 +57,11 @@ trailbase/
 17 `STRICT` tables, no views: three vocabulary tables (`party_types`, `invoice_types`,
 `payment_types`), eight master-data tables, two link tables, four transaction tables. Enumerations are
 integer codes with foreign keys — see [[Decision — Encode enumerations as integer codes with vocabulary tables]].
+
+`categories` and `companies` are **different things and not interchangeable**: `items.category` is
+vestigial — kept for later use, and not built on — while `company` carries what the old system called an
+item's company ([[Decision — Company replaces category in the TrailBase model]]). Note that nothing yet
+links an `items` row to a `companies` row.
 Reports are aggregated by the client — see [[Decision — Drop SQL views; aggregate reports client-side]].
 Timestamps keep PocketBase's `'%Y-%m-%d %H:%M:%fZ'` text format — see
 [[Decision — Keep PocketBase-compatible data shapes]].

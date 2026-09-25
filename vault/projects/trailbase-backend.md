@@ -77,6 +77,11 @@ Out of scope:
   every report itself on worker threads, using TrailBase only for CRUD and auth. See
   [[Frontend — TrailBase Server-Rendered App]] and
   [[TB-0004 Build the server-rendered TrailBase frontend]]; `npm run smoke` passes 55/55.
+- **Domain clarified 2026-09-25:** `items.category` and `companies` are different things. `category` is
+  vestigial (kept for later use) and `company` takes over everything the old system used `category` for
+  — [[Decision — Company replaces category in the TrailBase model]]. Nothing yet links an item to a
+  company, so the client still reads `items.category`; [[TB-0006 Give items a company and use it in reports]]
+  covers the gap.
 - First run is now correct: `trailbase/RUN.BAT` creates a fresh depot with the CLI (known admin
   password, no init race) and binds `127.0.0.1:4000` explicitly. TrailBase's IPv6-only default bind is
   recorded as [[Issue — TrailBase binds IPv6 loopback by default]] — it had made the dashboard URL and
@@ -123,6 +128,7 @@ cannot expose the PocketBase-style report views.
 - [[Decision — Drop SQL views; aggregate reports client-side]]
 - [[Decision — Model multi-valued relations as link tables]]
 - [[Decision — Keep PocketBase-compatible data shapes]]
+- [[Decision — Company replaces category in the TrailBase model]]
 
 ## Issues
 
@@ -136,6 +142,7 @@ cannot expose the PocketBase-style report views.
 - [x] [[TB-0001 Redesign the TrailBase schema]] — Done
 - [x] [[TB-0004 Build the server-rendered TrailBase frontend]] — Done (55/55 smoke checks)
 - [x] [[TB-0005 Fix the first-run admin password and the backend bind]] — Done (9/9 + browser-verified)
+- [ ] [[TB-0006 Give items a company and use it in reports]] — Backlog (held: needs the item→company link confirmed)
 - [ ] [[TB-0002 Wire a frontend to the TrailBase server]] — Backlog (held pending re-specification)
 - [ ] [[TB-0003 Migrate PocketBase data into the TrailBase schema]] — Backlog (held pending re-specification)
 
@@ -150,18 +157,20 @@ flowchart TD
   T1["TB-0001 · Redesign the TrailBase schema · Done"]
   T4["TB-0004 · Build the server-rendered frontend · Done"]
   T5["TB-0005 · First-run password + bind · Done"]
+  T6["TB-0006 · Items get a company · Backlog"]
   T2["TB-0002 · Wire a frontend to the TrailBase server · Backlog"]
   T3["TB-0003 · Migrate PocketBase data into the TrailBase schema · Backlog"]
   T1 --> T4
   T4 --> T5
+  T4 --> T6
   T1 -.->|"held: specs to be restated"| T2
   T1 -.->|"held: specs to be restated"| T3
 ```
 
 Text alternative: the redesign (TB-0001) is complete; the server-rendered frontend (TB-0004) was built
-on it, and its first-run/bind defects were then fixed (TB-0005), with the stack exercised in a real
-browser. Wiring the *Next.js* client and migrating real data remain the two open follow-ons, parked
-until the TrailBase specification is settled.
+on it, its first-run/bind defects were fixed (TB-0005), and the company/category clarification left one
+open client-side follow-on (TB-0006) that needs the item→company link settled first. Wiring the
+*Next.js* client and migrating real data remain parked until the TrailBase specification is settled.
 
 ## Current checkpoint
 

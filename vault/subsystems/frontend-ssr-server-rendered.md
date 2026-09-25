@@ -109,12 +109,17 @@ Inherited quirks are kept deliberately (they are in the old SQL too): `transacti
 total cost rather than margin, `ledger_*.credit/debit` ignore the return case, and
 `ledger_journal.stock` is always `0`.
 
-Two deliberate divergences:
+Two deliberate divergences, plus one known gap:
 
 - `payments_invoices_report` splits a payment by the **item** companies on its invoice
-  (`transactions_report.company`), as the SQL does. `payments_view.company` — the booker's companies
-  through the `order_booker_companies` link table — is a different vocabulary in the new schema and
-  is not used for the split.
+  (`transactions_report.company`), as the SQL does; `payments_view.company` — the booker's companies
+  through `order_booker_companies` — is not the split basis.
+- **Known gap:** that split basis, and every other "Company" column in this app, currently reads
+  **`items.category`**, because the preserved SQL does and because `items` has no link to `companies`
+  yet. The owner has ruled that `category` is vestigial and `company` is what these fields must use —
+  see [[Decision — Company replaces category in the TrailBase model]] and
+  [[TB-0006 Give items a company and use it in reports]]. Until that lands, read every "Company" column
+  here as the item's category.
 - `ledger_area`'s `GROUP BY` emitted arbitrary `created`/`type` values, which made its date and
   "recieving only" filters unreliable. The Area Ledger filters the source payments instead.
 

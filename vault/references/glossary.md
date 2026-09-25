@@ -24,12 +24,15 @@ Project vocabulary. Where a term maps to a schema field, the field is named.
 - **Customer** — a party you sell to.
 - **Supplier** — a party you buy from.
 - **Booker** / **Order Booker** — a sales agent who takes orders; `order_bookers`.
-- **Company** — in this app, the *category* of an item (`categories`). "Company" and
-  "category" are the same collection; report fields named `company` reference it.
+- **Company** — in the PocketBase app, the *category* of an item (`categories`); "Company" and
+  "category" were the same collection there, and report fields named `company` reference it. **In the
+  TrailBase system they are two different things**: `items.category` is vestigial and `company` carries
+  this meaning — see [[Decision — Company replaces category in the TrailBase model]].
 - **Category** — see Company.
 - **Area** — a territory, belonging to a section (`areas`).
 - **Section** — a grouping of areas (`sections`).
-- **Item** — a product (`items`) with cost price, sale price, carton size, and category.
+- **Item** — a product (`items`) with cost price, sale price, carton size, and a category; see
+  **Company** for how TrailBase differs.
 - **Scheme** — free/extra quantity given on a line beyond billed `qty` (`transactions.scheme`).
 
 ## Invoices and lines

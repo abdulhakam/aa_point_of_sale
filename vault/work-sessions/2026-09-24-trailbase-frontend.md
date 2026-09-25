@@ -105,8 +105,11 @@ no UI framework, minimal JavaScript.
 
 - None blocking.
 - Open: should the invoice, cash-memo and printing screens follow later, or does TrailBase's own
-  admin dashboard cover them? And should `items.category` and `parties.company` really be different
-  vocabularies (categories vs companies), given the old frontend used one?
+  admin dashboard cover them?
+- **Resolved 2026-09-25:** `items.category` and `companies` are different things. `category` is
+  vestigial (kept for later use) and `company` takes over everything the old system used `category`
+  for — [[Decision — Company replaces category in the TrailBase model]]. The mechanical gap this
+  leaves (`items` has no company link) is [[TB-0006 Give items a company and use it in reports]].
 - All verification used scratch depots created under `frontend-ssr/.tbdemo/` and removed afterwards;
   the real `trailbase/traildepot` was never exercised by the tests.
 - Correction noted afterwards: `trailbase/traildepot/data/` now exists and `metadata.textproto` moved to

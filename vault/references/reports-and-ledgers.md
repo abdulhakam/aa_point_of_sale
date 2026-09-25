@@ -23,6 +23,10 @@ How every report is computed. The logic lives in PocketBase **view collections**
 not in frontend code. Full SQL is stored in the live database and in
 `backend/pb_migrations/*.js`; the formulas below are the authoritative summary.
 
+This documents the **PocketBase** model. In the TrailBase rebuild, report fields named `company` must
+source an item's company from `companies` rather than `items.category` — see
+[[Decision — Company replaces category in the TrailBase model]].
+
 Legend: `d1`/`d2` are percentage discounts (0–100), `drs` is a flat discount in currency,
 `scheme` is free quantity, `qty` is billed quantity.
 

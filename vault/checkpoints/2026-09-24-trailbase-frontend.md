@@ -92,7 +92,9 @@ computes every report itself.
   must follow.
 - **Assumption to re-check:** that `items.category` (an item's company) and a party's/booker's
   `companies` link rows are meant to be different vocabularies. The old frontend used one, and the
-  payments-by-company split depends on the answer.
+  payments-by-company split depends on the answer. **Resolved 2026-09-25:** they are different things —
+  `category` is vestigial and `company` replaces it; see
+  [[Decision — Company replaces category in the TrailBase model]].
 
 ## Blockers and unresolved questions
 

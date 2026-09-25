@@ -82,6 +82,9 @@ backend is reachable from both a browser and the frontend.
 
 ## Decisions and assumptions that affect next steps
 
+- **`company` replaces `category` everywhere the old system used an item's category** —
+  [[Decision — Company replaces category in the TrailBase model]]. The app still reads `items.category`
+  because nothing links an item to a company yet; do not build new behaviour on `categories`.
 - **Always pass `--address` explicitly in launchers.** Do not rely on TrailBase's `localhost:4000`
   default; see [[Issue — TrailBase binds IPv6 loopback by default]].
 - **Initialise a depot with the CLI, not with a running server plus a second process.** The CLI path
@@ -93,6 +96,9 @@ backend is reachable from both a browser and the frontend.
 
 ## Blockers and unresolved questions
 
+- **How does an item get its company?** `items` has no link to `companies`, so the company/category
+  decision cannot be implemented until this is chosen — see
+  [[TB-0006 Give items a company and use it in reports]].
 - The original hang's root cause was never captured; concurrency during first-run init is the
   best-supported explanation and is now structurally impossible.
 - Unverified on the real depot: the management create/update/delete path (deliberately, to avoid
@@ -102,7 +108,10 @@ backend is reachable from both a browser and the frontend.
 
 ## Exact next action
 
-None scheduled. To bring the stack up: `trailbase\RUN.BAT`, then `frontend-ssr\RUN.BAT` (set
+[[TB-0006 Give items a company and use it in reports]] once the item→company link is settled (see the
+options in that note; (a) `items.company` is recommended) — the rest of the stack is in a working state.
+
+To bring the stack up in the meantime: `trailbase\RUN.BAT`, then `frontend-ssr\RUN.BAT` (set
 `SESSION_SECRET` in `frontend-ssr/.env` first). To start over from an empty database, delete
 `trailbase\traildepot\data`.
 
