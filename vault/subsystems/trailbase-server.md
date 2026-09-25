@@ -2,7 +2,7 @@
 type: Subsystem
 status: Active
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 belongs_to:
   - "[[TrailBase Backend]]"
 related_to:
@@ -78,6 +78,14 @@ trail --depot=./traildepot schema items # export a record API's JSON schema
 ```
 
 First run creates the depot, applies the migration and prints a generated admin credential.
+
+`RUN.BAT` instead creates a fresh depot with `trail user change-password`, which applies this
+directory's config and migration, creates the admin **and** sets a fixed scaffold password
+(`admin@localhost` / `administrator-0ne`) in one step, and only then starts the server — so no second
+process ever races the initialisation. It always passes `--address=127.0.0.1:4000`, because TrailBase's
+own default bind is `[::1]:4000` (IPv6 only), which a browser or a client at `127.0.0.1` cannot reach
+— see [[Issue — TrailBase binds IPv6 loopback by default]]. Later runs only start the server, so a
+password changed by hand is never overwritten; delete `traildepot/data/` for a fresh scaffold.
 
 ## Constraints and gotchas
 

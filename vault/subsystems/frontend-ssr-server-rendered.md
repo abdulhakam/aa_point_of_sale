@@ -2,7 +2,7 @@
 type: Subsystem
 status: Active
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 belongs_to:
   - "[[TrailBase Backend]]"
 related_to:
@@ -128,6 +128,11 @@ Details and the expectation table are in `frontend-ssr/README.md`.
 
 ## Constraints and gotchas
 
+- **The backend has to be reachable on IPv4 loopback.** `TRAILBASE_URL` defaults to
+  `http://127.0.0.1:4000`, but TrailBase's own default bind is `[::1]:4000` (IPv6 only), so a
+  default-configured server is invisible to this app. Start it with `--address=127.0.0.1:4000` — which
+  `trailbase/RUN.BAT` does — or point `TRAILBASE_URL` at `[::1]`. See
+  [[Issue — TrailBase binds IPv6 loopback by default]].
 - **Normalise raw rows before reading relations.** TrailBase returns foreign keys as `{id}` objects
   (`{id: 0}` for an enum code) or `null`, so both the report path and the management screens run rows
   through `normalizeRows()` in `src/lib/reports/data.js` first. Skipping it makes relation columns and

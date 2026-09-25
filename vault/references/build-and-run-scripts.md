@@ -2,7 +2,7 @@
 type: Reference
 status: Active
 created: 2026-09-19
-updated: 2026-09-19
+updated: 2026-09-25
 belongs_to:
   - "[[AA Point of Sale]]"
 related_to:
@@ -37,6 +37,20 @@ All entry points are Windows batch files. Read this before running or changing t
 | `RUN SERVE.BAT` | PocketBase `serve` + `npm run serve` (`http-server ./out/`; needs a static export). |
 | `TAURI BUILD.BAT` | `cd ../frontend`, `npm run tauri build`. |
 | `TAURI DEV.BAT` / `TAURI RUN.BAT` | Tauri dev/run variants. |
+
+## TrailBase stack
+
+Two more entry points exist for the TrailBase backend and its server-rendered frontend. They need the
+`trail` binary on `PATH` and Node 20+, and are documented in [[Backend — TrailBase Server]] and
+[[Frontend — TrailBase Server-Rendered App]] rather than repeated here:
+
+| Script | What it does |
+|---|---|
+| `trailbase/RUN.BAT` | Start TrailBase on `http://127.0.0.1:4000` and open its admin dashboard. On a fresh depot it first creates the depot with `trail user change-password` (which applies that directory's config + migration and sets a fixed admin password), then waits for the listener before opening the dashboard. |
+| `frontend-ssr/RUN.BAT` | Install dependencies and `.env` if missing, then `npm start` — the Express + MiniJinja frontend on `http://127.0.0.1:3100`. Needs TrailBase already running on IPv4 loopback. |
+
+Do not rely on TrailBase's default bind: it is `[::1]:4000` (IPv6 only), so anything addressing
+`127.0.0.1` is refused — see [[Issue — TrailBase binds IPv6 loopback by default]].
 
 ## Requirements
 

@@ -77,6 +77,10 @@ Out of scope:
   every report itself on worker threads, using TrailBase only for CRUD and auth. See
   [[Frontend — TrailBase Server-Rendered App]] and
   [[TB-0004 Build the server-rendered TrailBase frontend]]; `npm run smoke` passes 55/55.
+- First run is now correct: `trailbase/RUN.BAT` creates a fresh depot with the CLI (known admin
+  password, no init race) and binds `127.0.0.1:4000` explicitly. TrailBase's IPv6-only default bind is
+  recorded as [[Issue — TrailBase binds IPv6 loopback by default]] — it had made the dashboard URL and
+  the frontend's `TRAILBASE_URL` both unreachable.
 - The earlier React/Vite TrailBase scaffold remains deleted from the working tree (and present in git
   history) as `frontend-tb/`; it targets the *older* schema (`products`, `companies2parties`,
   `partiesEnumType`, `TEXT` enums) and is a structural reference only. The new app deliberately lives
@@ -125,11 +129,13 @@ cannot expose the PocketBase-style report views.
 - [[Issue — TrailBase rejects scalar JSON-schema columns]]
 - [[Issue — TrailBase view type-inference limits]]
 - [[Issue — A stale TrailBase depot silently keeps an old schema]]
+- [[Issue — TrailBase binds IPv6 loopback by default]]
 
 ## Tasks
 
 - [x] [[TB-0001 Redesign the TrailBase schema]] — Done
 - [x] [[TB-0004 Build the server-rendered TrailBase frontend]] — Done (55/55 smoke checks)
+- [x] [[TB-0005 Fix the first-run admin password and the backend bind]] — Done (9/9 + browser-verified)
 - [ ] [[TB-0002 Wire a frontend to the TrailBase server]] — Backlog (held pending re-specification)
 - [ ] [[TB-0003 Migrate PocketBase data into the TrailBase schema]] — Backlog (held pending re-specification)
 
@@ -143,18 +149,20 @@ restated, not because a task blocks them.
 flowchart TD
   T1["TB-0001 · Redesign the TrailBase schema · Done"]
   T4["TB-0004 · Build the server-rendered frontend · Done"]
+  T5["TB-0005 · First-run password + bind · Done"]
   T2["TB-0002 · Wire a frontend to the TrailBase server · Backlog"]
   T3["TB-0003 · Migrate PocketBase data into the TrailBase schema · Backlog"]
   T1 --> T4
+  T4 --> T5
   T1 -.->|"held: specs to be restated"| T2
   T1 -.->|"held: specs to be restated"| T3
 ```
 
-Text alternative: the redesign (TB-0001) is complete, and the server-rendered frontend (TB-0004) was
-built on top of it and verified. Wiring the *Next.js* client and migrating real data remain the two open
-follow-ons; both are parked until the TrailBase specification is settled, because the schema they would
-target is expected to change.
+Text alternative: the redesign (TB-0001) is complete; the server-rendered frontend (TB-0004) was built
+on it, and its first-run/bind defects were then fixed (TB-0005), with the stack exercised in a real
+browser. Wiring the *Next.js* client and migrating real data remain the two open follow-ons, parked
+until the TrailBase specification is settled.
 
 ## Current checkpoint
 
-- [[Checkpoint — TrailBase Frontend — 2026-09-24]] (supersedes [[Checkpoint — TrailBase Backend — 2026-09-24]])
+- [[Checkpoint — TrailBase First Run — 2026-09-25]] (supersedes [[Checkpoint — TrailBase Frontend — 2026-09-24]])
