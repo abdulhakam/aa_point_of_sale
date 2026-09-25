@@ -53,15 +53,17 @@ frontend-ssr/
       render.js              # MiniJinja environment + filesystem loader + filters
       format.js              # money/qty/date helpers (mirrors the old frontend)
       entities.js            # management screen definitions (fields, columns)
+      plugins.js             # plugin registry: scans plugins/ and parses each meta.md
       reports/
         data.js              # base tables read + relation normalisation
         views.js             # the PocketBase view SQL rebuilt in JavaScript
         reports.js           # one function per report (filters, rows, totals)
         worker.js / pool.js  # worker_threads pool
         index.js             # cached views + dispatch facade
-    routes/                  # auth, dashboard, reports, management
+    routes/                  # auth, dashboard, reports, management, plugins
   views/                     # the Jinja templates (layout, partials, pages)
   public/                    # app.css, app.js, favicon
+  plugins/                   # one folder per plugin (meta.md + index.html); see Plugins below
 ```
 
 ## Interface
@@ -76,7 +78,28 @@ Routes (all except `/login` require a session):
 | `GET /reports/<report>` | one page per report, filters via query string (APPLY/RESET) |
 | `GET /management`, `GET /management/<entity>` | master-data screens |
 | `POST /management/<entity>/create`, `…/<id>/update`, `…/<id>/delete` | writes |
+| `GET /plugins` | plugin hub, one card per directory under `plugins/` |
+| `GET /plugins/<slug>/` | a plugin's static page (login required) |
 | `GET /healthz` | liveness + worker-pool stats |
+
+## Plugins
+
+Optional, self-contained features. Each plugin is one directory under `plugins/`:
+
+```text
+plugins/<slug>/
+  meta.md      # description + YAML frontmatter (title, author, licence, tags, order)
+  index.html   # the plugin's single static page
+```
+
+`src/lib/plugins.js` scans the directory and parses each `meta.md` (inline `[a, b]` and block-list tags);
+`GET /plugins` renders the cards; the page itself is served as a static file by an `express.static` mount
+under `/plugins` guarded by `requireAuth`. A plugin is therefore added, changed or removed by copying or
+deleting its folder — **no change to `src/` or `views/` is ever needed**, which is the point of the hub.
+Plugin pages link the shared stylesheet at `/static/css/app.css` to look like part of the app.
+
+Bundled: **Import from v1** — [[Import from v1 Plugin]], a backend-free PocketBase→TrailBase migration
+([[TB-0007 Add the plugins hub and the Import from v1 migration plugin]]).
 
 ## How it works
 
@@ -157,3 +180,5 @@ Details and the expectation table are in `frontend-ssr/README.md`.
 - [[Backend — TrailBase Server]] — the API contract and its gotchas.
 - [[Frontend — Next.js Application]] — the PocketBase-era client whose screens this mirrors.
 - [[TB-0004 Build the server-rendered TrailBase frontend]] — the work that built it.
+- [[Import from v1 Plugin]] — the bundled migration plugin.
+- [[Issue — Report cache lag after a client-side import]] — the one loose end of a browser-only import.

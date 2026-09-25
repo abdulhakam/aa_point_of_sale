@@ -20,6 +20,7 @@ export const config = {
   cacheTtlMs: num(process.env.CACHE_TTL_SECONDS, 60) * 1000,
   viewsDir: path.join(rootDir, "views"),
   publicDir: path.join(rootDir, "public"),
+  pluginsDir: path.join(rootDir, "plugins"),
 };
 
 /** Worker threads for report aggregation: explicit setting, else CPUs - 1 (min 1). */

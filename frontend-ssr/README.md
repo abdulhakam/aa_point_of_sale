@@ -90,6 +90,27 @@ Companies (`categories`), Companies, Order Bookers and Items. Multi-valued relat
 `order_booker_companies` link tables. Tables that have a `deleted` column are soft-deleted;
 the rest are hard-deleted.
 
+## Plugins
+
+`/plugins` lists the optional, self-contained features in `plugins/`. Each plugin is one folder:
+
+```text
+plugins/<slug>/
+  meta.md      # description + YAML frontmatter (title, author, license, tags, order)
+  index.html   # the plugin's single static page
+```
+
+The hub reads each `meta.md` (see `src/lib/plugins.js`) and the page is served as a static file at
+`/plugins/<slug>/`, behind the same login as the rest of the app. A plugin is added, changed or
+removed by copying or deleting its folder — no change to `src/` or `views/` needed. See
+`plugins/README.md` for the format.
+
+Bundled: **Import from v1** (`plugins/import-from-v1/`) — a backend-free migration that copies a
+running PocketBase (v1) database into this TrailBase depot. It talks directly to both servers from
+the browser (PocketBase admin login + paged reads; TrailBase user login + bulk record writes, with
+per-row delete for the optional clear) and translates PocketBase ids/enum text into TrailBase UUIDs
+and codes. See its `meta.md` and the inline `PLAN` for the field mapping.
+
 ## Report arithmetic
 
 `src/lib/reports/views.js` rebuilds the PocketBase view SQL in JavaScript, and

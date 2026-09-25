@@ -1,6 +1,6 @@
 ---
 type: Checkpoint
-status: Current
+status: Superseded
 belongs_to:
   - "[[TrailBase Backend]]"
 work_session:
@@ -129,3 +129,5 @@ To bring the stack up in the meantime: `trailbase\RUN.BAT`, then `frontend-ssr\R
 4. Read `trailbase/README.md` (Quick start) and `trailbase/RUN.BAT` before touching the run flow.
 5. Read [[Issue — TrailBase binds IPv6 loopback by default]] before changing any address handling.
 6. Continue from `Exact next action` unless reality has invalidated it.
+
+> Superseded by [[Checkpoint — Plugins Hub — 2026-09-25]] (2026-09-25).

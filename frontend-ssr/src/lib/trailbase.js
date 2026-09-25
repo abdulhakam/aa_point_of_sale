@@ -43,7 +43,13 @@ export function createTrailBase(baseUrl) {
     const raw = await res.text();
     if (!res.ok) throw new TrailBaseError(res.status, raw, path);
     if (text) return raw;
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      // DELETE answers with a plain-text body ("deleted"), not JSON.
+      return raw;
+    }
   };
 
   /** Turn `{col: op-or-value, ...}` into `filter[col][$op]=value` query entries. */

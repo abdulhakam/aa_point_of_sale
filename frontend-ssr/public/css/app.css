@@ -216,6 +216,10 @@ table.data td.actions form { display: inline; margin: 0 0 0 0.25rem; }
 .report-meta { display: flex; flex-wrap: wrap; gap: 1rem; color: var(--muted); font-size: 0.8rem; margin-bottom: 0.5rem; }
 .report-opening { font-size: 0.85rem; margin: 0 0 0.5rem; }
 
+/* ------------------------------------------------------------------- tags */
+
+.tag { display: inline-block; padding: 0.05rem 0.5rem; border: 1px solid var(--border); border-radius: 999px; background: #eef1f4; color: var(--muted); font-size: 0.75rem; }
+
 .notice { padding: 1rem; background: #fff8e1; border: 1px solid #f0d9a0; border-radius: 6px; }
 
 /* ------------------------------------------------------------------- flash */

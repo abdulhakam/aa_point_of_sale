@@ -2,7 +2,7 @@
 type: Project
 status: Active
 created: 2026-09-24
-updated: 2026-09-24
+updated: 2026-09-25
 related_to:
   - "[[AA Point of Sale]]"
 tags:
@@ -77,6 +77,22 @@ Out of scope:
   every report itself on worker threads, using TrailBase only for CRUD and auth. See
   [[Frontend — TrailBase Server-Rendered App]] and
   [[TB-0004 Build the server-rendered TrailBase frontend]]; `npm run smoke` passes 55/55.
+- A **plugins hub** now sits in that frontend: `/plugins` lists every directory under `frontend-ssr/plugins/`
+  from its `meta.md`, and each plugin page is a static file served behind the app login. A plugin is one
+  folder and can be added or removed with no change to `src/` or `views/`. See
+  [[TB-0007 Add the plugins hub and the Import from v1 migration plugin]].
+- The first plugin is **Import from v1** — a backend-free PocketBase→TrailBase migration that runs in the
+  browser (both servers allow cross-origin requests) and copies the whole dataset through the record APIs.
+  [[Import from v1 Plugin]], [[Decision — Run the PocketBase migration client-side as a plugin]]. It was
+  verified on the live `backend/p_data` data: **60,245 / 60,245 rows, 0 failures**, with every counter and
+  enum distribution matching the source and the Stock Report matching the `items_report` view exactly.
+  This fulfils [[TB-0003 Migrate PocketBase data into the TrailBase schema]].
+- Building that plugin exposed and fixed a latent client defect: TrailBase answers `DELETE` with a
+  `text/plain` body, which the record client parsed as JSON — breaking every hard delete in the app —
+  [[Issue — TrailBase returns a plain-text DELETE body]].
+- One loose end from a browser-only import: it cannot invalidate the app's server-side report cache, so the
+  dashboard/reports can lag by up to `CACHE_TTL_SECONDS` after a copy —
+  [[Issue — Report cache lag after a client-side import]].
 - **Domain clarified 2026-09-25:** `items.category` and `companies` are different things. `category` is
   vestigial (kept for later use) and `company` takes over everything the old system used `category` for
   — [[Decision — Company replaces category in the TrailBase model]]. Nothing yet links an item to a
@@ -121,6 +137,7 @@ cannot expose the PocketBase-style report views.
 - [[Data Model]] — the PocketBase model the domain (not the schema) comes from.
 - [[Reports & Ledgers]] — what each report computes; the reference for re-implementing them client-side.
 - [[Glossary]] — domain vocabulary (booker, scheme, party, area, section, ...).
+- [[Import from v1 Plugin]] — the bundled PocketBase→TrailBase migration.
 
 ## Decisions
 
@@ -129,6 +146,7 @@ cannot expose the PocketBase-style report views.
 - [[Decision — Model multi-valued relations as link tables]]
 - [[Decision — Keep PocketBase-compatible data shapes]]
 - [[Decision — Company replaces category in the TrailBase model]]
+- [[Decision — Run the PocketBase migration client-side as a plugin]]
 
 ## Issues
 
@@ -136,15 +154,18 @@ cannot expose the PocketBase-style report views.
 - [[Issue — TrailBase view type-inference limits]]
 - [[Issue — A stale TrailBase depot silently keeps an old schema]]
 - [[Issue — TrailBase binds IPv6 loopback by default]]
+- [[Issue — TrailBase returns a plain-text DELETE body]]
+- [[Issue — Report cache lag after a client-side import]]
 
 ## Tasks
 
 - [x] [[TB-0001 Redesign the TrailBase schema]] — Done
 - [x] [[TB-0004 Build the server-rendered TrailBase frontend]] — Done (55/55 smoke checks)
 - [x] [[TB-0005 Fix the first-run admin password and the backend bind]] — Done (9/9 + browser-verified)
+- [x] [[TB-0003 Migrate PocketBase data into the TrailBase schema]] — Done (60,245/60,245 rows via the plugin)
+- [x] [[TB-0007 Add the plugins hub and the Import from v1 migration plugin]] — Done (real-data import verified in Chrome)
 - [ ] [[TB-0006 Give items a company and use it in reports]] — Backlog (held: needs the item→company link confirmed)
 - [ ] [[TB-0002 Wire a frontend to the TrailBase server]] — Backlog (held pending re-specification)
-- [ ] [[TB-0003 Migrate PocketBase data into the TrailBase schema]] — Backlog (held pending re-specification)
 
 ## Task dependency and progress
 
@@ -157,21 +178,26 @@ flowchart TD
   T1["TB-0001 · Redesign the TrailBase schema · Done"]
   T4["TB-0004 · Build the server-rendered frontend · Done"]
   T5["TB-0005 · First-run password + bind · Done"]
+  T3["TB-0003 · Migrate PocketBase data · Done"]
+  T7["TB-0007 · Plugins hub + Import from v1 · Done"]
   T6["TB-0006 · Items get a company · Backlog"]
   T2["TB-0002 · Wire a frontend to the TrailBase server · Backlog"]
-  T3["TB-0003 · Migrate PocketBase data into the TrailBase schema · Backlog"]
   T1 --> T4
   T4 --> T5
+  T4 --> T7
   T4 --> T6
+  T3 -.->|"fulfilled by"| T7
   T1 -.->|"held: specs to be restated"| T2
-  T1 -.->|"held: specs to be restated"| T3
 ```
 
 Text alternative: the redesign (TB-0001) is complete; the server-rendered frontend (TB-0004) was built
-on it, its first-run/bind defects were fixed (TB-0005), and the company/category clarification left one
-open client-side follow-on (TB-0006) that needs the item→company link settled first. Wiring the
-*Next.js* client and migrating real data remain parked until the TrailBase specification is settled.
+on it, its first-run/bind defects were fixed (TB-0005), and the PocketBase-data migration (TB-0003) was
+delivered as the Import from v1 plugin inside a new plugins hub (TB-0007) — verified on the live data.
+The company/category clarification leaves one open client-side follow-on (TB-0006) that needs the
+item→company link settled first, and wiring the *Next.js* client (TB-0002) remains parked until the
+TrailBase specification is settled.
 
 ## Current checkpoint
 
-- [[Checkpoint — TrailBase First Run — 2026-09-25]] (supersedes [[Checkpoint — TrailBase Frontend — 2026-09-24]])
+- [[Checkpoint — Plugins Hub — 2026-09-25]] (supersedes [[Checkpoint — TrailBase First Run — 2026-09-25]],
+  which superseded [[Checkpoint — TrailBase Frontend — 2026-09-24]])

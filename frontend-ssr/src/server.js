@@ -6,12 +6,13 @@ import { config, workerCount } from "./config.js";
 import { createTrailBase } from "./lib/trailbase.js";
 import { createRenderer } from "./lib/render.js";
 import { createReportService } from "./lib/reports/index.js";
-import { sessionMiddleware } from "./lib/auth.js";
+import { sessionMiddleware, requireAuth } from "./lib/auth.js";
 import { trailbaseErrorHandler } from "./lib/http.js";
 import { authRoutes } from "./routes/auth.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { reportRoutes } from "./routes/reports.js";
 import { managementRoutes } from "./routes/management.js";
+import { pluginRoutes } from "./routes/plugins.js";
 
 export function createApp() {
   const app = express();
@@ -34,6 +35,9 @@ export function createApp() {
   app.use(dashboardRoutes(ctx));
   app.use(reportRoutes(ctx));
   app.use(managementRoutes(ctx));
+  app.use(pluginRoutes(ctx));
+  // Plugin pages are plain static files, behind the same login as the app.
+  app.use("/plugins", requireAuth, express.static(config.pluginsDir, { index: "index.html" }));
 
   app.get("/healthz", (req, res) => res.json({ ok: true, workers: reports.stats() }));
   app.use((req, res) => res.status(404).send("Not found"));
