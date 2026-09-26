@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Issues collection schema",
+  "description": "Documents for the \"Issues\" collection. Documents may carry extra frontmatter fields; missing recommended fields are reported as warnings only.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Document title."
+    },
+    "type": {
+      "type": "string",
+      "description": "Document type. Convention: issue."
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "description": "Creation date (YYYY-MM-DD)."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Topic tags (#tag style, lowercase)."
+    }
+  },
+  "required": [
+    "title",
+    "type",
+    "created"
+  ]
+}

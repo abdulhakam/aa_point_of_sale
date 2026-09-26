@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Projects collection schema",
+  "description": "Projects or efforts that own work, knowledge and decisions. Documents may carry extra frontmatter fields; missing recommended fields are reported as warnings only.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Project title."
+    },
+    "type": {
+      "type": "string",
+      "description": "Document type. Convention: project."
+    },
+    "status": {
+      "type": "string",
+      "description": "Project status.",
+      "examples": [
+        "active",
+        "paused",
+        "done"
+      ]
+    },
+    "owner": {
+      "type": "string",
+      "description": "Responsible person as a wikilink, e.g. \"[[person-me]]\"."
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "description": "Creation date (YYYY-MM-DD)."
+    },
+    "target": {
+      "type": "string",
+      "format": "date",
+      "description": "Target date (YYYY-MM-DD)."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Topic tags (#tag style, lowercase)."
+    }
+  },
+  "required": [
+    "title",
+    "type",
+    "status",
+    "created"
+  ]
+}
