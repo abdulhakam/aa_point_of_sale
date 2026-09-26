@@ -1,0 +1,6 @@
+/p/reports/payments
+/p/reports/itemsales
+/p/reports/salesreport
+/p/reports/profit
+/p/ledgers/booker
+/p/ledgers/party

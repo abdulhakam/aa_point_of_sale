@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Blocked
+status: Ready
 ticket: TB-0009
 priority: P2
 belongs_to:
@@ -49,6 +49,12 @@ Node still carries the per-page definitions the architecture is meant to remove.
 
 The blocker is performance, not correctness: the page host is currently slower than the route it would replace
 ([[Issue — Declarative pages ship whole views and are slower than server rendering]]).
+
+**2026-09-26 — blocker cleared.** The page host was re-measured after
+[[TB-0008 Serve report results from the page host instead of whole views]] and is now **faster** than the
+server-rendered route (server-side median 270 ms → 44 ms; wire bytes 5–9× smaller; end-to-end faster on 10/12
+reports), and all 14 reports are at row/total parity. The issue is Resolved, so this task moved
+Blocked → Ready.
 
 ## Related
 

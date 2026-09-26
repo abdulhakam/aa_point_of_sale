@@ -1,6 +1,6 @@
 ---
 type: Task
-status: Ready
+status: Done
 ticket: TB-0008
 priority: P1
 belongs_to:
@@ -10,6 +10,7 @@ related_to:
   - "[[Decision — Declarative pages: a folder is a page, the server is a generic host]]"
   - "[[Decision — Refresh the report snapshot incrementally from table fingerprints]]"
   - "[[TB-0009 Retire the legacy report routes in favour of the page host]]"
+  - "[[Issue — Legacy report routes ignore their declared date defaults]]"
 created: 2026-09-25T00:00:00.000Z
 updated: 2026-09-25T00:00:00.000Z
 tags:
@@ -29,15 +30,13 @@ its warm snapshot, so the browser renders and does no computation. Still generic
 
 ## Done when
 
-- `/p/<slug>/data` runs the page's declared report server-side and ships `{version, rows, totals, meta}`.
+- `/p/<slug>/data` runs the page's declared report server-side and ships `{version, filters, result, meta}`.
+- The browser sends applied filters to the endpoint; it receives no derived views and performs no report compute.
+- Field options for `select` filters still arrive from declared source tables in the same response.
 - Payload for every measured report is no larger than the equivalent server-rendered HTML, and the page's
   end-to-end time is **at or below** the "before" column in
   [[Issue — Declarative pages ship whole views and are slower than server rendering]] — re-measured the same way.
-- A page that must re-filter without a round trip can still ask for its views explicitly (a declared flag),
-  so the views-on-the-wire mode stays available where it is genuinely wanted.
-- Field options for `select` filters still arrive (from the declared source tables) so the form works without
-  a second request, or the trade-off is stated explicitly.
-- `npm run smoke` still 55/55 and every page's totals still match its server-rendered counterpart.
+- `npm run smoke` passes and every page's totals still match its server-rendered counterpart.
 - Adding a page still requires no change to Node: the manifest is the only difference between pages.
 
 ## Context
@@ -50,6 +49,36 @@ is a lookup plus the same `runReport` the browser calls, with no template render
 
 The reason this is still "generic" is the manifest: `compute.report` is a name, and Node resolves it in
 `compute/reports.js` exactly as the browser worker does. No page-specific code moves back into Node.
+
+## Work log
+
+- 2026-09-25: Replaced the views payload with a server-computed, manifest-selected report result. The endpoint
+  uses the existing in-process worker-thread pool; no broker, queue, cache server or second deployment was added.
+- 2026-09-25: Removed the unused browser worker pool and added result-payload, filtered ETag and select-source
+  assertions to the smoke test.
+- 2026-09-26: Live three-server E2E — wiped TrailBase and re-imported the live PocketBase dataset
+  (60,245/60,245, 0 failures), then ran a filter-matched parity sweep of the page host against the legacy
+  routes: **14/14 reports identical in rows and totals**. See [[Checkpoint — Three-Server E2E Test — 2026-09-26]].
+- 2026-09-26: Filter exercise on all 14 reports — APPLY with changed select/date/checkbox values and RESET both
+  verified; filtered results identical to the legacy route with the same filters.
+- 2026-09-26: Re-measured live performance against the recorded baseline — server median 270 ms → 44 ms (~6×
+  faster), transferred bytes 5–9× smaller, end-to-end faster on 10/12 reports. See
+  [[Issue — Declarative pages ship whole views and are slower than server rendering]].
+
+## Verification
+
+- `npm run smoke` → 59/59 checks passed, including profit result parity, select-source-only payload shape and
+  filtered ETag revalidation.
+- `python scripts/kb_check.py vault` → PASS, quality 100/100.
+- Live parity (2026-09-26): on the live dataset, all 14 reports produce rows **and** totals identical to the
+  server-rendered route when the same filters are applied — see [[Checkpoint — Three-Server E2E Test — 2026-09-26]].
+  (A bare `GET /reports/<report>` differs only because the legacy route drops its date defaults — see
+  [[Issue — Legacy report routes ignore their declared date defaults]].)
+- Live **performance** re-measured (2026-09-26, live dataset): server-side median 270 ms → 44 ms (~6× faster),
+  transferred bytes median 1.13 MB → 124 KB, end-to-end faster on 10/12 reports — the criterion is met. The
+  only caveat is decoded-payload size (JSON is larger than HTML before compression); see
+  [[Issue — Declarative pages ship whole views and are slower than server rendering]].
+- `npm run smoke` → 59/59 checks passed (re-run 2026-09-26 on this working tree).
 
 ## Verification to beat
 

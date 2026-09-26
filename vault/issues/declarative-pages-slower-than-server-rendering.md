@@ -1,6 +1,6 @@
 ---
 type: Issue
-status: Open
+status: Resolved
 belongs_to:
   - "[[TrailBase Backend]]"
 related_to:
@@ -26,6 +26,10 @@ The declarative page host ([[Decision — Declarative pages: a folder is a page,
 is **slower than the server-rendered route for every report measured**, on the live 60k-row dataset. The
 browser has to receive and parse the page's whole derived view set before it can show anything, whereas the
 server-rendered route ships only the finished result.
+
+> **Resolved 2026-09-26** by [[TB-0008 Serve report results from the page host instead of whole views]] —
+the page host now requests named server-computed results instead of whole views. Re-measurement below shows
+it is faster server-side and end-to-end, and ships far fewer bytes on the wire.
 
 ## How it was measured
 
@@ -75,18 +79,54 @@ On the wire it is mixed: for `payments` the page moves **2.3 MB gzipped vs 6.4 M
 - The architecture's actual wins are server-side, not latency: Node runs no page logic, a repeat visit is a
   `304`, and the server pays the view build once per snapshot version instead of once per request.
 
+## Re-measured 2026-09-26 — resolved
+
+Method: live dataset (60,254 rows, snapshot v12), same machine. **Server-side** = median of 5 `GET`s with a
+session cookie and `Accept-Encoding: gzip` (legacy HTML is *not* compressed by the app). **End-to-end** =
+in-page time-to-ready in Chrome with the cache disabled, median of 2.
+
+Server-side response time and bytes:
+
+| report | legacy ms | page ms | speed-up | legacy wire | page wire | legacy decoded | page decoded |
+|---|---|---|---|---|---|---|---|
+| `payments` | 1,269 | 248 | 5.1× | 6,518,114 | 838,110 | 6,518,114 | 7,645,196 |
+| `salesreport` | 505 | 101 | 5.0× | 2,132,174 | 329,080 | 2,132,174 | 2,667,122 |
+| `paymentsbycompany` | 833 | 133 | 6.3× | 3,274,601 | 335,355 | 3,274,601 | 4,074,213 |
+| `itemsales` | 2,220 | 379 | 5.9× | 7,883,228 | 1,042,821 | 7,883,228 | 12,487,276 |
+| `profit` | 2,277 | 376 | 6.1× | 8,503,568 | 1,042,785 | 8,503,568 | 12,487,228 |
+| `stock` | 34 | 7 | 5.1× | 45,279 | 9,280 | 45,279 | 52,835 |
+| `difference` | 13 | 7 | 2.0× | 32,765 | 5,648 | 32,765 | 39,994 |
+| `dailysale` | 6 | 4 | 1.5× | 10,466 | 2,237 | 10,466 | 15,657 |
+| `outstanding` | 21 | 10 | 2.2× | 116,619 | 32,173 | 116,619 | 152,900 |
+| `productsale` | 8 | 5 | 1.5× | 32,902 | 8,141 | 32,902 | 40,203 |
+| `ledgers/area` | 30 | 11 | 2.7× | 136,037 | 32,826 | 136,037 | 163,619 |
+| `ledgers/general` | 540 | 76 | 7.1× | 2,445,455 | 215,336 | 2,445,455 | 3,070,423 |
+| **median** | **270** | **44** | **~6×** | **1,134,106** | **124,081** | — | — |
+
+End-to-end time-to-ready (ms, legacy → page): payments 17,393 → 11,535; salesreport 3,662 → 4,034;
+paymentsbycompany 7,281 → 4,971; itemsales 31,389 → 11,098; profit 22,440 → 16,077; stock 896 → 773;
+difference 944 → 858; dailysale 137 → 139; outstanding 377 → 374; productsale 244 → 223;
+ledgers/area 418 → 397; ledgers/general 5,793 → 4,851. **The page host is faster on 10 of 12 reports and
+within 2–7 ms on the rest.**
+
+Two honest caveats:
+
+- The **decoded** JSON is larger than the decoded HTML (JSON is more verbose; `payments` 7.6 MB vs 6.5 MB),
+  but it gzips far better, so the **transferred** bytes are 5–9× smaller for every report. The legacy route
+  does not compress its HTML, so its wire size equals its decoded size.
+- The page keeps a minified payload but no per-report caching; repeat views rely on the endpoint's `ETag`
+  revalidating to `304`.
+
 ## Mitigation
 
-Not yet chosen. In impact order:
+**Implemented, awaiting live remeasurement:** `/p/<slug>/data` now runs the manifest's trusted named report
+against the warm snapshot in the existing Node worker-thread pool and returns `{rows, totals}` plus only
+select-source tables. Applied filters are query parameters and participate in the ETag, so re-filtering takes
+one normal HTTP request rather than receiving whole views. The browser now only renders.
 
-1. **Ship the result, not the views.** Let Node run the page's named report against its warm snapshot and
-   return `{rows, totals}`. Still fully generic — the manifest already names `compute.report`. Expected to
-   beat the server-rendered path outright; the trade is that re-filtering needs a round trip.
-   Tracked as [[TB-0008 Serve report results from the page host instead of whole views]].
-2. **A columnar payload** (typed arrays + transferables, or `SharedArrayBuffer` with COOP/COEP) to cut
-   transfer and parse by 5–10×.
-3. **Compress the server-rendered HTML too** — it currently goes out uncompressed, which flatters the
-   comparison for the page host on large reports.
+This retains a portable local module boundary and adds no queue, broker, cache server or second deployment.
+[[TB-0008 Serve report results from the page host instead of whole views]] is complete only after the existing
+live-data performance table is remeasured.
 
 ## Notes
 

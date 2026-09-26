@@ -349,6 +349,32 @@ export function reportRoutes({ config, render, reports }) {
   // Background refresh job state, for the colour indicator in the top bar.
   router.get("/reports/status", auth, (req, res) => res.json(reports.status()));
 
+  /** Where to return after a form POST: same-host referer, else the dashboard. */
+  function backTo(req) {
+    try {
+      const url = new URL(req.get("referer"));
+      if (url.host === req.get("host")) return url.pathname + url.search;
+    } catch {
+      /* no referer, or one we cannot trust */
+    }
+    return "/dashboard";
+  }
+
+  // Manual trigger for the warm snapshot: probe, re-read what changed, rebuild those
+  // views and re-render the affected reports. `?full=1` re-reads every table instead.
+  // Answers JSON when asked, otherwise redirects back so the control works without JS.
+  router.post(
+    "/reports/refresh",
+    auth,
+    ah(async (req, res) => {
+      const full = qsb(req.query.full) || qsb(req.body?.full);
+      if (full) reports.invalidate();
+      await reports.refresh();
+      if (String(req.get("accept") || "").includes("application/json")) return res.json(reports.status());
+      res.redirect(303, backTo(req));
+    })
+  );
+
   router.get("/reports/ledgers", auth, (req, res) => {
     res.send(page(shell(req, "reports", "Ledgers"), "reports/ledgers/index.html", { tiles: LEDGER_INDEX }));
   });

@@ -197,7 +197,7 @@ async function get(cookies, url, opts = {}) {
     ...opts,
   });
   cookies.set(res);
-  return { status: res.status, location: res.headers.get("location"), body: await res.text() };
+  return { status: res.status, location: res.headers.get("location"), etag: res.headers.get("etag"), body: await res.text() };
 }
 
 async function postForm(cookies, url, fields) {
@@ -292,6 +292,26 @@ async function main() {
     const profit = await get(cookies, `/reports/profit?${sep}`);
     check("profit total is 91.00 (margin arithmetic)", profit.body.includes('class="right">91.00<'), "");
     check("profit row uses final-margin 90.42", profit.body.includes("90.42"), "");
+
+    const pageProfit = await get(cookies, `/p/reports/profit/data?${sep}`);
+    const pageProfitPayload = pageProfit.status === 200 ? JSON.parse(pageProfit.body) : null;
+    check("page data returns a named report result", pageProfitPayload?.meta?.report === "profit" && Array.isArray(pageProfitPayload.result?.rows), pageProfit.body);
+    check("page data preserves profit total", pageProfitPayload?.result?.totals?.profit === "91.00", JSON.stringify(pageProfitPayload?.result?.totals));
+    check("page data ships select sources, not derived views", Array.isArray(pageProfitPayload?.tables?.items) && pageProfitPayload?.views === undefined, pageProfit.body);
+    const pageProfitCached = await get(cookies, `/p/reports/profit/data?${sep}`, { headers: { cookie: cookies.cookie, "if-none-match": pageProfit.etag } });
+    check("page data revalidates an unchanged filtered result", pageProfit.etag && pageProfitCached.status === 304, `${pageProfit.etag} ${pageProfitCached.status}`);
+
+    // manual refresh trigger (the top-bar control)
+    const refreshed = await postForm(cookies, "/reports/refresh", {});
+    check("manual refresh redirects back without JS", refreshed.status === 303 && String(refreshed.location || "").startsWith("/"), `${refreshed.status} ${refreshed.location}`);
+    const refreshedFull = await postForm(cookies, "/reports/refresh?full=1", {});
+    check("manual refresh accepts a full re-read", refreshedFull.status === 303, `${refreshedFull.status} ${refreshedFull.location}`);
+    const refreshedJson = await fetch(FE + "/reports/refresh", { method: "POST", redirect: "manual", headers: { accept: "application/json", cookie: cookies.cookie } });
+    const refreshedState = refreshedJson.status === 200 ? await refreshedJson.json() : null;
+    check("manual refresh answers JSON when asked", refreshedState?.ready === true && refreshedState?.phase === "idle", `${refreshedJson.status}`);
+    const afterRefresh = await get(cookies, "/reports/status");
+    const afterState = afterRefresh.status === 200 ? JSON.parse(afterRefresh.body) : null;
+    check("manual refresh leaves the snapshot ready", afterState?.ready === true && afterState?.build > 0, afterRefresh.body);
 
     const itemsales = await get(cookies, `/reports/itemsales?${sep}`);
     check("item sales total sale is 731.00", itemsales.body.includes('class="right">731.00<'), "");

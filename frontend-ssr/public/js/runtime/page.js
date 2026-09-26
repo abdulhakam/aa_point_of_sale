@@ -1,15 +1,13 @@
 /**
  * The generic page driver.
  *
- * Reads the manifest the server embedded, fetches exactly the base tables the page
- * declared (cache-aware), hands the declared views + report to a worker, and fills
- * the DOM. It knows nothing about any specific page: the Jinja template renders
- * the filters, the columns and the totals labels, and this file only moves data.
+ * Reads the manifest the server embedded, requests its named report result and the
+ * select-source tables, then fills the DOM. It knows nothing about any specific
+ * page: the Jinja template renders filters, columns and totals labels.
  *
  * Timings are published on `window.__page` so the report speed can be measured
  * from outside.
  */
-import { createPool } from "./pool.js";
 
 const metaEl = document.getElementById("page-meta");
 if (metaEl) {
@@ -40,7 +38,6 @@ function publish(timer) {
 function start(meta) {
   const form = document.querySelector("[data-page-filters]");
   const tbody = document.querySelector("[data-page-rows]");
-  const pool = createPool(Math.min(navigator.hardwareConcurrency || 2, 4));
   let run = 0;
 
   const filters = () => {
@@ -53,7 +50,7 @@ function start(meta) {
     return out;
   };
 
-  /** Select options come from the fetched tables, so Node never ships them. */
+  /** Select options come only from declared source tables. */
   function fillSelects(tables) {
     if (!form) return;
     for (const field of meta.filters || []) {
@@ -101,14 +98,16 @@ function start(meta) {
     }
   }
 
-  async function load() {
-    // Revalidation is the browser's job: the data endpoint answers an
-    // `If-None-Match` with `304`, and the cached body is reused transparently.
-    const res = await fetch(meta.dataUrl, { headers: { accept: "application/json" } });
+  async function load(appliedFilters) {
+    // Revalidation is the browser's job: the endpoint's ETag includes snapshot
+    // version and declared filters, so a cached result is reused safely.
+    const query = new URLSearchParams(appliedFilters);
+    const url = query.size ? `${meta.dataUrl}?${query}` : meta.dataUrl;
+    const res = await fetch(url, { headers: { accept: "application/json" } });
     if (!res.ok) throw new Error(`page data: HTTP ${res.status}`);
     const text = await res.text();
     const body = JSON.parse(text);
-    return { version: body.version, views: body.views ?? {}, tables: body.tables ?? {}, bytes: text.length };
+    return { version: body.version, result: body.result, tables: body.tables ?? {}, bytes: text.length };
   }
 
   async function rebuild() {
@@ -118,14 +117,15 @@ function start(meta) {
     setStatus("Fetching data…");
 
     try {
-      const data = await load();
+      const appliedFilters = filters();
+      const data = await load(appliedFilters);
       if (ticket !== run) return;
       timer.fetchMs = Math.round(performance.now() - started);
       timer.bytes = data.bytes;
       timer.version = data.version;
       fillSelects(data.tables);
 
-      const missing = (meta.requires || []).filter((name) => !filters()[name]);
+      const missing = (meta.requires || []).filter((name) => !appliedFilters[name]);
       if (missing.length) {
         const field = (meta.filters || []).find((f) => f.name === missing[0]);
         if (tbody) tbody.textContent = "";
@@ -134,22 +134,14 @@ function start(meta) {
         return publish(timer);
       }
 
-      if (!meta.compute?.report) {
+      if (!data.result) {
         setStatus(`${meta.needs.tables.length} table(s) loaded · snapshot v${data.version}`, "ok");
         timer.totalMs = Math.round(performance.now() - started);
         return publish(timer);
       }
 
-      setStatus("Computing…");
-      const computeStart = performance.now();
-      const result = await pool.run({
-        report: meta.compute.report,
-        views: data.views,
-        filters: filters(),
-      });
-      timer.computeMs = Math.round(performance.now() - computeStart);
       if (ticket !== run) return;
-
+      const result = data.result;
       const renderStart = performance.now();
       renderRows(result);
       renderTotals(result);
@@ -158,7 +150,7 @@ function start(meta) {
       timer.totalMs = Math.round(performance.now() - started);
 
       setStatus(
-        `${timer.rows.toLocaleString()} row(s) · computed in ${timer.computeMs} ms · snapshot v${data.version}`
+        `${timer.rows.toLocaleString()} row(s) · snapshot v${data.version}`
       );
     } catch (error) {
       if (ticket === run) setStatus(`Failed: ${error.message}`, "error");

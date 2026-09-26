@@ -92,6 +92,7 @@ Routes (all except `/login` require a session):
 | `GET /p`, `GET /p/<slug>`, `GET /p/<slug>/data` | the declarative page host — see Declarative pages |
 | `GET /compute/*` | the shared compute modules, served to the browser runtime |
 | `GET /reports/status` | the refresh job's phase and last-run summary (top-bar indicator) |
+| `POST /reports/refresh` | the top-bar control: probe, re-read what changed, rebuild and re-render; `?full=1` re-reads every table. JSON when asked, otherwise a `303` back |
 | `GET /healthz` | liveness + worker-pool stats |
 
 ## Plugins
@@ -159,7 +160,11 @@ the production path until [[TB-0008 Serve report results from the page host inst
   exactly the tables it touched, and the snapshot is published before the warm re-render so a request never
   waits on it. A quiet tick costs 17 cheap requests and no CPU. `REFRESH_INTERVAL_SECONDS` (default 60 s)
   replaces the old `CACHE_TTL_SECONDS` TTL — see
-  [[Decision — Refresh the report snapshot incrementally from table fingerprints]].
+  [[Decision — Refresh the report snapshot incrementally from table fingerprints]]. The pipeline runs on
+  the `REFRESH_INTERVAL_SECONDS` timer, on a management write (`invalidate`), lazily when the snapshot is not
+  ready, or **on demand**: the top-bar state indicator is a button that POSTs `/reports/refresh`, with
+  `?full=1` to re-read every table — [[Issue — No manual trigger for the report snapshot refresh]]
+  (Resolved).
 - **The legacy `/reports/<report>` routes still serve** every report page from Node. Their replacements live
   in `pages/` but are currently slower — see Declarative pages below.
 - Each report is dispatched to a `worker_threads` pool with only the view arrays it declares, so
@@ -199,7 +204,7 @@ Two deliberate divergences, plus one known gap:
 ## Verification
 
 `npm run smoke` boots a throw-away TrailBase depot, seeds a consistent dataset through the record
-APIs, starts this app against it, and drives every screen over HTTP with a real login: **55/55
+APIs, starts this app against it, and drives every screen over HTTP with a real login: **63/63
 assertions pass**, including hand-computed amounts that must equal the preserved view SQL (profit
 `91.00`, stock `4510.00`, outstanding `150.00`, and the `403.85 / 161.54` revenue-share split).
 Details and the expectation table are in `frontend-ssr/README.md`.
@@ -210,8 +215,18 @@ with filters applying and resetting correctly and revalidation returning `304`. 
 the two paths were measured against each other — the page host is slower everywhere, with the numbers and the
 method in [[Issue — Declarative pages ship whole views and are slower than server rendering]].
 
+On 2026-09-26 a full three-server E2E (wipe, re-import the live dataset, open every route) confirmed the page
+host is **numerically at parity** with the legacy routes: all 14 reports produce identical rows and totals when
+the same filters are applied. A bare `GET /reports/<report>` differs only because the legacy route drops its
+date defaults — [[Issue — Legacy report routes ignore their declared date defaults]]. See
+[[Checkpoint — Three-Server E2E Test — 2026-09-26]].
+
 ## Constraints and gotchas
 
+- **A stale frontend on `:3100` silently serves old code.** If another `node src/server.js` already holds
+  the port, a newly started one dies with `EADDRINUSE` while the old process keeps answering — so static
+  files (read from disk per request) look current while the server routes are stale. Check the listening
+  PID before believing a change is live; the smoke suite starts its own process and is unaffected.
 - **The backend has to be reachable on IPv4 loopback.** `TRAILBASE_URL` defaults to
   `http://127.0.0.1:4000`, but TrailBase's own default bind is `[::1]:4000` (IPv6 only), so a
   default-configured server is invisible to this app. Start it with `--address=127.0.0.1:4000` — which
@@ -240,6 +255,8 @@ method in [[Issue — Declarative pages ship whole views and are slower than ser
 ## Related
 
 - [[TrailBase Backend]] — the project this belongs to.
+- [[Reports vs Pages — Implementation and Performance]] — the side-by-side reference for the two report paths.
+- [[TrailBase Frontend System Diagrams]] — interactive architecture, sequence and data-flow diagrams.
 - [[Backend — TrailBase Server]] — the API contract and its gotchas.
 - [[Frontend — Next.js Application]] — the PocketBase-era client whose screens this mirrors.
 - [[TB-0004 Build the server-rendered TrailBase frontend]] — the work that built it.

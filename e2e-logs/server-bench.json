@@ -1,0 +1,110 @@
+[
+  {
+    "report": "payments",
+    "legacy_ms": 1269,
+    "page_ms": 248,
+    "legacy_wire": 6518114,
+    "page_wire": 838110,
+    "legacy_dec": 6518114,
+    "page_dec": 7645196
+  },
+  {
+    "report": "salesreport",
+    "legacy_ms": 505,
+    "page_ms": 101,
+    "legacy_wire": 2132174,
+    "page_wire": 329080,
+    "legacy_dec": 2132174,
+    "page_dec": 2667122
+  },
+  {
+    "report": "paymentsbycompany",
+    "legacy_ms": 833,
+    "page_ms": 133,
+    "legacy_wire": 3274601,
+    "page_wire": 335355,
+    "legacy_dec": 3274601,
+    "page_dec": 4074213
+  },
+  {
+    "report": "itemsales",
+    "legacy_ms": 2220,
+    "page_ms": 379,
+    "legacy_wire": 7883228,
+    "page_wire": 1042821,
+    "legacy_dec": 7883228,
+    "page_dec": 12487276
+  },
+  {
+    "report": "profit",
+    "legacy_ms": 2277,
+    "page_ms": 376,
+    "legacy_wire": 8503568,
+    "page_wire": 1042785,
+    "legacy_dec": 8503568,
+    "page_dec": 12487228
+  },
+  {
+    "report": "stock",
+    "legacy_ms": 34,
+    "page_ms": 7,
+    "legacy_wire": 45279,
+    "page_wire": 9280,
+    "legacy_dec": 45279,
+    "page_dec": 52835
+  },
+  {
+    "report": "difference",
+    "legacy_ms": 13,
+    "page_ms": 7,
+    "legacy_wire": 32765,
+    "page_wire": 5648,
+    "legacy_dec": 32765,
+    "page_dec": 39994
+  },
+  {
+    "report": "dailysale",
+    "legacy_ms": 6,
+    "page_ms": 4,
+    "legacy_wire": 10466,
+    "page_wire": 2237,
+    "legacy_dec": 10466,
+    "page_dec": 15657
+  },
+  {
+    "report": "outstanding",
+    "legacy_ms": 21,
+    "page_ms": 10,
+    "legacy_wire": 116619,
+    "page_wire": 32173,
+    "legacy_dec": 116619,
+    "page_dec": 152900
+  },
+  {
+    "report": "productsale",
+    "legacy_ms": 8,
+    "page_ms": 5,
+    "legacy_wire": 32902,
+    "page_wire": 8141,
+    "legacy_dec": 32902,
+    "page_dec": 40203
+  },
+  {
+    "report": "ledgers/area",
+    "legacy_ms": 30,
+    "page_ms": 11,
+    "legacy_wire": 136037,
+    "page_wire": 32826,
+    "legacy_dec": 136037,
+    "page_dec": 163619
+  },
+  {
+    "report": "ledgers/general",
+    "legacy_ms": 540,
+    "page_ms": 76,
+    "legacy_wire": 2445455,
+    "page_wire": 215336,
+    "legacy_dec": 2445455,
+    "page_dec": 3070423
+  }
+]

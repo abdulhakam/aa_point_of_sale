@@ -23,9 +23,9 @@ tags:
 
 ## Status
 
-Accepted (2026-09-25) as the target shape for the frontend. The current implementation is **slower than
-server rendering** — see [[Issue — Declarative pages ship whole views and are slower than server rendering]]
-— and the fix is tracked by [[TB-0008 Serve report results from the page host instead of whole views]].
+Accepted (2026-09-25). The page host now runs each manifest's trusted named report on the local worker-thread
+pool and returns its result rather than whole views. Live-dataset performance remeasurement remains tracked by
+[[TB-0008 Serve report results from the page host instead of whole views]].
 
 ## Context
 
@@ -57,27 +57,24 @@ Node keeps exactly three generic routes plus a shared static mount:
 |---|---|
 | `GET /p` | list every folder under `pages/` that has a `meta.json` |
 | `GET /p/<slug>` | render the declared template with the manifest embedded as JSON |
-| `GET /p/<slug>/data` | the views the manifest names (plus any raw tables), gzipped, `ETag` = snapshot build |
-| `GET /compute/*` | the environment-neutral compute modules, served so the browser runs the same files |
+| `GET /p/<slug>/data` | the manifest's named report result plus select-source tables, gzipped, `ETag` = snapshot + filters |
+| `GET /compute/*` | the environment-neutral compute modules, retained as a portable module surface |
 
 **The compute layer is shared, not duplicated.** `compute/` (`views.js`, `reports.js`, `format.js`, `ids.js`)
-touches no Node API and is imported directly by Node *and* fetched by the browser at `/compute/`. The browser
-runtime is a flat worker pool (`public/js/runtime/`) that runs `runReport` over the views it was handed.
+touches no Node API. The local report service dispatches trusted named operations to its `worker_threads` pool;
+the browser receives the completed result and only renders it.
 
 ## Consequences
 
 - **Adding a page is adding a folder** — `meta.json` + a two-line template. Demonstrated by adding the Stock
   page mid-session with no Node change and no restart.
-- **Node keeps only generic work**: discover folders, parse manifests, resolve a page's views from the
-  snapshot, serialise them, render a Jinja template, hold the session. That is the ~200-line "kernel" that
-  ports to Go/Rust/WASI. This is the L1 step of a ladder whose later steps render templates client-side and
-  let the browser read TrailBase directly.
+- **Node keeps only generic work**: discover folders, parse manifests, resolve snapshot inputs, dispatch a
+  named compute operation, render a Jinja template and hold the session. These are explicit local module
+  boundaries, not separate deployed services.
 - **The browser owns presentation.** Filters render server-side in the template; options, rows and totals are
-  filled by the runtime. A flat pool is used deliberately: worker-inside-worker is a Safari compatibility trap
-  (WebKit lacks nested dedicated workers) and buys nothing over dispatching from the main thread.
-- **First-load latency regressed** for every report measured, because the whole view set crosses the wire to
-  be computed in the browser. This is the accepted cost of the shape; the immediate fix is to let Node run the
-  named report and ship only `{rows, totals}` — still generic, because the manifest names the report.
+  filled by the runtime. CPU-bound report work stays in the local Node `worker_threads` pool.
+- **The views-on-the-wire regression is removed structurally.** The endpoint now returns `{rows, totals}` and
+  lightweight select sources; live performance must still be remeasured before declaring TB-0008 complete.
 - **Data pages need JavaScript.** The shell and filters are still server-rendered, but rows are not.
 - Two traps found and recorded: MiniJinja hands templates a *proxy*, so `| json` on a value produces `{}` —
   manifests are serialised in Node (`metaJson`); and a module worker's script is cached aggressively, so the
@@ -88,7 +85,8 @@ runtime is a flat worker pool (`public/js/runtime/`) that runs `runReport` over 
 - **Keep server rendering only** — rejected as the end state: it keeps every page's definition inside Node.
 - **A client SPA framework** — rejected: the app is deliberately framework-free, and manifest-plus-template
   already gives the wanted decoupling.
-- **Nested web workers** — rejected: no benefit over a flat pool, and a hard browser lock-in.
+- **Browser worker computation** — removed: serialising whole views and structured-cloning them to a browser
+  worker caused the measured page-host regression; the existing server worker pool is cheaper and portable.
 - **An IndexedDB cache of the base tables** — implemented, measured, then **removed**: writing ~60k row
   objects took ~36 s. The browser's own HTTP cache (revalidation via `ETag`) does the job.
 
@@ -97,16 +95,13 @@ runtime is a flat worker pool (`public/js/runtime/`) that runs `runReport` over 
 - All 14 reports now exist as pages; `profit` and `stock` render **identical** totals and rows to their
   server-rendered counterparts on both a seeded throwaway depot and the live 60k-row dataset
   (profit `400.00` / stock `-600.00` on the seeded fixture).
-- The network log shows workers importing `/compute/reports.js`, `views.js`, `format.js`, `ids.js` — Node's
-  own files.
-- `npm run smoke` 55/55 throughout, including the compute extraction.
+- `npm run smoke` 59/59 after the result endpoint change, including report-result parity, select-source-only
+  payload shape and filtered ETag revalidation.
 
 ## Revisit when
 
-- The report-result payload ([[TB-0008 Serve report results from the page host instead of whole views]]) has
-  been measured; if pages are still slower than server rendering on real data, the shape itself is in question.
-- WASI p3 / a Go or Rust service makes the data layer a component — then the manifest may name a component
-  instead of a JS report.
+- Re-measure the result payload on the 60k-row live dataset. If it remains slower than the legacy rendered
+  route, investigate the measured bottleneck before changing the local module boundaries.
 
 ## Related
 

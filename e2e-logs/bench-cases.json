@@ -1,0 +1,14 @@
+[
+  { "page": "/p/reports/payments",          "legacy": "/reports/payments" },
+  { "page": "/p/reports/salesreport",       "legacy": "/reports/salesreport" },
+  { "page": "/p/reports/paymentsbycompany", "legacy": "/reports/paymentsbycompany" },
+  { "page": "/p/reports/itemsales",         "legacy": "/reports/itemsales" },
+  { "page": "/p/reports/profit",            "legacy": "/reports/profit" },
+  { "page": "/p/reports/stock",             "legacy": "/reports/stockreport" },
+  { "page": "/p/reports/difference",        "legacy": "/reports/difference" },
+  { "page": "/p/reports/dailysale",         "legacy": "/reports/dailysale" },
+  { "page": "/p/reports/outstanding",       "legacy": "/reports/outstanding" },
+  { "page": "/p/reports/productsale",       "legacy": "/reports/productsale" },
+  { "page": "/p/ledgers/area",              "legacy": "/reports/ledgers/area" },
+  { "page": "/p/ledgers/general",           "legacy": "/reports/ledgers/general" }
+]

@@ -4,16 +4,30 @@ import { requireAuth } from "../lib/auth.js";
 import { page, ah } from "../lib/http.js";
 import { listPages, readPage } from "../lib/pages.js";
 
+const scalar = (value) => (Array.isArray(value) ? String(value[0] ?? "") : String(value ?? ""));
+
+/** Resolve only declared filter fields; a manifest controls the compute input. */
+function filtersFor(def, query) {
+  const filters = {};
+  for (const field of def.filters) {
+    const value = scalar(query[field.name]);
+    filters[field.name] = field.type === "check" ? (value === "on" ? "on" : "") : value || field.value;
+  }
+  // TrailBase vocabulary codes are integers, while form values arrive as strings.
+  if (filters.type !== undefined && filters.type !== "") filters.type = Number(filters.type);
+  return filters;
+}
+
 /** Bump when the shape of the data payload changes, so caches invalidate. */
-const PAYLOAD_REVISION = 2;
+const PAYLOAD_REVISION = 3;
 
 /**
  * The generic page host.
  *
  * Nothing in this file knows anything about a specific page. It discovers folders
  * under `pages/`, renders the template their `meta.json` names, and serves the
- * base tables those pages declare. Adding a page is adding a folder — no code
- * here, or anywhere else in Node, changes.
+ * source tables their filters declare, then dispatches their trusted named compute
+ * operation. Adding a page is adding a folder — no code here, or elsewhere in Node, changes.
  */
 export function pageRoutes({ config, render, reports }) {
   const router = express.Router();
@@ -61,26 +75,24 @@ export function pageRoutes({ config, render, reports }) {
   }
 
   /**
-   * The page's data: the derived views it named (already built and cached by the
-   * background job, so this is serialisation only), plus any raw tables it also
-   * declared. The `ETag` carries a payload-shape revision and the snapshot's build
-   * number, so a repeat visit revalidates to a `304` — and a change in what we
-   * send (not just in the data) invalidates correctly.
+   * The page's data: its named report result, computed against the warm snapshot,
+   * plus only tables needed to populate select filters. The browser renders the
+   * result; it never receives whole derived views or executes report logic.
    */
   async function sendData(req, res, def) {
+    const filters = filtersFor(def, req.query);
     const snapshot = await reports.getViews(req.token);
-    const etag = `W/"v${PAYLOAD_REVISION}-${snapshot.version}"`;
+    const etag = `W/"v${PAYLOAD_REVISION}-${snapshot.version}-${encodeURIComponent(JSON.stringify(filters))}"`;
     res.set("cache-control", "private, no-cache");
     res.set("vary", "accept-encoding");
     res.set("etag", etag);
     if (req.headers["if-none-match"] === etag) return res.status(304).end();
 
-    const views = {};
-    for (const name of def.needs.views) views[name] = snapshot.views[name] ?? [];
+    const result = def.compute?.report ? await reports.run(def.compute.report, req.token, filters) : null;
     const tables = {};
     for (const table of def.needs.tables) tables[table] = snapshot.base[table] ?? [];
 
-    const payload = { version: snapshot.version, slug: def.slug, views };
+    const payload = { version: snapshot.version, slug: def.slug, filters, result, meta: { report: def.compute?.report ?? null } };
     if (def.needs.tables.length) payload.tables = tables;
     const body = Buffer.from(JSON.stringify(payload));
     res.set("content-type", "application/json; charset=utf-8");

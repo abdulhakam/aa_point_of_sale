@@ -1,0 +1,2 @@
+/reports/ledgers/party	/p/ledgers/party	party
+/reports/ledgers/booker	/p/ledgers/booker	booker

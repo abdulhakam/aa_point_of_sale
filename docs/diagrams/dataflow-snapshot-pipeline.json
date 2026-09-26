@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "TrailBase report data flow — incremental snapshot",
+    "output": "dataflow-snapshot-pipeline.html",
+    "viewBox": [1080, 520],
+    "quality_profile": "showcase"
+  },
+  "stages": [
+    { "label": "Source" },
+    { "label": "Probe" },
+    { "label": "Fetch" },
+    { "label": "Process" },
+    { "label": "Serve" }
+  ],
+  "nodes": [
+    { "id": "tb", "type": "backend", "label": "TrailBase", "sublabel": "17 tables", "stage": 0, "row": 1, "tag": "typed REST" },
+    { "id": "probe", "type": "backend", "label": "Fingerprint probe", "sublabel": "count + max updated", "stage": 1, "row": 1, "tag": "1 req/table" },
+    { "id": "fetch", "type": "backend", "label": "Fetch changed", "sublabel": "whole tables", "stage": 2, "row": 1, "tag": "skips unchanged" },
+    { "id": "base", "type": "database", "label": "Base snapshot", "sublabel": "in memory", "stage": 3, "row": 0, "tag": "merged" },
+    { "id": "views", "type": "database", "label": "Derived views", "sublabel": "rebuilt in JS", "stage": 3, "row": 2, "tag": "only affected" },
+    { "id": "routes", "type": "backend", "label": "Legacy /reports", "sublabel": "MiniJinja HTML", "stage": 4, "row": 1, "tag": "runReport" },
+    { "id": "pages", "type": "backend", "label": "Page host /p/data", "sublabel": "gzip JSON + ETag", "stage": 4, "row": 2, "tag": "compute.report" }
+  ],
+  "flows": [
+    { "id": "signature", "from": "tb", "to": "probe", "label": "signature per table", "classification": "control", "variant": "emphasis" },
+    { "id": "changed", "from": "probe", "to": "fetch", "label": "changed tables only", "classification": "control", "variant": "dashed" },
+    { "id": "rows", "from": "fetch", "to": "base", "label": "rows read whole", "classification": "data", "variant": "default" },
+    { "id": "rebuild", "from": "base", "to": "views", "label": "rebuild affected views", "classification": "transform", "variant": "default", "fromSide": "bottom", "toSide": "top", "route": "straight", "labelDy": 26 },
+    { "id": "html", "from": "views", "to": "routes", "label": "default view -> HTML", "classification": "data", "variant": "default" },
+    { "id": "json", "from": "views", "to": "pages", "label": "named result -> JSON", "classification": "data", "variant": "emphasis", "route": "straight", "labelDy": 53 }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Incremental by fingerprint", "items": ["A quiet tick costs 17 cheap requests and no CPU", "Only changed tables are fetched; only their views are rebuilt"] },
+    { "dot": "emerald", "title": "Triggers", "items": ["A timer every 60 s; a write invalidates its tables; a read refreshes lazily"] },
+    { "dot": "amber", "title": "Two consumers, one snapshot", "items": ["/reports/* renders HTML; the page host returns gzip JSON", "The 13 PocketBase view SQLs are rebuilt in compute/views.js"] }
+  ]
+}

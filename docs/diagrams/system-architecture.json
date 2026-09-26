@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "TrailBase POS Frontend — System Architecture",
+    "output": "system-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "report-paths", "label": "Two report surfaces", "focus": ["browser", "ssr", "routes", "pages", "service"], "note": "One report service, two ways to reach it." },
+      { "id": "data", "label": "Data and snapshot", "focus": ["service", "tb", "db"], "note": "The warm snapshot is fed by TrailBase over typed REST." },
+      { "id": "plugins", "label": "Plugins", "focus": ["browser", "ssr", "plugins", "tb"], "note": "Self-contained folders; the import runs in the browser." }
+    ]
+  },
+  "components": [
+    { "id": "browser", "type": "external", "label": "Operator Browser", "sublabel": "Chrome", "pos": [40, 200], "size": [150, 64], "tag": "signed cookie session" },
+    { "id": "ssr", "type": "backend", "label": "frontend-ssr", "sublabel": "Express + MiniJinja", "pos": [300, 200], "size": [160, 66], "tag": ":3100" },
+    { "id": "routes", "type": "backend", "label": "Legacy Report Routes", "sublabel": "/reports/*", "pos": [300, 40], "size": [170, 56], "tag": "server-rendered HTML" },
+    { "id": "pages", "type": "backend", "label": "Declarative Page Host", "sublabel": "/p/*", "pos": [590, 360], "size": [170, 56], "tag": "manifest -> JSON result" },
+    { "id": "plugins", "type": "backend", "label": "Plugins Hub", "sublabel": "/plugins", "pos": [300, 520], "size": [170, 56], "tag": "one folder each" },
+    { "id": "service", "type": "backend", "label": "Report Service", "sublabel": "warm snapshot", "pos": [590, 200], "size": [180, 66], "tag": "worker pool + compute/" },
+    { "id": "tb", "type": "backend", "label": "TrailBase", "sublabel": "typed REST + auth", "pos": [860, 200], "size": [150, 64], "tag": ":4000" },
+    { "id": "db", "type": "database", "label": "SQLite", "sublabel": "traildepot/data", "pos": [1060, 200], "size": [150, 60], "tag": "main.db" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "frontend-ssr process (Node :3100)", "wraps": ["ssr", "routes", "pages", "plugins", "service"] },
+    { "kind": "region", "label": "TrailBase depot (traildepot/)", "wraps": ["tb", "db"] }
+  ],
+  "connections": [
+    { "id": "browser-to-ssr", "from": "browser", "to": "ssr", "label": "HTTPS :3100", "variant": "emphasis" },
+    { "id": "ssr-to-routes", "from": "ssr", "to": "routes", "label": "renders HTML", "fromSide": "top", "toSide": "bottom" },
+    { "id": "ssr-to-pages", "from": "ssr", "to": "pages", "label": "serves JSON", "fromSide": "right", "toSide": "left" },
+    { "id": "ssr-to-plugins", "from": "ssr", "to": "plugins", "label": "static page", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "routes-to-service", "from": "routes", "to": "service", "label": "runReport(report)", "fromSide": "right", "toSide": "top" },
+    { "id": "pages-to-service", "from": "pages", "to": "service", "label": "runReport(compute.report)", "fromSide": "top", "toSide": "bottom" },
+    { "id": "service-to-tb", "from": "service", "to": "tb", "label": "reads records", "variant": "emphasis" },
+    { "id": "tb-to-db", "from": "tb", "to": "db", "label": "SQL" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Two report surfaces, one service", "items": ["/reports/* renders the whole table server-side as uncompressed HTML", "/p/* returns a named report result as gzipped JSON; the browser renders it"] },
+    { "dot": "amber", "title": "Report service", "items": ["Warm in-memory snapshot of 17 base tables and derived views", "Incremental refresh from per-table fingerprints; aggregation on worker threads"] },
+    { "dot": "rose", "title": "Backend and plugins", "items": ["TrailBase exposes typed REST + auth over SQLite with no SQL views", "Each folder under plugins/ is served behind the login; Import from v1 runs in the browser"] }
+  ]
+}

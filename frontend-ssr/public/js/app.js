@@ -64,6 +64,7 @@
     var el = document.querySelector("[data-job]");
     if (!el) return;
     var text = el.querySelector("[data-job-text]");
+    var form = el.closest("[data-job-form]");
     var LABELS = { idle: "idle", fetch: "fetching", process: "processing", render: "rendering", error: "error" };
 
     function ago(ms) {
@@ -111,6 +112,23 @@
 
     poll();
     setInterval(poll, 3000);
+
+    // The indicator is also the manual refresh control: submit, then reload so the page
+    // renders from the rebuilt snapshot. Without JS the form POST does the same thing.
+    if (form) {
+      form.addEventListener("submit", function (event) {
+        event.preventDefault();
+        if (el.getAttribute("aria-busy") === "true") return;
+        el.setAttribute("aria-busy", "true");
+        el.disabled = true;
+        if (text) text.textContent = "refreshing…";
+        fetch(form.getAttribute("action"), { method: "POST", headers: { accept: "application/json" } })
+          .then(function (res) { return res.ok ? res.json() : null; })
+          .then(function (state) { if (state) paint(state); })
+          .catch(function () {})
+          .then(function () { window.location.reload(); });
+      });
+    }
   }
 
   function init() {

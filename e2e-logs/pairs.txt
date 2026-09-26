@@ -1,0 +1,12 @@
+/reports/payments	/p/reports/payments
+/reports/salesreport	/p/reports/salesreport
+/reports/paymentsbycompany	/p/reports/paymentsbycompany
+/reports/itemsales	/p/reports/itemsales
+/reports/profit	/p/reports/profit
+/reports/stockreport	/p/reports/stock
+/reports/difference	/p/reports/difference
+/reports/dailysale	/p/reports/dailysale
+/reports/outstanding	/p/reports/outstanding
+/reports/productsale	/p/reports/productsale
+/reports/ledgers/area	/p/ledgers/area
+/reports/ledgers/general	/p/ledgers/general

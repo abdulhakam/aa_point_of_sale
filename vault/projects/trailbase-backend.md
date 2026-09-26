@@ -81,6 +81,10 @@ Out of scope:
   from its `meta.md`, and each plugin page is a static file served behind the app login. A plugin is one
   folder and can be added or removed with no change to `src/` or `views/`. See
   [[TB-0007 Add the plugins hub and the Import from v1 migration plugin]].
+- **The snapshot can be refreshed on demand (2026-09-26).** The top-bar state indicator is a button that
+  POSTs `/reports/refresh` (probe → re-read changed tables → rebuild views → re-render reports, then
+  reload); `?full=1` re-reads every table. The endpoint answers JSON or redirects back, so the control also
+  works without JavaScript. See [[Issue — No manual trigger for the report snapshot refresh]] (Resolved).
 - **Report generation was rebuilt around an incremental snapshot (2026-09-25).** The service no longer
   re-reads all 17 tables and rebuilds all 14 views on a TTL: a background job probes each table's fingerprint
   (row count + newest `updated`), fetches only tables that changed, rebuilds only the views they feed and
@@ -94,13 +98,24 @@ Out of scope:
   Node change. The compute layer moved to `frontend-ssr/compute/`, which touches no Node API and is served
   verbatim to the browser. See [[TB-0011 Add the declarative page host and migrate the reports to it]] and
   [[Decision — Declarative pages: a folder is a page, the server is a generic host]].
-- **The page host is slower than server rendering on real data** — median ≈ 5× across 10 reports, up to 154×
-  on the smallest. The browser must receive and parse the whole view set (11.7–58.2 MB decoded) before it can
-  show anything, while the server keeps the views warm and ships only the result. Recorded with the full table
-  as [[Issue — Declarative pages ship whole views and are slower than server rendering]]; the fix is
-  [[TB-0008 Serve report results from the page host instead of whole views]].
+- **The page host now requests named server-computed results rather than whole views.** The generic endpoint
+  dispatches `meta.compute.report` to the existing worker-thread pool against the warm snapshot and returns
+  `{filters, result}` plus select-source tables; the browser only renders. No queue, broker, cache server or
+  separate service was added. **Re-measured on the live dataset 2026-09-26: the page host is now faster than
+  the server-rendered route** — server-side median 270 ms → 44 ms (~6×), transferred bytes 1.13 MB → 124 KB,
+  and faster end-to-end on 10/12 reports — so
+  [[TB-0008 Serve report results from the page host instead of whole views]] is Done and
+  [[TB-0009 Retire the legacy report routes in favour of the page host]] is unblocked. All
+  14 reports are at row/total parity on live data, unfiltered, filtered and after RESET; see
+  [[Issue — Declarative pages ship whole views and are slower than server rendering]] (now Resolved).
 - The live dataset was re-verified as already migrated (every PocketBase row present in TrailBase). TrailBase
   holds **2 items named `elb`** that do not exist in PocketBase (209 vs 207); left in place rather than deleted.
+- **The depot was wiped and re-imported on 2026-09-26** as an end-to-end test of the recent commits:
+  **Import from v1** copied the live PocketBase dataset again (60,245/60,245, 0 failures), leaving a clean
+  **60,254** rows / **207** items — the two extra `elb` items noted above are no longer present. All 14
+  legacy reports and all 14 page-host pages were then opened in a browser and rendered, and a filter-matched
+  parity sweep confirmed **14/14** reports produce identical rows and totals on both paths. See
+  [[Checkpoint — Three-Server E2E Test — 2026-09-26]].
 - The first plugin is **Import from v1** — a backend-free PocketBase→TrailBase migration that runs in the
   browser (both servers allow cross-origin requests) and copies the whole dataset through the record APIs.
   [[Import from v1 Plugin]], [[Decision — Run the PocketBase migration client-side as a plugin]]. It was
@@ -156,6 +171,8 @@ cannot expose the PocketBase-style report views.
 
 - [[Data Model]] — the PocketBase model the domain (not the schema) comes from.
 - [[Reports & Ledgers]] — what each report computes; the reference for re-implementing them client-side.
+- [[Reports vs Pages — Implementation and Performance]] — how `/reports` and `/p` work and how they compare.
+- [[TrailBase Frontend System Diagrams]] — interactive diagrams of the whole system.
 - [[Glossary]] — domain vocabulary (booker, scheme, party, area, section, ...).
 - [[Import from v1 Plugin]] — the bundled PocketBase→TrailBase migration.
 
@@ -178,7 +195,9 @@ cannot expose the PocketBase-style report views.
 - [[Issue — TrailBase binds IPv6 loopback by default]]
 - [[Issue — TrailBase returns a plain-text DELETE body]]
 - [[Issue — Report cache lag after a client-side import]]
-- [[Issue — Declarative pages ship whole views and are slower than server rendering]]
+- [[Issue — Declarative pages ship whole views and are slower than server rendering]] — Resolved (2026-09-26)
+- [[Issue — No manual trigger for the report snapshot refresh]] — Resolved (2026-09-26)
+- [[Issue — Legacy report routes ignore their declared date defaults]]
 
 ## Tasks
 
@@ -189,16 +208,16 @@ cannot expose the PocketBase-style report views.
 - [x] [[TB-0007 Add the plugins hub and the Import from v1 migration plugin]] — Done (real-data import verified in Chrome)
 - [x] [[TB-0010 Refresh report views incrementally with a background job and an indicator]] — Done (18/18 + 7/7 harnesses)
 - [x] [[TB-0011 Add the declarative page host and migrate the reports to it]] — Done (14 pages; a new page needed no Node change)
-- [ ] [[TB-0008 Serve report results from the page host instead of whole views]] — Ready (P1: the page host is currently slower)
-- [ ] [[TB-0009 Retire the legacy report routes in favour of the page host]] — Blocked (on TB-0008)
+- [x] [[TB-0008 Serve report results from the page host instead of whole views]] — Done (14/14 parity; server 270→44 ms; smoke 59/59)
+- [ ] [[TB-0009 Retire the legacy report routes in favour of the page host]] — Ready (blocker cleared)
 - [ ] [[TB-0006 Give items a company and use it in reports]] — Backlog (held: needs the item→company link confirmed)
 - [ ] [[TB-0002 Wire a frontend to the TrailBase server]] — Backlog (held pending re-specification)
 
 ## Task dependency and progress
 
-Task frontmatter is authoritative. The page-host work is a chain: TB-0011 delivered the host, TB-0008 is the
-open defect it left behind, and TB-0009 (retiring the old routes) is `blocked_by` it. TB-0006 and TB-0002 stay
-held because the system's specs are being restated.
+Task frontmatter is authoritative. The page-host chain is now resolved: TB-0011 delivered the host, TB-0008
+(serving results instead of views) is Done, and TB-0009 (retiring the old routes) is Ready now that its
+`blocked_by` is closed. TB-0006 and TB-0002 stay held because the system's specs are being restated.
 
 ```mermaid
 flowchart TD
@@ -209,8 +228,8 @@ flowchart TD
   T7["TB-0007 · Plugins hub + Import from v1 · Done"]
   T10["TB-0010 · Incremental report refresh · Done"]
   T11["TB-0011 · Declarative page host + reports · Done"]
-  T8["TB-0008 · Serve report results, not views · Ready"]
-  T9["TB-0009 · Retire the legacy report routes · Blocked"]
+  T8["TB-0008 · Serve report results, not views · Done"]
+  T9["TB-0009 · Retire the legacy report routes · Ready"]
   T6["TB-0006 · Items get a company · Backlog"]
   T2["TB-0002 · Wire a frontend to the TrailBase server · Backlog"]
   T1 --> T4
@@ -228,14 +247,20 @@ flowchart TD
 Text alternative: the schema redesign (TB-0001) underpins the server-rendered frontend (TB-0004); its
 first-run/bind defects were fixed (TB-0005) and the PocketBase-data migration (TB-0003) was delivered as the
 Import from v1 plugin inside a new hub (TB-0007). Report generation was then made incremental (TB-0010) and a
-declarative page host with all 14 reports followed (TB-0011) — which left one open defect, **TB-0008**: the page
-host ships whole views and is slower than server rendering. Retiring the legacy `/reports/*` routes (TB-0009) is
-`blocked_by` TB-0008. The item→company follow-on (TB-0006) and the Next.js client (TB-0002) are both held
-pending specification.
+declarative page host with all 14 reports followed (TB-0011). The defect it left behind — **TB-0008**, the page
+host shipping whole views and being slower than server rendering — is now **Done**: it serves named
+server-computed results, is at row/total parity with the legacy routes on live data, and benchmarks faster
+server-side and end-to-end. That unblocks **TB-0009**, retiring the legacy `/reports/*` routes, which is now
+Ready. The item→company follow-on (TB-0006) and the Next.js client (TB-0002) are both held pending
+specification.
 
 ## Current checkpoint
 
-- [[Checkpoint — Page Host and Report Performance — 2026-09-25]] (supersedes
+- [[Checkpoint — Manual Snapshot Refresh Control — 2026-09-26]] (supersedes
+  [[Checkpoint — TB-0008 Benchmarked and Closed — 2026-09-26]], which superseded
+  [[Checkpoint — Three-Server E2E Test — 2026-09-26]], which superseded
+  [[Checkpoint — Portable Page-Host Compute — 2026-09-25]], which superseded
+  [[Checkpoint — Page Host and Report Performance — 2026-09-25]], which superseded
   [[Checkpoint — Plugins Hub — 2026-09-25]], which superseded
   [[Checkpoint — TrailBase First Run — 2026-09-25]], which superseded
   [[Checkpoint — TrailBase Frontend — 2026-09-24]])

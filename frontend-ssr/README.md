@@ -32,6 +32,9 @@ browser ──HTTP──▶ Express (this app)                       ──REST�
   (row count + newest `updated`) and only re-reads, rebuilds and re-renders what actually changed;
   a management write invalidates just the tables it touched. Report aggregation runs in a
   `worker_threads` pool sized to the CPU count.
+- **Pages request named results, not views.** A page manifest selects a trusted report operation;
+  `/p/<slug>/data` runs it against the warm snapshot and returns `{rows, totals}` plus only the
+  tables needed for select filters. The browser renders that result and does no report computation.
 
 ## Quick start
 
@@ -112,6 +115,15 @@ running PocketBase (v1) database into this TrailBase depot. It talks directly to
 the browser (PocketBase admin login + paged reads; TrailBase user login + bulk record writes, with
 per-row delete for the optional clear) and translates PocketBase ids/enum text into TrailBase UUIDs
 and codes. See its `meta.md` and the inline `PLAN` for the field mapping.
+
+## Manual refresh
+
+The snapshot is normally refreshed on a timer (`REFRESH_INTERVAL_SECONDS`), on a management write, or
+lazily on read. The green state indicator in the top bar is also a **button**: clicking it POSTs
+`/reports/refresh`, which probes TrailBase, re-reads only the tables whose fingerprint moved, rebuilds
+their views and re-renders the affected reports, then reloads the page so it renders from the rebuilt
+snapshot. The control is a plain form so it works with JavaScript disabled. Add `?full=1` to the POST to
+re-read every table instead of only the changed ones.
 
 ## Report arithmetic
 
