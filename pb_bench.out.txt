@@ -1,3 +1,0 @@
-2026/09/20 12:47:28 Server started at http://127.0.0.1:8095
-├─ REST API: http://127.0.0.1:8095/api/
-└─ Admin UI: http://127.0.0.1:8095/_/
