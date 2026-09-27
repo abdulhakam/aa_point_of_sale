@@ -10,10 +10,12 @@ related_to: ["[[trail-runtime-js-reference]]", "[[runtime-js-single-host]]", "[[
 
 # Guest app-host port — route dispatcher, SQL reads and report parity
 
-The `frontend-ssr` app now runs on the `runtime-js` guest host: the declarative page host, the
-report/ledger engine and the management/plugin/dashboard screens are served by a single runtime
-TypeScript dispatcher, with the **shared** `compute/` modules executed in QuickJS. All fourteen
-report/ledger pages produce **byte-identical results to the Node app on the same data**.
+The guest frontend ([[runtime-js-guest-platform]]) now runs on the `runtime-js` host: the
+declarative page host, the report/ledger engine and the management/plugin/dashboard screens are
+served by a single runtime TypeScript dispatcher, with the **shared** `compute/` modules executed
+in QuickJS. All fourteen report/ledger pages produce **byte-identical results to the former Node
+app on the same data** (`frontend-ssr`, removed 2026-09-27; the differential was run while it still
+existed).
 
 ## How it is put together
 
@@ -32,7 +34,7 @@ report/ledger pages produce **byte-identical results to the Node app on the same
   restart; the dispatcher file itself is read per request).
 - **App modules:** `/app/compute/{format,ids,views,reports}.js` are the **verbatim** shared files;
   `/app/lib/{entities,data,pages,plugins,http,report-pages,reports}.js` are guest ports of the
-  Node `src/lib` modules (async `fs` instead of `node:fs`).
+  former Node frontend's `src/lib` modules (async `fs` instead of `node:fs`).
 - **Auth:** TrailBase's own cookie (`auth_token`, `SameSite=Strict`) resolved by the host into
   `req.user`; unauthenticated page requests redirect to `/login`, whose POST redirects to
   TrailBase's `/_/auth/login`. No second session layer ([[trailbase-guest-wasm-runtime-defaults]]).
@@ -53,7 +55,7 @@ follows input order):
    `compute/views.js` and `compute/reports.js` was replaced with it
    ([[deterministic-sort-and-sql-reads-in-guest]]).
 
-## Shared-code changes (they affect Node too — verified together)
+## Shared-code changes (verified by the report parity)
 
 - `buildLedgerParty` was **O(n²)** — a `reduce` over all payments per row. With 26,526 payments
   that is infeasible in the guest (and wasteful in Node). Rewritten to sum per (party, date) and
@@ -92,7 +94,8 @@ numbers/enums as `CAST(? AS …)`, and ids emitted as URL-safe base64
 ## Verified: guest smoke (69/69)
 
 `runtime-js/tools/guest-smoke.mjs` boots a throw-away depot with the guest component, seeds the
-**same** dataset as `frontend-ssr/scripts/smoke.js`, logs in **through the app's own `/login`**
+**same** dataset the former Node smoke used (`frontend-ssr/scripts/smoke.js`, removed 2026-09-27),
+logs in **through the app's own `/login`**
 (bad password → 401, good → 303 + cookies) and exercises every screen. **69/69 checks pass**,
 including the pinned totals (`profit 91.00`, item sales `731.00/591.00`, stock `4510.00`, payments
 `800.00/150.00`, payments-by-company `500.00/300.00`, `403.85/161.54`), the page-data payload shape
@@ -128,8 +131,8 @@ artifact**. Steps run in-process (no HTTP worker fan-out — the host's `fetch` 
 - **Static files** are read as UTF-8 text. The current asset set is all text
   (`favicon.svg`, `css/app.css`, `js/*.js`), so nothing needs binary serving; images would need a
   bytes bridge.
-- **Invoices / cash-memos / printing** are **out of scope by request** for `frontend-ssr`
-  ([[frontend-ssr-feature-parity-gaps]] § 1), so they are not parity work here; the platform
+- **Invoices / cash-memos / printing** are **out of scope by request** for the guest frontend
+  ([[guest-frontend-feature-parity-gaps]] § 1), so they are not parity work here; the platform
   only needs to make them authorable as new pages. The job queue that would back batch work is
   now built ([[jobs-in-process-durable-queue]]).
 - The **`worker` HTTP fan-out** is not built: the queue runs in-process, and the new outbound

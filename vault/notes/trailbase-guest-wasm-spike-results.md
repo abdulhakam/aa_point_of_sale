@@ -4,7 +4,7 @@ type: note
 status: active
 created: 2026-09-26
 tags: [trailbase, wasm, guests, spike, evidence, phase-0]
-related_to: ["[[trailbase]]", "[[frontend-ssr]]", "[[trailbase-migration]]", "[[trailbase-guest-wasm-runtime-defaults]]"]
+related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[trailbase-migration]]", "[[trailbase-guest-wasm-runtime-defaults]]"]
 ---
 
 # TrailBase guest-WASM Phase 0 spike results

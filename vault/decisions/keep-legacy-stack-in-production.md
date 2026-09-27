@@ -14,16 +14,16 @@ related_to: ["[[backend]]", "[[frontend]]", "[[pos-0028-decide-cutover-plan]]"]
 ## Context
 
 There are two complete stacks in this workspace: PocketBase + Next.js
-([[backend]] + [[frontend]]) holding the production data and serving staff, and TrailBase +
-frontend-ssr ([[trailbase]] + [[frontend-ssr]]) which is new and covers only dashboard, reports
-and management.
+([[backend]] + [[frontend]]) holding the production data and serving staff, and TrailBase + the
+guest frontend ([[trailbase]] + [[runtime-js-guest-platform]]) which is new and covers only
+dashboard, reports and management.
 
 The obvious "clean" move — point one at the other and delete the loser — is not available, for
 three concrete reasons:
 
 1. **The new pair cannot do the job yet.** Invoicing, orders, cash memo, expenses and printing
-   have no SSR equivalent; those are the screens staff use to make money
-   ([[frontend-ssr-feature-parity-gaps]]).
+   have no guest equivalent; those are the screens staff use to make money
+   ([[guest-frontend-feature-parity-gaps]]).
 2. **The old API is world-readable, and that cannot be fixed in place safely.** Every PocketBase
    collection rule is `""`. Tightening them changes live behaviour for whatever currently relies
    on open access, with no test suite proving it is safe. TrailBase's authenticated-only default
@@ -70,7 +70,7 @@ The cutover itself is a **separate, explicit decision** with its own note:
 
 - No single source of truth for the UI, so a fix may need applying twice or deliberately only once.
 - Nothing forces the new pair to keep up, so parity can drift silently —
-  [[frontend-ssr-feature-parity-gaps]] exists to make that visible.
+  [[guest-frontend-feature-parity-gaps]] exists to make that visible.
 - The migration's clock is not started, because the stack that would retire is also the stack that
   is still earning.
 
@@ -84,8 +84,9 @@ The cutover itself is a **separate, explicit decision** with its own note:
   authenticated-only default.
 - `backend/DEV.BAT`, `RUN NEXTJS.BAT`, `RUN SERVE.BAT` — the legacy pair is still scripted and
   runnable ([[build-and-run]]).
-- `frontend-ssr/README.md` § *Known gaps* — "Invoices, cash memo, expenses and printing are **out
-  of scope** by request."
+- The former Node frontend's `frontend-ssr/README.md` § *Known gaps* (removed 2026-09-27,
+  [[guest-app-host-port]]) — "Invoices, cash memo, expenses and printing are **out of scope** by
+  request." The guest's current gap list is [[guest-frontend-feature-parity-gaps]].
 - The prior vault's `decisions/use-pocketbase-and-nextjs.md` is the original stack choice; this
   decision is its deliberate continuation rather than its reversal. See
   [[previous-vault-recovery]].

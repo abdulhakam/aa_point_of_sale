@@ -9,15 +9,18 @@ related_to: ["[[guest-app-host-port]]", "[[trail-runtime-js-reference]]", "[[tra
 
 # Guest vs Node performance on the same depot
 
-Measured latency of the same endpoints on the **Node `frontend-ssr`** and the **runtime-js
-guest**, both serving the same TrailBase depot (`trailbase/traildepot` copy: 8,927 invoices,
-23,413 transactions, 26,526 payments).
+⚠️ **Historical comparison.** The Node column below measured the **former Node frontend**
+(`frontend-ssr`, removed 2026-09-27) against the **guest frontend** ([[runtime-js-guest-platform]]),
+both serving the same TrailBase depot (`trailbase/traildepot` copy: 8,927 invoices, 23,413
+transactions, 26,526 payments). The Node app no longer exists in the tree, so its numbers are kept
+as a historical baseline; the guest's absolute measurements stand on their own.
 
-Tool: `runtime-js/tools/perf-compare.mjs`. Environment: `trail v0.33.22`, guest
-`--runtime-threads=4`, Node 24 (`WORKER_THREADS=4`), Windows, one shared dev machine.
-"Cold" = the first request to that endpoint in the run; "warm" = median of 3 repeats.
+Tool: `runtime-js/tools/perf-compare.mjs` — itself removed with the Node baseline, since it needed
+both apps running. Environment: `trail v0.33.22`, guest `--runtime-threads=4`, Node 24
+(`WORKER_THREADS=4`), Windows, one shared dev machine. "Cold" = the first request to that endpoint
+in the run; "warm" = median of 3 repeats.
 
-| Endpoint | Node cold/warm | Guest cold/warm |
+| Endpoint | Node cold/warm (historical) | Guest cold/warm |
 |---|---|---|
 | `/healthz` | 19 / **7 ms** | 55 / **28 ms** |
 | `/dashboard` | 2945 / **6 ms** | 3343 / **29 ms** |
@@ -33,6 +36,8 @@ StarlingMonkey on the same loop only ~1.1×; a guest call has a **~20 s deadline
 roughly **1×10⁶ simple loop iterations/s**.
 
 ## How to read this
+
+The Node figures below are the historical baseline (see the note at the top).
 
 - **Baseline overhead is ~20–30 ms per request** in the guest vs ~3–7 ms in Node — every guest
   request re-evaluates the dispatcher file and goes through QuickJS, where Node is JIT-compiled.
@@ -58,10 +63,11 @@ roughly **1×10⁶ simple loop iterations/s**.
   built).
 - The guest's `/p/.../data` warm benefits from the KV report cache but still pays the table read
   and serialisation; the cache removes the report math, not the payload.
-- The Node numbers depend on its warm-snapshot state (`REFRESH_INTERVAL_SECONDS=60`,
+- The Node numbers (historical) depended on its warm-snapshot state (`REFRESH_INTERVAL_SECONDS=60`,
   `WORKER_THREADS=4`).
-- Both apps run the **same** `compute/` code; the difference is the runtime (interpreter vs JIT,
-  single request thread vs a worker pool), not the logic.
+- Both apps ran the **same** `compute/` code (the guest's copy is
+  `runtime-js/site/app/compute/`); the difference was the runtime (interpreter vs JIT, single
+  request thread vs a worker pool), not the logic.
 
 ## Implications
 

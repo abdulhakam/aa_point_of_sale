@@ -1,4 +1,4 @@
-// Guest page registry — the same manifest contract as frontend-ssr/src/lib/pages.js, but
+// Guest page registry — the declarative page manifest contract, but
 // reading through the guest's (async) `fs` global instead of node:fs.
 //
 // A page is any folder under `pages/` with a `meta.json`; the folder path is the slug.

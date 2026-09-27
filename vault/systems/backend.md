@@ -88,7 +88,7 @@ PocketBase's view parser accepts.
 Every one of them appears as a *record type* in `frontend/src/app/api/pocketbase-types.ts`
 (`PaymentsViewRecord`, `InvoiceViewRecord`, `LedgerPartyRecord`, …), which is why removing
 the views on the TrailBase side is a frontend-visible change rather than an internal one.
-Their arithmetic is reimplemented in `frontend-ssr/compute/views.js` and
+Their arithmetic is reimplemented in `runtime-js/site/app/compute/views.js` and
 `compute/reports.js`, documented in [[reports-and-ledgers]], and preserved verbatim as SQL
 in the parent-directory artefacts described in [[stale-schema-sql-paths]].
 
@@ -108,7 +108,7 @@ have not simply been tightened in place.
 | "unset" enum | `''` | `NULL` |
 | Booleans | true/false | `0`/`1` |
 | Multi-valued relations | JSON arrays (`parties.company`) | link tables |
-| Report arithmetic | SQL views | JavaScript, in [[frontend-ssr]] |
+| Report arithmetic | SQL views | JavaScript, in [[runtime-js-guest-platform]] |
 | Ids | `'r…'` 15-char | UUIDv7 |
 | Timestamps | `'%Y-%m-%d %H:%M:%fZ'` | same, deliberately |
 | Aggregation | `GROUP BY` in views | client-side |
@@ -133,7 +133,9 @@ The value translations that must be applied:
 | `payments.type`: `''` / `sending` / `recieving` / `return` | `NULL` / `0` / `1` / `2` |
 | `parties.company`, `order_bookers.company` (JSON arrays of ids) | one `party_companies` / `order_booker_companies` row per id |
 
-A working implementation of exactly this translation already exists as the
-`import-from-v1` plugin inside [[frontend-ssr]] — but it drops `invoices.invoice_maker`
-(see [[import-from-v1-drops-invoice-maker]]). Tracked as
+A working implementation of exactly this translation exists as the `import-from-v1` plugin,
+ported to the guest at `runtime-js/site/app/plugins/import-from-v1/` (the Node copy at
+`frontend-ssr/plugins/import-from-v1/` was deleted with that app on 2026-09-27) — but it still
+drops `invoices.invoice_maker` (see [[import-from-v1-drops-invoice-maker]]) and is unverified.
+Verifying it is [[pos-0029-rebuild-v1-import-on-guest]], feeding
 [[pos-0027-migrate-production-data-to-trailbase]].

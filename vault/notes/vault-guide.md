@@ -46,7 +46,7 @@ Conventions in force:
 | `type` | the collection's type: `project`, `system`, `decision`, `reference`, `issue`, `task`, `note` |
 | `status` | `experimental` / `production` on systems; `proposed`/`accepted`/`superseded` on decisions; `todo`/`doing`/`blocked`/`done` on tasks; `active` elsewhere |
 | `system` | on references: which system(s) the note describes (`new`, `legacy`, `both`) |
-| `locator` | on systems: the directory the system lives in, e.g. `frontend-ssr/` |
+| `locator` | on systems: the directory the system lives in, e.g. `runtime-js/` |
 | `belongs_to` | a single **wikilink** to the parent document (a decision belongs to the migration project) |
 | `related_to` | a list of **wikilinks** to peers |
 | `decided_on` | on decisions: `YYYY-MM-DD`, when the choice was made |
@@ -62,7 +62,7 @@ brackets as a nested list.
   used in the code comments (`POS-0009`, `POS-0011`, `POS-0026`, `TB-0008`).
 - **Wikilinks** resolve by filename stem across the whole vault, and stems must be unique or the
   link is ambiguous. That is why the four system notes are the bare names (`trailbase`,
-  `frontend-ssr`, `backend`, `frontend`) — nothing else may take those stems.
+  `runtime-js-guest-platform`, `backend`, `frontend`) — nothing else may take those stems.
 - **Subtasks** are GFM checkboxes (`- [ ]` / `- [x]`). Hybrid inline metadata (`[key:: value]`)
   is not used anywhere in this vault.
 - **Dates** are `YYYY-MM-DD`.

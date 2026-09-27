@@ -3,6 +3,7 @@ title: AA Point of Sale knowledge base
 type: meta
 status: active
 created: 2026-09-26
+updated: 2026-09-27
 tags: [meta, index, pos, erp]
 ---
 
@@ -11,24 +12,24 @@ tags: [meta, index, pos, erp]
 A local-first, file-first knowledgebase (opinionated vault) for the
 `aa_point_of_sale` trade & distribution ERP/POS workspace.
 
-The workspace holds **four systems plus the guest-WASM platform**, in two states of maturity this
-vault exists so that questions about any of them are answered from these documents instead of by
-re-reading source.
+The workspace holds **four systems**, in two states of maturity, plus the guest-WASM
+app platform that now carries the new frontend. This vault exists so that questions about any of
+them are answered from these documents instead of by re-reading source.
 
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs, validated against a running server |
-| [[frontend-ssr]] | `frontend-ssr/` | **New / experimental** | Express + MiniJinja server-rendered dashboard / reports / management |
-| [[runtime-js-guest-platform]] | `runtime-js/`, `guests/`, `runtime-js/site/` | **New / experimental** | WebAssembly app host: the same app as TrailBase guest components (Rust + QuickJS + minijinja), 71/71 and 14/14 parity vs the Node app |
+| [[runtime-js-guest-platform]] | `runtime-js/`, `guests/`, `runtime-js/site/` | **New / experimental** | WebAssembly app host: the new frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management |
 | [[backend]] | `backend/` | **Legacy / production** | PocketBase 0.22.55 serving the live POS |
 | [[frontend]] | `frontend/` | **Legacy / production** | Next.js 14 + Mantine SPA talking to PocketBase |
 
 **The legacy pair is what is actually running in production.** The new pair is the
-replacement under construction: the TrailBase schema and APIs are done and verified,
-and the SSR frontend covers dashboard, reports and management — but no production data
-has been migrated and the legacy Next.js app does not talk to TrailBase yet. The
-**guest-WASM platform** is a second, further-out way to serve that same app (no Node process); it
-is verified against a throw-away depot only. See [[aa-point-of-sale]] for the programme view and
+replacement under construction: the TrailBase schema and APIs are done and verified, and the
+guest frontend covers dashboard, reports and management — but no production data has been
+migrated and the legacy Next.js app does not talk to TrailBase yet. The guest platform is the
+chosen replacement frontend and the legacy UI is to be shifted onto it screen-for-screen
+([[guest-ui-is-a-direct-shift-of-legacy]]); the intermediate Node `frontend-ssr` experiment was
+removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and
 [[trailbase-migration]] for the active workstream.
 
 ## Rules
@@ -39,6 +40,7 @@ is verified against a throw-away depot only. See [[aa-point-of-sale]] for the pr
   warnings, never errors.
 - `.md` / `.html` documents are the source of truth. Everything written to `.vault/`
   is derived and rebuildable.
+- `attachments/` holds captured assets (e.g. the legacy UI reference) and is not a collection.
 
 ## Collections
 
@@ -55,23 +57,25 @@ is verified against a throw-away depot only. See [[aa-point-of-sale]] for the pr
 
 ## Reading order for a newcomer
 
-1. [[aa-point-of-sale]] — the business context, the four systems, and which one is live.
-2. [[trailbase]] and [[frontend-ssr]] — the replacement pair.
-3. [[runtime-js-guest-platform]] — the same app as WebAssembly guest components (the further-out re-platform).
-4. [[backend]] and [[frontend]] — what production runs today.
-5. [[data-model]] — the 17 tables, the enumeration codes, and the PocketBase → TrailBase value translation.
-6. [[reports-and-ledgers]] — the report arithmetic, and why it now lives in JavaScript.
-7. [[build-and-run]] and [[environment]] — how to start all four systems, and the credentials each
+1. [[aa-point-of-sale]] — the business context, the systems, and which one is live.
+2. [[trailbase]] and [[runtime-js-guest-platform]] — the replacement pair.
+3. [[backend]] and [[frontend]] — what production runs today.
+4. [[data-model]] — the 17 tables, the enumeration codes, and the PocketBase → TrailBase value translation.
+5. [[reports-and-ledgers]] — the report arithmetic, and why it lives in JavaScript at runtime.
+6. [[build-and-run]] and [[environment]] — how to start each system, and the credentials each
    needs (the local-only `credentials/` collection, e.g. `credentials/experimental-trailbase.md`).
 
 ## Status at a glance
 
 - 17 of 17 TrailBase tables exposed as record APIs; migration applies clean on an empty depot.
-- 14 reports implemented in `compute/reports.js`; 14 declarative pages plus 4 ledger pages.
-- `npm run smoke` in `frontend-ssr` reports `== 55/55 checks passed ==` against a throw-away depot.
-- Legacy Next.js app still points at PocketBase (`NEXT_PUBLIC_PB_URL`), and PocketBase still holds the production data.
-- The guest-WASM platform serves the same app without Node: smoke **71/71**, differential **14/14**
+- 14 reports implemented in `runtime-js/site/app/compute/reports.js`; 14 declarative pages plus 4
+  ledger pages.
+- The guest serves the same app without Node: smoke **71/71**, differential **14/14**
   (`runtime-js/tools/`), plus a first verified invoice-entry slice.
+- Legacy Next.js app still points at PocketBase (`NEXT_PUBLIC_PB_URL`), and PocketBase still holds the production data.
+- Parity target restated: the guest frontend is a direct shift of the legacy UI, same look
+  ([[guest-ui-is-a-direct-shift-of-legacy]]); the remaining gaps are in
+  [[guest-frontend-feature-parity-gaps]].
 
 Detail in [[system-status-overview]].
 
@@ -93,4 +97,5 @@ See [[vault-guide]] for the authoring conventions actually used here.
 
 - [[vault-guide]] — conventions, and how to add a document or a collection.
 - [[system-status-overview]] — one screen of status, coverage and risk.
+- [[legacy-ui-reference-captures]] — captured legacy UI, the parity reference.
 - [[previous-vault-recovery]] — how to recover the pre-`cleanup` vault from git history.

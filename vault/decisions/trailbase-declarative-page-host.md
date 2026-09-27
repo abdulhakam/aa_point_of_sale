@@ -4,9 +4,9 @@ type: decision
 status: accepted
 decided_on: 2026-09-25
 created: 2026-09-26
-tags: [frontend-ssr, pages, page-host, declarative]
+tags: [guest, pages, page-host, declarative]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[frontend-ssr]]", "[[performance-and-caching]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[performance-and-caching]]"]
 ---
 
 # Make report pages declarative manifests, not code
@@ -47,11 +47,11 @@ single generic runtime serves it.
 }
 ```
 
-- `src/routes/pages.js` **knows nothing about any specific page.** It discovers folders, renders
-  the declared template, serves the declared tables, and dispatches the declared compute
-  operation. Adding a page is adding a folder.
-- `src/lib/pages.js` is the registry: it normalises the manifest, resolves a filter default
-  through `compute/format.js` when it is `{ "fn": "…" }`, and derives `needs.tables` from
+- The guest's generic page host (`runtime-js/site/ahscripts/routes/_app/route.ts`) **knows nothing
+  about any specific page.** It discovers folders, renders the declared template, serves the
+  declared tables, and dispatches the declared compute operation. Adding a page is adding a folder.
+- `runtime-js/site/app/lib/pages.js` is the registry: it normalises the manifest, resolves a filter
+  default through `compute/format.js` when it is `{ "fn": "…" }`, and derives `needs.tables` from
   `needs.views` (plus each `select` filter's `source`) so a page *cannot* under-declare the data
   it needs.
 - `/p/<slug>/data` returns `{version, slug, filters, result, meta}` plus only the tables needed
@@ -72,7 +72,7 @@ single generic runtime serves it.
 - **Filters stay APPLY-gated for free**, because the form and the request are both generated from
   the same `filters` array.
 - **The same compute code runs in both runtimes.** `compute/` is served at `/compute/*` (behind
-  auth) as the identical bytes Node imports, so the browser worker and the server cannot drift.
+  auth) as the identical bytes the guest imports, so the browser and the guest cannot drift.
 
 ## Consequences
 
@@ -80,10 +80,11 @@ single generic runtime serves it.
 
 - 14 page folders, each two files, replacing 14 bespoke pages. `/p` lists them; `/p/<slug>` and
   `/p/<slug>/data` serve them.
-- The `meta.json` shape is a contract: `PAYLOAD_REVISION = 3` in `pages.js` exists to be bumped
-  when the payload shape changes, so client caches invalidate.
-- `metaJson` is serialised in Node rather than in the template, because MiniJinja hands templates
-  a proxy and `| json` on it yields `{}`; `<` is escaped so it cannot close the script tag.
+- The `meta.json` shape is a contract: the data payload's ETag carries a `v3` revision
+  (`W/"v3-…"` in the route), bumped when the payload shape changes so client caches invalidate.
+- `metaJson` is serialised in the guest host rather than in the template, because MiniJinja hands
+  templates a proxy and `| json` on it yields `{}`; `<` is escaped so it cannot close the script
+  tag.
 - `readPage` rejects anything escaping `pagesDir` (`..`, `\`, NUL).
 
 **Given up**
@@ -100,14 +101,13 @@ single generic runtime serves it.
 
 ## Evidence
 
-- `frontend-ssr/src/lib/pages.js` — the registry, `normalizeMeta`, `resolveDefault`,
+- `runtime-js/site/app/lib/pages.js` — the registry, `normalizeMeta`, `resolveDefault`,
   `MAX_DEPTH = 6`, and the slug-escape rejection in `readPage`.
-- `frontend-ssr/src/routes/pages.js` — the generic host, `filtersFor`, `PAYLOAD_REVISION = 3`,
-  the ETag/gzip handling, and the comment "Adding a page is adding a folder — no code here, or
-  elsewhere in Node, changes."
-- `frontend-ssr/pages/` — 14 folders, each `meta.json` + `page.html` (`reports/{payments,
+- `runtime-js/site/ahscripts/routes/_app/route.ts` — the generic host, `filtersFor`, the
+  `W/"v3-…"` ETag and gzip handling, and the `/p/<slug>` and `/p/<slug>/data` endpoints.
+- `runtime-js/site/app/pages/` — 14 folders, each `meta.json` + `page.html` (`reports/{payments,
   salesreport,paymentsbycompany,itemsales,profit,stock,difference,outstanding,productsale,
   dailysale}`, `ledgers/{area,booker,general,party}`).
-- `frontend-ssr/pages/reports/profit/meta.json` — the worked example quoted above.
+- `runtime-js/site/app/pages/reports/profit/meta.json` — the worked example quoted above.
 - The prior vault's `decisions/trailbase-declarative-page-host.md` (`ea2bd12`) is the original
   record; see [[previous-vault-recovery]].

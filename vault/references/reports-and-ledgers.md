@@ -5,7 +5,7 @@ status: active
 system: both
 created: 2026-09-26
 tags: [pos, reports, ledgers, arithmetic, parity]
-related_to: ["[[frontend-ssr]]", "[[backend]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[backend]]"]
 ---
 
 # Report arithmetic and ledgers
@@ -13,7 +13,8 @@ related_to: ["[[frontend-ssr]]", "[[backend]]"]
 The reports are the reason this rewrite exists, so their arithmetic is specified rather than
 implied. On the legacy side the arithmetic is SQL, inside PocketBase views ([[backend]]). On
 the new side there are no views at all — the same arithmetic is reimplemented in JavaScript
-in `frontend-ssr/compute/views.js` and `compute/reports.js`, deliberately reproducing the old
+in `runtime-js/site/app/compute/views.js` and `runtime-js/site/app/compute/reports.js`,
+deliberately reproducing the old
 view SQL so that report output matches for the same rows. The mapping is documented in
 `vault/references/reports-and-ledgers.md`, which is this file.
 
@@ -41,8 +42,8 @@ view SQL so that report output matches for the same rows. The mapping is documen
 Plus the machinery that makes incremental rebuilds possible: `buildView`, `viewsAffectedBy`,
 `viewClosure`, `tablesForViews`, `buildViews`, `buildSelectedViews(base, previous, dirty)`.
 
-`viewsAffectedBy(tables)` is what lets [[frontend-ssr]] rebuild only the views a changed table
-feeds, and `viewClosure(names)` is what lets a `meta.json` declare `"views":
+`viewsAffectedBy(tables)` is what lets [[runtime-js-guest-platform]] rebuild only the views a
+changed table feeds, and `viewClosure(names)` is what lets a `meta.json` declare `"views":
 ["transactionsReport"]` and have the transitive dependencies pulled in automatically.
 
 ## The line and invoice math
@@ -96,7 +97,8 @@ the caller assembles `ctx` from the warm snapshot:
 
 Note `productsale`'s title is **"Product Supply Summary"**, not "Product Sale Report" — the
 tile on the index is labelled with the latter. `ledgers/general` is the only report with no
-`refs` input, which is also why it is excluded from the warm-up list in `server.js`.
+`refs` input, which is also why it is excluded from the warm-up list in
+`runtime-js/site/ahscripts/routes/_app/route.ts`.
 
 The 4 ledger pages are reached at `/reports/ledgers/{area,booker,general,party}` and from
 `LEDGER_INDEX`; the other 11 from `REPORT_INDEX`.
@@ -104,7 +106,7 @@ The 4 ledger pages are reached at `/reports/ledgers/{area,booker,general,party}`
 ## Inherited quirks, kept on purpose
 
 These are wrong but deliberate — they are in the old SQL too, and reproducing them is what
-makes the `55/55` comparisons meaningful:
+makes the `71/71` comparisons meaningful:
 
 1. **`transaction_view.profit` is total cost, not margin.** The old SQL misnamed it. The
    `Profit Report` therefore uses `transactions_report.profit`, which *is* the real margin.
@@ -122,9 +124,10 @@ from the legacy views.
 
 ## The assertions that pin the numbers
 
-`npm run smoke` (`frontend-ssr/scripts/smoke.js`) seeds a small consistent dataset through the
-record APIs and checks hand-computed values that must match the preserved view SQL — 55
-assertions in total. The arithmetic ones:
+The guest smoke suite (`node runtime-js/tools/guest-smoke.mjs`) seeds a small consistent dataset
+through the
+record APIs and checks hand-computed values that must match the preserved view SQL — 71
+checks in total. The arithmetic ones:
 
 | Value | Expected | Why |
 |---|---|---|
@@ -138,7 +141,7 @@ assertions in total. The arithmetic ones:
 The last row is the interesting one: it demonstrates that Payments By Company distributes a
 payment across companies **by revenue share**, not by direct attribution.
 
-Run it with `npm run smoke` in `frontend-ssr/` (see [[build-and-run]]). It boots its own
+Run it with `node runtime-js/tools/guest-smoke.mjs` (see [[build-and-run]]). It boots its own
 throw-away TrailBase depot, so it does not touch development or production data.
 
 ## Where the old SQL is preserved
@@ -156,6 +159,6 @@ wants the aggregation as a **WASM handler** or a materialised table inside Trail
 ## Related
 
 - [[backend]] — the views listed per migration, including `payments_summary`'s eight columns.
-- [[frontend-ssr]] — the page host and the report service that run this code.
+- [[runtime-js-guest-platform]] — the page host and the report service that run this code.
 - [[trailbase-drop-sql-views]] — why there are no views on the new side.
 - [[tb-0013-rework-report-screens-without-views]] — the legacy-side follow-up.

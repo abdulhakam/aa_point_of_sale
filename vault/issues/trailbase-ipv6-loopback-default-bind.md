@@ -12,12 +12,13 @@ related_to: ["[[trailbase]]", "[[environment]]"]
 
 ## The problem
 
-TrailBase's own default bind address is `[::1]:4000` — **IPv6 loopback only**. Neither of the two
-clients in this workspace can reach that:
+TrailBase's own default bind address is `[::1]:4000` — **IPv6 loopback only**. A browser opened at
+`http://127.0.0.1:4000` (or `http://localhost:4000` resolving to IPv4) cannot reach that.
 
-- a browser opened at `http://127.0.0.1:4000` (or `http://localhost:4000` resolving to IPv4),
-- [[frontend-ssr]], whose `TRAILBASE_URL` is `http://127.0.0.1:4000` and which therefore makes
-  IPv4 connections only.
+The former Node frontend (`frontend-ssr`, removed 2026-09-27) could not reach it either: its
+`TRAILBASE_URL` was `http://127.0.0.1:4000`, so it made IPv4 connections only. The guest frontend
+has no such client — it is served by TrailBase itself on the same origin
+([[guest-app-host-port]]) — so the browser is the only client affected today.
 
 The failure mode is unhelpful: the server logs `Listening on http://[::1]:4000` and looks healthy,
 while every client gets a connection refused. Nothing in the message says "wrong address family".
@@ -35,12 +36,16 @@ if not defined ADDRESS set "ADDRESS=127.0.0.1:4000"
 start "" trail "--depot=%DEPOT%" run --address=%ADDRESS%
 ```
 
+That comment's "frontend ... TRAILBASE_URL" predates the guest platform, where the app is served
+by TrailBase itself ([[guest-app-host-port]]); the bind it documents is unchanged.
+
 The address is overridable (`set "ADDRESS=127.0.0.1:4001" && RUN.BAT`), and it is also what the
 BAT file polls for readiness — it waits on
 `netstat -a -n -p tcp | findstr "%ADDRESS%" | findstr LISTENING` — so the override keeps the
 readiness check and the bind in agreement.
 
-`frontend-ssr/.env.example` carries the same warning, from the client's side:
+The removed Node frontend's `.env.example` carried the same warning, from the client's side
+(historical, removed 2026-09-27):
 
 > NOTE: `trailbase/RUN.BAT` binds TrailBase to 127.0.0.1 explicitly because TrailBase's own default
 > is [::1]:4000 (IPv6 only) - a client at 127.0.0.1 cannot reach that. If you start the server
@@ -55,21 +60,22 @@ and the same trap is waiting for anyone who follows the quick-start section of
 `trail --depot=./traildepot run` and, in the RUN.BAT explanation, why the BAT file differs — but
 the warning is two screens below the command.
 
-Worth considering: have `.env.example` default `TRAILBASE_URL` to whatever `RUN.BAT` uses (it does)
-*and* add a one-line "if this fails, you probably bound IPv6" to the README's quick start.
+Worth considering: add a one-line "if this fails, you probably bound IPv6" next to the
+`trail --depot=./traildepot run` command in the README's quick start.
 
 ## Also related
 
 The `/reports/refresh` control and the readiness polling both depend on the address matching, so a
-custom `ADDRESS` on one side and not the other produces a frontend that starts and then reports
-errors on every request. [[environment]] lists all four ports for exactly this reason.
+custom `ADDRESS` on one side and not the other produces a guest frontend that starts and then
+answers errors to every request from the mismatched client. [[environment]] lists all four ports
+for exactly this reason.
 
 ## Evidence
 
 - `trailbase/RUN.BAT` — the `ADDRESS` default, the comment block quoted above, and the `netstat`
   polling.
-- `frontend-ssr/.env.example` — the client-side note.
-- `frontend-ssr/.env` — `TRAILBASE_URL=http://127.0.0.1:4000`.
+- The removed Node frontend's `.env.example` and `.env` (`TRAILBASE_URL=http://127.0.0.1:4000`)
+  held the client-side note; both went with `frontend-ssr` on 2026-09-27.
 - `trailbase/README.md` — the `RUN.BAT` explanation ("binds `127.0.0.1:4000` explicitly, because
   TrailBase's own default bind is `[::1]:4000` (IPv6 only)") and the validation line "the server
   reaches `Listening on http://[::1]:4000`", which is the observed default being described.

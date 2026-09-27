@@ -11,7 +11,7 @@ import { DatabaseSync } from "node:sqlite";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import * as V from "../../frontend-ssr/compute/views.js";
+import * as V from "../site/app/compute/views.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "../..");

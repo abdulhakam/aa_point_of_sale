@@ -6,13 +6,13 @@ priority: critical
 created: 2026-09-26
 tags: [decision, cutover, strategy, blocking, migration]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[keep-legacy-stack-in-production]]", "[[frontend-ssr-feature-parity-gaps]]"]
+related_to: ["[[keep-legacy-stack-in-production]]", "[[guest-frontend-feature-parity-gaps]]"]
 ---
 
 # POS-0028 Decide the cutover shape
 
 One decision gates the rest of the migration: **is the legacy Next.js UI repointed at TrailBase, or
-retired in favour of expanding [[frontend-ssr]]?**
+retired in favour of expanding [[runtime-js-guest-platform]]?**
 
 Everything else is downstream of it.
 
@@ -27,22 +27,22 @@ PocketBase.
   plus [[tb-0013-rework-report-screens-without-views]] for the view-dependent screens.
 - **Nothing is rebuilt.** Invoicing, printing, cash memo, orders and expenses keep working
   unchanged, because only the transport changed.
-- **[[frontend-ssr]] becomes redundant** for reports and management — either deleted, or kept as a
-  read-only/print-oriented view. That has to be decided too, or the workspace ends up with two
-  frontends by inertia ([[keep-legacy-stack-in-production]]).
+- **[[runtime-js-guest-platform]] becomes redundant** for reports and management — either deleted,
+  or kept as a read-only/print-oriented view. That has to be decided too, or the workspace ends up
+  with two frontends by inertia ([[keep-legacy-stack-in-production]]).
 - **Where the aggregation runs changes.** PocketBase computed in SQL; TrailBase cannot
-  ([[trailbase-drop-sql-views]]), so the browser would carry the arithmetic unless the SSR
+  ([[trailbase-drop-sql-views]]), so the browser would carry the arithmetic unless the guest's
   server-side snapshot is reused ([[trailbase-incremental-report-refresh]]).
 - ⚠️ **A regression to manage:** the legacy client fetches whole views (9k–26k rows). Pointed at
   TrailBase it would have to fetch base tables and compute — the exact problem the SQL work on
   PocketBase was fixing ([[performance-and-caching]]). The server-side snapshot is the mitigation, and
   exploiting it means the frontend needs a server, not just a static bundle.
 
-### B — Retire the Next.js UI and complete the SSR app
+### B — Retire the Next.js UI and complete the guest platform
 
-Build the missing screens on [[frontend-ssr]] and delete `frontend/`.
+Build the missing screens on [[runtime-js-guest-platform]] and delete `frontend/`.
 
-- **Effort:** everything in [[frontend-ssr-feature-parity-gaps]] — invoice entry for four types plus
+- **Effort:** everything in [[guest-frontend-feature-parity-gaps]] — invoice entry for four types plus
   orders, printing and the print queue, and the whole cash-memo module.
 - **One stack, one deploy.** No adapter, no filter translation, no second build (no `build:standalone`,
   no Storybook), no duplicated business identity ([[environment]]).
@@ -50,23 +50,24 @@ Build the missing screens on [[frontend-ssr]] and delete `frontend/`.
   the right place.
 - ⚠️ **Higher risk on the screens that matter.** Invoice entry and printing are where a mistake costs
   money and paper. They would be rewritten, not ported.
-- ⚠️ **No test suite for the legacy behaviour** to port against — `npm run smoke` covers
-  [[frontend-ssr]] only. The legacy app has none, so "the new screen behaves the same" would be
-  asserted by hand.
+- ⚠️ **No test suite for the legacy behaviour** to port against — the guest smoke suite
+  (`node runtime-js/tools/guest-smoke.mjs`) covers [[runtime-js-guest-platform]] only. The legacy
+  app has none, so "the new screen behaves the same" would be asserted by hand.
 
 ## The questions this decision must answer
 
-1. **What happens to `frontend-ssr` under A?** Kept (as the report/print surface), or deleted? If
-   kept, on what URL — it currently owns `:3100` and the `/reports`, `/management` and `/p` spaces.
+1. **What happens to the guest frontend under A?** Kept (as the report/print surface), or deleted?
+   If kept, it is served by TrailBase itself ([[guest-app-host-port]]) and owns the `/reports`,
+   `/management` and `/p` spaces.
 2. **Where does the arithmetic run under A?** Client-side (simple, slow, and a regression) or through
-   the SSR server as a data service (fast, but makes the legacy app depend on a Node server).
-3. **Is a hybrid acceptable?** E.g. Next.js for entry and printing, SSR for reports and management.
-   That is effectively today's split, minus the shared backend — viable, but it means maintaining both
-   UIs deliberately.
+   the guest as a data service (fast, but makes the legacy app depend on the guest host).
+3. **Is a hybrid acceptable?** E.g. Next.js for entry and printing, the guest for reports and
+   management. That is effectively today's split, minus the shared backend — viable, but it means
+   maintaining both UIs deliberately.
 4. **What is the rollback?** How long does PocketBase stay writable, and how is a partial cutover
    reversed? [[keep-legacy-stack-in-production]] says the legacy stack stays live until parity — so
    what ends that period?
-5. **Does printing survive?** The SSR app has no address/phone/app_name equivalent for a printout
+5. **Does printing survive?** The guest app has no address/phone/app_name equivalent for a printout
    header and no print queue at all.
 6. **Does anything depend on PocketBase's world-readable API?** It is about to become
    authenticated-only. Either something breaks, or nothing does — this should be established, not
@@ -98,6 +99,6 @@ either first means doing it twice.
 
 - [[aa-point-of-sale]] — the constraints: the business is live, deployment is local
   ([[offline-local-deployment]]), and performance was the motivation.
-- [[frontend-ssr-feature-parity-gaps]] — the cost of shape B.
+- [[guest-frontend-feature-parity-gaps]] — the cost of shape B.
 - [[tb-0012-wire-nextjs-frontend-to-trailbase]] — the cost of shape A.
 - [[keep-legacy-stack-in-production]] — the interim policy this decision ends.

@@ -155,12 +155,13 @@ raw execution speed. Both engines must avoid long synchronous handlers.
 
 ## Rendering (D3) added here
 
-`minijinja` was folded into the `runtime-js` host as a native bridge, exposed to scripts as
-`render.html(name, ctxJson)` / `render.string(source, ctxJson)`. Templates come from
-`/app/views` (falling back to `/app/pages`), names resolve views-root-relative exactly as
-`frontend-ssr/src/lib/render.js` does, and the ten custom filters are ported (`money`, `num`,
-`round`, `qty`, `date`, `datefmt`, `upper`, `lower`, `json`, `yesno`) with an mtime template cache.
-A route may return `{ html: "..." }` and the host answers `text/html`.
+`minijinja` was folded into the `runtime-js` host as a native bridge (Rust side:
+`runtime-js/src/render.rs`), exposed to scripts as `render.html(name, ctxJson)` /
+`render.string(source, ctxJson)`. Templates come from `/app/views` (falling back to `/app/pages`),
+names resolve views-root-relative exactly as the former Node frontend's render module
+(`frontend-ssr/src/lib/render.js`, removed 2026-09-27) did, and the ten custom filters are ported
+(`money`, `num`, `round`, `qty`, `date`, `datefmt`, `upper`, `lower`, `json`, `yesno`) with an
+mtime template cache. A route may return `{ html: "..." }` and the host answers `text/html`.
 
 Verified end-to-end on `trail v0.33.22`:
 
@@ -175,13 +176,15 @@ GET /page -> 200  content-type: text/html; charset=utf-8
   <li>Widget &mdash; 9.50</li>               (loop + money)
 ```
 
-**Parity harness** (`frontend-ssr/scripts/render-parity.mjs`): renders all 34 `views/`+`pages/`
-templates and the ten filters through both `minijinja-js` (Node) and the Rust renderer, and diffs.
-Result: **34/34 templates byte-identical** (CRLF, doctype case, `{% extends %}`/`{% include %}`/
-`{% import %}`, macros, loops, conditionals); filters **9/10 identical**. The one divergence is
-`json`: `minijinja-js` serializes ctx objects as `{}` (its documented proxy bug, which is why the
-app pre-serializes `metaJson` as a string), while Rust serializes correctly — a divergence in
-Rust's favour. Run it with `node frontend-ssr/scripts/render-parity.mjs` while the depot serves.
+**Parity harness.** The former Node frontend's `scripts/render-parity.mjs` (removed 2026-09-27)
+rendered all 34 `views/`+`pages/` templates (now `runtime-js/site/app/views/` and
+`runtime-js/site/app/pages/`) and the ten filters through both `minijinja-js` (Node) and the Rust
+renderer, and diffed them. Result: **34/34 templates byte-identical** (CRLF, doctype case,
+`{% extends %}`/`{% include %}`/`{% import %}`, macros, loops, conditionals); filters **9/10
+identical**. The one divergence is `json`: `minijinja-js` serializes ctx objects as `{}` (its
+documented proxy bug, which is why the app pre-serializes `metaJson` as a string), while Rust
+serializes correctly — a divergence in Rust's favour. The harness itself is no longer in the tree;
+its recorded result stands.
 
 **Live template reload** verified (edit a template → new HTML; revert → old) after fixing a
 stale-cache defect: neither WASI file mtime nor `minijinja`'s template cache could invalidate, so

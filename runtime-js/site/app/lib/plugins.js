@@ -1,4 +1,4 @@
-// Guest plugin registry — ports frontend-ssr/src/lib/plugins.js onto the async guest fs.
+// Guest plugin registry — reads plugin manifests off the async guest fs.
 // Every directory under `plugins/` is one plugin: meta.md (frontmatter) + index.html.
 
 import { join } from "./paths.js";

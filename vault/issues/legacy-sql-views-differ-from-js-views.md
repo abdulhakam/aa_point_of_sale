@@ -13,8 +13,9 @@ related_to: ["[[tb-0022-move-reports-to-sql]]", "[[report-logic-stays-runtime-fi
 ## What was tested
 
 `runtime-js/tools/view-equivalence.mjs` reads the depot's base tables exactly as the guest's data
-layer does, builds every view with `frontend-ssr/compute/views.js` (the code that produces the
-current 14/14 report parity), runs the composed legacy SQL for the same view, and diffs the rows.
+layer does, builds every view with `runtime-js/site/app/compute/views.js` (the code the guest runs
+and that produces the current 14/14 report parity), runs the composed legacy SQL for the same view,
+and diffs the rows.
 
 ## Follow-up (2026-09-27): it also diverges on fresh invoices
 
@@ -66,7 +67,8 @@ The conversion plan assumed the legacy SQL could be dropped in **verbatim** (own
 would reproduce the JS. It does not: the JS views were *ported and adapted* — they add columns
 (`booker`), drop others, keep numbers unformatted, and in several places compute differently
 (`ledger_*` credit/debit, `items_report` qty units, `outstanding` which ignores the legacy
-threshold view). **The parity reference is the JS (`frontend-ssr`), not the legacy SQL.**
+threshold view). **The parity reference is the JS (`runtime-js/site/app/compute/views.js`), not the
+legacy SQL.**
 
 ## Consequences for the plan
 
@@ -83,7 +85,7 @@ threshold view). **The parity reference is the JS (`frontend-ssr`), not the lega
 ## Evidence
 
 - `runtime-js/tools/view-equivalence.mjs` — output above (0/13 identical; field-level diffs).
-- `runtime-js/site/app/reports/sql/views/*.sql` vs `frontend-ssr/compute/views.js`.
+- `runtime-js/site/app/reports/sql/views/*.sql` vs `runtime-js/site/app/compute/views.js`.
 
 ## Related
 

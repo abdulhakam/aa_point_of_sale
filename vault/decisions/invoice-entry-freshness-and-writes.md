@@ -7,16 +7,16 @@ created: 2026-09-27
 updated: 2026-09-27
 tags: [invoices, cashmemo, printing, realtime, subscriptions, concurrency, pos]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[frontend-ssr-feature-parity-gaps]]", "[[guest-app-host-port]]", "[[jobs-in-process-durable-queue]]", "[[legacy-invoice-numbering-is-racy]]"]
+related_to: ["[[guest-frontend-feature-parity-gaps]]", "[[guest-app-host-port]]", "[[jobs-in-process-durable-queue]]", "[[legacy-invoice-numbering-is-racy]]"]
 ---
 
 # Invoice/cash-memo entry: immediate-push, locked, poll-driven; A5/A4 print
 
 ## Context
 
-Invoice/cash-memo/printing are out of scope by request in `frontend-ssr`
-([[frontend-ssr-feature-parity-gaps]] §1) but are the workflows that make money, so their
-architecture is settled before they are built. Decisions below are confirmed with the owner
+Invoice/cash-memo/printing were out of scope by request in the former Node frontend
+(`frontend-ssr`, removed 2026-09-27) ([[guest-frontend-feature-parity-gaps]] §1) but are the
+workflows that make money, so their architecture is settled before they are built. Decisions below are confirmed with the owner
 (2026-09-27). An earlier draft of this note wrongly said TrailBase realtime is per-record only;
 table-level subscriptions exist (see below).
 
@@ -119,8 +119,8 @@ build.
 - `frontend/src/app/app/invoices/InvoiceForm.tsx:48,206,287,434` — create-with-`completed:false`,
   then PATCH on OK.
 - `frontend/src/app/providers.tsx` — the legacy react-query staleness settings.
-- `frontend-ssr/compute/views.js:115` and `compute/reports.js` — `completed` is carried in the
-  invoice view but never filtered.
+- `runtime-js/site/app/compute/views.js:115` and `runtime-js/site/app/compute/reports.js` —
+  `completed` is carried in the invoice view but never filtered.
 - The subscription probe: `…/subscribe/*` returns **403** for both auth methods
   ([[trailbase-subscribe-endpoint-forbidden]]).
 

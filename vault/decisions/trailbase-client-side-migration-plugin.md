@@ -4,9 +4,9 @@ type: decision
 status: accepted
 decided_on: 2026-09-25
 created: 2026-09-26
-tags: [frontend-ssr, plugins, migration, pocketbase, import]
+tags: [guest, plugins, migration, pocketbase, import]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[frontend-ssr]]", "[[pos-0027-migrate-production-data-to-trailbase]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[pos-0029-rebuild-v1-import-on-guest]]", "[[pos-0027-migrate-production-data-to-trailbase]]"]
 ---
 
 # Make the data migration a client-side plugin, not backend code
@@ -23,19 +23,22 @@ Where should that code live? Options considered:
 | Option | Problem |
 |---|---|
 | A PocketBase JS migration (`//go:build` hook or `pb_hooks`) | Runs *inside* the old server, which is meant to be left alone; it would also need to be deployed there |
-| A standalone Node script in `trailbase/` | A second place that needs a TrailBase client, auth handling and paging — duplicating `frontend-ssr/src/lib/trailbase.js` |
-| Server-side code in [[frontend-ssr]] | The migration becomes part of the running app's surface area forever, for something run once |
+| A standalone Node script in `trailbase/` | A second place that needs TrailBase auth handling and paging — duplicating the guest's data layer (`runtime-js/site/app/lib/data.js`) |
+| Server-side code in the guest frontend ([[runtime-js-guest-platform]]) | The migration becomes part of the running app's surface area forever, for something run once |
 | A browser page that talks to both servers | No backend code at all, and both credentials are already available to the operator doing it |
 
 ## Decision
 
-The migration is the bundled **`import-from-v1` plugin**: a self-contained folder
-`frontend-ssr/plugins/import-from-v1/` containing `meta.md` + `index.html`, served at
-`/plugins/import-from-v1/` **behind the same login as the rest of the app**.
+The migration is the bundled **`import-from-v1` plugin**: a self-contained folder containing
+`meta.md` + `index.html`, served at `/plugins/import-from-v1/` **behind the same login as the
+rest of the app**. It was written inside the former Node frontend
+(`frontend-ssr/plugins/import-from-v1/`, removed 2026-09-27) and has been ported to the guest at
+`runtime-js/site/app/plugins/import-from-v1/`; verifying it end-to-end is
+[[pos-0029-rebuild-v1-import-on-guest]].
 
 It signs in to PocketBase (admin login + paged reads) and TrailBase (user login + bulk record
-writes) directly from the browser and copies the data itself. No backend code is added to
-[[frontend-ssr]], and nothing is added to [[backend]] or [[trailbase]] beyond the schema.
+writes) directly from the browser and copies the data itself. No backend code is added to the
+guest frontend, and nothing is added to [[backend]] or [[trailbase]] beyond the schema.
 
 It does the translation work:
 
@@ -54,7 +57,8 @@ It does the translation work:
 
 - **The plugin contract is designed for exactly this.** `plugins/<slug>/{meta.md,index.html}` is
   a single self-contained page, addable and removable by copying or deleting a folder, with no
-  change to `src/` or `views/` ([[frontend-ssr]]). A one-off migration is the archetypal plugin.
+  change to `src/` or `views/` ([[runtime-js-guest-platform]]; the guest serves plugins from
+  `runtime-js/site/app/plugins/`). A one-off migration is the archetypal plugin.
 - **It is behind the login**, so the page — and therefore the two sets of credentials it uses —
   is not reachable anonymously.
 - **Both servers are reachable from the operator's browser** (`:8090` and `:4000` on
@@ -90,14 +94,16 @@ It does the translation work:
 
 ## Evidence
 
-- `frontend-ssr/plugins/README.md` — the plugin format, and "Plugin pages are behind the same
-  login as the rest of the app."
-- `frontend-ssr/plugins/import-from-v1/meta.md` — frontmatter (`author: Abdul Hakam`,
+- `runtime-js/site/app/plugins/README.md` — the plugin format, and "Plugin pages are behind the
+  same login as the rest of the app."
+- `runtime-js/site/app/plugins/import-from-v1/meta.md` — frontmatter (`author: Abdul Hakam`,
   `license: MIT`, `tags: [migration, pocketbase, import, one-time]`, `order: 10`) and the "What it
-  does" list quoted above.
-- `frontend-ssr/src/lib/plugins.js` + `src/routes/plugins.js` — the hub that reads each `meta.md`
-  and serves the page.
-- `frontend-ssr/src/server.js` — `app.use("/plugins", requireAuth, express.static(config.pluginsDir, { index: "index.html" }))`.
+  does" list quoted above; the Node copy carried the same text (removed 2026-09-27,
+  [[guest-app-host-port]]). Verifying it is [[pos-0029-rebuild-v1-import-on-guest]].
+- `runtime-js/site/app/lib/plugins.js` and `runtime-js/site/ahscripts/routes/_app/route.ts` — the
+  hub that reads each `meta.md` and the `/plugins/*` route that serves the page.
+- The former Node frontend's `frontend-ssr/src/server.js` (removed 2026-09-27,
+  [[guest-app-host-port]]) — `app.use("/plugins", requireAuth, express.static(config.pluginsDir, { index: "index.html" }))`.
 - `trailbase/README.md` § *Data migration* — the value translations the plugin implements.
 - The prior vault's `decisions/trailbase-migration-is-a-client-side-plugin.md` (`bd81f2f`) is the
   original record; see [[previous-vault-recovery]].

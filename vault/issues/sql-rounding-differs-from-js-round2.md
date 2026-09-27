@@ -55,7 +55,7 @@ Round money with the JS-equivalent expression above (done), **or** return raw va
 
 - `runtime-js/tools/extract-legacy-views.mjs` — `jsRoundLike`.
 - `runtime-js/tools/view-equivalence.mjs` — `transactionView` 23,413/23,413 identical.
-- `frontend-ssr/compute/format.js` — `round2`.
+- `runtime-js/site/app/compute/format.js` — `round2`.
 
 ## Related
 

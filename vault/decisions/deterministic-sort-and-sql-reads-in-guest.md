@@ -16,12 +16,12 @@ related_to: ["[[guest-app-host-port]]", "[[runtime-js-single-host]]", "[[reports
 The guest app-host reads the depot's SQLite directly rather than through TrailBase's record APIs
 ([[guest-app-host-port]]). The report/ledger calculators are order-sensitive: some sort, but many
 do not, and floating-point accumulation follows input order. A first differential run against the
-Node app matched only 1/14 pages.
+former Node app matched only 1/14 pages.
 
 ## Decision
 
 1. **Read every base table with `ORDER BY "id" DESC`.** That is the record API's default order
-   (uuid_v7 ids are time-sortable), so the guest presents the same row order the Node app sees.
+   (uuid_v7 ids are time-sortable), so the guest presents the same row order the Node app saw.
    Without it, rows were in rowid order and totals drifted in the last cent.
 2. **Never use `localeCompare` in shared compute.** `String.prototype.localeCompare` is ICU-backed
    in Node/V8 but not in QuickJS, so the same sort produced different orders on the two runtimes.
@@ -36,7 +36,7 @@ Node app matched only 1/14 pages.
 
 **Accepted**
 
-- Report and ledger output is **byte-identical** between the guest and the Node app on the same
+- Report and ledger output was **byte-identical** between the guest and the Node app on the same
   data (14/14 pages; see [[guest-app-host-port]]).
 - Ordering is deterministic and identical across engines, which is what makes the differential
   test meaningful.
@@ -55,10 +55,12 @@ Node app matched only 1/14 pages.
 
 ## Evidence
 
-- `runtime-js/tools/guest-parity.mjs` — 14/14 pages match (totals exact, rows equal after
-  stripping raw ids).
-- `runtime-js/site/app/lib/data.js` — `readTable` ordering; `frontend-ssr/compute/format.js` —
-  `compareText`; `frontend-ssr/compute/views.js` — O(n log n) `buildLedgerParty`.
+- The Node-vs-guest differential harness (`runtime-js/tools/guest-parity.mjs`, removed with the
+  Node app) — 14/14 pages matched (totals exact, rows equal after stripping raw ids); see
+  [[guest-app-host-port]].
+- `runtime-js/site/app/lib/data.js` — `readTable` ordering;
+  `runtime-js/site/app/compute/format.js` — `compareText`; `runtime-js/site/app/compute/views.js` —
+  O(n log n) `buildLedgerParty`.
 - [[guest-app-host-port]] — the measurements and the remaining gaps.
 
 ## Related

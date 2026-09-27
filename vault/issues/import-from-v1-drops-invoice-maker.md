@@ -5,7 +5,7 @@ status: known-limitation
 severity: medium
 created: 2026-09-26
 tags: [migration, import, data-loss, invoice-maker, plugin]
-related_to: ["[[trailbase-client-side-migration-plugin]]", "[[pos-0027-migrate-production-data-to-trailbase]]"]
+related_to: ["[[trailbase-client-side-migration-plugin]]", "[[pos-0027-migrate-production-data-to-trailbase]]", "[[pos-0029-rebuild-v1-import-on-guest]]"]
 ---
 
 # The v1 importer drops invoices.invoice_maker
@@ -13,7 +13,11 @@ related_to: ["[[trailbase-client-side-migration-plugin]]", "[[pos-0027-migrate-p
 ## What happens
 
 The `import-from-v1` plugin ([[trailbase-client-side-migration-plugin]]) **does not migrate
-`invoices.invoice_maker`**. Its own description says so explicitly:
+`invoices.invoice_maker`**. Its own description says so explicitly. This was true of the Node
+copy at `frontend-ssr/plugins/import-from-v1/` (deleted with `frontend-ssr` on 2026-09-27, in git
+history) and remains true of the ported guest copy at
+`runtime-js/site/app/plugins/import-from-v1/`; fixing it is
+[[pos-0029-rebuild-v1-import-on-guest]]:
 
 > Drops `invoices.invoice_maker` (it points at PocketBase's `_user`, which TrailBase does not
 > share).
@@ -46,8 +50,8 @@ never silently rewrite a reference to a guessed target).
 
 - **Invoice authorship is lost.** After a migration, `invoice_maker` is `NULL` for every imported
   invoice, so "who made this invoice" is unanswerable for all history.
-- **It is a silent-ish loss.** The plugin documents it in its `meta.md`, but nothing in the
-  migration *output* reports how many invoices lost a maker, so it will not surface in a row-count
+- **It is a silent-ish loss.** The plugin documented it in its `meta.md`, but nothing in the
+  migration *output* reported how many invoices lost a maker, so it will not surface in a row-count
   reconciliation. The count is `SELECT COUNT(*) FROM invoices WHERE invoice_maker IS NOT NULL` on
   the source.
 - **Expansion was never available anyway.** `invoice_maker` cannot be expanded even when set,
@@ -60,9 +64,9 @@ never silently rewrite a reference to a guessed target).
 
 1. **Accept it and document it** as a known, deliberate loss — the lowest-cost path, and defensible
    given the column was never expandable.
-2. **Match by email** in the plugin: read the PocketBase users, ensure a TrailBase user exists for
-   each email (creating where needed, and reporting what it created), keep an id map, and set
-   `invoice_maker` from it. Recoverable data, at the cost of the plugin creating accounts.
+2. **Match by email** in the rebuilt plugin: read the PocketBase users, ensure a TrailBase user
+   exists for each email (creating where needed, and reporting what it created), keep an id map,
+   and set `invoice_maker` from it. Recoverable data, at the cost of the plugin creating accounts.
 3. **Preserve the old id in a side column** (e.g. a nullable `invoice_maker_legacy` text column) so
    the information survives the migration and can be resolved later. Requires a schema addition —
    which means a *new* migration, not an edit to the applied one
@@ -81,16 +85,20 @@ Option 1 or 4 is the honest minimum; option 2 is the one that actually preserves
   browser.
 - [[trailbase-pocketbase-data-compatibility]] — the general principle that what can be preserved
   cheaply is preserved; `invoice_maker` is the counter-example that was not cheap.
+- [[pos-0029-rebuild-v1-import-on-guest]] — the guest verification, where `invoice_maker` must be
+  handled explicitly rather than dropped again.
 
 ## Evidence
 
-- `frontend-ssr/plugins/import-from-v1/meta.md` — "Drops `invoices.invoice_maker` (it points at
-  PocketBase's `_user`, which TrailBase does not share)."
+- `runtime-js/site/app/plugins/import-from-v1/meta.md` — "Drops `invoices.invoice_maker` (it points
+  at PocketBase's `_user`, which TrailBase does not share)." The Node copy with the same text is
+  in git history (`frontend-ssr/plugins/import-from-v1/meta.md`). Fixing it is
+  [[pos-0029-rebuild-v1-import-on-guest]].
 - `trailbase/traildepot/migrations/main/U1790208000__create_base_tables.sql` — the `invoice_maker`
   column and its `REFERENCES "_user"("id") ON DELETE SET NULL`, plus
   `CREATE INDEX "idx_invoices_invoice_maker"`.
 - `traildepot/config.textproto` — `invoices` allow-lists `expand: ["type","party","booker"]` and
   **not** `invoice_maker`, with the surrounding comment explaining that a hidden `_user` table cannot
   be expanded.
-- `frontend-ssr/src/lib/reports/data.js` — `RELATIONS.invoices = ["type","party","booker","invoice_maker"]`,
+- `runtime-js/site/app/lib/data.js` — `RELATIONS.invoices = ["type","party","booker","invoice_maker"]`,
   i.e. the field is read and normalised, so the *client* handles it fine; only the migration omits it.

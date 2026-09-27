@@ -7,19 +7,22 @@ locator: runtime-js/, guests/, runtime-js/site/
 runtime: TrailBase 0.33.22 + wasmtime guest, Rust + QuickJS (rquickjs) + minijinja
 created: 2026-09-27
 tags: [pos, wasm, guests, runtime-js, rquickjs, quickjs, minijinja, experimental]
-related_to: ["[[trailbase]]", "[[frontend-ssr]]", "[[guest-app-host-port]]", "[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-defaults]]"]
+related_to: ["[[trailbase]]", "[[frontend]]", "[[guest-app-host-port]]", "[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[guest-ui-is-a-direct-shift-of-legacy]]"]
 ---
 
 # runtime-js guest platform (WebAssembly app host)
 
-**New / experimental.** A second way to serve the new frontend: instead of a Node process
-([[frontend-ssr]]), the whole app runs as **TrailBase guest-WASM components** on the server's own
-wasmtime. The architecture is compiled once; pages, templates and report logic are files under an
-`app/` directory, read and evaluated **at runtime** — adding a report or a page means editing files,
-not rebuilding a component.
+**New / experimental.** The new frontend: the whole app runs as **TrailBase guest-WASM
+components** on the server's own wasmtime, with no separate Node process. The architecture is
+compiled once; pages, templates and report logic are files under an `app/` directory, read and
+evaluated **at runtime** — adding a report or a page means editing files, not rebuilding a
+component. The intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
+([[guest-ui-is-a-direct-shift-of-legacy]]).
 
 It is the implementation of the wasm app-platform plan and is **not wired to production**; the
-legacy pair ([[backend]] + [[frontend]]) is still what runs the shop.
+legacy pair ([[backend]] + [[frontend]]) is still what runs the shop. The intended end state is a
+direct shift of the legacy UI onto this host, same look
+([[tb-0023-direct-shift-legacy-ui-to-guest]]).
 
 ## The pieces
 
@@ -103,5 +106,6 @@ invoice design all have their own decisions recorded in this vault.
 
 - [[guest-app-host-port]] — the port itself and what is verified.
 - [[trail-runtime-js-reference]] — the adopted host and its measurements.
-- [[frontend-ssr]] — the Node app it replaces.
+- [[frontend]] — the legacy UI it is to replace, screen for screen.
+- [[guest-ui-is-a-direct-shift-of-legacy]] — the look-and-behaviour mandate.
 - [[build-and-run]] / [[environment]] — how to start it.

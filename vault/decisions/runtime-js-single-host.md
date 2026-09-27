@@ -29,8 +29,8 @@ rather than being a separate component:
 
 - A Rust `minijinja` module (`runtime-js/src/render.rs`) is exposed to scripts as native
   `render.html(name, ctxJson)` / `render.string(source, ctxJson)`. Templates load from
-  `/app/views` (falling back to `/app/pages`); names resolve views-root-relative; the ten
-  `frontend-ssr` filters are ported; templates cache by mtime.
+  `/app/views` (falling back to `/app/pages`); names resolve views-root-relative; the ten filters
+  from the earlier Node frontend are ported; templates cache by mtime.
 - A route returns `{ html: "..." }` and the host answers `Content-Type: text/html`; anything else
   is JSON.
 - Business logic (routes, report/ledger calculators) stays runtime TS under `app/`; the Rust host
@@ -46,7 +46,7 @@ later option if isolation or the per-call deadline demands it.
 |---|---|
 | Separate `render` guest reached over HTTP (plan's D3) | Adds cross-component HTTP + JSON round-trips for every page render, plus a second component to load/deploy. Our S6 spike proved the HTTP path works, so it stays available, but it buys nothing while everything is Rust-in-one-host. |
 | `minijinja-js` inside the JS engine | The original reason for the Rust crate ([[trailbase-guest-wasm-runtime-defaults]], D3): nested WASM engines are not viable inside the guest. Not an option. |
-| Keep `frontend-ssr`'s Node renderer | Defeats the whole re-platform; two runtimes and a second deploy. |
+| Keep the former Node frontend's renderer | Defeats the whole re-platform; two runtimes and a second deploy. Removed 2026-09-27 ([[guest-ui-is-a-direct-shift-of-legacy]]). |
 
 ## Consequences
 

@@ -16,8 +16,9 @@ record the results as evidence.
 
 ## Why
 
-The plan replaces the Node `frontend-ssr` process with TrailBase guest-WASM components whose
-business logic is loaded and evaluated at runtime. Two premises were unverified and load-bearing:
+The plan replaces the former Node frontend (`frontend-ssr`, removed 2026-09-27) process with
+TrailBase guest-WASM components whose business logic is loaded and evaluated at runtime. Two
+premises were unverified and load-bearing:
 that a `jco` component can `eval`/`new Function` at runtime (D2), and that a guest can read the
 `app/` directory through the WASI sandbox (D4). S2–S5 were required to be *decided* before Phase 1.
 

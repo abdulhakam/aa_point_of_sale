@@ -5,7 +5,7 @@ status: active
 system: both
 created: 2026-09-26
 tags: [pos, performance, caching, indexes, snapshots]
-related_to: ["[[frontend]]", "[[frontend-ssr]]", "[[backend]]"]
+related_to: ["[[frontend]]", "[[runtime-js-guest-platform]]", "[[backend]]"]
 ---
 
 # Performance and caching
@@ -58,7 +58,7 @@ queries: {
 
 `useAppliedFilters(initial)` holds the filter values a query actually reads, so editing several
 inputs (area → section → booker) collapses to **one** request when APPLY is pressed instead of
-one per keystroke. The SSR frontend keeps the same behaviour as a server-rendered APPLY/RESET
+one per keystroke. The guest frontend keeps the same behaviour as a server-rendered APPLY/RESET
 form.
 
 ### Server-side aggregation in SQL — three migrations
@@ -81,15 +81,15 @@ PocketBase view must be a single function call**, which is why `total_sending`,
 
 ## New side (experimental)
 
-### Incremental warm snapshot — `frontend-ssr/src/lib/reports/`
+### Incremental warm snapshot — `runtime-js/site/app/lib/reports.js`
 
-A snapshot of the 17 base tables **and** their derived views is held in memory and refreshed by a
-background job that spends CPU only when something changed:
+A snapshot of the 17 base tables **and** their derived views is held in memory and refreshed
+incrementally, spending CPU only on what changed:
 
 | Step | Cost |
 |---|---|
-| **probe** | one request per table: `limit=1&order=-updated&count=true` → `{count, newest updated}` |
-| **fetch** | only tables whose fingerprint moved, each read whole (`listAll`) |
+| **probe** | one query per table: `` `${COUNT(*)}:${MAX(updated)}` `` → a `count:newest updated` fingerprint |
+| **fetch** | only tables whose fingerprint moved, each read whole from the depot's SQLite |
 | **process** | only the views those tables feed (`viewsAffectedBy`) |
 | **render** | only the reports reading a rebuilt view, pre-rendered for their default filters |
 
@@ -97,18 +97,19 @@ Mechanisms that make it work:
 
 - Every table carries `updated` (trigger-maintained) and ids are time-sortable UUIDv7, so any
   insert, delete or in-place update moves either the count or the newest `updated`. The probe
-  therefore catches all three change kinds with one cheap request per table.
-- If the server rejects `order=-updated`, the probe degrades to count-only — still catches
-  inserts and deletes, just not in-place updates.
+  therefore catches all three change kinds with one cheap query per table.
+- Link tables (`party_companies`, `order_booker_companies`) have no `updated` column, so they fall
+  back to a count-only fingerprint — still catches inserts and deletes, just not in-place updates
+  ([[guest-fingerprint-refresh]]).
 - `viewsAffectedBy(tables)` keeps a write to one table from rebuilding all 14 views;
   `buildSelectedViews(base, previous, dirty)` is the incremental builder.
-- **Report results are cached per `(report, filters)`**, `MAX_CACHED_REPORTS = 200`,
-  oldest-first eviction.
+- **Report results are cached in the depot KV store**, keyed by a per-process nonce and snapshot
+  version ([[guest-report-result-cache]]).
 - A management write calls `invalidate(tables)`, which marks only those tables and triggers the
   job immediately, so the next request already sees the write — no waiting for the timer.
-- Aggregation runs on a `worker_threads` pool sized to `WORKER_THREADS` or CPUs − 1 (min 1);
-  if the pool cannot start, the same pure function runs in-process. This keeps one slow report
-  from blocking the Node event loop.
+- Aggregation runs **in-process in the guest host** — the guest has no `worker_threads` fan-out
+  ([[runtime-js-guest-platform]]), so the same pure functions run on the request; views are rebuilt
+  lazily on the request that reads them.
 - `ensureFresh` retries at most 3 times, so a stream of writes cannot spin the loop.
 
 ### Pages ship results, not views
@@ -130,20 +131,20 @@ Response hygiene on that endpoint:
 
 ### One implementation, two runtimes
 
-`frontend-ssr/compute/` is served at `/compute/*` (behind auth) as the *same file bytes* Node
-imports, so the browser runtime can run the identical report code in a worker. There is no second
-implementation to keep in sync, and no drift between what the server computed and what the client
-would compute.
+`runtime-js/site/app/compute/` is served at `/compute/*` (behind auth) as the *same file bytes* the
+guest dispatcher loads, so the browser runtime can run the identical report code in a worker. There
+is no second implementation to keep in sync, and no drift between what the server computed and what
+the client would compute.
 
 ## Where the two approaches differ
 
 | Concern | Legacy | New |
 |---|---|---|
-| Where aggregates are computed | SQL views in PocketBase; client sums the rest | JavaScript, shared between Node and browser |
+| Where aggregates are computed | SQL views in PocketBase; client sums the rest | JavaScript, shared between the guest host and the browser |
 | How much data crosses the wire | whole views (9k–26k rows) | a finished result + small reference tables |
-| Freshness | 60 s `staleTime`, plus SQL views updated on read | warm snapshot, invalidated on write, timer-refreshed (default 60 s) |
+| Freshness | 60 s `staleTime`, plus SQL views updated on read | warm snapshot, invalidated on write, rebuilt lazily on the request that reads it |
 | Change detection | none (re-fetch by cache policy) | per-table fingerprint (count + newest `updated`) |
-| Computed where | browser main thread | `worker_threads` pool (server) or a browser worker |
+| Computed where | browser main thread | in-process in the guest host, or a browser worker |
 | Manual refresh | none | `/reports/refresh` button, `?full=1` for a full re-read |
 | Aggregation cost per read | paid per request in SQLite | paid once per change, in memory |
 
@@ -155,12 +156,12 @@ would compute.
   still need reworking; until then they cannot be pointed at TrailBase.
 - `tb-0012-wire-nextjs-frontend-to-trailbase` — the legacy client's `getFullList` callers should
   move to `listPage` before any cutover, on either backend.
-- `CACHE_TTL_SECONDS` in `frontend-ssr/.env` is read by nothing, so it currently tunes nothing
-  ([[environment]]).
+- **`CACHE_TTL_SECONDS`** in the removed Node frontend's `.env` (`frontend-ssr`, removed 2026-09-27)
+  was read by nothing, so it tuned nothing; the guest has no such setting ([[environment]]).
 
 ## Related
 
 - [[reports-and-ledgers]] — the arithmetic these mechanisms carry.
 - [[frontend]] — `providers.tsx`, `useAPI.ts` and the client-side caching in context.
-- [[frontend-ssr]] — the report service and page host in context.
+- [[runtime-js-guest-platform]] — the report service and page host in context.
 - [[backend]] — the indexes and summary view migrations.

@@ -7,7 +7,7 @@ locator: trailbase/
 runtime: TrailBase 0.33.22 (trail CLI)
 created: 2026-09-26
 tags: [pos, backend, trailbase, experimental, sqlite]
-related_to: ["[[backend]]", "[[frontend-ssr]]"]
+related_to: ["[[backend]]", "[[runtime-js-guest-platform]]"]
 ---
 
 # TrailBase backend
@@ -77,7 +77,7 @@ barcode while a duplicate non-empty one is refused.
 
 Every table carries a `trg_<table>__updated` `AFTER UPDATE` trigger — SQLite has no
 `ON UPDATE`, so `updated` is maintained per table. That trigger is also what makes
-[[frontend-ssr]]'s change-detection fingerprint work.
+the guest frontend's change-detection fingerprint work ([[guest-fingerprint-refresh]]).
 
 Full table/column detail: [[data-model]]. Full API surface: [[api-contract-trailbase]].
 
@@ -138,8 +138,7 @@ trailbase\RUN.BAT
    Later runs skip straight to starting the server, so a password you change yourself is
    never overwritten.
 2. It binds `ADDRESS=127.0.0.1:4000` explicitly, because TrailBase's own default bind is
-   `[::1]:4000` (IPv6 only), which neither a browser at `127.0.0.1` nor [[frontend-ssr]]
-   (whose `TRAILBASE_URL` is `http://127.0.0.1:4000`) can reach. See
+   `[::1]:4000` (IPv6 only), which a client at `127.0.0.1` cannot reach. See
    [[trailbase-ipv6-loopback-default-bind]].
 
 Override with `set "DEPOT=C:\some\depot"` / `set "ADDRESS=127.0.0.1:4001"` before invoking.

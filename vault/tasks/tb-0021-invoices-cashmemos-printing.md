@@ -7,13 +7,14 @@ created: 2026-09-27
 updated: 2026-09-27
 tags: [invoices, cashmemo, printing, realtime, concurrency, pos]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[invoice-entry-freshness-and-writes]]", "[[legacy-invoice-numbering-is-racy]]", "[[frontend-ssr-feature-parity-gaps]]", "[[jobs-in-process-durable-queue]]"]
+related_to: ["[[invoice-entry-freshness-and-writes]]", "[[legacy-invoice-numbering-is-racy]]", "[[guest-frontend-feature-parity-gaps]]", "[[jobs-in-process-durable-queue]]"]
 ---
 
 # TB-0021 Invoices, cash memos and printing on the guest platform
 
-Build the money-making screens `frontend-ssr` deliberately left out
-([[frontend-ssr-feature-parity-gaps]] §1). Design and all owner decisions:
+Build the money-making screens the former Node frontend (`frontend-ssr`, removed
+2026-09-27) deliberately left out and that the guest frontend ([[runtime-js-guest-platform]])
+still lacks ([[guest-frontend-feature-parity-gaps]] §1). Design and all owner decisions:
 [[invoice-entry-freshness-and-writes]].
 
 ## Spike first (blocking) — answered

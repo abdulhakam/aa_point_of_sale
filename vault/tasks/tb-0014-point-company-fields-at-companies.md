@@ -6,7 +6,7 @@ priority: medium
 created: 2026-09-26
 tags: [naming, schema, categories, companies, items]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[data-model]]", "[[frontend-ssr]]"]
+related_to: ["[[data-model]]", "[[runtime-js-guest-platform]]"]
 ---
 
 # TB-0014 Resolve the "Company" naming collision between categories and companies
@@ -24,15 +24,15 @@ the wrong table, and a reader who trusts the UI will not find a `company` column
 
 ## Current state, in code
 
-- `frontend-ssr/src/lib/entities.js` — `categories` has `label: "Item Companies"`,
+- `runtime-js/site/app/lib/management.js` — `categories` has `label: "Item Companies"`,
   `singular: "Item Company"`; but `items` has
   `{ name: "category", label: "Company", type: "relation", source: "categories" }`.
 - `frontend/src/app/api/items.ts` — the same: a `category` field whose `baseProps.label` is
   `"Company"`, with `dataQuery: { collectionName: "categories" }` — so the wrong-looking query is
   actually correct, which is what makes this a trap.
 - The legacy Management screen exposes **no** Companies screen at all, while
-  [[frontend-ssr]] added `/management/companies`. So one frontend edits `companies` and the other
-  cannot.
+  [[runtime-js-guest-platform]] added `/management/companies`. So one frontend edits `companies`
+  and the other cannot.
 
 ## The open question
 
@@ -57,8 +57,8 @@ So there are two sub-questions, and they are genuinely separate:
    loses the business's own vocabulary if "Company" is what staff actually say.
 2. **Rename the concept in the schema.** `categories` → something unambiguous and `items.category` →
    the matching name. A real migration plus a rename across both frontends and every report column
-   that emits `company` from a category join (see `frontend-ssr/src/routes/reports.js`'s
-   `COMPANY` column and `entities.js`'s `resolve: "categories"`).
+   that emits `company` from a category join (see `runtime-js/site/app/lib/report-pages.js`'s
+   `COMPANY` column and `runtime-js/site/app/lib/management.js`'s `resolve: "categories"`).
 3. **Split them.** Add `items.company` as a real FK to `companies` if items genuinely need one, and
    keep `category` for the brand grouping — possibly renaming `category` to make the pair
    unambiguous ("brand" + "company").
@@ -81,18 +81,18 @@ The prior vault recorded a decision titled *"company replaces category"* (commit
 - [ ] Decide: label-only, rename, or add a real `items.company`
 - [ ] If the schema changes, write a **new** migration and keep the old one untouched
 - [ ] Update both frontends together: `items` label, the Management hub, and any report column that
-      renders a category as "Company" (`frontend-ssr/src/routes/reports.js` defines a `COMPANY`
-      column; `frontend-ssr/pages/reports/*/meta.json` reference `company` keys)
+      renders a category as "Company" (`runtime-js/site/app/lib/report-pages.js` defines a `COMPANY`
+      column; `runtime-js/site/app/pages/reports/*/meta.json` reference `company` keys)
 - [ ] Update [[data-model]] and [[glossary]] to match the outcome either way
 
 ## Evidence
 
 - `trailbase/README.md` § *Follow-ups* item 3, quoted above.
-- `frontend-ssr/src/lib/entities.js` — `categories` labelled "Item Companies" vs `items.category`
-  labelled "Company" and resolving to `categories`.
+- `runtime-js/site/app/lib/management.js` — `categories` labelled "Item Companies" vs
+  `items.category` labelled "Company" and resolving to `categories`.
 - `frontend/src/app/api/items.ts` — the same mismatch, with `collectionName: "categories"`.
 - `trailbase/traildepot/migrations/main/U1790208000__create_base_tables.sql` — `categories` and
   `companies` as separate tables; `party_companies` and `order_booker_companies` both referencing
   `companies`.
-- `frontend-ssr/pages/reports/profit/meta.json` — a `company` filter sourced from `categories`,
-  which is the label/source mismatch in its most user-visible form.
+- `runtime-js/site/app/pages/reports/profit/meta.json` — a `company` filter sourced from
+  `categories`, which is the label/source mismatch in its most user-visible form.

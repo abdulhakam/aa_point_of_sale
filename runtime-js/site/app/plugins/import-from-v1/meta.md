@@ -43,8 +43,8 @@ are used only for the requests made while the import runs; nothing is stored.
 ## Notes
 
 - Re-running without *Clear existing data* will duplicate rows.
-- The report screens keep an in-memory snapshot that a background job refreshes every
-  `REFRESH_INTERVAL_SECONDS` (60s by default), so data imported straight into TrailBase appears
-  within that interval.
+- The guest reads the depot SQLite directly and keeps a fingerprint-based snapshot, refreshed on
+  demand and by the minute poller, so data imported straight into TrailBase appears after the
+  next refresh (or immediately via `POST /reports/refresh`).
 - The default TrailBase URL is `http://127.0.0.1:4000`; the default PocketBase
   URL is `http://127.0.0.1:8090`.

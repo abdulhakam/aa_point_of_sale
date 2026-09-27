@@ -1,9 +1,9 @@
 // AA Point of Sale — guest app host for the runtime-js TrailBase component.
 //
 // This file is evaluated as a script by the host (no imports): it loads the app's modules
-// itself through a small ESM->CJS shim, then routes requests the way frontend-ssr's Express
-// app does. Business logic lives in /app/compute and /app/lib; this file is only the HTTP
-// front controller.
+// itself through a small ESM->CJS shim, then routes requests across the whole URL space.
+// Business logic lives in /app/compute and /app/lib; this file is only the HTTP front
+// controller.
 //
 // The whole file runs inside an IIFE. `run_route` re-evaluates it in the same persistent
 // QuickJS context for every request, so top-level `const`s would be a redeclaration error on

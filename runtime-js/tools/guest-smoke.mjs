@@ -1,7 +1,7 @@
 /**
  * Guest smoke test: boots a throw-away TrailBase depot with the `runtime-js` guest component
- * and the site, seeds the same dataset as `frontend-ssr/scripts/smoke.js`, then exercises every
- * screen over HTTP and asserts the same pinned totals.
+ * and the site, seeds a pinned small dataset, then exercises every screen over HTTP and asserts
+ * the pinned totals.
  *
  *   node runtime-js/tools/guest-smoke.mjs
  *
@@ -12,7 +12,7 @@ import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { toUuid } from "../../frontend-ssr/src/lib/uuid.js";
+import { toUuid } from "./uuid.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runtimeRoot = path.resolve(here, "..");
@@ -99,7 +99,7 @@ async function api(method, apiPath, body) {
 
 const create = async (apiName, body) => (await api("POST", `/api/records/v1/${apiName}`, body)).ids[0];
 
-/** The same dataset as frontend-ssr/scripts/smoke.js. */
+/** The pinned smoke dataset (seed rows and hand-computed totals). */
 async function seed() {
   const sectionA = await create("sections", { name: "North" });
   const sectionB = await create("sections", { name: "South" });

@@ -34,7 +34,7 @@ Domain and code vocabulary, including the deliberate misspellings that must not 
 | **Discount 1 / Discount 2** | Two **multiplicative** percentage discounts, applied in sequence, on both `transactions` and `invoices`. |
 | **`discount_rs`** | A flat rupee amount, subtracted **after** the two percentages. |
 | **Dated / due date** | `invoices.dated` (the document date, falling back to `created`) and `invoices.duedate`. |
-| **Cash memo** | The legacy module holding the payment vouchers, receive vouchers, DA entry and expenses screens. No SSR equivalent. |
+| **Cash memo** | The legacy module holding the payment vouchers, receive vouchers, DA entry and expenses screens. No guest equivalent. |
 | **DA entry** | "Daily allowance"-style expense entry inside the cash-memo module. |
 | **Ledger** | A running statement: party, booker, area or general. |
 | **Outstanding** | What a party still owes or is owed — `outstanding_summary`. |
@@ -62,14 +62,14 @@ logic all used that spelling". A future cleanup must change all of them at once,
 | Term | Meaning |
 |---|---|
 | **View** | On the legacy side, a PocketBase SQL view (`payments_view`, `invoice_view`, …). On the new side, a *derived table rebuilt in JavaScript* in `compute/views.js`. Same name, different mechanism — see [[trailbase-drop-sql-views]]. |
-| **Snapshot / warm snapshot** | The in-memory copy of the 17 base tables **and** their derived views held by [[frontend-ssr]]'s report service. |
+| **Snapshot / warm snapshot** | The in-memory copy of the 17 base tables **and** their derived views held by [[runtime-js-guest-platform]]'s report service. |
 | **Fingerprint / signature** | `{row count, newest updated}` per table, used to decide whether a table must be re-read. |
 | **Probe** | The single cheap request per table (`limit=1&order=-updated&count=true`) that produces the fingerprint. |
 | **View closure** | The transitive set of views a page needs, resolved from the views it declares (`viewClosure`). |
 | **Page host** | The generic `/p/<slug>` runtime: renders a `meta.json`-declared template, serves that page's data, and does not know any specific page. See [[trailbase-declarative-page-host]]. |
 | **Declarative page** | A folder `pages/<slug>/` containing `meta.json` + a template. Adding a page is adding a folder. |
 | **Plugin** | A folder `plugins/<slug>/` containing `meta.md` + `index.html`, served behind the login and listed by the plugin hub. |
-| **Compute module** | A file in `frontend-ssr/compute/` that is environment-neutral and byte-for-byte shared between Node and the browser (served, behind auth, at `/compute/*`). |
+| **Compute module** | A file in `runtime-js/site/app/compute/` that is environment-neutral and byte-for-byte shared between the guest host and the browser (served, behind auth, at `/compute/*`). |
 | **Warm-up** | Pre-rendering the reports that read a rebuilt view for their default filters, so the first visit after a change is already cached. |
 | **Depot** | A TrailBase data directory (`traildepot/`): `config.textproto`, `migrations/`, and the git-ignored runtime state. |
 | **Record API** | A TrailBase-exposed table at `/api/records/v1/<name>`, declared inside `config.textproto`'s `record_apis`. |

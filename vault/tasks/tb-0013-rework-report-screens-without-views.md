@@ -43,12 +43,13 @@ them is not just a type edit.
 ## The two possible outcomes
 
 **Rework** — each screen fetches base tables and computes via the shared engine. The arithmetic is
-already written and verified: `frontend-ssr/compute/views.js` plus `compute/reports.js`, whose 14
+already written and verified: `runtime-js/site/app/compute/views.js` plus
+`runtime-js/site/app/compute/reports.js`, whose 14
 report keys map onto these screens ([[reports-and-ledgers]]). The natural move is to reuse those
 modules rather than re-derive the arithmetic in React.
 
 **Retire** — the screen is deleted and its `/p/*` equivalent (or its `/reports/*` equivalent inside
-[[frontend-ssr]]) becomes the only implementation. This is what
+[[runtime-js-guest-platform]]) becomes the only implementation. This is what
 [[trailbase-declarative-page-host]] was designed for, and it removes the duplication rather than
 porting it.
 
@@ -58,8 +59,9 @@ retired outright, this task collapses into deleting the screens.
 ## Not to be forgotten
 
 - `/app/reports/payments/areawise` — a copy of the Unified Payments Report that no tile links to.
-  [[frontend-ssr]] already left it out deliberately; deleting it here is the consistent choice.
-- `/app/reports/stockreport/itemTransactionsReport` — has no SSR equivalent, so it needs a decision
+  [[runtime-js-guest-platform]] already left it out deliberately; deleting it here is the
+  consistent choice.
+- `/app/reports/stockreport/itemTransactionsReport` — has no guest equivalent, so it needs a decision
   rather than a port.
 - The dashboard's `counts_for_row_numbers` becomes `buildCounts(base)` client-side, i.e. it depends
   on the warm snapshot rather than one cheap view read
@@ -68,7 +70,7 @@ retired outright, this task collapses into deleting the screens.
 ## Subtasks
 
 - [ ] For each screen in the table above, decide: rework onto base tables, or retire in favour of the
-      SSR/page-host equivalent
+      guest/page-host equivalent
 - [ ] Reuse `compute/views.js` + `compute/reports.js` rather than re-implementing the arithmetic
 - [ ] Replace `counts_for_row_numbers` usage with `buildCounts`
 - [ ] Decide the fate of `payments_summary`'s SQL-side aggregation — the one view that exists for
@@ -86,7 +88,8 @@ retired outright, this task collapses into deleting the screens.
   migrations (`1789890300_ledger_party_window_function.js`, `1789890310_payments_summary_view.js`) and
   in the parent-directory artefacts. ⚠️ The READMEs' path to those artefacts is wrong; see
   [[stale-schema-sql-paths]].
-- `frontend-ssr/README.md` also lists this as § *Follow-ups* item 2: "Rework the report screens that
+- The former Node frontend's README (`frontend-ssr/README.md`, removed 2026-09-27) also listed
+  this as § *Follow-ups* item 2: "Rework the report screens that
   depended on the dropped views, and delete the corresponding entries from
   `frontend/src/app/api/pocketbase-types.ts`."
 

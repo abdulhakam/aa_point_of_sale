@@ -7,7 +7,7 @@ locator: frontend/
 runtime: Next.js 14.0.4, React 18, Mantine 7, PocketBase JS SDK 0.20.1
 created: 2026-09-26
 tags: [pos, frontend, nextjs, mantine, pocketbase, legacy, production]
-related_to: ["[[backend]]", "[[frontend-ssr]]"]
+related_to: ["[[backend]]", "[[runtime-js-guest-platform]]", "[[guest-ui-is-a-direct-shift-of-legacy]]"]
 ---
 
 # frontend (Next.js POS)
@@ -16,9 +16,10 @@ related_to: ["[[backend]]", "[[frontend-ssr]]"]
 today. It is the complete product: invoicing, cash memo, payments, printing, management and
 reports. It talks to PocketBase ([[backend]]) through the official JS SDK.
 
-[[frontend-ssr]] is the replacement, but it only covers dashboard / reports / management —
-so this app cannot be retired until invoicing, printing and the cash-memo screens are
-either rebuilt or deliberately dropped.
+The guest-WASM frontend ([[runtime-js-guest-platform]]) is the replacement, but it only covers
+dashboard / reports / management so far — so this app cannot be retired until invoicing,
+printing and the cash-memo screens are either rebuilt or deliberately dropped, and until the
+guest UI matches this one screen for screen ([[guest-ui-is-a-direct-shift-of-legacy]]).
 
 ## Stack
 
@@ -72,7 +73,7 @@ Every data access in the app goes through that single shared instance.
 | `NEXT_PUBLIC_ADDRESS` | business address | `123 Sample Street, Sample City` |
 | `NEXT_PUBLIC_PHONE` | business phone | `000-0000000` |
 
-⚠️ Note this is a **different business identity** from `frontend-ssr`'s `APP_NAME` ("AA Point
+⚠️ Note this is a **different business identity** from the new side's `APP_NAME` ("AA Point
 of Sale") and from the example file ("AA_W_POS"). Confirm which one is correct before a
 cutover — see [[environment]].
 
@@ -126,7 +127,8 @@ query actually reads, so editing inputs does not fire a request until the user p
 APPLY. The page builds its PocketBase `filter` from `applied`, not from live form state;
 `apply(next)` snapshots the inputs and `reset()` returns to the initial snapshot — which is
 the page's defaults, so the page still loads once on mount. This is a deliberate
-performance pattern, kept in [[frontend-ssr]] as the server-rendered APPLY/RESET form.
+performance pattern, kept on the new side ([[runtime-js-guest-platform]]) as the server-rendered
+APPLY/RESET form.
 
 ### Form generation
 
@@ -164,16 +166,16 @@ App Router directories under `src/app/`, each with a `page.tsx`:
 Shell components: `app/layout.tsx`, `app/NavbarMinimal.tsx` (+ `.module.css`),
 `app/TimeDisplay.jsx`; providers in `app/providers.tsx` (React Query + Mantine).
 
-Side-by-side with [[frontend-ssr]]: [[route-map]].
+Side-by-side with [[runtime-js-guest-platform]]: [[route-map]].
 
-## What the legacy app has that the SSR app does not
+## What the legacy app has that the guest app does not
 
-| Capability | Legacy | SSR |
+| Capability | Legacy | Guest |
 |---|---|---|
-| Invoice entry (purchase / sale / return / difference) | ✅ | ❌ out of scope |
+| Invoice entry (purchase / sale / return / difference) | ✅ | ❌ (first slice only) |
 | Orders | ✅ | ❌ |
-| Cash memo: payment & receive vouchers, DA entry, expenses | ✅ | ❌ out of scope |
-| Invoice printing + print queue | ✅ | ❌ out of scope |
+| Cash memo: payment & receive vouchers, DA entry, expenses | ✅ | ❌ |
+| Invoice printing + print queue | ✅ | ❌ |
 | Dashboard | ✅ | ✅ |
 | Reports (11 + ledgers) | ✅ | ✅ (not `payments/areawise`) |
 | Management (7 entities) | ✅ | ✅ |
@@ -184,6 +186,6 @@ that converges.
 
 ## Related
 
-- [[frontend-ssr-feature-parity-gaps]] — the concrete list of what is missing on the new side.
+- [[guest-frontend-feature-parity-gaps]] — the concrete list of what is missing on the new side.
 - [[route-map]] — every route in both apps.
 - [[performance-and-caching]] — what the query cache and the SQL views do for speed.

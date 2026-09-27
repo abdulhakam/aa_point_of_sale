@@ -81,7 +81,7 @@ git archive "8f0349c^" vault | tar -x -C ..\_vault-recovery
 
 | Old collection | Files | Maps to |
 |---|---|---|
-| `vault/subsystems/` | `trailbase-server.md`, `frontend-ssr-server-rendered.md`, `backend-pocketbase.md`, `frontend-nextjs-app.md`, `desktop-deployment.md` | `systems/` (the first four are superseded by [[trailbase]], [[frontend-ssr]], [[backend]], [[frontend]]) |
+| `vault/subsystems/` | `trailbase-server.md`, `frontend-ssr-server-rendered.md`, `backend-pocketbase.md`, `frontend-nextjs-app.md`, `desktop-deployment.md` | `systems/` (the first four are superseded by [[trailbase]], [[runtime-js-guest-platform]], [[backend]], [[frontend]]) |
 | `vault/decisions/` | 10 files | `decisions/` (9 are re-authored here; `use-pocketbase-and-nextjs.md` is the original choice that [[keep-legacy-stack-in-production]] now reframes) |
 | `vault/issues/` | 10 files | `issues/` (the TrailBase ones are carried over; `declarative-pages-slower-than-server-rendering.md` and `no-manual-report-refresh-trigger.md` were since **fixed** — the manual refresh control and the page host shipped in `ea2bd12`) |
 | `vault/tasks/` | ~30 files | `tasks/` — the `pos-*` series is the performance programme's ticket trail (POS-0005 … POS-0026); read it before proposing a performance task |
@@ -97,7 +97,8 @@ git archive "8f0349c^" vault | tar -x -C ..\_vault-recovery
 Worth knowing before trusting anything read out of history:
 
 - **`no-manual-report-refresh-trigger.md`** — no longer true. `/reports/refresh` and the
-  green-indicator button exist; see [[frontend-ssr]] and [[trailbase-incremental-report-refresh]].
+  green-indicator button exist; see [[runtime-js-guest-platform]] and
+  [[trailbase-incremental-report-refresh]].
 - **`declarative-pages-slower-than-server-rendering.md`** — no longer true as stated; the page
   host now serves finished report results rather than making the browser derive them, and
   retires report logic from the client.

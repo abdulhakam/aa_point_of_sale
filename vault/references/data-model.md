@@ -35,7 +35,7 @@ only migration) and `trailbase/traildepot/config.textproto`.
 - `updated` is maintained by a per-table `AFTER UPDATE` trigger (`trg_<table>__updated`),
   because SQLite has no `ON UPDATE`. Safe without recursion: TrailBase does not change SQLite's
   `recursive_triggers` default (off). These triggers are also what
-  [[frontend-ssr]]'s change-detection fingerprint depends on.
+  [[runtime-js-guest-platform]]'s change-detection fingerprint depends on.
 - Money is `REAL`. See [[tb-0015-integer-cents-for-money]].
 - Date-ish columns (`dated`, `duedate`, `payment_date`, `expenses.date`) are `TEXT DEFAULT ''`
   with `CHECK (col = '' OR datetime(col) IS NOT NULL)` — so `''` means unset and is a legal
@@ -87,9 +87,9 @@ still referenced is refused, so a code cannot be orphaned.
 | `items` | `name`, `category` → `categories(id)` `ON DELETE SET NULL`, `barcode`, `display_id`, `cost_price`, `sale_price`, `box_size_qty` — note **no `deleted`** |
 | `expenses` | `name`, `description`, `amount`, `date` |
 
-`sections` has no `deleted` column, which is why [[frontend-ssr]] hard-deletes sections and
-soft-deletes everything else — `entities.js` records `softDelete: false` for `sections` and
-`items`, `true` for the rest.
+`sections` has no `deleted` column, which is why [[runtime-js-guest-platform]] hard-deletes
+sections and soft-deletes everything else — `runtime-js/site/app/lib/management.js` records
+`softDelete: false` for `sections` and `items`, `true` for the rest.
 
 `items` also has no `deleted`, and is the only table with a partial unique index (below).
 

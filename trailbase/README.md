@@ -47,8 +47,8 @@ yet) it creates the depot with `trail user change-password`, which applies this 
 `config.textproto` and migration, creates the admin user **and** sets a fixed password
 (`admin@localhost` / `administrator-0ne`) in one step, before any server starts — so nothing races
 initialisation. It also binds `127.0.0.1:4000` explicitly, because TrailBase's own default bind is
-`[::1]:4000` (IPv6 only): neither a browser at `127.0.0.1`, nor the `frontend-ssr` client whose
-`TRAILBASE_URL` is `http://127.0.0.1:4000`, can reach that. Later runs just start the server, so a
+`[::1]:4000` (IPv6 only): a client at `127.0.0.1` cannot reach that. Later runs just start the
+server, so a
 password you change yourself is never overwritten; delete `traildepot/data/` for a fresh scaffold
 (and the fixed password again).
 

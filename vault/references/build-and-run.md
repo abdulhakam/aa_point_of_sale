@@ -23,11 +23,13 @@ Windows; the `.BAT` files are the supported entry points.
 1. backend\RUN SERVE.BAT          (static)        PocketBase :8090  +  http-server :3000
 
 2. trailbase\RUN.BAT                              TrailBase :4000
-3. frontend-ssr\RUN.BAT                           SSR frontend :3100   (needs 2 to be up)
+3. guest frontend                                 TrailBase :4003   (needs 2 to be up)
+   trail --depot=<depot> run --address=127.0.0.1:4003 --runtime-root-fs=runtime-js/site
 ```
 
 Steps 1 and 2/3 are independent stacks — you can run the legacy pair, the new pair, or both at
-once. Ports do not collide. Port table: [[environment]].
+once. Ports do not collide. Port table: [[environment]]. The guest frontend has no separate
+process: the TrailBase server serves it ([[runtime-js-guest-platform]]).
 
 ## Legacy pair (production)
 
@@ -122,36 +124,11 @@ Other useful CLI commands:
 Installing the binary, once: `iwr https://trailbase.io/install.ps1 | iex` (Windows) or
 `curl -sSL https://trailbase.io/install.sh | bash` (Unix).
 
-### `frontend-ssr\RUN.BAT`
+The Node `frontend-ssr` process that used to sit here was removed on 2026-09-27
+([[guest-ui-is-a-direct-shift-of-legacy]]); its `RUN.BAT`, `.env` and `npm run smoke` no longer
+exist. The new frontend is the guest-WASM platform below.
 
-```bat
-if not exist "node_modules" ( call npm install --no-fund --no-audit || goto :fail )
-if not exist ".env" ( copy /y ".env.example" ".env" >nul ; echo NOTE: edit .env and set SESSION_SECRET before real use. )
-call npm start
-```
-
-Then `npm start` → `node src/server.js`, which logs both the listen address and the TrailBase
-URL it is pointed at, plus the worker-thread count. **TrailBase must already be running** — the
-BAT file says so in its own output. On failure to install it exits 1.
-
-| Command | Purpose |
-|---|---|
-| `npm start` | run the server |
-| `npm run dev` | `node --watch src/server.js` — restarts on change |
-| `npm run smoke` | 55-assertion end-to-end test against a throw-away depot |
-
-`npm run smoke` is the one to run after any change to `compute/` or `src/lib/reports/`: it boots
-its own TrailBase depot, seeds a consistent dataset through the record APIs, starts this
-frontend against it, and drives every screen over HTTP with a real login. It does not touch
-`traildepot/`, so it is safe to run while the development server is up. Expect:
-
-```text
-== 55/55 checks passed ==
-```
-
-The assertions that matter are in [[reports-and-ledgers]].
-
-## Guest-WASM platform (experimental)
+## Guest-WASM platform (the new frontend, experimental)
 
 There is no script yet; the loop is build → deploy → run → verify
 ([[runtime-js-guest-platform]]).
@@ -176,16 +153,16 @@ trail --depot=<depot> run --address=127.0.0.1:4003 --runtime-root-fs=runtime-js/
 
 ### Verify
 
-All harnesses live in `runtime-js/tools/` and take `GUEST_BASE`/`NODE_BASE` from the environment:
+All harnesses live in `runtime-js/tools/`. The Node-comparative ones (`guest-parity.mjs`,
+`perf-compare.mjs`) were deleted with `frontend-ssr`; the parity results they produced are
+recorded in [[guest-app-host-port]].
 
 | Command | Checks |
 |---|---|
 | `node runtime-js/tools/guest-smoke.mjs` | boots its own depot, seeds the smoke dataset and runs **71/71** checks |
-| `node runtime-js/tools/guest-parity.mjs` | Node vs guest, every declarative page (**14/14**); needs the Node app on `:3100` |
 | `node runtime-js/tools/jobs-check.mjs` | durable queue, idempotency, worker fan-out, poller (`POLLER_TEST=1`) |
 | `node runtime-js/tools/management-check.mjs` | management create/update/delete |
 | `node runtime-js/tools/invoice-check.mjs` | context + ETag, idempotent create/lines, lease, complete |
-| `node runtime-js/tools/perf-compare.mjs` | Node vs guest latency on the same depot |
 | `node runtime-js/tools/view-equivalence.mjs` | ported report SQL vs `compute/views.js` |
 
 ## Prerequisites
@@ -195,7 +172,7 @@ All harnesses live in `runtime-js/tools/` and take `GUEST_BASE`/`NODE_BASE` from
 | `backend` | Windows; `pocketbase.exe` is bundled (0.22.55, 44 MB, committed) |
 | `frontend` | Node.js (Next 14 / React 18); `npm install` in `frontend/` |
 | `trailbase` | the `trail` binary on `PATH` (`iwr https://trailbase.io/install.ps1 \| iex`) |
-| `frontend-ssr` | Node.js **>= 20** (declared in `engines`); `npm install` in `frontend-ssr/` |
+| `runtime-js` (guest) | Rust with the `wasm32-wasip2` target; `cargo build --target wasm32-wasip2 --release` in `runtime-js/`; Node for the tools |
 
 ## Data directories (do not commit)
 
@@ -205,7 +182,7 @@ All harnesses live in `runtime-js/tools/` and take `GUEST_BASE`/`NODE_BASE` from
 | `backend/pb_data_bench/` | git-ignored — benchmark data |
 | `backend/p_data/` | ⚠️ **committed** (`data.db`, `data.db-shm`, `data.db-wal`, `logs.db`, `types.d.ts`) — see [[pocketbase-data-dirs-in-git]] |
 | `trailbase/traildepot/data`, `backups`, `uploads`, `secrets`, `wasm` | git-ignored by `trailbase/.gitignore` |
-| `frontend-ssr/.env`, `.tbdemo/` | git-ignored |
+| `runtime-js/target/`, `runtime-js/.tbdemo-guest/` | build output and the smoke test's throw-away depot; git-ignored |
 | `frontend/.env.local`, `.next/`, `out/` | git-ignored by the root `.gitignore` |
 
 ## Credentials
@@ -216,8 +193,8 @@ The logins each system needs are in the `credentials/` collection:
 |---|---|---|
 | PocketBase (`backend/`) | production | `credentials/production-pocketbase.md` |
 | Next.js (`frontend/`) | production | `credentials/production-nextjs.md` |
-| TrailBase (`trailbase/`) | experimental | `credentials/experimental-trailbase.md` |
-| `frontend-ssr/` (session secret) | experimental | `credentials/experimental-frontend-ssr.md` |
+| TrailBase (`trailbase/`) | experimental | [[experimental-trailbase]] |
+| Guest frontend (`runtime-js/`) | experimental | — (no separate secret; uses TrailBase auth) |
 
 They are plaintext and tracked; see `credentials/README.md` for the warning.
 
@@ -226,4 +203,4 @@ They are plaintext and tracked; see `credentials/README.md` for the warning.
 - [[environment]] — ports, env vars and credentials in one table.
 - [[trailbase]] — what the server actually exposes once it is up.
 - [[backend]] / [[frontend]] — the legacy scripts in context.
-- [[frontend-ssr]] — the app being started.
+- [[runtime-js-guest-platform]] — the new frontend being started.

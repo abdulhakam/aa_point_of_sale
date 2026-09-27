@@ -1,4 +1,4 @@
-// Guest management module — ports frontend-ssr/src/lib/entities.js's display/form helpers and
+// Guest management module — display/form helpers and
 // src/routes/management.js's write logic onto direct SQL.
 //
 // The Node app writes through TrailBase record APIs; the guest has `db.execute`, so writes are

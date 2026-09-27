@@ -6,7 +6,7 @@ decided_on: 2026-09-24
 created: 2026-09-26
 tags: [trailbase, schema, relations, json, indexes]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[data-model]]", "[[frontend-ssr]]"]
+related_to: ["[[data-model]]", "[[runtime-js-guest-platform]]"]
 ---
 
 # Model multi-valued relations as link tables, not JSON
@@ -54,11 +54,14 @@ CREATE TABLE "party_companies" (
 - `ON DELETE CASCADE` on both endpoints: a link without an endpoint is garbage, so it goes.
 - The `UNIQUE` constraint doubles as the party → company lookup index, and the explicit
   `idx_party_companies_company` / `idx_order_booker_companies_company` indexes add the reverse.
-- `frontend-ssr`'s management screens edit these directly: `entities.js` declares a `multi` field
-  type with `{link, field, other, source}`, e.g.
+- The guest frontend's management screens edit these directly:
+  `runtime-js/site/app/lib/management.js` declares a `multi` field type with
+  `{link, field, other, source}`, e.g.
   `{ name: "company", type: "multi", link: "party_companies", field: "party", other: "company", source: "companies" }`.
-- The `library import-from-v1` plugin expands the PocketBase arrays into these tables, so the
-  translation is already written.
+- The `import-from-v1` plugin expanded the PocketBase arrays into these tables, so the translation
+  is already written. It is ported to the guest at
+  `runtime-js/site/app/plugins/import-from-v1/`; verifying it is
+  [[pos-0029-rebuild-v1-import-on-guest]].
 
 **Given up**
 
@@ -69,7 +72,7 @@ CREATE TABLE "party_companies" (
   arguably infrastructure (three vocabularies + two link tables + the return-reference join).
 - A client that wants "the companies of this party" needs a second request or a client-side
   resolve; nested `expand` does not exist. Both frontends resolve references client-side, which is
-  the supported pattern — `hydrateRefs` in the legacy app and the `refs` map in the SSR app.
+  the supported pattern — `hydrateRefs` in the legacy app and the `refs` map in the guest app.
 
 ## Evidence
 
@@ -81,8 +84,10 @@ CREATE TABLE "party_companies" (
   `expand: ["party","company"]` / `["order_booker","company"]`.
 - `trailbase/README.md` § *Design decisions* → "**No JSON columns.**" including the
   `company~"<id>"` filter note.
-- `frontend-ssr/src/lib/entities.js` — the `multi` field and column definitions for `parties` and
-  `bookers`.
-- `frontend-ssr/plugins/import-from-v1/meta.md` — "Expands the multi-valued `parties.company` /
-  `order_bookers.company` relations into the `party_companies` / `order_booker_companies` link
-  tables."
+- `runtime-js/site/app/lib/management.js` — the `multi` field and column definitions for `parties`
+  and `bookers`.
+- `runtime-js/site/app/plugins/import-from-v1/meta.md` — "Expands the multi-valued
+  `parties.company` / `order_bookers.company` relations into the `party_companies` /
+  `order_booker_companies` link tables." The Node copy had the same text
+  (`frontend-ssr/plugins/import-from-v1/meta.md`, removed 2026-09-27, [[guest-app-host-port]]).
+  Verifying it is [[pos-0029-rebuild-v1-import-on-guest]].

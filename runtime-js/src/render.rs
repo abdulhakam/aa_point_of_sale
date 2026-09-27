@@ -1,6 +1,6 @@
 //! Rust `minijinja` rendering, exposed to runtime JS as `render(name, ctxJson)`.
 //!
-//! Mirrors `frontend-ssr/src/lib/render.js`: templates are loaded from the views root
+//! Templates are loaded from the views root
 //! (falling back to the pages root), every name resolves views-root-relative (so
 //! `{% extends 'layout.html' %}` works from a page in another directory), and the same ten
 //! custom filters are registered. Templates are read fresh on each render; see `Loader` for

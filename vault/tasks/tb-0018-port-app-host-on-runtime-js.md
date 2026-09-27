@@ -11,7 +11,8 @@ related_to: ["[[guest-app-host-port]]", "[[deterministic-sort-and-sql-reads-in-g
 
 # TB-0018 Port the app host onto the runtime-js guest
 
-Serve the `frontend-ssr` surfaces from the `runtime-js` guest: the declarative page host, the
+Serve the app surfaces the former Node frontend (`frontend-ssr`, removed 2026-09-27) ran, from
+the `runtime-js` guest: the declarative page host, the
 report/ledger engine, management, dashboard and plugins, with the shared `compute/` modules
 running in QuickJS and results identical to the Node app.
 
@@ -44,9 +45,10 @@ actual application, so the report engine can be verified against the Node app on
       and sets the auth cookies ([[guest-outbound-http-and-login]]); bad password → 401
 - [ ] `/p/<slug>/data` gzip; binary static assets (current assets are all text)
 - [ ] Record-API ACL/validation parity for writes (the guest writes raw SQL)
-- [ ] Invoices / cash-memos / printing — **out of scope by request** for `frontend-ssr`
-      ([[frontend-ssr-feature-parity-gaps]]), so not parity work; the platform only makes them
-      authorable as new pages
+- [ ] Invoices / cash-memos / printing — **out of scope by request** for the former Node
+      frontend (`frontend-ssr`, removed 2026-09-27)
+      ([[guest-frontend-feature-parity-gaps]]), so not parity work for this port; the platform
+      only makes them authorable as new pages
 - [x] Jobs + worker queue — durable in-process queue done ([[jobs-in-process-durable-queue]]);
       HTTP worker fan-out not built
 - [x] Adapt the smoke suite to drive the guest (55/55 and pinned totals) —

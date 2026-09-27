@@ -11,7 +11,7 @@ model, the decisions already made, the verified defects, and the work in flight.
 Treat the vault as the first place you read and the last place you write on **every** task:
 
 - **Read the vault before the source.** Before exploring `backend/`, `frontend/`,
-  `frontend-ssr/`, or `trailbase/`, consult the vault. Start at `vault/README.md`, then
+  `runtime-js/`, `guests/`, or `trailbase/`, consult the vault. Start at `vault/README.md`, then
   `vault/notes/system-status-overview.md`, then the relevant collection. Only read source to
   verify a current detail or fill a gap the vault does not cover.
 - **Answer from the vault.** Questions about how a system works, what is decided, what is
@@ -104,7 +104,7 @@ Ticket-prefixed task slugs follow the existing series (`tb-00NN-…`, `pos-00NN-
 - Extra frontmatter fields are always allowed; missing recommended fields are warnings, not
   errors.
 - The legacy pair (`backend/`, `frontend/`) is what runs in production. Do not describe or
-  route the new pair (`trailbase/`, `frontend-ssr/`) as live unless the vault says so.
+  route the new pair (`trailbase/`, `runtime-js/`) as live unless the vault says so.
 
 ## Validate before you declare done
 

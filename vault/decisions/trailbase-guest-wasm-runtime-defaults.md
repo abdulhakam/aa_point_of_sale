@@ -6,15 +6,16 @@ decided_on: 2026-09-26
 created: 2026-09-26
 tags: [trailbase, wasm, guests, architecture, runtime]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[trailbase]]", "[[frontend-ssr]]", "[[trailbase-guest-wasm-spike-results]]", "[[offline-local-deployment]]"]
+related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[trailbase-guest-wasm-spike-results]]", "[[offline-local-deployment]]"]
 ---
 
 # Run the app platform as TrailBase guest-WASM components
 
 ## Context
 
-`frontend-ssr` ([[frontend-ssr]]) is a Node/Express process that renders pages, runs report
-arithmetic in `worker_threads`, and keeps a warm in-memory snapshot. The wasm app-platform plan
+The former Node frontend (`frontend-ssr`, removed 2026-09-27) was a Node/Express process that
+rendered pages, ran report arithmetic in `worker_threads`, and kept a warm in-memory snapshot. The
+wasm app-platform plan
 (`.kilo/plans/1790438607199-trailbase-wasm-app-platform.md`) proposes replacing that process with
 TrailBase **guest-WASM** components that run on TrailBase's built-in wasmtime: architecture
 compiled once, business logic (pages, templates, report/ledger code) loaded and evaluated from an
@@ -61,7 +62,7 @@ Runtime defaults established by the spikes:
 
 | Alternative | Why not |
 |---|---|
-| Keep the Node/Express `frontend-ssr` process | Works today (55/55 smoke) but is a second runtime, a second deploy step, and a process-local snapshot that cannot be shared across copies. The platform goal is one binary, one depot, offline. |
+| Keep the Node/Express `frontend-ssr` process | It worked (55/55 smoke) but was a second runtime, a second deploy step, and a process-local snapshot that could not be shared across copies. The platform goal is one binary, one depot, offline. Removed 2026-09-27 ([[guest-ui-is-a-direct-shift-of-legacy]]). |
 | Build a build-time bundle of the report logic into the component | Rejected once S4 passed: it would mean a rebuild for every report/page, losing the authoring model. Kept only as the D2-B fallback. |
 | Sync `app/` into DB/KV instead of the filesystem | Unnecessary once S3 passed (`--runtime-root-fs`). Kept as the D4-B fallback. |
 | `--aot` components | Strictly worse on this runtime (size + cold start). |
@@ -83,9 +84,10 @@ Runtime defaults established by the spikes:
 
 - Long CPU-bound handlers are dangerous on the guest (single-threaded, ~1·10⁶ iter/s, ~20 s
   deadline). Heavy aggregation should stay in SQL or move to sharded job steps.
-- The Node `frontend-ssr` stays as the reference and rollback until parity
-  ([[frontend-ssr-feature-parity-gaps]], and the cutover decision
-  [[pos-0028-decide-cutover-plan]]).
+- The former Node `frontend-ssr` was kept as the reference and rollback until parity
+  ([[guest-frontend-feature-parity-gaps]], and the cutover decision
+  [[pos-0028-decide-cutover-plan]]); it was removed on 2026-09-27, so the guest is now the only
+  frontend ([[guest-ui-is-a-direct-shift-of-legacy]]).
 - D3 (the Rust `minijinja` guest) is the main unproven piece; it is Phase 2 of the plan.
 
 ## Evidence

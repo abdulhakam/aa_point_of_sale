@@ -1,15 +1,12 @@
 /**
- * TrailBase id helpers.
+ * TrailBase id helpers for the runtime-js tools (Node only — uses `Buffer`).
  *
  * Reads return url-safe base64 ids (`AaDUohMoc6CQ6pZZGqRMDQ==`); writes of a
- * relation accept canonical UUID text. Relation columns come back as `{id}` or
- * `null`; enum codes come back as `{id: 0}` — and `0` is a real code, so the
- * accessors below are explicit about null.
- *
- * `relId` is re-exported from `compute/ids.js` so the browser runtime shares the
- * exact same implementation; `toUuid` needs `Buffer` and so stays Node-only.
+ * relation accept canonical UUID text. `relId` is re-exported from the guest's
+ * `app/compute/ids.js` so the tools share the exact same accessor the app runs;
+ * `toUuid` needs `Buffer` and therefore stays Node-only.
  */
-import { relId } from "../../compute/ids.js";
+import { relId } from "../site/app/compute/ids.js";
 
 const b64ToBytes = (id) => {
   const std = id.replace(/-/g, "+").replace(/_/g, "/");

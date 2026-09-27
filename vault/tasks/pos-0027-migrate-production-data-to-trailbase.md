@@ -20,23 +20,26 @@ codes translated, and prove the copy is complete and correct.
 [[tb-0015-integer-cents-for-money]] should be decided first, because converting money to integer
 cents is a mechanical change on an empty database and a data migration on a full one.
 
-## The tool already exists
+## The tool must be rebuilt first
 
-`frontend-ssr/plugins/import-from-v1/` does the whole job: browser-side, signs in to both servers,
-writes in dependency order (masters → link tables → invoices → return references → transactions →
-payments), translates ids and enums, expands the JSON-array relations, skips collections the source
-lacks, and offers a dry run and an optional clear-first
-([[trailbase-client-side-migration-plugin]]).
+The importer that did this job lived in the former Node frontend at
+`frontend-ssr/plugins/import-from-v1/` (removed 2026-09-27) and is gone from the tree
+([[pos-0029-rebuild-v1-import-on-guest]], [[trailbase-client-side-migration-plugin]]). Rebuilt on
+the guest, it does the whole job: browser-side, signs in to both servers, writes in dependency order
+(masters → link tables → invoices → return references → transactions → payments), translates ids and
+enums, expands the JSON-array relations, skips collections the source lacks, and offers a dry run and
+an optional clear-first.
 
 So this task is **not** "write the importer" — it is "run it deliberately, measure it, and reconcile
-it". The gap is process, not code.
+it", once [[pos-0029-rebuild-v1-import-on-guest]] has rebuilt it. The gap is process, not method.
 
 ## Aggregation must not be run against production
 
-The depot used for [[frontend-ssr]]'s development is the *same* depot the migration would write to,
-by default. Decide the target explicitly before running anything: either a scratch depot
-(`set "DEPOT=C:\some\depot" && trailbase\RUN.BAT`) or the real one, knowingly. Nothing in the plugin
-or in `RUN.BAT` stops a migration being pointed at production.
+The depot used for [[runtime-js-guest-platform]]'s development is the *same* depot the migration
+would write to, by default. Decide the target explicitly before running anything: either a scratch
+depot (started with `trail --depot=<depot> run --runtime-root-fs=runtime-js/site` — see
+[[build-and-run]]) or the real one, knowingly. Nothing in the rebuilt importer or in the way the
+depot is started stops a migration being pointed at production.
 
 ## Subtasks
 
@@ -90,7 +93,7 @@ or in `RUN.BAT` stops a migration being pointed at production.
 
 ### 6. Prove it
 
-- [ ] Run `npm run smoke` in `frontend-ssr` against the migrated depot
+- [ ] Run the guest smoke suite (`node runtime-js/tools/guest-smoke.mjs`) against the migrated depot
 - [ ] Walk the reports with real data and compare totals against the PocketBase screens for the same
       filters — this is where [[report-routes-ignore-date-defaults]] will need watching, since the two
       paths default to different windows

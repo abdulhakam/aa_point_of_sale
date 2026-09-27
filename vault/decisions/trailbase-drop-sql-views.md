@@ -29,9 +29,9 @@ re-filtered and re-summed anyway.
 ## Decision
 
 **TrailBase has no views.** The schema is 17 base tables only. Report arithmetic moves into
-JavaScript, in `frontend-ssr/compute/views.js` and `compute/reports.js`, where it is written to
-reproduce the old view SQL exactly — including its known quirks — so that output can be compared
-for the same rows.
+JavaScript, in `runtime-js/site/app/compute/views.js` and `runtime-js/site/app/compute/reports.js`,
+where it is written to reproduce the old view SQL exactly — including its known quirks — so that
+output can be compared for the same rows.
 
 ## Why not the alternatives
 
@@ -46,11 +46,10 @@ for the same rows.
 
 **Accepted**
 
-- `frontend-ssr/compute/views.js` rebuilds all 14 derived views plus `refs` and `counts`
+- `runtime-js/site/app/compute/views.js` rebuilds all 14 derived views plus `refs` and `counts`
   ([[reports-and-ledgers]] lists the builders).
 - The arithmetic is **one implementation, two runtimes**: the files are served at `/compute/*`
-  (behind auth) as the same bytes Node imports, so the browser can run them in a worker with no
-  drift.
+  (behind auth) as the same bytes the guest imports, so the browser can run them with no drift.
 - Because the rebuild is pure and incremental, only the views a changed table feeds are
   recomputed (`viewsAffectedBy`), and the results are cached — see
   [[trailbase-incremental-report-refresh]].
@@ -76,9 +75,9 @@ for the same rows.
 - `trailbase/README.md` § *Design decisions* → "**No views.**" with the typing rules spelled out,
   and § *Known TrailBase limitations* which records this as measured against `v0.33.15` and
   re-checked on `v0.33.22`.
-- `frontend-ssr/compute/views.js` — 22,926 bytes, `buildView` / `viewsAffectedBy` / `viewClosure`
+- `runtime-js/site/app/compute/views.js` — `buildView` / `viewsAffectedBy` / `viewClosure`
   / `tablesForViews` / `buildViews` / `buildSelectedViews`.
-- `frontend-ssr/src/lib/reports/worker.js` — runs `buildViews` and `runReport` off the request
-  thread.
+- `runtime-js/site/app/lib/reports.js` — runs `buildView` and `runReport` **in-process** (the
+  guest has no `worker.js` or `worker_threads` fan-out).
 - The `refs` pseudo-view, which is not from the old SQL at all but exists so a view-based page
   can also receive the reference maps its filters need.

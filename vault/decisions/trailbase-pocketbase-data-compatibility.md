@@ -62,11 +62,13 @@ all used that spelling. The migration carries a comment saying so.
 
 - Exported PocketBase data stays lexicographically comparable with newly inserted TrailBase
   rows.
-- `frontend-ssr`'s probe works partly *because* of this: ids are time-sortable UUIDv7 and
+- The guest frontend's probe works partly *because* of this: ids are time-sortable UUIDv7 and
   `updated` is a comparable string, so `{count, newest updated}` is a usable fingerprint
   ([[trailbase-incremental-report-refresh]]).
-- The migration is a straight value translation — the table in [[data-model]] — which the
-  `import-from-v1` plugin already implements.
+- The migration is a straight value translation — the table in [[data-model]] — implemented by the
+  `import-from-v1` plugin, ported to the guest at
+  `runtime-js/site/app/plugins/import-from-v1/` (the Node copy was deleted with `frontend-ssr` on
+  2026-09-27). Verifying it is [[pos-0029-rebuild-v1-import-on-guest]].
 
 **Debt this creates**
 

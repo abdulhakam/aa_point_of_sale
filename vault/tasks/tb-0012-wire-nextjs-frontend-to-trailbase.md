@@ -12,7 +12,7 @@ related_to: ["[[trailbase-client-side-migration-plugin]]", "[[api-contract-trail
 # TB-0012 Wire a client to TrailBase
 
 Give one of the two UIs a TrailBase data layer, so the new backend stops being reachable only from
-[[frontend-ssr]]'s own client.
+the guest frontend ([[runtime-js-guest-platform]]).
 
 Two shapes are available and [[pos-0028-decide-cutover-plan]] chooses between them. This task is the
 implementation either way.
@@ -62,20 +62,22 @@ src/app/api/pocketbase.js       # kept only for the auth/session path, or remove
 - ❌ The view-shaped types (`PaymentsViewRecord`, …) have no TrailBase source; see
   [[tb-0013-rework-report-screens-without-views]].
 
-## Option B — treat the SSR app as the client
+## Option B — treat the guest app as the client
 
-Retire the Next.js POS UI and build the missing screens on [[frontend-ssr]] instead.
+Retire the Next.js POS UI and build the missing screens on [[runtime-js-guest-platform]] instead.
 
 - ✅ No adapter, no filter translation, no second UI stack ([[keep-legacy-stack-in-production]] ends).
 - ✅ The server already aggregates and caches ([[trailbase-incremental-report-refresh]]).
-- ❌ Everything in [[frontend-ssr-feature-parity-gaps]] must be built first — invoicing, printing,
+- ❌ Everything in [[guest-frontend-feature-parity-gaps]] must be built first — invoicing, printing,
   cash memo, expenses, orders.
 
 ## Subtasks
 
 - [ ] Record which option [[pos-0028-decide-cutover-plan]] chose, and supersede this task if it is B
 - [ ] Write the client: `trailbase.js` with `listPage` / `listAll` / `count` / `getOne` / `create` /
-      `update` / `remove` / `schema`, modelled on `frontend-ssr/src/lib/trailbase.js`
+      `update` / `remove` / `schema`, per the contract in [[api-contract-trailbase]] — the guest
+      frontend reads the depot's SQLite directly and has no record-API client to copy
+      ([[runtime-js-guest-platform]])
 - [ ] Handle the four encoding traps: base64 reads vs UUID writes, plain-text delete, `0`/`1`
       booleans, integer enum codes (`0` is valid — never branch on truthiness)
 - [ ] Rewrite every PocketBase `filter:` expression as `filter[col][$op]=` parameters, and check each
@@ -92,6 +94,7 @@ Retire the Next.js POS UI and build the missing screens on [[frontend-ssr]] inst
 ## Related
 
 - [[api-contract-trailbase]] — the full contract and its gotchas.
-- [[frontend-ssr]] — the working client to copy from.
+- [[runtime-js-guest-platform]] — the guest frontend; it reads the depot SQLite directly and has no
+  record-API client, so [[api-contract-trailbase]] is the contract to implement.
 - [[previous-vault-recovery]] — `frontend-tb/` (`14b0518^`) is an earlier TrailBase client whose
   `src/collections/` layer may still be a useful reference, though it targets the older schema names.

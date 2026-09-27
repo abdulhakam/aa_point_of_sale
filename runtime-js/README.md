@@ -27,8 +27,8 @@ Globals exposed to scripts: `trailbase.query`, `db.query`/`execute`, `sqlite.exe
 ## Rendering (Rust `minijinja`)
 
 Templates live under `/app/views` (falling back to `/app/pages`); names resolve
-views-root-relative, so `{% extends "layout.html" %}` works from any page. The ten
-`frontend-ssr` filters are ported (`money`, `num`, `round`, `qty`, `date`, `datefmt`, `upper`,
+views-root-relative, so `{% extends "layout.html" %}` works from any page. Ten
+formatting filters are registered (`money`, `num`, `round`, `qty`, `date`, `datefmt`, `upper`,
 `lower`, `json`, `yesno`). Templates are read fresh every render — no mtime cache (WASI mtime is
 unusable and minijinja caches compiled templates, so the environment clears templates per render),
 which is what makes editing a template live.

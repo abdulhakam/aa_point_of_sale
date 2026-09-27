@@ -18,15 +18,16 @@ Two places in the same repository state the opposite thing about the same behavi
 |---|---|
 | `trailbase/README.md`, § *Access control* | "An unauthenticated request is answered with **403** (no permission), not 401." |
 | `traildepot/config.textproto`, the `record_apis` comment block | "Nothing here is public: an unauthenticated request gets **401**." |
-| `frontend-ssr/src/lib/trailbase.js`, verified-behaviour header | "Unauthenticated requests are answered `403`." |
+| The former Node frontend's `src/lib/trailbase.js` (removed 2026-09-27), verified-behaviour header | "Unauthenticated requests are answered `403`." |
 
 So two sources say **403** (including the one that records it as *measured*), and the configuration
 file — the file a developer reads while editing permissions — says **401**.
 
 ## Which is right
 
-**403.** The `README` records it as a verified observation, and the SSR client's header lists it
-among behaviours verified against a running server on `v0.33.22`:
+**403.** The `README` records it as a verified observation, and the former Node client's header
+(`frontend-ssr`, removed 2026-09-27) listed it among behaviours verified against a running server
+on `v0.33.22`:
 
 > unauthenticated `GET /api/records/v1/items` and `…/party_types/schema` return `403` with the
 > shipped authenticated-only config.
@@ -58,10 +59,12 @@ that `SCHEMA` is granted to authenticated users, both of which are already state
 
 ## Not a behavioural problem
 
-Nothing in this repository depends on the wrong number. `frontend-ssr`'s `TrailBaseError` carries
-whatever status it receives, and `trailbaseErrorHandler` renders any TrailBase failure as a page
-regardless of code. So this is a documentation defect with a real (if bounded) cost, not a bug that
-can corrupt state.
+Nothing in the current tree depends on the wrong number. The guest frontend reads the depot SQLite
+directly and writes through SQL ([[runtime-js-guest-platform]]), so it does not branch on TrailBase
+record-API status codes at all. In the former Node frontend (`frontend-ssr`, removed 2026-09-27),
+`TrailBaseError` carried whatever status it received and `trailbaseErrorHandler` rendered any
+TrailBase failure as a page regardless of code. So this is a documentation defect with a real (if
+bounded) cost, not a bug that can corrupt state.
 
 ## Evidence
 
@@ -70,6 +73,8 @@ can corrupt state.
   `…/party_types/schema` return `403` with the shipped authenticated-only config."
 - `traildepot/config.textproto` lines ~56–59 — "NOTE: the old PocketBase collection rules were `""`,
   i.e. world-accessible. Nothing here is public: an unauthenticated request gets 401."
-- `frontend-ssr/src/lib/trailbase.js` — the header comment "Unauthenticated requests are answered
-  `403`."
-- `frontend-ssr/src/lib/http.js` — `trailbaseErrorHandler`, which is status-agnostic.
+- The former Node frontend's `src/lib/trailbase.js` (removed 2026-09-27) — the header comment
+  "Unauthenticated requests are answered `403`."
+- The former Node frontend's `src/lib/http.js` (removed 2026-09-27) — `trailbaseErrorHandler`,
+  which was status-agnostic. The guest's `runtime-js/site/app/lib/http.js` is a small
+  page/query-string helper and has no TrailBase error path.

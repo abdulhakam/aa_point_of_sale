@@ -1,4 +1,4 @@
-// Guest port of frontend-ssr/src/routes/reports.js's page definitions and helpers
+// Report page definitions and helpers for the guest app
 // (REPORT_INDEX, LEDGER_INDEX, REPORT_PAGES, parseFilters, filterOptions).
 
 import { monthStart, today, yearStart } from "../compute/format.js";

@@ -4,22 +4,24 @@ type: reference
 status: active
 system: both
 created: 2026-09-26
-tags: [pos, routes, frontend, frontend-ssr, nextjs, express]
-related_to: ["[[frontend]]", "[[frontend-ssr]]"]
+updated: 2026-09-27
+tags: [pos, routes, frontend, guest, nextjs, wasm]
+related_to: ["[[frontend]]", "[[runtime-js-guest-platform]]"]
 ---
 
 # Route map
 
 Every user-visible route in the workspace, legacy ([[frontend]], Next.js App Router on
-`:3000`) against new ([[frontend-ssr]], Express on `:3100`).
+`:3000`) against the new frontend ([[runtime-js-guest-platform]], served by TrailBase itself,
+normally on `:4003`).
 
 ## Side by side
 
-| Screen | Legacy (Next.js) | New (SSR) | Parity |
+| Screen | Legacy (Next.js) | New (guest) | Parity |
 |---|---|---|---|
-| Login | `/auth` | `/auth/login` | ✅ |
+| Login | `/auth` | `/login` | ✅ |
 | Root / redirect | `/` | `/` → dashboard | ✅ |
-| Dashboard | `/app/dashboard` | `/dashboard` | ✅ |
+| Dashboard | `/app/dashboard` | `/dashboard` | ✅ (look differs — [[tb-0023-direct-shift-legacy-ui-to-guest]]) |
 | Reports index | `/app/reports` | `/reports` | ✅ |
 | Unified Payments Report | `/app/reports/payments` | `/reports/payments` | ✅ |
 | Payments, area-wise | `/app/reports/payments/areawise` | — | ❌ omitted on purpose |
@@ -46,22 +48,25 @@ Every user-visible route in the workspace, legacy ([[frontend]], Next.js App Rou
 | Parties | `/app/management/parties` | `/management/parties` | ✅ |
 | Order Bookers | `/app/management/bookers` | `/management/bookers` | ✅ |
 | Items | `/app/management/items` | `/management/items` | ✅ |
-| Invoices index | `/app/invoices` | — | ❌ out of scope |
-| Purchase invoices | `/app/invoices/purchase` | — | ❌ out of scope |
-| Sale invoices | `/app/invoices/sale` | — | ❌ out of scope |
-| Return invoices | `/app/invoices/return` | — | ❌ out of scope |
-| Difference invoices | `/app/invoices/difference` | — | ❌ out of scope |
-| Orders | `/app/invoices/orders` | — | ❌ out of scope |
-| Invoice print | `/app/invoices/print`, `/printinvoice`, `/printinvoice/queue` | — | ❌ out of scope |
+| Invoices index | `/app/invoices` | — | ❌ not built |
+| Purchase invoices | `/app/invoices/purchase` | — | ❌ not built |
+| Sale invoices | `/app/invoices/sale` | — | ❌ not built |
+| Return invoices | `/app/invoices/return` | — | ❌ not built |
+| Difference invoices | `/app/invoices/difference` | — | ❌ not built |
+| Orders | `/app/invoices/orders` | — | ❌ not built |
+| Invoice print | `/app/invoices/print`, `/printinvoice`, `/printinvoice/queue` | — | ❌ not built |
 | Invoice view (public-ish) | `/views/invoice` | — | ❌ |
-| Cash memo hub | `/app/cashmemo` | — | ❌ out of scope |
-| Payment vouchers | `/app/cashmemo/cash_payment_vouchers` | — | ❌ out of scope |
-| Receive vouchers | `/app/cashmemo/cash_recieve_vouchers` | — | ❌ out of scope |
-| DA entry | `/app/cashmemo/da_entry` | — | ❌ out of scope |
-| Expenses | `/app/cashmemo/expenses` | — | ❌ out of scope |
-| Cash-memo payments | `/app/cashmemo/payments` | — | ❌ out of scope |
+| Cash memo hub | `/app/cashmemo` | — | ❌ not built |
+| Payment vouchers | `/app/cashmemo/cash_payment_vouchers` | — | ❌ not built |
+| Receive vouchers | `/app/cashmemo/cash_recieve_vouchers` | — | ❌ not built |
+| DA entry | `/app/cashmemo/da_entry` | — | ❌ not built |
+| Expenses | `/app/cashmemo/expenses` | — | ❌ not built |
+| Cash-memo payments | `/app/cashmemo/payments` | — | ❌ not built |
 
-## SSR-only routes
+The ❌ rows are the parity work in [[guest-frontend-feature-parity-gaps]] and
+[[tb-0023-direct-shift-legacy-ui-to-guest]].
+
+## Guest-only routes
 
 | Route | Purpose |
 |---|---|
@@ -69,12 +74,12 @@ Every user-visible route in the workspace, legacy ([[frontend]], Next.js App Rou
 | `POST /reports/refresh` | manual refresh; `?full=1` re-reads every table; answers JSON or redirects back |
 | `GET /p` | index of declarative pages discovered under `pages/` |
 | `GET /p/<slug>` | a declarative page, rendered from its `meta.json` + template |
-| `GET /p/<slug>/data` | that page's data: `{version, slug, filters, result, meta}`, ETagged and gzip-capable |
+| `GET /p/<slug>/data` | that page's data: `{version, slug, filters, result, meta}`, ETagged (no gzip in the guest) |
 | `GET /plugins` | plugin hub, reading each `plugins/<slug>/meta.md` |
 | `GET /plugins/<slug>/` | a plugin page (static file, behind the login) |
 | `GET /healthz` | `{ok: true, workers: …}` |
 | `GET /static/*` | static assets, `maxAge: 0` (revalidate every load) |
-| `GET /compute/*` | the shared compute modules, **behind `requireAuth`** |
+| `GET /compute/*` | the shared compute modules, behind auth |
 
 ## Legacy-only route families
 
@@ -85,13 +90,18 @@ Every user-visible route in the workspace, legacy ([[frontend]], Next.js App Rou
 
 ## Notes on the mapping
 
-- The legacy Item Sales Report lives at `reports/transactions/unified` while the SSR version
+- The legacy Item Sales Report lives at `reports/transactions/unified` while the guest version
   is `reports/itemsales`; the *title* is the same ("Item Sales Report"). Do not assume route
   path equality when comparing.
-- The SSR management hub additionally exposes **Companies**, which the legacy app has no
+- The guest management hub additionally exposes **Companies**, which the legacy app has no
   screen for even though the `companies` collection exists. This is part of the open naming
   question in [[tb-0014-point-company-fields-at-companies]].
-- Both apps use the same *labels* for the report tiles (the SSR `REPORT_INDEX` comments say
-  so explicitly), so the tiles were copied deliberately rather than reinvented.
-- Ports: legacy frontend `:3000`, PocketBase `:8090`, TrailBase `:4000`, SSR frontend
-  `:3100`. Full detail in [[environment]].
+- Both apps use the same *labels* for the report tiles, so the tiles were copied deliberately
+  rather than reinvented — the direct-shift mandate is [[guest-ui-is-a-direct-shift-of-legacy]].
+- Ports: legacy frontend `:3000`, PocketBase `:8090`, TrailBase `:4000`, guest frontend
+  `:4003`. Full detail in [[environment]].
+
+## Related
+
+- [[guest-frontend-feature-parity-gaps]] — what the ❌ rows cost.
+- [[legacy-ui-reference-captures]] — the captured legacy screens.

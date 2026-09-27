@@ -1,4 +1,4 @@
-// Guest HTTP/template helpers — mirrors frontend-ssr/src/lib/http.js `page`/`qs`/`qsb`,
+// Guest HTTP/template helpers — `page`/`qs`/`qsb`,
 // rendering through the host's Rust minijinja bridge (`render.html`).
 
 export function page(shell, name, data) {

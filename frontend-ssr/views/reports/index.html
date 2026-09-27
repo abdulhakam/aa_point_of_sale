@@ -1,9 +1,0 @@
-{% extends 'layout.html' %}
-{% block body %}
-<h1 class="page-title">Reports</h1>
-<section class="grid">
-{% for t in tiles %}
-  <a class="tile tone-{{ t.tone }}" href="/reports/{{ t.target }}"><span class="tile-title">{{ t.title }}</span></a>
-{% endfor %}
-</section>
-{% endblock %}

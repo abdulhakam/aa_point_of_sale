@@ -1,5 +1,12 @@
 # Re-platform `frontend-ssr` onto TrailBase guest-WASM (runtime-JS app platform)
 
+> **Status note (2026-09-27).** This plan is history. The re-platform it describes completed, and
+> the intermediate Node frontend `frontend-ssr/` has since been **deleted from the tree**
+> ([[guest-ui-is-a-direct-shift-of-legacy]]); the new frontend is the guest platform
+> ([[runtime-js-guest-platform]]). References to `frontend-ssr/` paths below are the state at the
+> time of writing, not current locations; the "rollback to frontend-ssr" option is void. See the
+> vault for the live picture.
+
 ## Goal
 
 Replace the Node/Express `frontend-ssr` process with a set of TrailBase **guest-WASM

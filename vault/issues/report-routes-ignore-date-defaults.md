@@ -4,19 +4,20 @@ type: issue
 status: open
 severity: medium
 created: 2026-09-26
-tags: [frontend-ssr, reports, defaults, parity, page-host]
-related_to: ["[[frontend-ssr]]", "[[trailbase-declarative-page-host]]"]
+tags: [runtime-js, reports, defaults, parity, page-host]
+related_to: ["[[runtime-js-guest-platform]]", "[[trailbase-declarative-page-host]]"]
 ---
 
 # The /reports/* routes ignore their declared date defaults, so they disagree with /p/*
 
-⚠️ **Naming note:** despite the original title, this is about the `/reports/*` routes **inside
-[[frontend-ssr]]** — the hand-written report routes — versus the declarative page host at `/p/*`.
-It is *not* about the legacy Next.js app in `frontend/`.
+⚠️ **Naming note:** despite the original title, this is about the `/reports/*` routes **inside the
+guest frontend** ([[runtime-js-guest-platform]]) — the hand-written report routes in
+`runtime-js/site/app/lib/report-pages.js` — versus the declarative page host at `/p/*`. It is *not*
+about the legacy Next.js app in `frontend/`.
 
 ## Summary
 
-`parseFilters` in `frontend-ssr/src/routes/reports.js` starts from `pageDef.defaults` and then
+`parseFilters` in `runtime-js/site/app/lib/report-pages.js` starts from `pageDef.defaults` and then
 **overwrites every field** from the query string. A bare `GET /reports/<report>` with no query
 therefore wipes the declared `from` / `to` defaults to empty strings, and the route computes
 **all-time** figures. The declarative page for the same report applies the manifest default, so
@@ -25,9 +26,14 @@ the two entry points disagree about their default view while both declare the sa
 Effectively, `{ from: monthStart(), to: today() }` in `REPORT_PAGES[key].defaults` is only a
 *form* default, not a *query* default.
 
+This is the guest port of the former Node frontend's hand-written report routes (`frontend-ssr`,
+removed 2026-09-27); `parseFilters` was carried over unchanged, so the defect survived the port.
+
 ## Measured evidence
 
-Measured 2026-09-26 against a populated TrailBase depot (60,254 rows, snapshot v12), same machine.
+Measured 2026-09-26 against a populated TrailBase depot (60,254 rows, snapshot v12), same machine,
+on the former Node frontend's `/reports/*` routes; the guest runs the same `parseFilters` over the
+same depot, so the bare-GET behaviour below is unchanged.
 
 Rendered filter inputs on a bare `GET` (no query string):
 
@@ -51,8 +57,9 @@ default:
 divergence, not an arithmetic difference. That distinction matters: it means the report engine is
 not in question, only which window each entry point defaults to.
 
-`git blame` dates the logic to the first SSR commit (`8dc815f`, 2026-09-25), so it is **not** a
-regression introduced by the later report-refresh / page-host commits (`ea2bd12`).
+The logic dates to the first SSR commit (`8dc815f`, 2026-09-25) and was ported to the guest
+unchanged, so it is **not** a regression introduced by the later report-refresh / page-host
+commits (`ea2bd12`).
 
 ## Why it matters
 
@@ -62,8 +69,8 @@ regression introduced by the later report-refresh / page-host commits (`ea2bd12`
   returns tens to thousands. It is the exact class of whole-view fetch the rewrite exists to remove
   ([[performance-and-caching]]).
 - It is a "two sources of truth" problem that has to be settled as part of
-  [[trailbase-declarative-page-host]]: once the legacy route is retired the manifest default wins
-  and the reports hub must link to `/p/...`.
+  [[trailbase-declarative-page-host]]: once the hand-written route is retired the manifest default
+  wins and the reports hub must link to `/p/...`.
 
 ## Options
 
@@ -81,18 +88,20 @@ page-host decision was meant to remove.
 
 ## Status
 
-Open and unfixed. Not a regression, and not blocking — but it undercuts the performance case for
-the report routes and will confuse anyone comparing the two paths.
+Open and unfixed in the guest. Not a regression, and not blocking — but it undercuts the
+performance case for the report routes and will confuse anyone comparing the two paths.
 
 ## Evidence
 
-- `frontend-ssr/src/routes/reports.js` — `REPORT_PAGES[*].defaults` (e.g. `payments: { defaults: {
-  from: monthStart(), to: today() }, … }`) and `parseFilters`, which reads the query over the
-  defaults.
-- `frontend-ssr/src/lib/pages.js` → `resolveDefault`, and `frontend-ssr/src/routes/pages.js` →
-  `filtersFor` (`value || field.value`), which is the behaviour the route is missing.
-- `frontend-ssr/pages/reports/dailysale/meta.json` — `{ "fn": "today" }` on both `from` and `to`,
-  the declared default the route ignores.
-- The measurements above, originally recorded 2026-09-26 against a 60,254-row depot; the prior
-  vault held them as `issues/legacy-report-routes-ignore-date-defaults.md` and they are
-  recoverable from `8f0349c^` — see [[previous-vault-recovery]].
+- `runtime-js/site/app/lib/report-pages.js` — `REPORT_PAGES[*].defaults` (e.g. `payments: {
+  defaults: { from: monthStart(), to: today() }, … }`) and `parseFilters`, which reads the query
+  over the defaults.
+- `runtime-js/site/app/lib/pages.js` → `resolveDefault`, and
+  `runtime-js/site/ahscripts/routes/_app/route.ts` → `filtersFor` (`value || field.value`), which
+  is the behaviour the route is missing.
+- `runtime-js/site/app/pages/reports/dailysale/meta.json` — `{ "fn": "today" }` on both `from` and
+  `to`, the declared default the route ignores.
+- The measurements above, originally recorded 2026-09-26 against a 60,254-row depot on the former
+  Node frontend (removed 2026-09-27); the prior vault held them as
+  `issues/legacy-report-routes-ignore-date-defaults.md` and they are recoverable from `8f0349c^`
+  — see [[previous-vault-recovery]].

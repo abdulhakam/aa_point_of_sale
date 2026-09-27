@@ -5,15 +5,16 @@ status: active
 system: new
 created: 2026-09-26
 tags: [pos, api, trailbase, rest, contract, gotchas]
-related_to: ["[[trailbase]]", "[[data-model]]", "[[frontend-ssr]]"]
+related_to: ["[[trailbase]]", "[[data-model]]", "[[runtime-js-guest-platform]]"]
 ---
 
 # TrailBase API contract
 
 Everything a client needs to know about talking to [[trailbase]], as verified against a running
-server on `trail v0.33.15` and re-verified on `v0.33.22`. The reference implementation of the
-client side is `frontend-ssr/src/lib/trailbase.js` (151 lines), whose header comment lists these
-same facts.
+server on `trail v0.33.15` and re-verified on `v0.33.22`. The client-side reference the Node
+frontend used was `frontend-ssr/src/lib/trailbase.js` (151 lines, removed 2026-09-27, whose header
+comment listed these same facts); the guest frontend reads the depot's SQLite directly and has no
+record-API client ([[runtime-js-guest-platform]]).
 
 ## Endpoint surface
 
@@ -73,8 +74,8 @@ GET /api/records/v1/invoices?filter[deleted][$eq]=0
 GET /api/records/v1/parties?filter[name][$like]=ali
 ```
 
-Operators: `$eq $ne $gt $gte $lt $lte $is $like $re`, plus the `in` form. `frontend-ssr`'s
-`buildFilter` turns
+Operators: `$eq $ne $gt $gte $lt $lte $is $like $re`, plus the `in` form. The former Node client's
+`buildFilter` (in `frontend-ssr/src/lib/trailbase.js`, removed 2026-09-27) turned
 
 ```js
 { type: 1, deleted: 0, created: { $gte: "2026-09-01 00:00:00.000Z" } }
@@ -104,8 +105,8 @@ inlines the `invoice_types` row as `type: {"id":1,"data":{"name":"sale",…}}`. 
   rather than at request time — same for `excluded_columns`.
 - Costs nothing until a client asks, so allow-listing every FK is free.
 - **Cannot reach a hidden (`_`-prefixed) table**, so `invoices.invoice_maker` cannot be expanded.
-- `frontend-ssr` therefore resolves references client-side from a `refs` map instead — the
-  supported pattern.
+- The guest frontend therefore resolves references client-side from a
+  `refs` map instead — the supported pattern.
 
 Allow-listed expansions, per `config.textproto`:
 
@@ -133,8 +134,9 @@ Allow-listed expansions, per `config.textproto`:
 | **Relation writes** take | **canonical UUID text**, e.g. `str(uuid.UUID(bytes=b64decode(id)))` |
 
 So passing the base64 form back on a write is rejected with `400`. This is the single most
-common integration mistake. `frontend-ssr/src/lib/uuid.js` (`relId`) exists to normalise either
-form on the read side.
+common integration mistake. The former Node client's `relId` helper
+(`frontend-ssr/src/lib/uuid.js`, removed 2026-09-27) normalised either form on the read side; the
+Node-only id helper now lives at `runtime-js/tools/uuid.mjs`.
 
 Also:
 
@@ -143,7 +145,7 @@ Also:
   `uuid_parse('…')`. Prefer `uuid_parse()` in a migration, because it validates the text form
   instead of failing a `CHECK`.
 - UUIDv7 is time-sortable, which is what makes cursor pagination cheap and lets
-  [[frontend-ssr]] use "newest id" as part of its change fingerprint.
+  [[runtime-js-guest-platform]] use "newest id" as part of its change fingerprint.
 
 ## Writes
 
@@ -153,8 +155,9 @@ Also:
 - With `server.enable_record_transactions: true`, an invoice **plus its `transactions` rows** can
   be submitted as one atomic request. That is the intended shape for invoice entry.
 - **`DELETE` answers with a plain-text body (`deleted`), not JSON.** A client that blindly
-  `JSON.parse`s the response will throw. `frontend-ssr`'s `request()` catches the parse failure
-  and returns the raw string, with a comment saying exactly why. See
+  `JSON.parse`s the response will throw. The former Node client's `request()` (in
+  `frontend-ssr/src/lib/trailbase.js`, removed 2026-09-27) caught the parse failure and returned the
+  raw string, with a comment saying exactly why. See
   [[trailbase-delete-returns-plain-text]].
 - Booleans must be sent as `0` / `1` (`INTEGER`), because `STRICT` mode has no boolean type.
 - FK violations surface as `400 db constraint: fk`; unique violations as
@@ -182,10 +185,10 @@ The checks below were exercised over HTTP against a seeded depot (the full table
 | `GET payments?expand=type,party` | `type` inlined as `recieving`; `paid` returned as `1` |
 | unauthenticated `GET items`, `GET party_types/schema` | `403` |
 
-## Client implementation notes (`frontend-ssr/src/lib/trailbase.js`)
+## Client implementation notes (the former `frontend-ssr/src/lib/trailbase.js`, removed 2026-09-27)
 
-- `TrailBaseError` carries `status`, `body` and `path`; `trailbaseErrorHandler` in
-  `src/lib/http.js` turns it into a rendered page rather than a stack trace.
+- `TrailBaseError` carried `status`, `body` and `path`; `trailbaseErrorHandler` in the ported
+  `runtime-js/site/app/lib/http.js` turns it into a rendered page rather than a stack trace.
 - `MAX_LIMIT = 1024` matches the server cap.
 - `listPage`, `listAll`, `count`, `getOne`, `create`, `update`, `remove`, `schema`, `login`,
   `refresh` — deliberately no caching, no retries, no model layer. TrailBase is used for CRUD and
@@ -201,5 +204,6 @@ The checks below were exercised over HTTP against a seeded depot (the full table
 ## Related
 
 - [[data-model]] — the tables and columns behind each API.
-- [[frontend-ssr]] — how the client wrapper is wired into the app.
 - [[trailbase]] — config, access control and the depot lifecycle.
+- [[runtime-js-guest-platform]] — the guest, which reads the depot's SQLite directly rather than
+  through a record-API client.

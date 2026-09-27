@@ -32,20 +32,19 @@ machine as the user:
 | Legacy database | PocketBase: one 44 MB `pocketbase.exe` + a `pb_data/` directory | backup = copy the directory |
 | New database | TrailBase: one `trail` binary + a `traildepot/` directory | backup = copy the depot; SQLite underneath |
 | Legacy frontend | Next.js with `output: 'standalone'` and a `build:standalone` script that `robocopy`s into `../standalone` | copy the folder and run it |
-| New frontend | Express + MiniJinja, `npm start` — no build step at all | copy the folder, `npm install`, run |
+| New frontend | The guest-WASM frontend ([[runtime-js-guest-platform]]), served by the `trail` binary itself | copy the depot and its `wasm/` component; no separate process or install |
 | Auth | each server's own built-in user table; no external identity provider | TrailBase: email + password, ≥ 8 chars, no OTP (OTP needs SMTP) |
 | Assets | fonts/CSS/JS self-hosted; `images: { unoptimized: true }` | no external requests on page load |
-| Deployment scripts | `.BAT` files, not CI | `backend\DEV.BAT`, `backend\RUN NEXTJS.BAT`, `trailbase\RUN.BAT`, `frontend-ssr\RUN.BAT` |
+| Deployment scripts | `.BAT` files, not CI | `backend\DEV.BAT`, `backend\RUN NEXTJS.BAT`, `trailbase\RUN.BAT` |
 
 Two design choices follow directly and are recorded elsewhere:
 
 - **Everything binds loopback** (`127.0.0.1`), so nothing is exposed on the network by default.
   This is why `trailbase/RUN.BAT` has to override TrailBase's own `[::1]:4000` default
   ([[trailbase-ipv6-loopback-default-bind]]).
-- **The new frontend has no build step and no UI framework** ([[frontend-ssr]]): plain HTML, one
-  stylesheet, MiniJinja templates read from disk at render time, and `express.static(publicDir,
-  { maxAge: 0 })` so an edit is picked up on reload. On a machine with no build tooling, "no build"
-  is a feature.
+- **The new frontend has no build step and no UI framework** ([[runtime-js-guest-platform]]):
+  plain HTML, one stylesheet, and MiniJinja templates read from disk at render time — no bundler.
+  On a machine with no build tooling, "no build" is a feature.
 
 ## Consequences
 
@@ -67,10 +66,11 @@ Two design choices follow directly and are recorded elsewhere:
   by design.
 - Windows-specific entry points (`.BAT`, `netstat` polling, `robocopy`), and a 44 MB binary
   committed to git.
-- Session/secret management is manual: `SESSION_SECRET` in `frontend-ssr/.env` must be rotated by
-  hand, and `COOKIE_SECURE` set by hand if HTTPS is ever added ([[environment]]).
-- The "packaged build" is not fully unified: `frontend/` has a standalone bundle script but
-  `frontend-ssr/` has no equivalent, and Storybook is a dev-only extra.
+- Session/secret management is TrailBase's own: the guest has no separate process and no
+  `SESSION_SECRET`, and `COOKIE_SECURE` is set by hand if HTTPS is ever added ([[environment]]).
+- The "packaged build" is not fully unified: `frontend/` has a standalone bundle script but the
+  guest frontend has no separate bundle at all (it is served by the `trail` binary), and Storybook
+  is a dev-only extra.
 
 ## Evidence
 
@@ -82,7 +82,7 @@ Two design choices follow directly and are recorded elsewhere:
   are source; `data/`, `backups/`, `uploads/`, `secrets/`, `wasm/` are runtime state.
 - `traildepot/config.textproto` — no SMTP, no OAuth, no anonymous or OTP sign-in; everything
   local.
-- `frontend-ssr/src/server.js` + `src/render.js` — templates read from disk, static served with
-  `maxAge: 0`, no bundler.
+- `runtime-js/src/render.rs` and `runtime-js/site/app/views/` — templates read from disk at render
+  time, no bundler.
 - The prior vault recorded this as `decisions/offline-local-desktop-deployment.md`, and a related
   investigation into desktop packaging; see [[previous-vault-recovery]].
