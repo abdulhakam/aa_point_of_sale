@@ -14,11 +14,11 @@ pub fn init(ctx: &Ctx<'_>) -> Result<()> {
 }
 
 async fn kv_get(key: String) -> Result<Option<String>> {
-    let store = Store::open().map_err(|_| rquickjs::Error::Unknown)?;
-    let val = store.get(&key).map_err(|_| rquickjs::Error::Unknown)?;
+    let store = Store::open().map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
+    let val = store.get(&key).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     
     if let Some(bytes) = val {
-        let s = String::from_utf8(bytes).map_err(|_| rquickjs::Error::Unknown)?;
+        let s = String::from_utf8(bytes).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
         Ok(Some(s))
     } else {
         Ok(None)
@@ -26,15 +26,15 @@ async fn kv_get(key: String) -> Result<Option<String>> {
 }
 
 async fn kv_set(key: String, val: String) -> Result<()> {
-    let mut store = Store::open().map_err(|_| rquickjs::Error::Unknown)?;
+    let mut store = Store::open().map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     store.set(&key, val.as_bytes())
-        .map_err(|_| rquickjs::Error::Unknown)?;
+        .map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     Ok(())
 }
 
 async fn kv_delete(key: String) -> Result<()> {
-    let mut store = Store::open().map_err(|_| rquickjs::Error::Unknown)?;
+    let mut store = Store::open().map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     store.delete(&key)
-        .map_err(|_| rquickjs::Error::Unknown)?;
+        .map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     Ok(())
 }

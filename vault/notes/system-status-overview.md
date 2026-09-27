@@ -6,7 +6,6 @@ created: 2026-09-26
 tags: [meta, status, summary, risk]
 related_to: ["[[aa-point-of-sale]]", "[[trailbase-migration]]"]
 ---
-
 # System status overview
 
 One screen: what exists, what is verified, what is not, and what could go wrong.
@@ -14,7 +13,7 @@ One screen: what exists, what is verified, what is not, and what could go wrong.
 ## State of the four systems
 
 | System | Directory | State | Verified how |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | [[trailbase]] | `trailbase/` | New / experimental | Migration applies clean to an empty depot; 17/17 record APIs resolve; behaviour exercised over HTTP on a seeded depot on `v0.33.15` and re-verified on `v0.33.22` |
 | [[frontend-ssr]] | `frontend-ssr/` | New / experimental | `npm run smoke` → `== 55/55 checks passed ==` against a throw-away depot, including hand-computed report totals |
 | [[backend]] | `backend/` | **Legacy / production** | Holds the production data; 23 migrations; PocketBase 0.22.55 |
@@ -25,7 +24,7 @@ Nothing routes production traffic to the new pair. The two stacks are independen
 ## Coverage
 
 | Capability | Legacy | SSR |
-|---|---|---|
+| --- | --- | --- |
 | Master data (7 entities) | ✅ | ✅ |
 | Dashboard | ✅ | ✅ |
 | Reports (11) | ✅ | ✅ (10 — `areawise` omitted) |
@@ -39,31 +38,19 @@ Nothing routes production traffic to the new pair. The two stacks are independen
 
 ## Verified specifics worth trusting
 
-- `traildepot/data/` was deleted after validation, so the first real run is the documented clean
-  first run.
-- FK and unique violations return stable, assertable strings
-  (`400 db constraint: fk`, `400 db constraint: unique`).
-- The partial unique index on `barcode` behaves: two blank barcodes are accepted, the second
-  duplicate non-empty one is refused.
+- `traildepot/data/` was deleted after validation, so the first real run is the documented clean first run.
+- FK and unique violations return stable, assertable strings (`400 db constraint: fk`, `400 db constraint: unique`).
+- The partial unique index on `barcode` behaves: two blank barcodes are accepted, the second duplicate non-empty one is refused.
 - Anonymous calls are answered `403` on all 17 record APIs.
-- `trail --depot=./traildepot schema invoices` reports `invoices.type` as
-  `{"type":["null","integer"]}`, i.e. the nullable-integer enum shape is really what is exposed.
-- Report arithmetic matches the preserved view SQL on the smoke seed — the six pinned values are
-  in [[reports-and-ledgers]].
-- TrailBase guest-WASM Phase 0 (S1–S8) all pass on `v0.33.22`: runtime `eval` works, `app/` is
-  readable through `--runtime-root-fs`, a single component serves requests in parallel, guest
-  `fetch` reaches itself, and `UPDATE … RETURNING` claims atomically. Evidence in
-  [[trailbase-guest-wasm-spike-results]].
-- The guest app-host serves the same reports as the Node app: the adapted smoke suite passes
-  **71/71** (same seed and pinned totals) and the differential harness matches **14/14**
-  report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental
-  refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work
-  ([[guest-app-host-port]]).
+- `trail --depot=./traildepot schema invoices` reports `invoices.type` as `{"type":["null","integer"]}`, i.e. the nullable-integer enum shape is really what is exposed.
+- Report arithmetic matches the preserved view SQL on the smoke seed — the six pinned values are in [[reports-and-ledgers]].
+- TrailBase guest-WASM Phase 0 (S1–S8) all pass on `v0.33.22`: runtime `eval` works, `app/` is readable through `--runtime-root-fs`, a single component serves requests in parallel, guest `fetch` reaches itself, and `UPDATE … RETURNING` claims atomically. Evidence in [[trailbase-guest-wasm-spike-results]].
+- The guest app-host serves the same reports as the Node app: the adapted smoke suite passes **71/71** (same seed and pinned totals) and the differential harness matches **14/14** report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work ([[guest-app-host-port]]).
 
 ## Open risks
 
 | Risk | Why it matters | Where |
-|---|---|---|
+| --- | --- | --- |
 | No production data migrated | The new pair has never seen real volumes or real edge-case rows | [[pos-0027-migrate-production-data-to-trailbase]] |
 | Cutover shape undecided | Determines whether the legacy Next.js UI is repointed or retired; blocks two other tasks | [[pos-0028-decide-cutover-plan]] |
 | Invoicing/printing have no new-side equivalent | The new pair cannot replace the product, only part of it; designed but unbuilt | [[frontend-ssr-feature-parity-gaps]], [[tb-0021-invoices-cashmemos-printing]] |
@@ -97,7 +84,7 @@ Nothing routes production traffic to the new pair. The two stacks are independen
 
 Run the tools listed in [[vault-guide]]. As of creation:
 
-- 7 collections, 80 documents (plus the root `README.md`), all with frontmatter.
+- 7 collections, 82 documents (plus the root `README.md`), all with frontmatter.
 - Every document links to at least one index ([[aa-point-of-sale]], `README.md`, or this note).
 - No document carries `archived: true`; nothing here is read-only.
 

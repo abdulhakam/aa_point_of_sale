@@ -26,25 +26,49 @@ Build the money-making screens `frontend-ssr` deliberately left out
 
 ## Build
 
-- [ ] **Context endpoint** per screen: items + advisory derived stock + prices, parties, bookers,
-      areas, sections, types, invoice-number state; ETag tied to the snapshot fingerprint
-- [ ] **Polling client** for freshness: short-poll the context endpoint with `If-None-Match` → 304,
-      refetch on focus and after every write (subscriptions are unavailable)
-- [ ] **Immediate-push entry** (parity with legacy): Create inserts the invoice with
-      `completed=0`; header edits PATCH the invoice; line changes POST/PATCH/DELETE transactions;
-      OK sets `completed` (+ payments). No drafts (`localStorage` unused)
-- [ ] **`invoice_lock`**: lease (invoice, user, device, `lease_until`), atomic take/renew, release on
-      close/complete, expired-lease reclaim; second device is told who is editing
-- [ ] **Server-side invoice-number allocation** inside the write transaction, preserving the
-      `count+1` scheme; ids always `uuid_v7()`
-- [ ] **Idempotency key** (UNIQUE) on Create so a retry cannot create two invoices
-- [ ] **Access helper** gating on "authenticated" now, shaped so custom roles can replace it
-- [ ] Screens: invoice entry (purchase/sale/return/difference), orders
+### First slice — done (2026-09-27)
+
+The write API and its lease/idempotency are implemented on the guest and verified by
+`runtime-js/tools/invoice-check.mjs` (all checks pass, repeatedly):
+
+- [x] **Context endpoint** `GET /invoice/context?type=…` — items with advisory derived stock and
+      prices, parties, bookers, areas, sections, categories, companies, and the next number per
+      type; `ETag` (snapshot version + per-type counts) with a `304` on revalidation
+- [x] **Immediate-push entry**: `POST /invoice` inserts the row `completed=0`;
+      `PATCH /invoice/<id>` updates the header (full-state, 2 dp money); `POST /invoice/<id>/line`
+      adds, `DELETE /invoice/<id>/line/<lineId>` removes; `POST /invoice/<id>/complete` sets
+      `completed` and releases the lease
+- [x] **`invoice_lock`**: lease (invoice, user, device, `lease_until`), atomic take/renew with an
+      expired-lease/own-user predicate, release on complete, and a `409` for another device
+- [x] **Server-side invoice-number allocation** by the INSERT itself
+      (`(SELECT COUNT(*) FROM invoices WHERE type = ?) + 1`, preserving `count+1`); ids `uuid_v7()`
+- [x] **Idempotency**: an `invoice_create_key` (UNIQUE) per create and an `invoice_line_op` (UNIQUE)
+      per line add, so a retry cannot double-post (verified: same id/line on repeat)
+- [x] **Money at 2 dp** on every write ([[money-is-2dp-everywhere]])
+- [x] **Access**: gated by the app's authenticated-user check, behind one `userHex` helper
+- [x] Invoice mutations **invalidate the report snapshot** (the F5 concern, found and fixed during
+      integration: reports were stale after a write)
+- [x] `GET /invoice/<id>` for read-back (header + lines), used by the check tool
+
+### Remaining
+
+- [ ] **Screens**: invoice entry (purchase/sale/return/difference), orders — a browser client that
+      polls the context and drives the API above
 - [ ] Cash memos: payment vouchers, receive vouchers, DA entry, expenses, payments
 - [ ] **Printing**: server-rendered pages; **A5 receipts, A4 reports**; browser `window.print()`;
       a `print_job` queue (durable-queue job) for batch/reprint
-- [ ] Tests: subscription-driven refetch, lock contention + lease expiry, number uniqueness under
-      concurrent Create, idempotent Create retry, print-queue lifecycle
+- [ ] Lease **contention across two real users** in the check tool (needs a second user)
+- [ ] Resolve the F-items in [[invoice-entry-freshness-and-writes]] (invoice `status`/void,
+      per-line idempotency is done, totals recompute, coalescing)
+
+### Integration observations (to investigate)
+
+- With the SQL report path enabled, **fresh invoices (empty `dated`) diverged** between the SQL and
+  JS base views and the guest errored on some reports, so `USE_SQL_VIEWS` is back **off**
+  ([[legacy-sql-views-differ-from-js-views]]).
+- On the integration depot, `ledgers/party` now fails guest-side (the ~20 s guest limit on a
+  26.5k-row ledger) while the other 13 pages match — a performance limit
+  ([[trailbase-guest-cpu-js-limits]], [[guest-report-performance-options]]).
 
 ## Note (existing behaviour, not a bug to fix here)
 

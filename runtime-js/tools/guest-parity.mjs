@@ -82,6 +82,16 @@ function diffRows(a, b) {
 }
 
 const [nodeCookie, tbCookie] = await Promise.all([loginNode(), loginTrailBase()]);
+
+// The Node service refreshes its report snapshot on a timer, so a write made moments ago is not
+// reflected until it refreshes. Refresh it explicitly, or the guest looks "wrong" when it is the
+// one that is current.
+await fetch(`${NODE_BASE}/reports/refresh`, {
+  method: "POST",
+  redirect: "manual",
+  headers: { cookie: nodeCookie, accept: "application/json" },
+});
+
 const slugs = walk(pagesDir);
 
 async function getJson(url, cookie) {

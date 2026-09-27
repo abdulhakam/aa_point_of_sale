@@ -142,6 +142,7 @@ async function app(): Promise<any> {
     pages: await loadModule("/app/lib/pages.js"),
     plugins: await loadModule("/app/lib/plugins.js"),
     management: await loadModule("/app/lib/management.js"),
+    invoicing: await loadModule("/app/lib/invoicing.js"),
     service: await loadModule("/app/lib/reports.js"),
     http: await loadModule("/app/lib/http.js"),
     reportPages: await loadModule("/app/lib/report-pages.js"),
@@ -520,6 +521,115 @@ async function dispatch(req: any): Promise<any> {
     const view = await A.jobs.jobView(db, A.management.base64ToHex(jobMatch[1]));
     if (!view) return text("No such job", 404);
     return view;
+  }
+
+  // Invoice entry: immediate push, leased, server-numbered (tb-0021). JSON API for the screen.
+  const userHex = (() => {
+    const id = String(req.user?.id ?? "");
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)
+      ? id.replace(/-/g, "").toUpperCase()
+      : A.management.base64ToHex(id);
+  })();
+  const locked = () =>
+    ({ body: JSON.stringify({ error: "locked", holder: "another device" }), contentType: "application/json; charset=utf-8", status: 409 });
+  const rowsToObjects = (columns: string[], rows: any[]) =>
+    (rows ?? []).map((values) => Object.fromEntries(columns.map((c, i) => [c, values[i]])));
+
+  if (path === "/invoice/context" && method === "GET") {
+    const type = String(query.type || "sale");
+    const snap = await A.service.getViews(["refs", "itemsReport"]);
+    const refs = snap.views.refs ?? {};
+    const items = (snap.views.itemsReport ?? []).map((r: any) => ({
+      id: r.id, name: r.name, category: r.category, box_size_qty: r.box_size_qty,
+      cost_price: r.cost_price, sale_price: r.sale_price, stock: r.qty,
+    }));
+    const counts = await db.all('SELECT "type", COUNT(*) FROM "invoices" GROUP BY "type" ORDER BY "type"', []);
+    const countOf = (code: number) => {
+      const hit = (counts ?? []).find((r: any[]) => Number(r[0]) === code);
+      return (hit ? Number(hit[1]) : 0) + 1;
+    };
+    const etag = `W/"inv-ctx-${snap.version}-${JSON.stringify(counts)}-${type}"`;
+    const headers = { etag, "cache-control": "private, no-cache" };
+    if (String((req.headers && req.headers["if-none-match"]) || "") === etag) {
+      return { status: 304, body: "", contentType: "application/json; charset=utf-8", headers };
+    }
+    const payload = {
+      version: snap.version,
+      type,
+      items,
+      parties: refs.parties ?? [],
+      bookers: refs.bookers ?? [],
+      areas: refs.areas ?? [],
+      sections: refs.sections ?? [],
+      categories: refs.categories ?? [],
+      companies: refs.companies ?? [],
+      next: { purchase: countOf(0), sale: countOf(1), return: countOf(2), difference: countOf(3) },
+    };
+    return { body: JSON.stringify(payload), contentType: "application/json; charset=utf-8", headers };
+  }
+
+  if (path === "/invoice" && method === "POST") {
+    const body = jsonBody(req);
+    const created = await A.invoicing.createInvoice(db, {
+      type: body.type, key: body.key, userHex, device: body.device,
+    });
+    A.service.invalidate(); // the report snapshot must see the new invoice
+    return created;
+  }
+
+  const invoiceMatch = /^\/invoice\/([^/]+)$/.exec(path);
+  if (invoiceMatch && method === "GET") {
+    const hex = A.management.base64ToHex(invoiceMatch[1]);
+    const head = rowsToObjects(
+      ["id", "type", "invoiceNo", "party", "booker", "dated", "discount_1", "discount_2", "discount_rs", "description", "completed"],
+      await db.all('SELECT "id","type","invoiceNo","party","booker","dated","discount_1","discount_2","discount_rs","description","completed" FROM "invoices" WHERE "id" = unhex(?)', [hex])
+    );
+    if (!head.length) return text("No such invoice", 404);
+    return {
+      invoice: head[0],
+      lines: rowsToObjects(
+        ["id", "item", "qty", "price", "cost_price", "discount_1", "discount_2", "discount_rs", "scheme"],
+        await db.all('SELECT "id","item","qty","price","cost_price","discount_1","discount_2","discount_rs","scheme" FROM "transactions" WHERE "invoice" = unhex(?) ORDER BY "id" DESC', [hex])
+      ),
+    };
+  }
+  if (invoiceMatch && method === "PATCH") {
+    const body = jsonBody(req);
+    const hex = A.management.base64ToHex(invoiceMatch[1]);
+    if (!(await A.invoicing.takeLock(db, hex, userHex, String(body.device || "")))) return locked();
+    const updated = await A.invoicing.patchHeader(db, hex, body);
+    A.service.invalidate();
+    return { updated };
+  }
+
+  const lineMatch = /^\/invoice\/([^/]+)\/line$/.exec(path);
+  if (lineMatch && method === "POST") {
+    const body = jsonBody(req);
+    const hex = A.management.base64ToHex(lineMatch[1]);
+    if (!(await A.invoicing.takeLock(db, hex, userHex, String(body.device || "")))) return locked();
+    const line = await A.invoicing.addLine(db, hex, body, body.opKey);
+    A.service.invalidate();
+    return { line };
+  }
+  const lineIdMatch = /^\/invoice\/([^/]+)\/line\/([^/]+)$/.exec(path);
+  if (lineIdMatch && method === "DELETE") {
+    const hex = A.management.base64ToHex(lineIdMatch[1]);
+    if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
+    const deleted = await A.invoicing.deleteLine(db, A.management.base64ToHex(lineIdMatch[2]));
+    A.service.invalidate();
+    return { deleted };
+  }
+  const completeMatch = /^\/invoice\/([^/]+)\/complete$/.exec(path);
+  if (completeMatch && method === "POST") {
+    const hex = A.management.base64ToHex(completeMatch[1]);
+    if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
+    const completed = await A.invoicing.completeInvoice(db, hex, userHex, true);
+    A.service.invalidate();
+    return { completed };
+  }
+  const releaseMatch = /^\/invoice\/([^/]+)\/release$/.exec(path);
+  if (releaseMatch && method === "POST") {
+    return { released: await A.invoicing.releaseLock(db, A.management.base64ToHex(releaseMatch[1]), userHex) };
   }
 
   if (path === "/p") {

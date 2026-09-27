@@ -38,7 +38,7 @@ async fn read_file_js<'js>(ctx: Ctx<'js>, path: String, options: Opt<rquickjs::V
     // For now assuming utf8 return string, unless specified?
     
     let path_ref = std::path::PathBuf::from(path);
-    let bytes = read_file(&path_ref).map_err(|_| rquickjs::Error::Unknown)?; // map error
+    let bytes = read_file(&path_ref).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?; // map error
     
     // Return string by default
     if let Some(val) = options.0 {
@@ -54,13 +54,13 @@ async fn read_file_js<'js>(ctx: Ctx<'js>, path: String, options: Opt<rquickjs::V
          }
          // Need context to create string
          let ctx = val.ctx();
-         let s = String::from_utf8(bytes).map_err(|_| rquickjs::Error::Unknown)?;
+         let s = String::from_utf8(bytes).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
          return Ok(rquickjs::Value::from_string(rquickjs::String::from_str(ctx.clone(), &s)?));
     }
 
     // Capture context somehow? We don't have it if options is None.
     // Argument needs Ctx.
-    let s = String::from_utf8(bytes).map_err(|_| rquickjs::Error::Unknown)?;
+    let s = String::from_utf8(bytes).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     return Ok(rquickjs::Value::from_string(rquickjs::String::from_str(ctx, &s)?));
 }
 

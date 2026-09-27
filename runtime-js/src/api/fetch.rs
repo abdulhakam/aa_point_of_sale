@@ -32,16 +32,16 @@ async fn request_js<'js>(ctx: Ctx<'js>, options: Object<'js>) -> Result<Object<'
             builder = builder.header(name, value);
         }
     }
-    let request = builder.body(body.into_body()).map_err(|_| rquickjs::Error::Unknown)?;
+    let request = builder.body(body.into_body()).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
 
     let client = wstd::http::Client::new();
-    let response = client.send(request).await.map_err(|_| rquickjs::Error::Unknown)?;
+    let response = client.send(request).await.map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     let status = response.status().as_u16();
     let headers_out = Object::new(ctx.clone())?;
     for (name, value) in response.headers() {
         headers_out.set(name.as_str(), value.to_str().unwrap_or(""))?;
     }
-    let bytes = response.into_body().bytes().await.map_err(|_| rquickjs::Error::Unknown)?;
+    let bytes = response.into_body().bytes().await.map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
 
     let out = Object::new(ctx)?;
     out.set("status", status)?;
@@ -56,9 +56,9 @@ async fn post_json(url: String, body: String) -> Result<String> {
         .uri(url)
         .header("content-type", "application/json")
         .body(body.into_body())
-        .map_err(|_| rquickjs::Error::Unknown)?;
+        .map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     let bytes = trailbase_wasm::fetch::fetch(request)
         .await
-        .map_err(|_| rquickjs::Error::Unknown)?;
+        .map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     Ok(String::from_utf8(bytes).unwrap_or_default())
 }

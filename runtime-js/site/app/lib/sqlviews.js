@@ -44,9 +44,11 @@ function compose(views, name) {
     ctes.push(`"${n}" AS (\n${views[n]}\n)`);
   };
   for (const d of depsOf(views, name)) add(d);
-  // `ORDER BY id DESC` matches the JS views' input order (base tables are read `-id`), which the
-  // report arithmetic is sensitive to: float sums accumulate in row order.
-  const body = ctes.length ? `WITH ${ctes.join(",\n")}\nSELECT * FROM (\n${views[name]}\n) AS _report` : views[name];
+  // Always wrap the view in a subquery: `ORDER BY "id"` must resolve to the view's output column,
+  // not to an ambiguous `id` in the view's own FROM/GROUP BY.
+  const body = ctes.length
+    ? `WITH ${ctes.join(",\n")}\nSELECT * FROM (\n${views[name]}\n) AS _report`
+    : `SELECT * FROM (\n${views[name]}\n) AS _report`;
   return `${body}\nORDER BY "id" DESC`;
 }
 

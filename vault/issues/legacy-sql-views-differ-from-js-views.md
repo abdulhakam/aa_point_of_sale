@@ -16,6 +16,18 @@ related_to: ["[[tb-0022-move-reports-to-sql]]", "[[report-logic-stays-runtime-fi
 layer does, builds every view with `frontend-ssr/compute/views.js` (the code that produces the
 current 14/14 report parity), runs the composed legacy SQL for the same view, and diffs the rows.
 
+## Follow-up (2026-09-27): it also diverges on fresh invoices
+
+The SQL base views were enabled after the 2 dp rule removed the float flake, but the invoice slice
+exposed a further divergence: rows created by invoice entry (a sale invoice with an **empty
+`dated`**, one line, no discounts) made the guest error on `ledgers/party` and `itemsales`, while
+the JS views handled them. The equivalence gate's dataset had no such rows, so it passed. With the
+SQL path enabled the differential also showed `dailysale`/`itemsales`/`profit` row-count gaps.
+
+`USE_SQL_VIEWS` is therefore back **off** (`runtime-js/site/app/lib/reports.js`), and the SQL path
+stays a switch to enable only after the equivalence gate covers fresh/partial invoices — or after
+the arithmetic moves to SQL properly ([[convert-base-views-not-derivations]]).
+
 ## Result: 0/13 views are identical
 
 Row counts usually match (`transactionView` 23,413 = 23,413; `paymentsView` 26,526 = 26,526;

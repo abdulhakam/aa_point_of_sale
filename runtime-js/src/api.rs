@@ -104,13 +104,13 @@ async fn query_js(sql: String, params: Opt<Vec<String>>) -> Result<String> {
     
     let rows = query(sql, params_values)
         .await
-        .map_err(|_| rquickjs::Error::Unknown)?; // Simplistic error mapping
+        .map_err(|e| { eprintln!("db error: {e}"); rquickjs::Error::Unknown })?;
 
     let json_rows: Vec<Vec<serde_json::Value>> = rows.into_iter()
         .map(|row| row.into_iter().map(value_to_json).collect())
         .collect();
         
-    serde_json::to_string(&json_rows).map_err(|_| rquickjs::Error::Unknown)
+    serde_json::to_string(&json_rows).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })
 }
 
 /// Write path: `db.execute(sql, params)` → rows affected. The record APIs are bypassed, so
@@ -125,7 +125,7 @@ async fn execute_js(sql: String, params: Opt<Vec<String>>) -> Result<i64> {
 
     let affected = trailbase_wasm::db::execute(&sql, params_values)
         .await
-        .map_err(|_| rquickjs::Error::Unknown)?;
+        .map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
 
     Ok(affected as i64)
 }

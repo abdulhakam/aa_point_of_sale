@@ -17,7 +17,7 @@ pub fn init(ctx: &Ctx<'_>) -> Result<()> {
 /// Write path: rows affected.
 async fn execute_wrapper(sql: String, params: Opt<Vec<String>>) -> Result<i64> {
     let params_values: Vec<Value> = params.0.unwrap_or_default().into_iter().map(Value::Text).collect();
-    let affected = execute(&sql, params_values).await.map_err(|_| rquickjs::Error::Unknown)?;
+    let affected = execute(&sql, params_values).await.map_err(|e| { eprintln!("db.execute error: {e}"); rquickjs::Error::Unknown })?;
     Ok(affected as i64)
 }
 
@@ -28,7 +28,7 @@ async fn query_wrapper(ctx: Ctx<'_>, sql: String, params: Opt<Vec<String>>) -> R
     let rows = internal_query(sql, params).await?;
     // Convert to JS Value
     // serde_json::Value to rquickjs::Value
-    let json_str = serde_json::to_string(&rows).map_err(|_| rquickjs::Error::Unknown)?;
+    let json_str = serde_json::to_string(&rows).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     let val: rquickjs::Value = ctx.json_parse(json_str)?;
     Ok(val)
 }
@@ -39,7 +39,7 @@ async fn get_wrapper(ctx: Ctx<'_>, sql: String, params: Opt<Vec<String>>) -> Res
         return Ok(rquickjs::Value::new_undefined(ctx));
     }
     let row = rows.remove(0);
-    let json_str = serde_json::to_string(&row).map_err(|_| rquickjs::Error::Unknown)?;
+    let json_str = serde_json::to_string(&row).map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
     let val: rquickjs::Value = ctx.json_parse(json_str)?;
     Ok(val)
 }
@@ -50,7 +50,7 @@ async fn internal_query(sql: String, params: Opt<Vec<String>>) -> Result<Vec<Vec
     
     let rows = query(sql, params_values)
         .await
-        .map_err(|_| rquickjs::Error::Unknown)?;
+        .map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
 
     let json_rows: Vec<Vec<serde_json::Value>> = rows.into_iter()
         .map(|row| row.into_iter().map(crate::api::value_to_json).collect())
