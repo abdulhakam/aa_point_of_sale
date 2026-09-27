@@ -16,18 +16,20 @@ Build the money-making screens `frontend-ssr` deliberately left out
 ([[frontend-ssr-feature-parity-gaps]] §1). Design and all owner decisions:
 [[invoice-entry-freshness-and-writes]].
 
-## Spike first (blocking)
+## Spike first (blocking) — answered
 
-- [ ] Does `/api/records/v1/<name>/subscribe/*` hold an SSE/WS stream for a **wasm-hosted**
-      TrailBase, and how does it authenticate? (Local probe with the cookie got no events.) If it
-      does not hold, the fallback is short-poll on the context endpoint.
+- [x] Does `/api/records/v1/<name>/subscribe/*` hold an SSE/WS stream for a **wasm-hosted**
+      TrailBase, and how does it authenticate? — **No.** The endpoint returns **403** for both
+      cookie and bearer auth on a table that reads fine, and no realtime config exists
+      ([[trailbase-subscribe-endpoint-forbidden]]). **The screens poll** the context endpoint with
+      `If-None-Match`.
 
 ## Build
 
 - [ ] **Context endpoint** per screen: items + advisory derived stock + prices, parties, bookers,
       areas, sections, types, invoice-number state; ETag tied to the snapshot fingerprint
-- [ ] **Browser subscriptions** to the relevant tables (official client's default transport) →
-      refetch the context; short-poll fallback
+- [ ] **Polling client** for freshness: short-poll the context endpoint with `If-None-Match` → 304,
+      refetch on focus and after every write (subscriptions are unavailable)
 - [ ] **Immediate-push entry** (parity with legacy): Create inserts the invoice with
       `completed=0`; header edits PATCH the invoice; line changes POST/PATCH/DELETE transactions;
       OK sets `completed` (+ payments). No drafts (`localStorage` unused)

@@ -97,7 +97,7 @@ Nothing routes production traffic to the new pair. The two stacks are independen
 
 Run the tools listed in [[vault-guide]]. As of creation:
 
-- 7 collections, 79 documents (plus the root `README.md`), all with frontmatter.
+- 7 collections, 80 documents (plus the root `README.md`), all with frontmatter.
 - Every document links to at least one index ([[aa-point-of-sale]], `README.md`, or this note).
 - No document carries `archived: true`; nothing here is read-only.
 

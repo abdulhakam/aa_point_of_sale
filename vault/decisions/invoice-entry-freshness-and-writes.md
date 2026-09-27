@@ -1,5 +1,5 @@
 ---
-title: Invoice/cash-memo entry: immediate-push, locked, subscription-driven; A5/A4 print
+title: Invoice/cash-memo entry: immediate-push, locked, poll-driven; A5/A4 print
 type: decision
 status: accepted
 decided_on: 2026-09-27
@@ -10,7 +10,7 @@ belongs_to: "[[trailbase-migration]]"
 related_to: ["[[frontend-ssr-feature-parity-gaps]]", "[[guest-app-host-port]]", "[[jobs-in-process-durable-queue]]", "[[legacy-invoice-numbering-is-racy]]"]
 ---
 
-# Invoice/cash-memo entry: immediate-push, locked, subscription-driven; A5/A4 print
+# Invoice/cash-memo entry: immediate-push, locked, poll-driven; A5/A4 print
 
 ## Context
 
@@ -32,9 +32,12 @@ table-level subscriptions exist (see below).
   parties, bookers, areas/sections, types, invoice-number state) with an ETag; a subscription
   event triggers a refetch of that same payload (304 when unchanged). Short-poll is the fallback
   if a stream cannot be established.
-- **Unverified:** a local probe of `/api/records/v1/sections/subscribe/*` with the `auth_token`
-  cookie produced **no events** after a PATCH. Whether the stream holds for a wasm-hosted TrailBase
-  and how it authenticates must be spiked — it is a blocking item, not a design assumption.
+- **Resolved (2026-09-27): the stream does not work here.** `…/subscribe/*` returns **403** with
+  both the cookie and a bearer token on a readable table, and no realtime config exists; a live
+  attempt also coincided with the host exiting ([[trailbase-subscribe-endpoint-forbidden]]). So the
+  design uses the **polling fallback**: short-poll the context endpoint with `If-None-Match`
+  (`304` when unchanged), refetching on focus and after every write. Revisit push only if
+  TrailBase exposes/permits realtime and the streaming-disconnect panic is fixed.
 
 ### 2. Persistence: every change is pushed immediately (no drafts)
 
@@ -104,7 +107,7 @@ build.
 | F3 | **Per-line writes are not idempotent.** Create has an idempotency key; line POST/PATCH/DELETE do not, so a retry on flaky wifi duplicates a line. | Client-generated `uuid_v7` line ids + `conflict_resolution: REPLACE`, or an idempotency key per line write; prefer full-state PATCH for header fields (idempotent) over deltas. |
 | F4 | **Totals race.** Invoice totals derive from transactions; two fast line edits can each recompute from a stale read. | Recompute totals in the **same transaction** as the line change (or a SQL trigger). |
 | F5 | **Thundering herd.** Every change bumps table fingerprints and emits a subscription event → every device refetches the context and report caches invalidate. Typing on one till makes the shop's screens churn. | Debounce/coalesce events, scope each screen's subscription to the tables it actually shows, and avoid invalidating report results for writes that cannot affect the viewed report (or rely on the cache TTL). |
-| F6 | **The subscription channel is unverified** (auth and whether the stream holds for a wasm-hosted TrailBase). | Spike first; polling is the fallback — which then behaves like today's react-query staleness. |
+| F6 | **Subscriptions are unavailable** — `…/subscribe/*` returns 403 for both cookie and bearer auth. | Resolved by polling with `If-None-Match` ([[trailbase-subscribe-endpoint-forbidden]]); a live stream attempt also coincided with the host exiting, so push is worse than polling until that panic is fixed. |
 | F7 | **Server-to-self writes add a hop** and error-mapping work (forward the user's cookie, surface 4xx/409 unchanged). | Confine it to one helper; keep the browser's error shape. |
 | F8 | **Ledgers/payments move mid-entry.** Payment and outstanding reports count a partially entered invoice's payments immediately. | Follows from parity; surface it, and let operators filter by `status` if F1 is adopted. |
 | F9 | **Schema/ops.** New `invoice_lock` (and possibly `status`) tables/columns need migrations, and `invoiceNo` is `REAL` (should be `INTEGER`). | Add the migration; note the depot migration-staleness caveat ([[trailbase-stale-depot-skips-migration]]). |
@@ -118,7 +121,8 @@ build.
 - `frontend/src/app/providers.tsx` — the legacy react-query staleness settings.
 - `frontend-ssr/compute/views.js:115` and `compute/reports.js` — `completed` is carried in the
   invoice view but never filtered.
-- The subscription-for-a-wasm-hosted-server probe (no events) — unverified, spike pending.
+- The subscription probe: `…/subscribe/*` returns **403** for both auth methods
+  ([[trailbase-subscribe-endpoint-forbidden]]).
 
 ## Related
 
