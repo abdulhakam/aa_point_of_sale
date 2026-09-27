@@ -216,6 +216,23 @@ Reading a label now costs one request and is usually free: every FK is allow-lis
 `expand`, so `GET /api/records/v1/invoices?expand=type,party,booker` returns the invoice with
 the `invoice_types` row inlined as `type: {"id":1,"data":{"name":"sale",…}}`.
 
+## Platform tables (not part of the 17 business tables)
+
+The guest-WASM platform ([[runtime-js-guest-platform]]) adds its own tables in later migrations.
+They are infrastructure, not business data, and are written with direct SQL
+([[guest-writes-via-sql]]):
+
+| Table | Migration | Purpose |
+|---|---|---|
+| `job`, `job_step`, `job_artifact` | `U1790300000__create_job_tables.sql` | durable job queue: steps carry a UNIQUE `idempotency_key`, `state`, `attempt`, `lease_until`; `job_artifact.step_key` is UNIQUE so a re-run cannot double-apply ([[jobs-in-process-durable-queue]]) |
+| `invoice_lock`, `invoice_create_key`, `invoice_line_op` | `U1790300200__create_invoice_entry_tables.sql` | invoice entry: an edit lease per invoice, a create idempotency key, and a line-add idempotency key ([[invoice-entry-freshness-and-writes]], [[tb-0021-invoices-cashmemos-printing]]) |
+
+`U1790300100__round_money_to_2dp.sql` is a **data** migration, not schema: it rounds existing
+money and discount columns to 2 dp ([[money-is-2dp-everywhere]]).
+
+Note: TrailBase's `_user` ids are **UUIDv4**, so a table that references a user must not carry a
+`uuid_v7` check ([[trailbase-user-ids-are-uuidv4]]).
+
 ## Where the schema is *not* fully described here
 
 The `_user` table is TrailBase's own and is deliberately not declared in `config.textproto`;

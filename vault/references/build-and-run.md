@@ -151,6 +151,43 @@ frontend against it, and drives every screen over HTTP with a real login. It doe
 
 The assertions that matter are in [[reports-and-ledgers]].
 
+## Guest-WASM platform (experimental)
+
+There is no script yet; the loop is build → deploy → run → verify
+([[runtime-js-guest-platform]]).
+
+```powershell
+# 1. build the Rust host (Rust + wasm32-wasip2 target + QuickJS via rquickjs + minijinja)
+cd runtime-js
+cargo build --target wasm32-wasip2 --release        # -> target/wasm32-wasip2/release/trail_runtime_js.wasm
+
+# 2. start a scratch depot against the site directory (the guest is served by TrailBase itself)
+#    copy the built wasm into <depot>/wasm/ first; a fresh depot also needs the base migration
+trail --depot=<depot> run --address=127.0.0.1:4003 --runtime-root-fs=runtime-js/site
+```
+
+- `--runtime-root-fs=runtime-js/site` is **load-bearing**: it is the WASI sandbox root, so the
+  `app/` directory must live under it (S3, [[trailbase-guest-wasm-runtime-defaults]]).
+- Do **not** pass `--aot`: it doubles the size and is 2.3× slower to cold-load
+  ([[trailbase-guest-aot-startup-cost]]).
+- The Phase-0 spike guest is separate: `cd guests; npm install; npm run build:wasm`, then start
+  `guests/spikes/depot` with `--runtime-root-fs=guests/spikes/app` (port `4001`).
+- Ports, depot paths and the harness list are in [[environment]].
+
+### Verify
+
+All harnesses live in `runtime-js/tools/` and take `GUEST_BASE`/`NODE_BASE` from the environment:
+
+| Command | Checks |
+|---|---|
+| `node runtime-js/tools/guest-smoke.mjs` | boots its own depot, seeds the smoke dataset and runs **71/71** checks |
+| `node runtime-js/tools/guest-parity.mjs` | Node vs guest, every declarative page (**14/14**); needs the Node app on `:3100` |
+| `node runtime-js/tools/jobs-check.mjs` | durable queue, idempotency, worker fan-out, poller (`POLLER_TEST=1`) |
+| `node runtime-js/tools/management-check.mjs` | management create/update/delete |
+| `node runtime-js/tools/invoice-check.mjs` | context + ETag, idempotent create/lines, lease, complete |
+| `node runtime-js/tools/perf-compare.mjs` | Node vs guest latency on the same depot |
+| `node runtime-js/tools/view-equivalence.mjs` | ported report SQL vs `compute/views.js` |
+
 ## Prerequisites
 
 | System | Needs |

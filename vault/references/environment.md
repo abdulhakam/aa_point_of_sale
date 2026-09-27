@@ -28,6 +28,34 @@ which a browser at `127.0.0.1` — and `frontend-ssr`, whose `TRAILBASE_URL` is
 exactly this reason. If you start the server by hand, pass `--address=127.0.0.1:4000` or point
 the client at `[::1]`. See [[trailbase-ipv6-loopback-default-bind]].
 
+## Guest-WASM platform (experimental)
+
+The guest platform ([[runtime-js-guest-platform]]) is served **by TrailBase itself** — there is no
+separate frontend process, so it uses the TrailBase port. Development and verification use extra
+ports and throw-away depots:
+
+| Port | Used for |
+|---|---|
+| `4000` | the real TrailBase depot ([[trailbase]]) |
+| `4001` | Phase-0 spike depot (`guests/spikes/depot`, `--runtime-root-fs=guests/spikes/app`) |
+| `4002` | render/spike depot during the port |
+| `4003` | the app depot used by the smoke / differential / jobs / management / invoice checks |
+| `3100` | the Node `frontend-ssr`, started when the differential compares against it |
+
+Key paths:
+
+| Path | Role |
+|---|---|
+| `runtime-js/target/wasm32-wasip2/release/trail_runtime_js.wasm` | the built host (git-ignored) |
+| `runtime-js/site/` | the `ahscripts/` dispatcher and `app/` (views, pages, compute, lib, SQL) the host reads — pass this as `--runtime-root-fs` |
+| `guests/` | the Phase-0 spike guest (TS + Vite + `jco`); `guests/spikes/depot` is a scratch depot |
+| `runtime-js/tools/` | the verification harnesses (`guest-smoke`, `guest-parity`, `jobs-check`, `management-check`, `invoice-check`, `perf-compare`, `view-equivalence`, …) |
+| `%TEMP%\kilo\aa-*-depot` | throw-away depots used by those harnesses |
+
+`--runtime-root-fs=<dir>` is the WASI sandbox root: `app/` must live under it, and `..` escapes are
+refused ([[trailbase-guest-wasm-runtime-defaults]], S3). Bind `127.0.0.1` explicitly — TrailBase
+defaults to IPv6-only (see above).
+
 ## Environment variables by system
 
 ### `frontend/` — `.env.local` (git-ignored; `.env.local.example` is the template)

@@ -46,6 +46,8 @@ Nothing routes production traffic to the new pair. The two stacks are independen
 - Report arithmetic matches the preserved view SQL on the smoke seed — the six pinned values are in [[reports-and-ledgers]].
 - TrailBase guest-WASM Phase 0 (S1–S8) all pass on `v0.33.22`: runtime `eval` works, `app/` is readable through `--runtime-root-fs`, a single component serves requests in parallel, guest `fetch` reaches itself, and `UPDATE … RETURNING` claims atomically. Evidence in [[trailbase-guest-wasm-spike-results]].
 - The guest app-host serves the same reports as the Node app: the adapted smoke suite passes **71/71** (same seed and pinned totals) and the differential harness matches **14/14** report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work ([[guest-app-host-port]]).
+- A first **invoice-entry slice** runs on the guest and passes `runtime-js/tools/invoice-check.mjs`: context endpoint with ETag/304, server-side invoice numbering, an edit lease, idempotent create and line add, and complete ([[tb-0021-invoices-cashmemos-printing]]).
+- Money is **2 dp everywhere** — report data, guest writes, and a backfill migration ([[money-is-2dp-everywhere]]).
 
 ## Open risks
 
@@ -84,7 +86,7 @@ Nothing routes production traffic to the new pair. The two stacks are independen
 
 Run the tools listed in [[vault-guide]]. As of creation:
 
-- 8 collections, 87 documents (plus the root `README.md`), all with frontmatter.
+- 8 collections, 88 documents (plus the root `README.md`), all with frontmatter.
 - Every document links to at least one index ([[aa-point-of-sale]], `README.md`, or this note).
 - No document carries `archived: true`; nothing here is read-only.
 - The `credentials/` collection holds **plaintext** production and experimental secrets; the
