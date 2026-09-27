@@ -9,6 +9,7 @@
 import { TABLES, readTables } from "./data.js";
 import { buildView, viewClosure, tablesForViews, viewsAffectedBy, VIEW_ORDER } from "../compute/views.js";
 import { REPORTS, runReport } from "../compute/reports.js";
+import { relId } from "../compute/ids.js";
 import { rows as sqlViewRows } from "./sqlviews.js";
 
 /**
@@ -27,6 +28,31 @@ const SQL_VIEWS = USE_SQL_VIEWS
   ? { transactionView: "transaction_view", invoiceView: "invoice_view" }
   : {};
 
+/**
+ * Views where SQL supplies the rows but one column must be assembled in JS because SQL cannot
+ * express it.
+ *
+ * Empty on purpose: `paymentsView` was tried here (SQL rows + a JS `company` array) and broke
+ * parity (differential 9–12/14, flaky) — the legacy `payments_view` differs from the JS in more
+ * than `company`, as the equivalence gate warned ([[legacy-sql-views-differ-from-js-views]]). Only
+ * views the gate proves byte-identical are converted.
+ */
+const HYBRID_SQL_VIEWS = {};
+
+/** Attach `company` (array, as the JS view does) from the booker's link table. */
+function augmentPaymentsView(rows) {
+  const byBooker = new Map();
+  for (const link of state.base.order_booker_companies ?? []) {
+    const booker = relId(link.order_booker);
+    if (!byBooker.has(booker)) byBooker.set(booker, []);
+    byBooker.get(booker).push(relId(link.company));
+  }
+  for (const row of rows) {
+    row.company = row.booker && byBooker.has(row.booker) ? byBooker.get(row.booker) : [];
+  }
+  return rows;
+}
+
 async function buildOne(name, built) {
   const sqlName = SQL_VIEWS[name];
   if (sqlName) {
@@ -34,6 +60,14 @@ async function buildOne(name, built) {
       return await sqlViewRows(sqlName);
     } catch (error) {
       console.log(`[sqlview] ${name} failed, using JS: ${error}`);
+    }
+  }
+  const hybridName = HYBRID_SQL_VIEWS[name];
+  if (hybridName) {
+    try {
+      return augmentPaymentsView(await sqlViewRows(hybridName));
+    } catch (error) {
+      console.log(`[sqlview] ${name} (hybrid) failed, using JS: ${error}`);
     }
   }
   return buildView(name, state.base, built);
@@ -74,6 +108,21 @@ async function probeFingerprints(db) {
   return out;
 }
 
+/** Base tables a set of views needs materialised: none for pure-SQL views, the link table for a
+ * hybrid's augment, and the declared tables for JS views. */
+function baseTablesFor(views) {
+  const out = new Set();
+  for (const name of views) {
+    if (SQL_VIEWS[name]) continue;
+    if (HYBRID_SQL_VIEWS[name]) {
+      out.add("order_booker_companies");
+      continue;
+    }
+    for (const table of tablesForViews([name])) out.add(table);
+  }
+  return [...out];
+}
+
 /** The view arrays a report needs, per its registry `inputs`. */
 export function viewsForReport(name) {
   const spec = REPORTS[name];
@@ -90,12 +139,12 @@ export async function getViews(names) {
   const need = viewClosure(requested);
   const missingViews = need.filter((name) => state.views[name] === undefined);
   if (missingViews.length) {
-    // Only the JS views need their base tables materialised; SQL views read the database directly.
-    const jsMissing = missingViews.filter((name) => !SQL_VIEWS[name]);
-    const missingTables = tablesForViews(jsMissing).filter((table) => state.base[table] === undefined);
-    if (missingTables.length) {
-      const rows = await readTables(missingTables);
-      for (const table of missingTables) state.base[table] = rows[table];
+    // Pure-SQL views read the database themselves; hybrid views need only the link table their
+    // JS augment reads; JS views need their declared base tables.
+    const tables = baseTablesFor(missingViews).filter((table) => state.base[table] === undefined);
+    if (tables.length) {
+      const rows = await readTables(tables);
+      for (const table of tables) state.base[table] = rows[table];
     }
     // `viewClosure` is already in VIEW_ORDER order, so a view sees fresh dependencies.
     const built = {};
@@ -140,8 +189,7 @@ export async function refresh(db) {
     return state;
   }
 
-  const jsDirty = [...dirty].filter((name) => !SQL_VIEWS[name]);
-  const toRead = tablesForViews(jsDirty).filter((table) => state.base[table] === undefined || changed.includes(table));
+  const toRead = baseTablesFor([...dirty]).filter((table) => state.base[table] === undefined || changed.includes(table));
   if (toRead.length) {
     const rows = await readTables(toRead);
     for (const table of toRead) state.base[table] = rows[table];

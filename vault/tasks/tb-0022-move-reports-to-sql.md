@@ -58,7 +58,7 @@ cent), so it cannot hide a cent.
 | `invoiceView` ↔ `invoice_view` | 8927/8927 | **identical** |
 | `transactionsReport` ↔ `transactions_report` | 23413/23413 | **2 rows**, a 1-cent float-accumulation artifact |
 | `itemsDifferenceReport` ↔ `items_difference_report` | 207/207 | 42 rows: `qty` units (js=4 sql=0) |
-| `paymentsView` ↔ `payments_view` | 26526/26526 | `company` is an **array** in JS, `null` in SQL → `sql+js` |
+| `paymentsView` ↔ `payments_view` | 26526/26526 | `company` is an **array** in JS, `null` in SQL — and more (hybrid attempt failed) |
 | `itemsReport` ↔ `items_report` | 207/207 | `qty` units: js=756 vs sql=3276 |
 | `ledgerJournal` ↔ `ledger_journal` | 26614/26614 | `accounts_recievable`/`cash` signs |
 | `ledgerBooker`/`ledgerParty` | 26526/26526 | JS adds `booker`; `credit` differs |
@@ -97,9 +97,16 @@ payload still dominate**, which is what option 3 (render in Rust) targets.
 
 ## Next
 
-- [ ] Option 3: render reports in Rust from SQL so large row sets never cross the JS↔Rust boundary
-- [ ] `sql+js` for `paymentsView` (SQL rows + JS `company` array) — extend the SQL mapping
-- [ ] Extend the SQL mapping to more base views (`net_price`, `items_report`) now that the rule is safe
+- [ ] Option 3: render reports in Rust from SQL so large row sets never cross the JS↔Rust boundary.
+      The warm profit render (~4 s) is the JS stringifying ~21.8k rows and Rust parsing them for
+      `minijinja`. Needs a design: either a Rust path that runs the SQL view and renders a template
+      that formats raw rows with the `minijinja` filters (`money`/`num`/`datefmt`), or a leaner
+      payload — today's templates expect pre-formatted `…Text` fields.
+- [x] ~~`sql+js` for `paymentsView`~~ — **tried and reverted**: SQL rows + a JS `company` array gave
+      **9–12/14, flaky**. The legacy `payments_view` differs from the JS in more than `company`, as
+      the equivalence gate warned. `paymentsView` stays JS; only gate-proven views convert.
+- [ ] Extend the SQL mapping only where the equivalence gate proves a view byte-identical
+      (`net_price`/`items_report` are not, on the evidence already collected)
 - [ ] `tb-0015` integer cents remains the storage-level form of the 2 dp rule
 
 ## Related
