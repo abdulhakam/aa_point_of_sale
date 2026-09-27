@@ -97,11 +97,11 @@ payload still dominate**, which is what option 3 (render in Rust) targets.
 
 ## Next
 
-- [ ] Option 3: render reports in Rust from SQL so large row sets never cross the JS↔Rust boundary.
-      The warm profit render (~4 s) is the JS stringifying ~21.8k rows and Rust parsing them for
-      `minijinja`. Needs a design: either a Rust path that runs the SQL view and renders a template
-      that formats raw rows with the `minijinja` filters (`money`/`num`/`datefmt`), or a leaner
-      payload — today's templates expect pre-formatted `…Text` fields.
+- [ ] Option 3: speed up the *render*, not the transport. Measured: shipping rows columnar and
+      expanding them in Rust gave **no gain** (warm profit 4.00 → 4.32 s), so the cost is
+      `minijinja` rendering ~21.8k rows (and the `/p` payload itself), not the JS↔Rust JSON. The
+      lever is rendering **fewer rows** (pagination/limits, or client-side rendering of large
+      reports) — a **product decision**, left open.
 - [x] ~~`sql+js` for `paymentsView`~~ — **tried and reverted**: SQL rows + a JS `company` array gave
       **9–12/14, flaky**. The legacy `payments_view` differs from the JS in more than `company`, as
       the equivalence gate warned. `paymentsView` stays JS; only gate-proven views convert.

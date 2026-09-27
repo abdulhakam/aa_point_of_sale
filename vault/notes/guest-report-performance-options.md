@@ -64,10 +64,15 @@ verified in `trailbase/traildepot/migrations/main`.
    20 s-cliff risk. The pure-SQL reports are the ledgers, item sales, differences, outstanding,
    stock and product/daily sales. **This does not cost the no-build authoring goal** — the SQL
    lives under `app/` and is executed at runtime ([[report-logic-stays-runtime-file-based]]).
-3. **Render reports in Rust, not JS.** The warm profit render is dominated by moving 21,815 rows
-   from QuickJS into Rust for `minijinja`. If the report's rows came from a **SQL query in Rust**
-   and were rendered directly, the rows would never enter QuickJS. This removes the largest warm
-   cost; it is the natural companion to option 2.
+3. **Render reports in Rust, not JS — MEASURED, and the premise was wrong.** The theory was that
+   the warm render (profit ~4 s) is dominated by moving 21,815 rows from QuickJS into Rust. Tested
+   by shipping the rows **columnar** (`{__columns, rows: [[…]]}`) and expanding them back in Rust:
+   **no gain — warm profit 4.00 → 4.32 s, `/p` data 2.42 → 2.82 s** (reverted). So the cost is not
+   the JSON crossing the boundary; it is **`minijinja` rendering ~21.8k rows into HTML** (and, for
+   `/p` data, the JS `JSON.stringify` of the payload itself). The real lever is therefore to
+   **render fewer rows** — paginate/limit report pages, or make the large reports
+   client-rendered from `/p/<slug>/data` — not to change the transport. That is a product decision
+   (does a report page need all 21k rows at once?), so it is left open rather than guessed.
 4. **Precompute off the request path with the queue.** The durable queue (with worker fan-out
    across the runtime threads) can rebuild the heavy views or the common filtered results after
    writes (debounced) or on a schedule, storing them in KV/materialised tables, so a request is a
