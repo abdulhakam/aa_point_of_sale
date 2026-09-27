@@ -21,7 +21,7 @@ import { rows as sqlViewRows } from "./sqlviews.js";
  * deterministic — or the float-sensitive aggregates stay in JS (`sql+js`) — the JS path is the
  * parity-safe default and this switch stays off.
  */
-const USE_SQL_VIEWS = false;
+const USE_SQL_VIEWS = true;
 
 const SQL_VIEWS = USE_SQL_VIEWS
   ? { transactionView: "transaction_view", invoiceView: "invoice_view" }

@@ -47,10 +47,11 @@ verified in `trailbase/traildepot/migrations/main`.
   **`transactionView` (23,413) and `invoiceView` (8,927) byte-identical**, and `transactionsReport`
   down to 2/23,413 rows. The gate's split became the strategy: **SQL for the base views (the
   expensive scans/joins), JS for the report-level derivations (the policy)** —
-  [[convert-base-views-not-derivations]]. The runtime plumbing is in (`sqlviews.js` + a
-  `USE_SQL_VIEWS` switch, default **off**): enabling it gave **12/14 and flaky**, because SQLite does
-  not guarantee an aggregate's scan order, so `SUM` accumulates doubles differently from the JS
-  ([[report-parity-flakes-on-float-arithmetic]]). Task: [[tb-0022-move-reports-to-sql]].
+  [[convert-base-views-not-derivations]]. **Enabled (2026-09-27)** once the owner's **2 dp money
+  rule** ([[money-is-2dp-everywhere]]) removed the float flake: differential **14/14 on three
+  consecutive runs** with the SQL path on, smoke 71/71. Measured: profit cold 16.6 → **13.9 s**,
+  dashboard cold 2.3 s → **0.26 s**, `/p` data 2.7 → 2.4 s; warm profit unchanged (~4 s — the
+  JS↔Rust payload, which option 3 targets). Task: [[tb-0022-move-reports-to-sql]].
 
 ## Ranked options
 

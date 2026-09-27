@@ -76,19 +76,31 @@ with `sql+js` for columns SQL cannot express (the `company` array).
 - `runtime-js/site/app/lib/sqlviews.js`: loads `app/reports/sql/views/*.sql` at runtime, inlines
   dependencies as CTEs, derives column names (comment-aware), runs via `sqlite.all`, and appends
   `ORDER BY "id" DESC` to match the JS input order.
-- `runtime-js/site/app/lib/reports.js`: a `SQL_VIEWS` map + `USE_SQL_VIEWS` switch. **Off by
-  default** — with it on the differential fell to **12/14 and was flaky**, because SQLite does not
-  guarantee the scan order feeding an aggregate, so `SUM` accumulates doubles differently from the
-  JS's fixed-order `+=` ([[report-parity-flakes-on-float-arithmetic]]).
+- `runtime-js/site/app/lib/reports.js`: a `SQL_VIEWS` map + `USE_SQL_VIEWS`, now **true**.
 - Fixed a real **loader bug**: aliased named imports were inverted
   (`import { rows as x }` generated `{x: rows}`), which silently broke `sqlviews` until corrected.
+- **Enabled after enforcing the 2 dp money rule** ([[money-is-2dp-everywhere]]): with money at 2 dp
+  the float flake disappears. Verified **14/14 on three consecutive differential runs** with the SQL
+  path on, plus smoke 71/71 and management-check.
+
+Measured with the SQL base views on ([[guest-vs-node-performance]] method):
+
+| Endpoint | SQL off | SQL on |
+|---|---|---|
+| `/reports/profit` cold | 16.6 s | **13.9 s** |
+| `/dashboard` cold | 2.3 s | **0.26 s** |
+| `/p/reports/profit/data` warm | 2.7 s | **2.4 s** |
+| `/reports/profit` warm | 3.9 s | 4.0 s (unchanged — the JS↔Rust payload) |
+
+Cold report time improved ~16 % and dashboard cold ~9×; the **derived JS views and the large HTTP
+payload still dominate**, which is what option 3 (render in Rust) targets.
 
 ## Next
 
-- [ ] Make the float-sensitive accumulation deterministic (integer cents — [[tb-0015-integer-cents-for-money]] — or keep those aggregates in JS), then enable `USE_SQL_VIEWS` and re-run the 14/14 differential
-- [ ] Make the differential compare money with a tiny tolerance (it already flaked 13/14 → 14/14 on unchanged code)
-- [ ] `sql+js` for `paymentsView` (SQL rows + JS `company` array) once the switch is viable
-- [ ] Then option 3 from [[guest-report-performance-options]]: render reports in Rust from SQL
+- [ ] Option 3: render reports in Rust from SQL so large row sets never cross the JS↔Rust boundary
+- [ ] `sql+js` for `paymentsView` (SQL rows + JS `company` array) — extend the SQL mapping
+- [ ] Extend the SQL mapping to more base views (`net_price`, `items_report`) now that the rule is safe
+- [ ] `tb-0015` integer cents remains the storage-level form of the 2 dp rule
 
 ## Related
 

@@ -1,16 +1,35 @@
 ---
 title: Report parity can flake on float last bits; SQL aggregates make it worse
 type: issue
-status: verified
+status: mitigated
 severity: medium
 created: 2026-09-27
+updated: 2026-09-27
 tags: [reports, floats, parity, differential, sql]
-related_to: ["[[tb-0022-move-reports-to-sql]]", "[[convert-base-views-not-derivations]]", "[[guest-vs-node-performance]]", "[[reports-and-ledgers]]", "[[tb-0015-integer-cents-for-money]]", "[[sql-rounding-differs-from-js-round2]]"]
+related_to: ["[[tb-0022-move-reports-to-sql]]", "[[convert-base-views-not-derivations]]", "[[guest-vs-node-performance]]", "[[reports-and-ledgers]]", "[[tb-0015-integer-cents-for-money]]", "[[sql-rounding-differs-from-js-round2]]", "[[money-is-2dp-everywhere]]"]
 ---
 
 # Report parity can flake on float last bits; SQL aggregates make it worse
 
-## What was observed
+## Mitigated (2026-09-27)
+
+Enforcing the owner's **2 dp money rule everywhere** ([[money-is-2dp-everywhere]]) removed the
+flake: report row money is rounded (`round2`) in the shared `compute/reports.js`, the guest's
+numeric write path rounds to 2 dp, and a backfill migration
+(`U1790300100__round_money_to_2dp.sql`) rounds existing values. With money at 2 dp the last-bit
+residue cannot reach the compared data.
+
+Result, with the SQL base views **on**:
+
+```text
+guest-parity: 14/14   (three consecutive runs, stable)
+guest-smoke:  71/71   (pinned totals unchanged)
+management-check: all checks passed
+```
+
+`USE_SQL_VIEWS` is now **true** in `runtime-js/site/app/lib/reports.js`.
+
+## Original finding
 
 The Node-vs-guest differential (`runtime-js/tools/guest-parity.mjs`, exact JSON comparison) is not
 perfectly deterministic. With **no SQL views in play** (the JS path, unchanged):

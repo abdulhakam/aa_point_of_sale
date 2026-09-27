@@ -177,7 +177,10 @@ function columnSpec(entity, form) {
       const value = raw === undefined || raw === null || raw === "" ? null : Number(raw);
       cols.push(value === null ? { name: field.name, expr: "NULL", param: null } : { name: field.name, expr: "CAST(? AS INTEGER)", param: String(value) });
     } else if (field.type === "number") {
-      const value = raw === undefined || raw === null || raw === "" ? 0 : Number(raw);
+      // Money (and any numeric column) is stored at 2 decimal places — insignificant digits
+      // never reach the database ([[money-is-2dp-everywhere]]).
+      const rawValue = raw === undefined || raw === null || raw === "" ? 0 : Number(raw);
+      const value = Number.isFinite(rawValue) ? Number(rawValue.toFixed(2)) : 0;
       cols.push({ name: field.name, expr: "CAST(? AS REAL)", param: String(value) });
     } else {
       cols.push({ name: field.name, expr: "?", param: typeof raw === "string" ? raw : "" });
