@@ -1,2 +1,4 @@
 .vault/
 .vault-cache/
+# Operator credentials are local-only: plaintext secrets must not be committed or pushed.
+credentials/

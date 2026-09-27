@@ -84,9 +84,12 @@ Nothing routes production traffic to the new pair. The two stacks are independen
 
 Run the tools listed in [[vault-guide]]. As of creation:
 
-- 7 collections, 82 documents (plus the root `README.md`), all with frontmatter.
+- 8 collections, 87 documents (plus the root `README.md`), all with frontmatter.
 - Every document links to at least one index ([[aa-point-of-sale]], `README.md`, or this note).
 - No document carries `archived: true`; nothing here is read-only.
+- The `credentials/` collection holds **plaintext** production and experimental secrets; the
+  repository has a remote, so treat them as compromised if it is ever pushed (see
+  `credentials/README.md`). The collection is git-ignored and local-only.
 
 ## Related
 

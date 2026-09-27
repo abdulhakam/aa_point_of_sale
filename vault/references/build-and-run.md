@@ -171,6 +171,19 @@ The assertions that matter are in [[reports-and-ledgers]].
 | `frontend-ssr/.env`, `.tbdemo/` | git-ignored |
 | `frontend/.env.local`, `.next/`, `out/` | git-ignored by the root `.gitignore` |
 
+## Credentials
+
+The logins each system needs are in the `credentials/` collection:
+
+| System | Environment | Document |
+|---|---|---|
+| PocketBase (`backend/`) | production | `credentials/production-pocketbase.md` |
+| Next.js (`frontend/`) | production | `credentials/production-nextjs.md` |
+| TrailBase (`trailbase/`) | experimental | `credentials/experimental-trailbase.md` |
+| `frontend-ssr/` (session secret) | experimental | `credentials/experimental-frontend-ssr.md` |
+
+They are plaintext and tracked; see `credentials/README.md` for the warning.
+
 ## Related
 
 - [[environment]] — ports, env vars and credentials in one table.

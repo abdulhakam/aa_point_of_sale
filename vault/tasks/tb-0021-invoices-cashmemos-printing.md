@@ -63,6 +63,8 @@ The write API and its lease/idempotency are implemented on the guest and verifie
 
 ### Integration observations (to investigate)
 
+- Findings recorded while building the slice: [[guest-db-bridge-text-params-only]] (the DB bridge binds text parameters only) and [[trailbase-user-ids-are-uuidv4]] (the lock schema).
+
 - With the SQL report path enabled, **fresh invoices (empty `dated`) diverged** between the SQL and
   JS base views and the guest errored on some reports, so `USE_SQL_VIEWS` is back **off**
   ([[legacy-sql-views-differ-from-js-views]]).

@@ -48,6 +48,7 @@ workstream.
 | `references/` | Data model, API contract, route map, report arithmetic, build/run, environment, caching |
 | `issues/` | Known defects, gaps and upstream limitations — verified, with the evidence |
 | `tasks/` | Actionable work items with GFM checkboxes for subtasks |
+| `credentials/` | Operator credentials per system and environment (production + experimental) — plaintext, see the collection's README |
 | `notes/` | How to use this vault, plus material that fits nowhere else |
 
 ## Reading order for a newcomer
@@ -57,7 +58,8 @@ workstream.
 3. [[backend]] and [[frontend]] — what production runs today.
 4. [[data-model]] — the 17 tables, the enumeration codes, and the PocketBase → TrailBase value translation.
 5. [[reports-and-ledgers]] — the report arithmetic, and why it now lives in JavaScript.
-6. [[build-and-run]] and [[environment]] — how to start all four systems.
+6. [[build-and-run]] and [[environment]] — how to start all four systems, and the credentials each
+   needs (the local-only `credentials/` collection, e.g. `credentials/experimental-trailbase.md`).
 
 ## Status at a glance
 
