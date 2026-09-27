@@ -8,7 +8,7 @@
  * (`frontend/src/app/app/reports/**`).
  */
 
-import { num, round2, qtyDisplay, dateOnly } from "./format.js";
+import { num, round2, qtyDisplay, dateOnly, compareText } from "./format.js";
 
 export const INVOICE_TYPE = { purchase: 0, sale: 1, return: 2, difference: 3 };
 export const PARTY_TYPE = { customer: 0, supplier: 1 };
@@ -177,7 +177,7 @@ export function reportPaymentsByCompany(ctx, f) {
       paid: p.paid,
       description: p.description,
     }))
-    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    .sort((a, b) => compareText(a.date, b.date));
 
   const sum = (pred) => round2(rows.reduce((t, r) => t + (pred(r) ? r.amount : 0), 0));
   const invoiceTotal = sum((r) => !r.paid && !r.type.startsWith("return"));
@@ -248,7 +248,7 @@ function transactionsRows(ctx, f) {
     .filter((t) => inDateRange(t.created, f.from, f.to))
     .filter((t) => txFilters(t, f, ix))
     .map((t) => txRow(t, ix))
-    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    .sort((a, b) => compareText(a.date, b.date));
 }
 
 export function reportProfit(ctx, f) {
@@ -289,7 +289,7 @@ function stockRows(ctx, f) {
       stock_amount: round2(num(r.qty) * num(r.cost_price)),
       stockAmountText: round2(num(r.qty) * num(r.cost_price)).toFixed(2),
     }))
-    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    .sort((a, b) => compareText(a.name, b.name));
 }
 
 export function reportStock(ctx, f) {
@@ -313,7 +313,7 @@ export function reportDifference(ctx, f) {
       box_size_qty: num(r.box_size_qty),
       tone: num(r.qty) < 0 ? "neg" : num(r.qty) > 0 ? "pos" : "",
     }))
-    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    .sort((a, b) => compareText(a.name, b.name));
   return { rows, totals: {}, meta: { company: f.company } };
 }
 
@@ -342,7 +342,7 @@ export function reportLedgerParty(ctx, f) {
     .filter((r) => !f.party || r.party === f.party)
     .filter((r) => inDateRange(r.created, f.from, f.to))
     .map((r) => ledgerRow(r, ix, invoiceMap));
-  rows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  rows.sort((a, b) => compareText(a.date, b.date));
   const last = rows[rows.length - 1];
   return { rows, totals: { balance: last ? last.balanceText : "0.00" }, meta: { party: f.party, from: f.from, to: f.to } };
 }
@@ -354,7 +354,7 @@ export function reportLedgerBooker(ctx, f) {
     .filter((r) => !f.booker || r.booker === f.booker)
     .filter((r) => inDateRange(r.created, f.from, f.to))
     .map((r) => ledgerRow(r, ix, invoiceMap));
-  rows.sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  rows.sort((a, b) => compareText(a.date, b.date));
   const credit = round2(rows.reduce((t, r) => t + r.credit, 0));
   const debit = round2(rows.reduce((t, r) => t + r.debit, 0));
   return { rows, totals: { credit: credit.toFixed(2), debit: debit.toFixed(2), balance: round2(credit - debit).toFixed(2) }, meta: { booker: f.booker, from: f.from, to: f.to } };
@@ -388,7 +388,7 @@ export function reportLedgerArea(ctx, f) {
       debitText: round2(e.debit).toFixed(2),
       balanceText: round2(e.debit - e.credit).toFixed(2),
     }))
-    .sort((a, b) => String(a.party).localeCompare(String(b.party)));
+    .sort((a, b) => compareText(a.party, b.party));
   const totals = {
     credit: round2(out.reduce((t, r) => t + r.credit, 0)).toFixed(2),
     debit: round2(out.reduce((t, r) => t + r.debit, 0)).toFixed(2),
@@ -429,7 +429,7 @@ export function reportLedgerGeneral(ctx, f) {
             ? "info"
             : "",
     }))
-    .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    .sort((a, b) => compareText(a.date, b.date));
 
   const sum = (pick) => round2(rows.reduce((t, r) => t + pick(r), 0));
   const opening = {
@@ -503,7 +503,7 @@ export function reportOutstanding(ctx, f) {
       paid_totalText: num(r.paid_total).toFixed(2),
       balanceText: num(r.balance).toFixed(2),
     }))
-    .sort((a, b) => String(a.party_name).localeCompare(String(b.party_name)));
+    .sort((a, b) => compareText(a.party_name, b.party_name));
   const sum = (p) => round2(rows.reduce((t, r) => t + p(r), 0));
   return {
     rows,
@@ -539,7 +539,7 @@ export function reportProductSale(ctx, f) {
       amount: e.amount,
       amountText: num(e.amount).toFixed(2),
     }))
-    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    .sort((a, b) => compareText(a.name, b.name));
   const total = round2(rows.reduce((t, r) => t + r.amount, 0));
   return { rows, totals: { amount: total.toFixed(2) }, meta: { from: f.from, to: f.to } };
 }

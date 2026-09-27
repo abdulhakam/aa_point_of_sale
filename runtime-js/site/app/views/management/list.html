@@ -1,0 +1,51 @@
+{% extends 'layout.html' %}
+{% import 'partials/entity_fields.html' as ef %}
+{% block body %}
+<h1 class="page-title">{{ entity.label }}</h1>
+<p class="crumbs"><a href="/management">← Management</a></p>
+
+<section class="card">
+  <h2>{% if editRow %}Edit {{ entity.singular }}{% else %}New {{ entity.singular }}{% endif %}</h2>
+  {% if editRow %}
+  <form class="entity-form" method="post" action="/management/{{ entityKey }}/{{ editRow.id }}/update">
+    {{ ef.render(fields) }}
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Save</button>
+      <a class="btn" href="/management/{{ entityKey }}">Cancel</a>
+    </div>
+  </form>
+  {% else %}
+  <form class="entity-form" method="post" action="/management/{{ entityKey }}/create">
+    {{ ef.render(fields) }}
+    <div class="form-actions">
+      <button class="btn primary" type="submit">Create</button>
+    </div>
+  </form>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>All {{ entity.label }} ({{ rows|length }})</h2>
+  <table class="data">
+    <thead><tr>
+      {% for c in columns %}<th class="{{ c.align }}">{{ c.label }}</th>{% endfor %}
+      <th>Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr{% if editRow and editRow.id == r.id %} class="editing"{% endif %}>
+        {% for c in columns %}<td class="{{ c.align }}">{{ r.cells[c.key] }}</td>{% endfor %}
+        <td class="actions">
+          <a class="btn small" href="/management/{{ entityKey }}?edit={{ r.id }}">Edit</a>
+          <form method="post" action="/management/{{ entityKey }}/{{ r.id }}/delete" data-confirm="Delete this record?">
+            <button class="btn small danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="{{ columns|length + 1 }}">No records yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

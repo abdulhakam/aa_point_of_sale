@@ -1,0 +1,24 @@
+{
+  "name": "aa-pos-guests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TrailBase guest-WASM components for the AA Point of Sale app platform",
+  "scripts": {
+    "bundle": "vite build",
+    "bundle:spike": "vite build --config vite.spike.config.js",
+    "componentize": "jco componentize dist/index.js -w node_modules/trailbase-wasm/wit -o dist/component.wasm",
+    "componentize:aot": "jco componentize dist/index.js -w node_modules/trailbase-wasm/wit --aot -o dist/component.wasm",
+    "build:wasm": "npm run bundle && npm run componentize",
+    "build:wasm:aot": "npm run bundle && npm run componentize:aot",
+    "check": "tsc --noEmit --skipLibCheck"
+  },
+  "dependencies": {
+    "trailbase-wasm": "^0.6.0"
+  },
+  "devDependencies": {
+    "@bytecodealliance/jco": "^1.35.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "title": "Stock Report",
+  "template": "page.html",
+  "needs": { "views": ["itemsReport", "refs"] },
+  "compute": { "report": "stockreport" },
+  "filters": [{ "name": "company", "label": "Company", "type": "select", "source": "categories" }],
+  "columns": [
+    { "key": "company", "label": "Company" },
+    { "key": "name", "label": "Name" },
+    { "key": "costText", "label": "CP", "right": true },
+    { "key": "qtyText", "label": "Qty", "right": true },
+    { "key": "box_size_qty", "label": "Carton Size", "right": true },
+    { "key": "stockAmountText", "label": "Stock Amount", "right": true }
+  ],
+  "totals": [{ "label": "Total Stock", "key": "stockAmount" }]
+}

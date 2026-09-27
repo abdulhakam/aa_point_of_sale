@@ -1,0 +1,18 @@
+{% extends 'layout.html' %}
+{% block body %}
+<div class="login-wrap">
+  <form class="card login" method="post" action="/login">
+    <h1>Welcome to POS</h1>
+    {% if expired %}<div class="flash warn">Your session expired. Please sign in again.</div>{% endif %}
+    {% if error %}<div class="flash error">{{ error }}</div>{% endif %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <label class="field"><span>Username or Email</span>
+      <input type="text" name="email" value="{{ email }}" required autofocus autocomplete="username">
+    </label>
+    <label class="field"><span>Password</span>
+      <input type="password" name="password" required autocomplete="current-password">
+    </label>
+    <button class="btn primary" type="submit">Login</button>
+  </form>
+</div>
+{% endblock %}

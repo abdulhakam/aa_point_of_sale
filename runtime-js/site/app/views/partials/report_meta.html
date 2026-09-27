@@ -1,0 +1,6 @@
+<div class="report-meta">
+{% if meta.from %}<span>From: {{ meta.from }}</span>{% endif %}
+{% if meta.to %}<span>To: {{ meta.to }}</span>{% endif %}
+{% for a in appliedLabels %}<span>{{ a.label }}: {{ a.value }}</span>{% endfor %}
+<span>Rows: {{ rows|length }}</span>
+</div>

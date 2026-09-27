@@ -1,0 +1,23 @@
+{
+  "title": "Area Ledger",
+  "template": "page.html",
+  "needs": { "views": ["paymentsView", "refs"] },
+  "compute": { "report": "ledgers/area" },
+  "filters": [
+    { "name": "from", "label": "Date From", "type": "date", "default": { "fn": "yearStart" } },
+    { "name": "to", "label": "Date To", "type": "date", "default": { "fn": "today" } },
+    { "name": "area", "label": "Area", "type": "select", "source": "areas" },
+    { "name": "section", "label": "Section", "type": "select", "source": "sections" }
+  ],
+  "columns": [
+    { "key": "party", "label": "Party" },
+    { "key": "debitText", "label": "Debit", "right": true },
+    { "key": "creditText", "label": "Credit", "right": true },
+    { "key": "balanceText", "label": "Balance", "right": true }
+  ],
+  "totals": [
+    { "label": "Total Debit", "key": "debit" },
+    { "label": "Total Credit", "key": "credit" },
+    { "label": "Total Balance", "key": "balance" }
+  ]
+}

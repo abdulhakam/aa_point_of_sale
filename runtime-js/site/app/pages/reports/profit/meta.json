@@ -1,0 +1,33 @@
+{
+  "title": "Profit Report",
+  "template": "page.html",
+  "needs": { "views": ["transactionsReport", "refs"] },
+  "compute": { "report": "profit" },
+  "filters": [
+    { "name": "from", "label": "Date From", "type": "date", "default": { "fn": "monthStart" } },
+    { "name": "to", "label": "Date To", "type": "date", "default": { "fn": "today" } },
+    { "name": "company", "label": "Company", "type": "select", "source": "categories" },
+    { "name": "party", "label": "Party", "type": "select", "source": "parties" },
+    { "name": "booker", "label": "Booker", "type": "select", "source": "order_bookers" },
+    { "name": "area", "label": "Area", "type": "select", "source": "areas" },
+    { "name": "section", "label": "Section", "type": "select", "source": "sections" },
+    { "name": "item", "label": "Item", "type": "select", "source": "items" },
+    { "name": "invoice", "label": "Invoice #", "type": "text" }
+  ],
+  "columns": [
+    { "key": "date", "label": "Date" },
+    { "key": "type", "label": "Type" },
+    { "key": "booker", "label": "Booker" },
+    { "key": "invoiceNo", "label": "Inv #" },
+    { "key": "party", "label": "Party" },
+    { "key": "company", "label": "Company" },
+    { "key": "area", "label": "Area" },
+    { "key": "section", "label": "Section" },
+    { "key": "item", "label": "Item" },
+    { "key": "qtyText", "label": "Qty", "right": true },
+    { "key": "scheme", "label": "Free", "right": true },
+    { "key": "net_amountText", "label": "Total", "right": true },
+    { "key": "profitText", "label": "Profit", "right": true }
+  ],
+  "totals": [{ "label": "Total Profit", "key": "profit" }]
+}

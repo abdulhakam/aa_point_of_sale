@@ -13,7 +13,7 @@
  *  - `transaction_view.profit` is total cost, not margin.
  */
 
-import { num, round2, qtyDisplay } from "./format.js";
+import { num, round2, qtyDisplay, compareText } from "./format.js";
 import { relId } from "./ids.js";
 
 const byId = (rows) => {
@@ -350,20 +350,53 @@ export function buildLedgerBooker(paymentsView) {
 /** ledger_party — the same credit/debit rules plus a running per-party balance. */
 export function buildLedgerParty(paymentsView) {
   const rows = buildLedgerBooker(paymentsView).filter((r) => r.party);
-  rows.sort((a, b) => String(a.dated).localeCompare(String(b.dated)));
-  // The SQL computes the balance as a correlated subquery over payment_date; do the
-  // same so ordering quirks cannot drift from the old output.
-  for (const r of rows) {
-    r.balance = round2(
-      paymentsView.reduce(
-        (sum, p) =>
-          p.party === r.party && String(p.payment_date) <= String(r.dated)
-            ? sum + (num(p.paid) === 0 ? num(p.amount) : -num(p.amount))
-            : sum,
-        0
-      )
-    );
+  rows.sort((a, b) => compareText(a.dated, b.dated));
+  // The SQL computes the balance as a correlated subquery over payment_date: sum every
+  // payment of that party with `payment_date <= the row's date`. Evaluating that per row
+  // is O(n^2); it depends only on (party, date), so sum the deltas per distinct date and
+  // prefix-sum them. Same value, one pass per party.
+  const deltasByParty = new Map(); // party -> Map(date -> Σdelta)
+  for (const p of paymentsView) {
+    if (!p.party) continue;
+    let byDate = deltasByParty.get(p.party);
+    if (!byDate) {
+      byDate = new Map();
+      deltasByParty.set(p.party, byDate);
+    }
+    const date = String(p.payment_date);
+    const delta = num(p.paid) === 0 ? num(p.amount) : -num(p.amount);
+    byDate.set(date, (byDate.get(date) || 0) + delta);
   }
+  const prefix = new Map(); // party -> { dates: string[], sums: number[] }
+  for (const [party, byDate] of deltasByParty) {
+    const dates = [...byDate.keys()].sort();
+    const sums = [];
+    let acc = 0;
+    for (const date of dates) {
+      acc += byDate.get(date);
+      sums.push(acc);
+    }
+    prefix.set(party, { dates, sums });
+  }
+  const balanceFor = (party, date) => {
+    const p = prefix.get(party);
+    if (!p) return 0;
+    // last index with dates[i] <= date
+    let lo = 0;
+    let hi = p.dates.length - 1;
+    let idx = -1;
+    while (lo <= hi) {
+      const mid = (lo + hi) >> 1;
+      if (p.dates[mid] <= date) {
+        idx = mid;
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    return idx < 0 ? 0 : round2(p.sums[idx]);
+  };
+  for (const r of rows) r.balance = balanceFor(r.party, String(r.dated));
   return rows;
 }
 

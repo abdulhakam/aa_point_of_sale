@@ -1,0 +1,19 @@
+{% extends 'layout.html' %}
+{% block body %}
+<h1 class="page-title">Dashboard</h1>
+
+<section class="grid">
+{% for t in shortcuts %}
+  <a class="tile tone-{{ t.tone }}" href="/{{ t.target }}"><span class="tile-title">{{ t.title }}</span></a>
+{% endfor %}
+</section>
+
+<section class="card">
+  <h2>Overview</h2>
+  <div class="stat-grid">
+  {% for s in tiles %}
+    <div class="stat"><div class="stat-value">{{ s.value }}</div><div class="stat-label">{{ s.label }}</div></div>
+  {% endfor %}
+  </div>
+</section>
+{% endblock %}
