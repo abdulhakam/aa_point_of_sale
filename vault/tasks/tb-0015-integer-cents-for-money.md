@@ -6,7 +6,7 @@ priority: medium
 created: 2026-09-26
 tags: [schema, money, floating-point, trailbase, correctness]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[trailbase-pocketbase-data-compatibility]]", "[[data-model]]"]
+related_to: ["[[trailbase-pocketbase-data-compatibility]]", "[[data-model]]", "[[component-split-and-sql-materialised-tables]]", "[[money-is-2dp-everywhere]]"]
 ---
 
 # TB-0015 Move money from REAL to integer cents

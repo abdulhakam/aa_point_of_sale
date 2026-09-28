@@ -60,3 +60,6 @@ Two facts that make this smaller than it looks, and should be stated in the reso
 
 - [[trail-runtime-js-reference]] — the provenance and licensing section this belongs in.
 - [[compiled-artifacts-are-generic-capabilities]] — why redistribution is contemplated at all.
+- [[trailbase-wasm-osl-3-0-licence]] — the **separate** finding for the `trailbase-wasm`
+  *dependency*, which declares `OSL-3.0`. This note is about the host crate's own upstream. Both
+  must be resolved before the split in [[component-split-and-sql-materialised-tables]] ships.

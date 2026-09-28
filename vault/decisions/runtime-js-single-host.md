@@ -81,8 +81,26 @@ here is an optimization, not a constraint on the app model. Decoupling `render.r
 WIT boundary — as the alternative below already anticipated — changes packaging only, never app
 logic.
 
+## Superseded in part (2026-09-28)
+
+This decision's **packaging** is now actively being revisited, not merely held open:
+
+- [[component-split-and-sql-materialised-tables]] splits the folded-in renderer and the SQL/JS
+  halves into three generic components and benchmarks both a composed single component and genuinely
+  separate components. The "extracting a `render` crate later means moving `render.rs` behind a HTTP
+  or WIT boundary" caveat above is now the agreed plan.
+- [[manifest-driven-routing-and-data-dag]] retires the runtime-JS file router's single dispatcher,
+  which was the mechanism this decision leaned on to make the host's fixed route table workable
+  ("authorable pages go through one generic file route in `app/`").
+
+What is **not** superseded: rendering stays native Rust rather than moving into the JS engine, and
+report/rendering logic stays in runtime files rather than being compiled into the host. Those two
+parts of D1 and D3 still hold.
+
 ## Related
 
 - [[trailbase-guest-wasm-runtime-defaults]] — D1–D6, which this amends for D3.
+- [[component-split-and-sql-materialised-tables]] — the split that supersedes the packaging.
+- [[manifest-driven-routing-and-data-dag]] — the routing change that supersedes the file router.
 - [[compiled-artifacts-are-generic-capabilities]] — the general invariant this is a case of.
 - [[tb-0017-adopt-trail-runtime-js]] — the adoption task.

@@ -7,7 +7,7 @@ created: 2026-09-27
 updated: 2026-09-27
 tags: [reports, sql, no-build, performance]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[report-logic-stays-runtime-file-based]]", "[[guest-report-performance-options]]", "[[legacy-report-sql-uses-company-columns]]", "[[dispatcher-transpiled-per-request]]"]
+related_to: ["[[report-logic-stays-runtime-file-based]]", "[[guest-report-performance-options]]", "[[legacy-report-sql-uses-company-columns]]", "[[dispatcher-transpiled-per-request]]", "[[component-split-and-sql-materialised-tables]]", "[[manifest-driven-routing-and-data-dag]]"]
 ---
 
 # TB-0022 Move report arithmetic into SQL (runtime .sql files)

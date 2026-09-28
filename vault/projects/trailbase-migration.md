@@ -50,12 +50,66 @@ not yet the legacy look. Step 3 is not started.
       -> [[tb-0013-rework-report-screens-without-views]]
 [ ] 13. Migrate the production data
       -> [[pos-0027-migrate-production-data-to-trailbase]]
+[ ] 14. Gate the component split on a parity oracle    -> rebuild the differential FIRST
+[ ] 15. Manifest-driven routing + JSON data DAG          -> [[manifest-driven-routing-and-data-dag]]
+[ ] 16. Three generic artifacts: composer + separate     -> [[component-split-and-sql-materialised-tables]]
+[ ] 17. Trigger-maintained Tier 2 materialised tables   -> resolves open decision 2 and tb-0015
 ```
 
 Step 10 gates 11 and 13: how much of the legacy UI must be rebuilt depends on whether it is
 repointed at TrailBase or retired in favour of the guest.
 
+**Step 16 is now measured and decided (2026-09-28).** The all-reports sweep priced the
+cross-component handoff at **+71% (median) on like-for-like acquisition, slower in 14/14 reports**,
+so the request path is **composed into one component** and separate components are reserved for
+off-request work. The apparent −31% end-to-end win came from skipping normalisation the guest still
+has to perform, not from the boundary. See [[component-split-and-sql-materialised-tables]].
+
+**Step 14 gates 15–17.** The component split deletes `compute/reports.js`, `compute/views.js` and
+`app/lib/reports.js` — which are the *only* implementation known to match legacy — while the parity
+differential is already gone ([[guest-parity-differential-not-reproducible]]). A golden-output
+corpus and an N-way differ must exist before that deletion, or the refactor is unverifiable.
+
 ## Report performance (2026-09-28)
+
+**Fresh-import baseline, re-measured 2026-09-28** on a depot rebuilt from the production copy
+(60,245 records, 0 import errors), `--runtime-threads=4`, cold = first view of a filter.
+Reproduce with `trailbase/tools/report-bench.mjs "auth_token=<jwt>"`:
+
+| report | cold | warm | payload |
+|---|---|---|---|
+| difference | 35 ms | 69 ms | 35 KB |
+| dailysale | 63 ms | 102 ms | 165 KB |
+| stockreport | 383 ms | 78 ms | 47 KB |
+| payments | 2,344 ms | 171 ms | 310 KB |
+| ledgers/area | 8,907 ms | 93 ms | 136 KB |
+| salesreport | 9,900 ms | 83 ms | 306 KB |
+| ledgers/booker | 15,510 ms | — | 5 KB |
+| **itemsales** | **20,024 ms → 500** | 20,051 ms | deadline |
+| **profit** | 500 | 20,021 ms | deadline |
+| **paymentsbycompany** | 20,029 ms → 500 | 500 | deadline |
+| **ledgers/general** | 20,038 ms → 500 | 500 | deadline |
+
+Four reports at the deadline, matching the previously recorded cliff. A single
+`POST /reports/refresh?full=1` that rebuilds **all** views also exceeds it (20.03 s → 500), so the
+snapshot must be built **lazily per report** — individual report builds do fit
+(11.0 s stockreport, 7.2 s dailysale).
+
+Two new findings came out of this run:
+
+- [[persisted-snapshot-can-be-stamped-current-while-empty]] — a **new defect**. After the import
+  every report rendered "No data" while the guest had all 60,245 rows. The persisted snapshot is
+  stamped with the whole-database fingerprint even when the views inside it are empty, and
+  `?full=1` cannot recover because `invalidate()` is in-memory only. Needs an out-of-band
+  `DELETE FROM mview/mview_meta/pagecache` plus a restart.
+- The import itself is verified end-to-end: 60,245 / 60,245, 0 failed, per-collection read ==
+  created, and the link counts (5 booker, 13 party) plus the 8,927 dropped `invoice_maker` match
+  the recorded reference exactly.
+
+**Next (cold path):** `itemsales`, `profit`, `paymentsbycompany` and `ledgers/general` cannot finish
+inside one guest call at all. Moving that computation into SQL
+([[component-split-and-sql-materialised-tables]]) is the required next step
+([[guest-report-performance-options]]).
 
 The guest reports are numerically correct but the **cold** path (first view of a filter) is slow.
 Shipped so far: a fingerprint-keyed **materialised view snapshot** shared through SQLite
@@ -76,13 +130,13 @@ being worked around silently.
 | # | Question | Options on the table | Note |
 |---|---|---|---|
 | 1 | **Cutover shape** — is the legacy Next.js UI repointed at TrailBase, or retired for the guest? Gates sequence 11 and 13. `critical`, no `due`, 8 unticked boxes | not written down; needs a decision first | [[pos-0028-decide-cutover-plan]] |
-| 2 | **Report cold path** — `itemsales`, `profit`, `ledgers/general`, `paymentsbycompany` exceed the 20 s deadline on production-sized data. Option 3 (render fewer rows) was redefined and is now an open product call, not just a pagination change | SQL aggregation, render fewer rows, native compute | [[snapshot-persistence-hits-the-20s-deadline]], [[guest-report-performance-options]], [[report-render-row-cap]] |
+| 2 | ~~**Report cold path**~~ — **decided 2026-09-28.** SQL aggregation won: report results move into trigger-maintained materialised tables, which also satisfies `reports.no_precomputation` because Tier 2 cannot disagree with its base table | chosen: SQL aggregation + trigger maintenance | [[component-split-and-sql-materialised-tables]] |
 | 3 | **Date defaults on report routes** — three named options, none chosen | declared, code, or per-request | [[report-routes-ignore-date-defaults]] |
 | 4 | **General Ledger opening balances** are not persisted anywhere, so the ledger cannot reproduce a historical balance | carry forward, compute, or persist | [[guest-frontend-feature-parity-gaps]] §4 |
 | 5 | **The 14/14 parity gate is gone** and nothing replaced it. Re-baseline against a fresh import, mark it historical, or rebuild a differential | three options, option 1 recommended | [[guest-parity-differential-not-reproducible]] |
 | 6 | **The host's `jobs` surface** — delete `jobs.rs` and drop the documented `ahscripts/jobs` authoring path, or wire it and root-cause discovery | two options | [[trailbase-host-jobs-module-never-called]] |
-| 7 | **Integer cents for money** (tb-0015) — the cost argument is stale: there are four migrations and the database has held real data | keep `REAL` + 2dp, or move to cents as a data migration | [[tb-0015-integer-cents-for-money]] |
-| 8 | **Upstream crate licensing** — unresolved, and the component is intended to be shareable | add a LICENSE upstream, or accept same-author terms | [[trailbase-host-upstream-crate-license-unresolved]] |
+| 7 | ~~**Integer cents for money**~~ — **split into two stages 2026-09-28.** SQL now owns the rounding site using the same `printf('%.2f')` legacy used, so float parity is achievable and comparable line for line. The `INTEGER` cents migration follows only after the float path is verified and finalised, as a separately-verified change. `qty` and `box_size_qty` stay `REAL` — they are legitimately fractional | stage 1: `REAL` + `printf` (parity); stage 2: `INTEGER` cents (exact) | [[component-split-and-sql-materialised-tables]], [[tb-0015-integer-cents-for-money]] |
+| 8 | **Licensing — now two separate findings.** (a) The `trailbase-wasm` **dependency** declares `OSL-3.0`, not a permissive licence, and vendors no `LICENSE` file — this was assumed to be MIT and is not. (b) The **host crate's own upstream** publishes no LICENSE, as its README has always warned. The component split makes both blocking, because splitting means distributing | confirm upstream terms, or add a LICENSE | [[trailbase-wasm-osl-3-0-licence]], [[trailbase-host-upstream-crate-license-unresolved]] |
 | 9 | **Leftover host endpoints** — `/count/{table}` (unauthenticated, SQL injection), the `/api` 200 mock, 404-for-everything, `/getscripts` | delete vs gate | [[tb-0025-host-endpoint-hygiene]] |
 
 Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with three unticked boxes
@@ -96,6 +150,8 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | Drop SQL views; aggregate in the client | [[trailbase-drop-sql-views]] |
 | Enumerations are integer codes + FK | [[trailbase-encode-enums-as-integer-codes]] |
 | Multi-valued relations become link tables | [[trailbase-link-tables-over-json]] |
+| Split the host into generic components; SQL owns report arithmetic; money as integer cents | [[component-split-and-sql-materialised-tables]] |
+| Manifest-driven routing with a JSON data DAG replaces `route.ts`; QuickJS coordinates, never calculates | [[manifest-driven-routing-and-data-dag]] |
 | Keep the PocketBase timestamp format | [[trailbase-pocketbase-data-compatibility]] |
 | Pages are declarative manifests | [[trailbase-declarative-page-host]] |
 | Reports refresh incrementally from a warm snapshot | [[trailbase-incremental-report-refresh]] |
