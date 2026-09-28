@@ -31,7 +31,10 @@ replacement for PocketBase; nothing in production reads from it yet.
     .gitignore                 # traildepot/data|backups|uploads|secrets|wasm are runtime state
     traildepot/
       config.textproto         # server/auth settings + the record_apis declarations
-      migrations/main/U1790208000__create_base_tables.sql   # the whole schema (21 KB)
+      migrations/main/U1790208000__create_base_tables.sql   # the 17 base tables (21 KB)
+      migrations/main/U1790300000__create_job_tables.sql     # durable queue
+      migrations/main/U1790300100__round_money_to_2dp.sql    # money-is-2dp-everywhere
+      migrations/main/U1790300200__create_invoice_entry_tables.sql  # invoice locks, idempotency, lines
       data/ backups/ secrets/ uploads/ wasm/               # runtime state, git-ignored
   ```
 

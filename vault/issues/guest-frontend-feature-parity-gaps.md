@@ -87,11 +87,11 @@ by the guest.
 
 ## Evidence
 
-- `trailbase/src/runtime/app/pages/` — the declarative pages, none of which is an invoice or cash-memo
+- `trailbase/runtime/app/pages/` — the declarative pages, none of which is an invoice or cash-memo
   screen.
-- `trailbase/src/runtime/app/lib/report-pages.js` — the report page definitions.
+- `trailbase/runtime/app/lib/report-pages.js` — the report page definitions.
 - [[route-map]] — the side-by-side table, including the ❌ rows.
-- `trailbase/src/config.textproto` — `enable_record_transactions: true`, confirming the backend can
+- `trailbase/config.textproto` — `enable_record_transactions: true`, confirming the backend can
   accept an invoice plus its transactions atomically.
 
 ## Related

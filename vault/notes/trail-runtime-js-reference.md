@@ -50,13 +50,13 @@ wraps it in an async IIFE that calls the method-named export, and JSON-serialize
 | Global | Ops |
 |---|---|
 | `trailbase.query`, `db.query` | `query(sql, params[])` → rows as JSON |
-| `db.execute` | **aliased to `query`** — not a real execute (see gaps) |
+| `db.execute` | a real `trailbase_wasm::db::execute`; **parameters are still text-only** (see gaps) |
 | `sqlite` | `execute`, `run`, `get`, `all` |
 | `kv` | `get`, `set`, `delete` |
 | `fs` | `readFile`, `writeFile`, `exists`, `readdir` |
 | `time` | `sleep`, `setTimeout` |
 | `console` | `log`/`warn`/`error`/`info`, captured to a `ScriptReport` |
-| `fetch` | **mock/placeholder → 501** (see gaps) |
+| `fetch` | a real bridge: `http.postJson` and `http.request` on `wstd` + the SDK client (see gaps) |
 
 Parameter binding is text-only: JS params are mapped to `Value::Text`.
 
@@ -70,7 +70,17 @@ Parameter binding is text-only: JS params are mapped to `Value::Text`.
 - **D5 (jobs): a precedent.** It has a `minutely` scheduler and a `jobs/` directory.
 - It uses only TrailBase's own `trailbase-wasm` world, so D6 holds.
 
-## Gaps to close before it can carry the app
+## Gaps to close before it can carry the app — as assessed 2026-09-26
+
+> **Four of the six are now closed.** This list is the upstream assessment, kept as the record of
+> what was believed on 2026-09-26. Current state: **closed** — 1 (`fetch` is a real bridge,
+> [[guest-outbound-http-and-login]]), 2 (`{html}` / `{text}` / `{body, contentType}` /
+> `{redirect}` response shapes, `host/src/lib.rs:262-310`), 3 in part (`db.execute` is a real
+> `trailbase_wasm::db::execute`; the text-only params remain,
+> [[guest-db-bridge-text-params-only]]), 5 (minijinja folded into this host,
+> [[runtime-js-single-host]]), 6 (cached by content hash, [[dispatcher-transpiled-per-request]]).
+> **Still open** — 4, plus `init`/`jobs` discovery (which turned out to be worse than "a discovery
+> bug": the whole module is uncalled, [[trailbase-host-jobs-module-never-called]]).
 
 1. **`fetch` is a stub (501).** Our spike proved a guest *can* reach the network/self
    ([[trailbase-guest-wasm-spike-results]] § S6); the Rust side needs an outgoing-HTTP bridge
@@ -83,7 +93,9 @@ Parameter binding is text-only: JS params are mapped to `Value::Text`.
    [[trailbase-guest-error-string-opaque]]).
 4. **Concurrency model.** One thread-local context per runtime instance pairs with
    `--runtime-threads`; whether two requests share a context, and how `SendWrapper`'s `unsafe`
-   bridge behaves under load, needs a spike in our depot.
+   bridge behaves under load, needs a spike in our depot. **Still unanswered** — and it now
+   matters more, because the thread-local snapshot is implicated in
+   [[snapshot-persistence-hits-the-20s-deadline]].
 5. **No `minijinja`/template rendering** — D3 remains to be built, likely as a Rust module in the
    same host or a sibling `render` crate.
 6. **TS transform per request** (swc on every request) — measure; cache by mtime if it matters.
@@ -98,9 +110,16 @@ trail run --dev --runtime-root-fs traildepot --demo --stderr-logging --public-di
 
 ## Status here
 
-**Adopted into this repo at `trailbase/src/`** (Rust crate, `trailbase-wasm 0.6.1`, README + `.gitignore`
-added, upstream attribution noted). It builds clean there
-(`trailbase/src/host/target/wasm32-wasip2/release/trail_runtime_js.wasm`, 5,875,367 B).
+**Adopted into this repo at `trailbase/host/`** (Rust crate, `trailbase-wasm 0.6.1`, README +
+`.gitignore` added, upstream attribution noted). It was first taken in at `trailbase/src/host/` and
+moved up a level by [[trailbase-flat-source-layout]] on 2026-09-28. It builds clean there
+(`trailbase/host/target/wasm32-wasip2/release/trail_runtime_js.wasm`).
+
+**Component size, stated once, with its history.** The upstream build is **5,875,367 B (5.88 MB)**;
+this repo's component is **7,187,264 B (7.17 MB)** after minijinja and the render bridge were added
+([[runtime-js-single-host]]). The 5,875,367 figure is the *upstream* measurement and is not the
+current size of anything we ship — earlier revisions of this note presented it as ours, which was
+wrong. Licensing is still unresolved: [[trailbase-host-upstream-crate-license-unresolved]].
 
 **Builds and runs against our stack.** The reference pins `trailbase-wasm 0.5.0`, which exports
 the `trailbase:component@0.1.0` world and is rejected by `trail v0.33.22`:
@@ -113,7 +132,13 @@ Bumping the dependency to `trailbase-wasm 0.6.1` (world `@0.2.0`) fixes it with 
 changes** — the crate compiled clean (one pre-existing dead-code warning) after only the version
 edit. It then loaded and served on `trail v0.33.22`.
 
-### Measured here (2026-09-26)
+### Measured here (2026-09-26, on the 5.88 MB upstream-sized component)
+
+> **All figures in this block are pre-minijinja and pre-app-host.** The shipped component is
+> ~22% larger (7.17 MB) and runs a ~15 KB dispatcher instead of the self-test routes, so treat
+> these as order-of-magnitude, not as current. `notes/guest-vs-node-performance.md` records the
+> later range as **2.4–9.7 s** cold for the same component — one run vs many, which is why the two
+> numbers disagree. Re-measure before quoting either.
 
 - **Component loads far faster than the JS guest:** `Loaded component … in: 2.42 s` cold and
   `0.37 s` warm, versus 39.7 s / 0.61 s for the 16 MB StarlingMonkey `jco` component. The 5.9 MB
@@ -127,6 +152,10 @@ edit. It then loaded and served on `trail v0.33.22`.
   `/bench?n=0` 18 ms, `n=1` 8.7 ms. (An earlier 106–144 ms figure was wall-clock and included
   curl process startup; the server-side number is the real one, and it covers `swc` transpile +
   QuickJS eval.) `/features` measured 125 ms because it does SQLite/FS/KV work.
+  **Superseded for the shipped app:** this was measured on the upstream self-test/bench routes
+  *before* the transpile cache and *before* the ~15 KB dispatcher existed. For the real app the
+  later measurement is **~20–30 ms** baseline
+  (`systems/runtime-js-guest-platform.md`, `notes/guest-vs-node-performance.md`).
 - Engine comparison on the same workload as Phase 0's `/spike/busy`:
 
   | Engine | Workload | Time |
@@ -156,12 +185,15 @@ raw execution speed. Both engines must avoid long synchronous handlers.
 ## Rendering (D3) added here
 
 `minijinja` was folded into the `runtime-js` host as a native bridge (Rust side:
-`trailbase/src/host/src/render.rs`), exposed to scripts as `render.html(name, ctxJson)` /
+`trailbase/host/src/render.rs`), exposed to scripts as `render.html(name, ctxJson)` /
 `render.string(source, ctxJson)`. Templates come from `/app/views` (falling back to `/app/pages`),
 names resolve views-root-relative exactly as the former Node frontend's render module
 (`frontend-ssr/src/lib/render.js`, removed 2026-09-27) did, and the ten custom filters are ported
-(`money`, `num`, `round`, `qty`, `date`, `datefmt`, `upper`, `lower`, `json`, `yesno`) with an
-mtime template cache. A route may return `{ html: "..." }` and the host answers `text/html`.
+(`money`, `num`, `round`, `qty`, `date`, `datefmt`, `upper`, `lower`, `json`, `yesno`) with a
+**deliberately uncached** loader — templates are re-read and `clear_templates()` is called per
+render, because WASI mtime is unusable and minijinja caches compiled templates
+([[trailbase-guest-template-cache-wasi-mtime]]). There is **no** mtime cache. A route may return
+`{ html: "..." }` and the host answers `text/html`.
 
 Verified end-to-end on `trail v0.33.22`:
 
@@ -177,8 +209,8 @@ GET /page -> 200  content-type: text/html; charset=utf-8
 ```
 
 **Parity harness.** The former Node frontend's `scripts/render-parity.mjs` (removed 2026-09-27)
-rendered all 34 `views/`+`pages/` templates (now `trailbase/src/runtime/app/views/` and
-`trailbase/src/runtime/app/pages/`) and the ten filters through both `minijinja-js` (Node) and the Rust
+rendered all 34 `views/`+`pages/` templates (now `trailbase/runtime/app/views/` and
+`trailbase/runtime/app/pages/`) and the ten filters through both `minijinja-js` (Node) and the Rust
 renderer, and diffed them. Result: **34/34 templates byte-identical** (CRLF, doctype case,
 `{% extends %}`/`{% include %}`/`{% import %}`, macros, loops, conditionals); filters **9/10
 identical**. The one divergence is `json`: `minijinja-js` serializes ctx objects as `{}` (its

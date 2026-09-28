@@ -46,7 +46,7 @@ Conventions in force:
 | `type` | the collection's type: `project`, `system`, `decision`, `reference`, `issue`, `task`, `note` |
 | `status` | `experimental` / `production` on systems; `proposed`/`accepted`/`superseded` on decisions; `todo`/`doing`/`blocked`/`done` on tasks; `active` elsewhere |
 | `system` | on references: which system(s) the note describes (`new`, `legacy`, `both`) |
-| `locator` | on systems: the directory the system lives in, e.g. `trailbase/src/` |
+| `locator` | on systems: the directory the system lives in, e.g. `trailbase/` |
 | `belongs_to` | a single **wikilink** to the parent document (a decision belongs to the migration project) |
 | `related_to` | a list of **wikilinks** to peers |
 | `decided_on` | on decisions: `YYYY-MM-DD`, when the choice was made |

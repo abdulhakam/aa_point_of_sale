@@ -17,7 +17,7 @@ endpoints, host globals, sizes).
 ## Found and fixed
 
 - **`USE_SQL_VIEWS`** — three docs still said the SQL report path was "on/true". It is **off**
-  (`trailbase/src/runtime/app/lib/reports.js:25`), turned off in `5ccebd8` because the SQL base
+  (`trailbase/runtime/app/lib/reports.js:25`), turned off in `5ccebd8` because the SQL base
   views diverge on fresh (empty-`dated`) invoices — a correctness reversal, not a speed one.
   Corrected in [[guest-report-performance-options]], [[report-parity-flakes-on-float-arithmetic]]
   and [[tb-0022-move-reports-to-sql]], each stating the earlier claim.
@@ -32,8 +32,8 @@ endpoints, host globals, sizes).
 
 ## Verified clean (no drift)
 
-- **Paths after the layout refactor**: all `trailbase/src/{host,runtime,tools,migrations,config.metadata}`
-  citations resolve; no live `runtime-js/…` path citations remain.
+- **Paths after the layout refactor**: all `trailbase/{host,runtime,tools,migrations,config.metadata}`
+  citations resolve; no live `runtime-js/…` or `trailbase/src/…` path citations remain.
 - **Endpoints**: `/reports/refresh`, `/reports/status`, `/worker/{pool}/step`
   (`route.ts:296`), `/invoice/context`, `/jobs/reconcile` all present.
 - **Host globals**: `trailbase`, `db`, `sqlite`, `kv`, `fs`, `http` (fetch), `render`, `time`,

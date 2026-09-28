@@ -24,7 +24,7 @@ the wrong table, and a reader who trusts the UI will not find a `company` column
 
 ## Current state, in code
 
-- `trailbase/src/runtime/app/lib/management.js` — `categories` has `label: "Item Companies"`,
+- `trailbase/runtime/app/lib/management.js` — `categories` has `label: "Item Companies"`,
   `singular: "Item Company"`; but `items` has
   `{ name: "category", label: "Company", type: "relation", source: "categories" }`.
 - `frontend/src/app/api/items.ts` — the same: a `category` field whose `baseProps.label` is
@@ -75,8 +75,8 @@ then the duplication the importer creates is expected.
    loses the business's own vocabulary if "Company" is what staff actually say.
 2. **Rename the concept in the schema.** `categories` → something unambiguous and `items.category` →
    the matching name. A real migration plus a rename across both frontends and every report column
-   that emits `company` from a category join (see `trailbase/src/runtime/app/lib/report-pages.js`'s
-   `COMPANY` column and `trailbase/src/runtime/app/lib/management.js`'s `resolve: "categories"`).
+   that emits `company` from a category join (see `trailbase/runtime/app/lib/report-pages.js`'s
+   `COMPANY` column and `trailbase/runtime/app/lib/management.js`'s `resolve: "categories"`).
 3. **Split them.** Add `items.company` as a real FK to `companies` if items genuinely need one, and
    keep `category` for the brand grouping — possibly renaming `category` to make the pair
    unambiguous ("brand" + "company").
@@ -99,18 +99,18 @@ The prior vault recorded a decision titled *"company replaces category"* (commit
 - [ ] Decide: label-only, rename, or add a real `items.company`
 - [ ] If the schema changes, write a **new** migration and keep the old one untouched
 - [ ] Update both frontends together: `items` label, the Management hub, and any report column that
-      renders a category as "Company" (`trailbase/src/runtime/app/lib/report-pages.js` defines a `COMPANY`
-      column; `trailbase/src/runtime/app/pages/reports/*/meta.json` reference `company` keys)
+      renders a category as "Company" (`trailbase/runtime/app/lib/report-pages.js` defines a `COMPANY`
+      column; `trailbase/runtime/app/pages/reports/*/meta.json` reference `company` keys)
 - [ ] Update [[data-model]] and [[glossary]] to match the outcome either way
 
 ## Evidence
 
 - `trailbase/README.md` § *Follow-ups* item 3, quoted above.
-- `trailbase/src/runtime/app/lib/management.js` — `categories` labelled "Item Companies" vs
+- `trailbase/runtime/app/lib/management.js` — `categories` labelled "Item Companies" vs
   `items.category` labelled "Company" and resolving to `categories`.
 - `frontend/src/app/api/items.ts` — the same mismatch, with `collectionName: "categories"`.
-- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql` — `categories` and
+- `trailbase/migrations/main/U1790208000__create_base_tables.sql` — `categories` and
   `companies` as separate tables; `party_companies` and `order_booker_companies` both referencing
   `companies`.
-- `trailbase/src/runtime/app/pages/reports/profit/meta.json` — a `company` filter sourced from
+- `trailbase/runtime/app/pages/reports/profit/meta.json` — a `company` filter sourced from
   `categories`, which is the label/source mismatch in its most user-visible form.

@@ -55,11 +55,11 @@ former Node app matched only 1/14 pages.
 
 ## Evidence
 
-- The Node-vs-guest differential harness (`trailbase/src/tools/guest-parity.mjs`, removed with the
+- The Node-vs-guest differential harness (`trailbase/tools/guest-parity.mjs`, removed with the
   Node app) — 14/14 pages matched (totals exact, rows equal after stripping raw ids); see
   [[guest-app-host-port]].
-- `trailbase/src/runtime/app/lib/data.js` — `readTable` ordering;
-  `trailbase/src/runtime/app/compute/format.js` — `compareText`; `trailbase/src/runtime/app/compute/views.js` —
+- `trailbase/runtime/app/lib/data.js` — `readTable` ordering;
+  `trailbase/runtime/app/compute/format.js` — `compareText`; `trailbase/runtime/app/compute/views.js` —
   O(n log n) `buildLedgerParty`.
 - [[guest-app-host-port]] — the measurements and the remaining gaps.
 

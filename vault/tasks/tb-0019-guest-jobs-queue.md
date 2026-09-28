@@ -21,7 +21,7 @@ Phase 6: a durable job queue with leases, retries and idempotent steps on the gu
 - [x] Idempotent effects (`INSERT OR IGNORE` on a unique step key), bounded retries with backoff
 - [x] API: `POST /jobs`, `GET /jobs/{id}`, `GET /jobs/{id}/result`, `POST /jobs/{id}/cancel`,
       `POST /jobs/reconcile`, `POST /jobs/{id}/steps/{seq}/recover`
-- [x] Tests: `trailbase/src/tools/jobs-check.mjs` — completion, result, one artifact per step,
+- [x] Tests: `trailbase/tools/jobs-check.mjs` — completion, result, one artifact per step,
       **genuine** idempotency under forced re-dispatch (attempt→2, artifacts unchanged), error paths
 - [x] A background poller — the host's minute `Job` now calls the app's reconcile route directly
       (the `ahscripts/jobs` discovery is broken; [[trailbase-runtime-js-scheduler-not-running-jobs]]).

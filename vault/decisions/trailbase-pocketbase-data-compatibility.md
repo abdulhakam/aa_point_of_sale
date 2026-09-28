@@ -67,7 +67,7 @@ all used that spelling. The migration carries a comment saying so.
   ([[trailbase-incremental-report-refresh]]).
 - The migration is a straight value translation — the table in [[data-model]] — implemented by the
   `import-from-v1` plugin, ported to the guest at
-  `trailbase/src/runtime/app/plugins/import-from-v1/` (the Node copy was deleted with `frontend-ssr` on
+  `trailbase/runtime/app/plugins/import-from-v1/` (the Node copy was deleted with `frontend-ssr` on
   2026-09-27). Verifying it is [[pos-0029-rebuild-v1-import-on-guest]].
 
 **Debt this creates**
@@ -85,7 +85,7 @@ all used that spelling. The migration carries a comment saying so.
 
 ## Evidence
 
-- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql` — the `created` /
+- `trailbase/migrations/main/U1790208000__create_base_tables.sql` — the `created` /
   `updated` defaults on all 17 tables; the `'recieving'` comment ("spelled the way PocketBase
   spelled it; the frontend, the old views and the ledger logic all used that spelling"); every
   `REAL` money column.

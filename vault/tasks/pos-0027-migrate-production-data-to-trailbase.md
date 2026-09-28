@@ -37,7 +37,7 @@ it", once [[pos-0029-rebuild-v1-import-on-guest]] has rebuilt it. The gap is pro
 
 The depot used for [[runtime-js-guest-platform]]'s development is the *same* depot the migration
 would write to, by default. Decide the target explicitly before running anything: either a scratch
-depot (started with `trail --depot=<depot> run --runtime-root-fs=trailbase/src/runtime` — see
+depot (started with `trail --depot=<depot> run --runtime-root-fs=trailbase/runtime` — see
 [[build-and-run]]) or the real one, knowingly. Nothing in the rebuilt importer or in the way the
 depot is started stops a migration being pointed at production.
 
@@ -50,7 +50,7 @@ depot is started stops a migration being pointed at production.
 - [ ] Record the source row counts per collection, as the reconciliation baseline
 - [ ] Confirm [[tb-0015-integer-cents-for-money]] has been decided (before or after, but knowingly)
 - [ ] Confirm the target depot, and that it is the intended one
-- [ ] Change `trailbase/src/config.textproto`'s `site_url` from the `http://localhost:4000` placeholder
+- [ ] Change `trailbase/config.textproto`'s `site_url` from the `http://localhost:4000` placeholder
       if the deployment will generate links
 
 ### 1. Accounts first
@@ -93,7 +93,7 @@ depot is started stops a migration being pointed at production.
 
 ### 6. Prove it
 
-- [ ] Run the guest smoke suite (`node trailbase/src/tools/guest-smoke.mjs`) against the migrated depot
+- [ ] Run the guest smoke suite (`node trailbase/tools/guest-smoke.mjs`) against the migrated depot
 - [ ] Walk the reports with real data and compare totals against the PocketBase screens for the same
       filters — this is where [[report-routes-ignore-date-defaults]] will need watching, since the two
       paths default to different windows

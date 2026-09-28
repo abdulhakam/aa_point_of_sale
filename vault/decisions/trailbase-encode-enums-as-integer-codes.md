@@ -73,7 +73,7 @@ real code**, so clients must test for unset with an explicit null check, never w
 - Reading a label needs a second request *unless* `expand` is used. Every FK is allow-listed for
   expand, so `?expand=type` inlines it, and allow-listing costs nothing until asked for.
 - Truthiness traps. `if (party.type)` is now wrong for a valid `0`, and `row.deleted ? …`
-  changed meaning once booleans became `0`/`1` too. `trailbase/src/runtime/app/lib/data.js`
+  changed meaning once booleans became `0`/`1` too. `trailbase/runtime/app/lib/data.js`
   coerces `0`/`1` explicitly for exactly this reason.
 - No JSON-schema validation is available on scalar columns, so the enum's write-time validation
   is the FK, and TrailBase's `schemas:` block is deliberately absent from
@@ -81,9 +81,9 @@ real code**, so clients must test for unset with an explicit null check, never w
 
 ## Evidence
 
-- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql` — the three
+- `trailbase/migrations/main/U1790208000__create_base_tables.sql` — the three
   vocabulary tables and their seeded `INSERT`s, plus every `INTEGER REFERENCES` column.
-- `trailbase/src/config.textproto` — the three vocabulary APIs granting `[READ, UPDATE, SCHEMA]`
+- `trailbase/config.textproto` — the three vocabulary APIs granting `[READ, UPDATE, SCHEMA]`
   and no `CREATE`; and the absence of any `schemas:` block, with the migration context.
 - `trailbase/README.md` § *Design decisions* → "**Enumerations are `INTEGER` + foreign key, not
   `TEXT` and not JSON.**" and the enum tables.

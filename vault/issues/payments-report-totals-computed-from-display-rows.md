@@ -29,7 +29,7 @@ Report** totals were nonsense:
 
 ### Cause
 
-`reportPayments` / `reportSalesPayments` (`trailbase/src/runtime/app/compute/reports.js`) mapped the
+`reportPayments` / `reportSalesPayments` (`trailbase/runtime/app/compute/reports.js`) mapped the
 raw `paymentsView` rows to **display** rows with `paymentRow()`, then passed those display rows to
 `paymentsTotals()` / `salesTotals()`. Those calculators are ports of the legacy
 `PaymentsView.tsx` `calculator` and read the **raw** shape:
@@ -42,7 +42,7 @@ raw `paymentsView` rows to **display** rows with `paymentRow()`, then passed tho
 - `p.paid` — dropped, so `totalPaid`/`invoiceTotal` were both wrong.
 
 A second, independent mismatch: the totals template
-(`trailbase/src/runtime/app/lib/report-pages.js`, `paymentsTotalsGroups`) labelled `t.totalSending`
+(`trailbase/runtime/app/lib/report-pages.js`, `paymentsTotalsGroups`) labelled `t.totalSending`
 as **Payable Amount**, but the legacy UI prints `total` = `invoiceTotal - totalPaid`.
 
 ### Fix
@@ -71,18 +71,18 @@ The ±0.02 is the intended 2 dp money backfill: the legacy view has two rows who
 more than two decimals, and the depot's values were rounded ([[money-is-2dp-everywhere]]); the sum
 moves by exactly that residue. It is not a calculation error.
 
-`trailbase/src/tools/guest-smoke.mjs` still passes **71/71**, including
+`trailbase/tools/guest-smoke.mjs` still passes **71/71**, including
 `payments payable amount is 800.00` and `payments recivable amount is 150.00`.
 
 ## Evidence
 
-- `trailbase/src/runtime/app/compute/reports.js` — `reportPayments`, `reportSalesPayments`,
+- `trailbase/runtime/app/compute/reports.js` — `reportPayments`, `reportSalesPayments`,
   `paymentsTotals`, `salesTotals`.
-- `trailbase/src/runtime/app/lib/report-pages.js` — `paymentsTotalsGroups`.
+- `trailbase/runtime/app/lib/report-pages.js` — `paymentsTotalsGroups`.
 - `frontend/src/app/app/reports/payments/PaymentsView.tsx` — the legacy `calculator` the totals
   mirror, and `frontend/src/app/app/reports/salesreport/PaymentsView.tsx` (same shape).
 - PocketBase `payments_view` (26,526 rows) + the legacy calculator ported to Node for the reference
-  column; `trailbase/src/tools/guest-smoke.mjs` for the regression.
+  column; `trailbase/tools/guest-smoke.mjs` for the regression.
 
 ## Related
 

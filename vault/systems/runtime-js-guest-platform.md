@@ -3,7 +3,7 @@ title: runtime-js guest platform (WebAssembly app host)
 type: system
 status: experimental
 maturity: new
-locator: trailbase/src/, guests/
+locator: trailbase/
 runtime: TrailBase 0.33.22 + wasmtime guest, Rust + QuickJS (rquickjs) + minijinja
 created: 2026-09-27
 tags: [pos, wasm, guests, runtime-js, rquickjs, quickjs, minijinja, experimental]
@@ -28,19 +28,19 @@ direct shift of the legacy UI onto this host, same look
 
 | Directory | What it is |
 |---|---|
-| `trailbase/src/` | The **source of truth**: `config.textproto`, `metadata.textproto`, `migrations/`, `runtime/`, `host/`, `tools/` |
-| `trailbase/src/host/` | The Rust host crate: `trailbase-wasm` SDK + `rquickjs` (QuickJS) + `minijinja`, built for `wasm32-wasip2` into a single `*.wasm` |
-| `trailbase/src/runtime/` | The frontend: `ahscripts/routes/_app/route.ts` (the dispatcher) and `app/` (views, pages, compute, lib, the report SQL) |
-| `trailbase/src/tools/` | The verification harnesses (`guest-smoke.mjs`, `view-equivalence.mjs`, …) |
+| `trailbase/` | The **source of truth**: `config.textproto`, `metadata.textproto`, `migrations/`, `runtime/`, `host/`, `tools/`, and the three `.bat` drivers |
+| `trailbase/host/` | The **compiled engine**: the Rust guest crate `trail_runtime_js` — `trailbase-wasm` SDK + `rquickjs` (QuickJS) + `minijinja`, built for `wasm32-wasip2` into a single `*.wasm`. Changing it needs `build.bat` |
+| `trailbase/runtime/` | The **editable application**: `ahscripts/routes/_app/route.ts` (the dispatcher) and `app/` (views, pages, compute, lib, the report SQL). Read at request time — no rebuild |
+| `trailbase/tools/` | The verification harnesses (`guest-smoke.mjs`, `view-equivalence.mjs`, …) |
 | `trailbase/traildepot/` | **Generated** by `clear_db.bat` + `build.bat`: source copies + `wasm/runtime_js.wasm` + `data/` |
-| `guests/` | The throw-away **Phase 0 spike** guest (TS + Vite + `jco componentize`) that proved the platform's assumptions — S1–S8 ([[trailbase-guest-wasm-spike-results]]) |
+| `guests/` | **Deleted 2026-09-28.** The throw-away **Phase 0 spike** guest (TS + Vite + `jco componentize`) that proved the platform's assumptions — S1–S8 ([[trailbase-guest-wasm-spike-results]]). Nothing loaded it once `host/` shipped, so the tree was removed; the spike findings survive in that note and in the [[trailbase-guest-aot-startup-cost]] / [[trailbase-guest-cpu-js-limits]] issues |
 
 The host is adapted from, and documented in, [[trail-runtime-js-reference]]; the runtime defaults it
 settled are in [[trailbase-guest-wasm-runtime-defaults]] and [[runtime-js-single-host]].
 
 ## How it works
 
-- **Routing**: one generic file route. `trailbase/src/host/src/lib.rs` resolves `ahscripts/routes/<path>/route.*`
+- **Routing**: one generic file route. `trailbase/host/src/lib.rs` resolves `ahscripts/routes/<path>/route.*`
   and, when no route folder matches, falls back to `ahscripts/routes/_app/route.ts` — a single
   dispatcher that implements the whole URL space (dynamic paths included).
 - **Business logic** is runtime JS/TS: `app/compute/*.js` is the **same** `compute/` code the Node app
@@ -89,9 +89,13 @@ server-side numbering, edit lease, idempotent create/lines, complete) is built a
 ## Known limitations (measured, not assumed)
 
 - **~20 s call deadline** and an interpreter-only JS engine (~1×10⁶ loop iterations/s): a long
-  synchronous handler fails, and a cold report build on production-sized data came within 1.3 s of
-  the cliff ([[trailbase-guest-cpu-js-limits]], [[guest-vs-node-performance]]).
-- Guest latency is multiples of Node's (~20–30 ms baseline vs ~3–7 ms).
+  synchronous handler fails. This is no longer hypothetical — on production-sized data
+  `profit`, `itemsales` and `paymentsbycompany` **returned 500 at the deadline**, and stay ~20 s
+  cold even at 1,000 rendered rows, because the cost is the JS pass over every row rather than the
+  render ([[trailbase-guest-cpu-js-limits]], [[guest-vs-node-performance]],
+  [[new-system-report-timings]], [[snapshot-persistence-hits-the-20s-deadline]]).
+- Guest latency is multiples of Node's (~20–30 ms baseline vs ~3–7 ms). The 9–18 ms figure in
+  `notes/trail-runtime-js-reference.md` is pre-cache and pre-dispatcher, and does not apply.
 - **Do not pass `--aot`**: it doubles size and is 2.3× slower to cold-load
   ([[trailbase-guest-aot-startup-cost]]).
 - TrailBase **subscriptions return 403**, so realtime push is unavailable; the app polls
@@ -104,7 +108,12 @@ server-side numbering, edit lease, idempotent create/lines, complete) is built a
 
 ## Status
 
-Experimental and verified against a throw-away depot, not production. It supersedes parts of
+Experimental, **not** wired to production and **not** currently holding production data. It has
+been exercised on a real-data-sized depot once (the V1 import, 60,245 records, then timing the
+reports — [[new-system-report-timings]], [[report-performance-baseline]]), and that depot has since
+been reset ([[tb-0024-flatten-new-system-layout]]). The report-parity differential that established
+14/14 against the legacy app can no longer be re-run
+([[guest-parity-differential-not-reproducible]]). This system supersedes parts of
 [[trailbase-migration]]'s plan for the app host; the report arithmetic, jobs, money handling and the
 invoice design all have their own decisions recorded in this vault.
 

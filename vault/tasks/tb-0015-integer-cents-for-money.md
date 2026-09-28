@@ -55,7 +55,8 @@ are multiplied into integers rather than summed.
 
 - **The new database is empty.** After [[pos-0027-migrate-production-data-to-trailbase]] it is not,
   and the change becomes a data migration over real rows plus a reconciliation.
-- **There is one migration file.** A change now is a new migration against a scaffold; a change
+- **There are four migration files**, not one: the base tables plus the job queue, 2 dp money
+  rounding and invoice entry. A change now is a new migration against a scaffold; a change
   later is a schema change against live data with the checksum hazard attached
   ([[trailbase-stale-depot-skips-migration]]).
 - **The parity oracle is available.** The old view SQL is preserved and the smoke test pins six
@@ -70,11 +71,11 @@ are multiplied into integers rather than summed.
 - [ ] Decide `invoiceNo`: `INTEGER` rather than cents
 - [ ] Write a **new** migration converting every column (a scaffold-era change; keep the applied one
       untouched)
-- [ ] Update `trailbase/src/runtime/app/compute/views.js` and `trailbase/src/runtime/app/compute/reports.js`
+- [ ] Update `trailbase/runtime/app/compute/views.js` and `trailbase/runtime/app/compute/reports.js`
       so the arithmetic works in integer units, and keep the `round2` boundaries in the same places
-- [ ] Update `trailbase/src/runtime/app/lib/management.js` and `frontend/src/app/api/items.ts` field
+- [ ] Update `trailbase/runtime/app/lib/management.js` and `frontend/src/app/api/items.ts` field
       metadata
-- [ ] Re-run the guest smoke suite (`node trailbase/src/tools/guest-smoke.mjs`) and confirm all 71
+- [ ] Re-run the guest smoke suite (`node trailbase/tools/guest-smoke.mjs`) and confirm all 71
       checks still pass, including the six pinned amounts
       (`91.00`, `731.00`, `4510.00`, `800.00`/`150.00`, `150.00`, `403.85`/`161.54`)
 - [ ] Update [[data-model]] and explain the unit in the conventions section

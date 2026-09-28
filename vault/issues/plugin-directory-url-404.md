@@ -18,7 +18,7 @@ plugin page) was unreachable by its own link — the trailing-slash branch in th
 
 ## Cause
 
-`trailbase/src/runtime/ahscripts/routes/_app/route.ts` served plugin files with
+`trailbase/runtime/ahscripts/routes/_app/route.ts` served plugin files with
 
 ```ts
 const rel = path.slice("/plugins/".length);

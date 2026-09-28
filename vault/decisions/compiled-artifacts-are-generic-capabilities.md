@@ -92,14 +92,14 @@ Concretely:
 
 ## Evidence
 
-- `trailbase/src/host/src/render.rs` — minijinja + the ten ported filters, exercised as a generic
+- `trailbase/host/src/render.rs` — minijinja + the ten ported filters, exercised as a generic
   `render.html/render.string` capability.
-- `trailbase/src/host/src/api.rs`, `trailbase/src/host/src/lib.rs` — the generic bridges (render,
+- `trailbase/host/src/api.rs`, `trailbase/host/src/lib.rs` — the generic bridges (render,
   SQL, response shaping); the host is described as "architecture only" in
   [[runtime-js-single-host]].
-- `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — the generic runtime file router; all app
+- `trailbase/runtime/ahscripts/routes/_app/route.ts` — the generic runtime file router; all app
   routes and report dispatch are runtime JS/TS.
-- `trailbase/src/runtime/app/compute/*.js`, `app/reports/sql/views/*.sql`, `app/views/**` — the
+- `trailbase/runtime/app/compute/*.js`, `app/reports/sql/views/*.sql`, `app/views/**` — the
   runtime authoring surface that composes the capabilities.
 - [[runtime-js-single-host]] — the accepted single-host packaging this reframes as an optimization.
 

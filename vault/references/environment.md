@@ -35,20 +35,29 @@ ports and throw-away depots:
 
 | Port | Used for |
 |---|---|
-| `4000` | the real TrailBase depot ([[trailbase]]) |
-| `4001` | Phase-0 spike depot (`guests/spikes/depot`, `--runtime-root-fs=guests/spikes/app`) |
+| `4000` | the real TrailBase depot ([[trailbase]]) — **the one and only server** |
+| `4001` | Phase-0 spike depot — **retired**; the `guests/` tree was deleted on 2026-09-28 |
 | `4002` | render/spike depot during the port |
-| `4003` | the app depot used by the smoke / jobs / management / invoice checks |
+| `4003` | **not a server** — only the default `GUEST_BASE` of `management-check.mjs`, `jobs-check.mjs` and `invoice-check.mjs`, which point at a depot you started yourself |
+| `4322` | the depot `guest-smoke.mjs` boots for itself |
+
+> **There is one server, not two.** The old docs described a "TrailBase on :4000" and a "guest
+> frontend on :4003". In fact `trailbase/RUN.BAT:45` starts a single `trail run` with
+> `--runtime-root-fs=%DEPOT%\runtime`, so the guest is a component of that server and the whole app
+> is served from `127.0.0.1:4000` — same origin as the record APIs (`guest-smoke.mjs` says so
+> outright: `FE = TB`). `:4003` and `:4322` are harness conventions only.
 
 Key paths:
 
 | Path | Role |
 |---|---|
-| `trailbase/src/host/target/wasm32-wasip2/release/trail_runtime_js.wasm` | the built host (git-ignored) |
-| `trailbase/src/runtime/` | the `ahscripts/` dispatcher and `app/` (views, pages, compute, lib, SQL) the host reads — pass this as `--runtime-root-fs` |
-| `guests/` | the Phase-0 spike guest (TS + Vite + `jco`); `guests/spikes/depot` is a scratch depot |
-| `trailbase/src/tools/` | the verification harnesses (`guest-smoke`, `jobs-check`, `management-check`, `invoice-check`, `view-equivalence`, …) |
-| `%TEMP%\kilo\aa-*-depot` | throw-away depots used by those harnesses |
+| `trailbase/host/target/wasm32-wasip2/release/trail_runtime_js.wasm` | the built host (git-ignored) |
+| `trailbase/runtime/` | the editable app: `ahscripts/` dispatcher and `app/` (views, pages, compute, lib, SQL) the host reads. **Edit here**, then re-sync |
+| `trailbase/traildepot/runtime/` | **what `--runtime-root-fs` is actually given** — a generated copy of the above, produced by `clear_db.bat`. Editing `trailbase/runtime/` alone does nothing until that re-sync (the failure in [[plugin-directory-url-404]]) |
+| `trailbase/.tbdemo-guest/depot` | the throw-away depot `guest-smoke.mjs` creates and deletes |
+| `%TEMP%\kilo\aa-perf-depot` | the production-sized depot `view-equivalence.mjs` and `verify-legacy-views.mjs` read **read-only** via `DEPOT_DB`. ⚠️ Its `migrations/main/` holds only 3 migrations — it predates `U1790300200__create_invoice_entry_tables` and is one schema behind the source |
+| `guests/` | **deleted 2026-09-28** — was the Phase-0 spike guest (TS + Vite + `jco`) and its scratch depot |
+| `trailbase/tools/` | the verification harnesses (`guest-smoke`, `jobs-check`, `management-check`, `invoice-check`, `view-equivalence`, `extract-legacy-views`, `verify-legacy-views`, `uuid`) |
 
 `--runtime-root-fs=<dir>` is the WASI sandbox root: `app/` must live under it, and `..` escapes are
 refused ([[trailbase-guest-wasm-runtime-defaults]], S3). Bind `127.0.0.1` explicitly — TrailBase
@@ -68,17 +77,17 @@ defaults to IPv6-only (see above).
 All four are `NEXT_PUBLIC_*`, so they are compiled into the browser bundle — never put a secret
 here.
 
-### Guest frontend (`trailbase/src/`) — no `.env`
+### Guest app (`trailbase/`) — no `.env`
 
 The guest app is served by TrailBase and reads no `.env`: its settings are the depot's
-`config.textproto` (below) plus the runtime files under `trailbase/src/runtime/app/`. The former Node
+`config.textproto` (below) plus the runtime files under `trailbase/runtime/app/`. The former Node
 `frontend-ssr` `.env` — including its inert `CACHE_TTL_SECONDS` and its `SESSION_SECRET` — was
 removed with that app on 2026-09-27 ([[guest-ui-is-a-direct-shift-of-legacy]]). The guest uses
 TrailBase's own auth cookies, so there is no second session secret to rotate
 ([[guest-outbound-http-and-login]]). The `APP_NAME` shown in its header comes from the
 `config.textproto` application name.
 
-### `trailbase/src/config.textproto` — not environment variables
+### `trailbase/config.textproto` — not environment variables
 
 TrailBase is configured by file, not by env vars. The values that behave like environment
 settings:
@@ -130,12 +139,21 @@ Three different business identities appear in configuration:
 |---|---|
 | `frontend/.env.local` | `SAMPLE TRADERS` + a Sample City address + phone |
 | `frontend/.env.local.example` | `AA_W_POS` + `abc 123 xyz` + `123 abc 789` |
-| guest frontend (`trailbase/src/config.textproto` application name) | `AA Point of Sale` |
+| guest app (`trailbase/runtime/app/config/business.json`) | `SAMPLE TRADERS` + the same Sample City address + phone |
+| guest app (`trailbase/config.textproto` application name) | `AA Point of Sale` |
 
-Before a cutover, confirm which is correct: the legacy app prints the business name, address
-and phone on invoices, while the guest app only has an application name in its header. Losing
-the address/phone from the printout would be a real regression — the new side has no equivalent
-variables yet, which the direct-shift work must fix ([[guest-ui-is-a-direct-shift-of-legacy]]).
+**Resolved 2026-09-28.** The earlier statement that "the new side has no equivalent variables yet"
+was stale: `trailbase/runtime/app/config/business.json` carries the legacy values verbatim
+(`SAMPLE TRADERS`, the Sample City address, the phone) and the `tb-0023` box for reproducing the
+printout header is ticked. Two identities remain, both benign:
+
+- the `config.textproto` application name is still `AA Point of Sale`, used for the header/app
+  label while `business.json` carries the printout identity — worth collapsing, not a blocker;
+- `frontend/.env.local.example` is the legacy *template*, and its `AA_W_POS` placeholder was never
+  the running value.
+
+Before a cutover, confirm the printout still reads `business.json` and not the application name
+([[guest-ui-is-a-direct-shift-of-legacy]]).
 
 ## Related
 

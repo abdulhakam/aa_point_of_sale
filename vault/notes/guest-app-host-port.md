@@ -19,12 +19,12 @@ existed).
 
 ## How it is put together
 
-- **Host change:** `trailbase/src/host/src/lib.rs` gained a dispatcher fallback — a request that matches
+- **Host change:** `trailbase/host/src/lib.rs` gained a dispatcher fallback — a request that matches
   no `ahscripts/routes/<path>/route.*` is routed to `ahscripts/routes/_app/route.ts`. It also
   passes the resolved `user` (`req.user()`), `query`, and more headers into the JS request, and
   understands `{ html }`, `{ redirect, status?, headers? }`, `{ text, status?, headers? }` and
   `{ body, contentType, status?, headers? }` responses (the last for static files, ETags, 304s).
-- **Dispatcher** (`trailbase/src/runtime/ahscripts/routes/_app/route.ts`): one file, no imports. It runs
+- **Dispatcher** (`trailbase/runtime/ahscripts/routes/_app/route.ts`): one file, no imports. It runs
   inside an **IIFE and installs `GET`/`POST`/`PATCH`/`DELETE` on `globalThis`**, because the host
   re-evaluates the file in the same persistent QuickJS context per request — top-level `const`s
   would be a redeclaration error on the second request.
@@ -33,8 +33,10 @@ existed).
   `new Function`. Loaded modules are cached on `globalThis` (so an app-module edit needs a
   restart; the dispatcher file itself is read per request).
 - **App modules:** `/app/compute/{format,ids,views,reports}.js` are the **verbatim** shared files;
-  `/app/lib/{entities,data,pages,plugins,http,report-pages,reports}.js` are guest ports of the
-  former Node frontend's `src/lib` modules (async `fs` instead of `node:fs`).
+  `/app/lib/` holds guest ports of the former Node frontend's `src/lib` modules (async `fs` instead
+  of `node:fs`) — now **13** of them: `entities`, `data`, `pages`, `plugins`, `http`,
+  `report-pages`, `reports`, plus the later additions `sqlviews`, `queue`, `management`,
+  `invoicing`, `paths`.
 - **Auth:** TrailBase's own cookie (`auth_token`, `SameSite=Strict`) resolved by the host into
   `req.user`; unauthenticated page requests redirect to `/login`, whose POST redirects to
   TrailBase's `/_/auth/login`. No second session layer ([[trailbase-guest-wasm-runtime-defaults]]).
@@ -68,7 +70,7 @@ follows input order):
 
 ## Verified: report parity (14/14)
 
-`trailbase/src/tools/guest-parity.mjs` logs into both apps against the **same** TrailBase server and
+`trailbase/tools/guest-parity.mjs` logs into both apps against the **same** TrailBase server and
 diffs each declarative page's computed data (`result.totals` exact; `result.rows` after stripping
 raw id fields, which legitimately differ because the guest base64-*standard* encodes uuids and the
 record API uses url-safe).
@@ -85,7 +87,7 @@ general ledger `recievable 26079984.69 / payable 19572794.91 / cash -9207712.93`
 
 ## Verified: management CRUD
 
-`trailbase/src/tools/management-check.mjs` drives create → list → update → verify → delete → verify
+`trailbase/tools/management-check.mjs` drives create → list → update → verify → delete → verify
 against the guest: sections (hard delete) and items (relation + numeric fields). All checks pass.
 Writes are direct SQL through a new `db.execute` bridge, with BLOBs bound as `unhex(hex)` and
 numbers/enums as `CAST(? AS …)`, and ids emitted as URL-safe base64
@@ -93,7 +95,7 @@ numbers/enums as `CAST(? AS …)`, and ids emitted as URL-safe base64
 
 ## Verified: guest smoke (71/71)
 
-`trailbase/src/tools/guest-smoke.mjs` boots a throw-away depot with the guest component, seeds the
+`trailbase/tools/guest-smoke.mjs` boots a throw-away depot with the guest component, seeds the
 **same** dataset the former Node smoke used (`frontend-ssr/scripts/smoke.js`, removed 2026-09-27),
 logs in **through the app's own `/login`**
 (bad password → 401, good → 303 + cookies) and exercises every screen. **71/71 checks pass**,
@@ -118,9 +120,11 @@ management write, `changed` includes `sections` and `rebuilt` includes `refs` �
 
 A durable queue (`job`/`job_step`/`job_artifact`) with atomic `UPDATE … RETURNING` claims, lease
 expiry recovery, bounded retries and idempotent effects runs on the guest
-([[jobs-in-process-durable-queue]]). `trailbase/src/tools/jobs-check.mjs` passes: submit → done with
+([[jobs-in-process-durable-queue]]). `trailbase/tools/jobs-check.mjs` passes: submit → done with
 the right result, one artifact per step, and **re-dispatch after a forced lease expiry adds no
-artifact**. Steps run in-process (no HTTP worker fan-out — the host's `fetch` is a stub).
+artifact**. Steps run in-process by default; the fan-out path POSTs to `/worker/1/step` over the
+host's real `http.request` bridge, added by [[guest-outbound-http-and-login]] — the "fetch is a
+stub" wording here predated it.
 
 ## Still to do (records honestly)
 

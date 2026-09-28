@@ -6,12 +6,19 @@ decided_on: 2026-09-27
 created: 2026-09-27
 tags: [trailbase, layout, build, depot, wasm, structure]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[runtime-js-guest-platform]]", "[[trailbase]]", "[[build-and-run]]", "[[environment]]", "[[runtime-js-single-host]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[trailbase]]", "[[build-and-run]]", "[[environment]]", "[[runtime-js-single-host]]", "[[trailbase-flat-source-layout]]"]
 ---
 
-# trailbase layout: src/ is the source of truth, traildepot/ is generated
+# trailbase layout: the sources are the truth, traildepot/ is generated
 
-## Decision
+> **Partly superseded on 2026-09-28** — the `src/` indirection was removed: everything now sits
+> directly under `trailbase/` (`host/`, `runtime/`, `tools/`, `migrations/`,
+> `config.textproto`, `metadata.textproto`). The `traildepot/`-is-generated half of this decision
+> still stands, as does the sandbox-root reasoning. The text below is kept as the record of what
+> was decided on 2026-09-27; read it as history, not as the current tree. See
+> [[trailbase-flat-source-layout]].
+
+## Decision (2026-09-27, as originally taken)
 
 The whole new system lives under `trailbase/`, with a clean source/artefact split:
 
@@ -65,7 +72,7 @@ The former top-level `runtime-js/` directory is retired: its host, frontend and 
 
 - `.gitignore` files: `trailbase/.gitignore` ignores the generated depot copies and runtime state;
   `trailbase/src/.gitignore` ignores `host/target/` and `src/.tbdemo-guest/`.
-- The harnesses moved to `trailbase/src/tools/` and were repointed (they now read `src/` for
+- The harnesses moved to `trailbase/tools/` and were repointed (they now read `src/` for
   config/migrations, `traildepot/wasm/` for the built component, and `src/runtime/` for
   `--runtime-root-fs`). `guest-smoke.mjs` still passes **71/71** from the new layout.
 - Vault path references were updated from `runtime-js/{site,tools,src,target}` to
@@ -76,7 +83,7 @@ The former top-level `runtime-js/` directory is retired: its host, frontend and 
 - `trailbase/clear_db.bat`, `trailbase/build.bat`, `trailbase/RUN.BAT` (2026-09-27).
 - `clear_db.bat` assembled `traildepot/` (config + metadata + migrations + runtime) from `src/`, and
   `build.bat` finished in 1m12s and copied `runtime_js.wasm` into `traildepot/wasm/`.
-- `node trailbase/src/tools/guest-smoke.mjs` — **71/71**.
+- `node trailbase/tools/guest-smoke.mjs` — **71/71**.
 
 ## Related
 

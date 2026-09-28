@@ -15,7 +15,7 @@ related_to: ["[[new-system-report-timings]]", "[[guest-report-performance-option
 
 A generic **materialised-snapshot** capability, implemented entirely in runtime files (no host
 rebuild), to work around the host's `thread_local` QuickJS state
-(`trailbase/src/host/src/runtime.rs`), where each of the 4 runtime threads has its own snapshot and
+(`trailbase/host/src/runtime.rs`), where each of the 4 runtime threads has its own snapshot and
 therefore rebuilt every view inside the request:
 
 - `app/lib/reports.js` — the built views are persisted to `mview(name, data)` (one JSON blob per
@@ -72,8 +72,8 @@ shared, inspectable store) but not the answer by itself.
 
 ## Evidence
 
-- `trailbase/src/runtime/app/lib/reports.js` — `mview` persistence + per-view hydration.
-- `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — reconcile drives `refresh`.
+- `trailbase/runtime/app/lib/reports.js` — `mview` persistence + per-view hydration.
+- `trailbase/runtime/ahscripts/routes/_app/route.ts` — reconcile drives `refresh`.
 - `trailbase/traildepot/data/main.db` — `mview` (14 views, sizes above), `mview_meta`.
 - Server log `[mview] hydrate 3/3`, `[mview] persist N views`, and the 20 s `Error calling WASM
   component` for `profit` / `paymentsbycompany`.

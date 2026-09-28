@@ -22,22 +22,22 @@ the workspace: `trade-and-distribution-management-system-specification.html` and
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs |
-| [[runtime-js-guest-platform]] | `trailbase/src/`, `guests/` | **New / experimental** | TrailBase guest-WASM app host: the new frontend (dashboard, reports, management) |
+| [[runtime-js-guest-platform]] | `trailbase/` | **New / experimental** | TrailBase guest-WASM app host: the new frontend (dashboard, reports, management) |
 | [[backend]] | `backend/` | **Legacy / production** | PocketBase 0.22.55 — holds the production data |
 | [[frontend]] | `frontend/` | **Legacy / production** | Next.js 14 POS — what staff use |
 
 ```text
 PRODUCTION (live)                      IN PROGRESS (replacement)
 ┌───────────────────┐                  ┌───────────────────┐
-│ frontend/         │  PocketBase SDK  │ trailbase/src/       │
+│ frontend/         │  PocketBase SDK  │ trailbase/        │
 │ Next.js 14 +      │ ───────────────▶ │ guest-WASM:       │ ───────────────▶ ┌────────────┐
 │ Mantine           │                  │ Rust + QuickJS +  │                  │ trailbase/ │
 └───────────────────┘                  │ minijinja         │                  │ 17 tables  │
         (the whole product:            └───────────────────┘                  │ record APIs│
          invoices, printing,                          ▲                        └────────────┘
-         cash memo, reports)                          │ no production data yet;
+         cash memo, reports)                          │ no production data currently loaded;
 ┌───────────────────┐                                 │ no legacy client yet
-│ backend/          │  ◀── the data to migrate ───────┘
+│ backend/          │  ◀── the data to re-import ─────┘
 │ PocketBase 0.22.55│
 └───────────────────┘
 ```
@@ -52,21 +52,25 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 **Done and verified**
 
 - TrailBase schema: 17 `STRICT` tables, 17 `record_apis`, seeded enumeration vocabularies,
-  indexes chosen from access paths, `updated` triggers, all in one migration that applies
-  clean to an empty depot.
+  indexes chosen from access paths, `updated` triggers. That is **one** migration
+  (`U1790208000__create_base_tables`); three more have since been added for the job queue
+  (`U1790300000`), 2 dp money rounding (`U1790300100`) and invoice entry (`U1790300200`), and they
+  apply clean on an empty depot too.
 - TrailBase behaviour exercised over HTTP against a seeded depot: expands, `filter[…]`
   operators, FK rejection (`POST parties {"type":9}` → `400 db constraint: fk`), partial
   unique index on `barcode`, duplicate link-pair rejection, `0`/`1` booleans.
-- The guest frontend: dashboard, 14 reports + 4 ledgers, 7 management entities, a declarative
+- The guest frontend: dashboard, 10 reports + 4 ledgers, 7 management entities, a declarative
   page host, a plugin hub, login, fingerprint refresh, KV report cache and a durable job
-  queue; `trailbase/src/tools/guest-smoke.mjs` at 71/71.
+  queue; `trailbase/tools/guest-smoke.mjs` at 71/71.
 - Guest report arithmetic cross-checked against the preserved PocketBase view SQL
   with hand-computed amounts — see [[reports-and-ledgers]].
 
 **Not done**
 
-- No production data has been migrated from PocketBase to TrailBase (the guest import plugin
-  exists but is unverified — [[pos-0029-rebuild-v1-import-on-guest]]).
+- No production data is currently loaded on the new side. The `import-from-v1` plugin **has** been
+  run against `traildepot` — 60,245 records, 0 errors ([[new-system-report-timings]]) — but the
+  depot was reset afterwards ([[tb-0024-flatten-new-system-layout]]), so the import must be re-run
+  and reconciled ([[pos-0029-rebuild-v1-import-on-guest]], [[pos-0027-migrate-production-data-to-trailbase]]).
 - The legacy Next.js app still reads and writes PocketBase; nothing points it at TrailBase.
 - Invoicing, cash memo, expenses and printing have no guest equivalent yet
   ([[guest-frontend-feature-parity-gaps]]).

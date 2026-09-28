@@ -15,12 +15,12 @@ related_to: ["[[backend]]", "[[reports-and-ledgers]]"]
 Two files cite the preserved PocketBase view SQL as `../full_database_schema.sql` and
 `../dltbl/views_from_pb/U1776088644__create_views.sql`, relative to their own directory (a third
 citation, in the removed Node frontend's `README.md`, went with `frontend-ssr` on 2026-09-27 — and
-its successor `trailbase/src/host/README.md` does not repeat it):
+its successor `trailbase/host/README.md` does not repeat it):
 
 | File | Line | Text |
 |---|---|---|
 | `trailbase/README.md` | 4, 128 | "schema in `../full_database_schema.sql`", "preserved verbatim in `../full_database_schema.sql` and `../dltbl/views_from_pb/U1776088644__create_views.sql`" |
-| `trailbase/src/runtime/app/compute/views.js` | 5 | "preserved verbatim in `full_database_schema.sql` / `dltbl/views_from_pb/U1776088644__create_views.sql`" |
+| `trailbase/runtime/app/compute/views.js` | 5 | "preserved verbatim in `full_database_schema.sql` / `dltbl/views_from_pb/U1776088644__create_views.sql`" |
 
 From `aa_point_of_sale/`, `../` resolves to `.../PRODUCTION_FULL/`, which does **not** contain
 either artefact. A search of that tree finds nothing.

@@ -21,7 +21,7 @@ as **text**.
 
 ## Decision
 
-1. **Expose a real write path.** `trailbase/src/host/src/api.rs` and `api/sqlite.rs` now register
+1. **Expose a real write path.** `trailbase/host/src/api.rs` and `api/sqlite.rs` now register
    `db.execute` / `sqlite.execute` / `sqlite.run` on `trailbase_wasm::db::execute` (rows affected),
    instead of aliasing them to the read-only `query`.
 2. **BLOB columns are bound as hex and wrapped in `unhex(?)`.** With SQLite ≥ 3.41 (the depot runs
@@ -60,10 +60,10 @@ correct. A write calls `invalidate()` on the guest report service so the next re
 
 ## Evidence
 
-- `trailbase/src/host/src/api.rs`, `trailbase/src/host/src/api/sqlite.rs` — the `execute` bridge.
-- `trailbase/src/runtime/app/lib/management.js` — `base64ToHex`, `createRow`/`updateRow`/`deleteRow`,
+- `trailbase/host/src/api.rs`, `trailbase/host/src/api/sqlite.rs` — the `execute` bridge.
+- `trailbase/runtime/app/lib/management.js` — `base64ToHex`, `createRow`/`updateRow`/`deleteRow`,
   `syncLinks`.
-- `trailbase/src/tools/management-check.mjs` — create → list → update → verify → delete → verify for
+- `trailbase/tools/management-check.mjs` — create → list → update → verify → delete → verify for
   sections (hard delete) and items (relation + numeric fields): all checks pass.
 - Report parity was unaffected at the time: the Node-vs-guest differential (`guest-parity.mjs`,
   removed with the `frontend-ssr` baseline) was still 14/14 after the id-encoding change.

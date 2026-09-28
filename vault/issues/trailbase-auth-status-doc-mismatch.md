@@ -17,7 +17,7 @@ Two places in the same repository state the opposite thing about the same behavi
 | Source | Claim |
 |---|---|
 | `trailbase/README.md`, § *Access control* | "An unauthenticated request is answered with **403** (no permission), not 401." |
-| `trailbase/src/config.textproto`, the `record_apis` comment block | "Nothing here is public: an unauthenticated request gets **401**." |
+| `trailbase/config.textproto`, the `record_apis` comment block | "Nothing here is public: an unauthenticated request gets **401**." |
 | The former Node frontend's `src/lib/trailbase.js` (removed 2026-09-27), verified-behaviour header | "Unauthenticated requests are answered `403`." |
 
 So two sources say **403** (including the one that records it as *measured*), and the configuration
@@ -71,10 +71,10 @@ bounded) cost, not a bug that can corrupt state.
 - `trailbase/README.md` § *Access control* — "An unauthenticated request is answered **403** (no
   permission), not 401." and § *Validation* — "unauthenticated `GET /api/records/v1/items` and
   `…/party_types/schema` return `403` with the shipped authenticated-only config."
-- `trailbase/src/config.textproto` lines ~56–59 — "NOTE: the old PocketBase collection rules were `""`,
+- `trailbase/config.textproto` lines ~56–59 — "NOTE: the old PocketBase collection rules were `""`,
   i.e. world-accessible. Nothing here is public: an unauthenticated request gets 401."
 - The former Node frontend's `src/lib/trailbase.js` (removed 2026-09-27) — the header comment
   "Unauthenticated requests are answered `403`."
 - The former Node frontend's `src/lib/http.js` (removed 2026-09-27) — `trailbaseErrorHandler`,
-  which was status-agnostic. The guest's `trailbase/src/runtime/app/lib/http.js` is a small
+  which was status-agnostic. The guest's `trailbase/runtime/app/lib/http.js` is a small
   page/query-string helper and has no TrailBase error path.

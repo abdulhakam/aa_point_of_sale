@@ -23,7 +23,7 @@ carry `CHECK (is_uuid_v7(col))` on it. The first cut of `invoice_lock` did, and 
 failed with `CHECK constraint failed: is_uuid_v7("user")`.
 
 Fixed by declaring the column `"user" BLOB NOT NULL` with no version check
-(`trailbase/src/migrations/main/U1790300200__create_invoice_entry_tables.sql`), while our own
+(`trailbase/migrations/main/U1790300200__create_invoice_entry_tables.sql`), while our own
 ids (`invoice`, `line`) keep the uuid_v7 check.
 
 Also note the id arrives over the guest API as a **canonical UUID string with dashes**
@@ -33,7 +33,7 @@ base64-decoding (the invoice routes handle both shapes).
 ## Evidence
 
 - `_user` row above, read from the depot's `main.db`.
-- The migration and `trailbase/src/runtime/ahscripts/routes/_app/route.ts` (`userHex`).
+- The migration and `trailbase/runtime/ahscripts/routes/_app/route.ts` (`userHex`).
 
 ## Related
 

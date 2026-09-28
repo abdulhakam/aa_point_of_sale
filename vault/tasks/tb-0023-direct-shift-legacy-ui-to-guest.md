@@ -30,7 +30,7 @@ reference ([[legacy-ui-reference-captures]]).
       print queue, standalone invoice view, and the cash-memo surfaces.
 - [x] Reproduce the legacy printout header (`SAMPLE TRADERS` + address + phone) as configuration
       rather than the `APP_NAME` placeholder ([[environment]]). Done 2026-09-27: the identity is
-      read from the optional `trailbase/src/runtime/app/config/business.json` (legacy values as the
+      read from the optional `trailbase/runtime/app/config/business.json` (legacy values as the
       built-in default in `route.ts`), and feeds the header brand and the report `.print-head`.
       Verified by overriding the file and seeing the rendered brand change without a rebuild.
 - [ ] Rule on the category-4 differences in [[guest-frontend-feature-parity-gaps]] (opening

@@ -39,13 +39,13 @@ The captured legacy UI is the reference for this work
   vault documents are gone. The runtime-JS work proved the model (minijinja render, shared
   `compute/`, declarative pages, jobs, fingerprint refresh); the Rust guest is now the host.
 - Still-valid decisions taken during that experiment are kept but **retargeted to the guest**:
-  where the code lived under `frontend-ssr/` it now lives under `trailbase/src/runtime/app/`.
+  where the code lived under `frontend-ssr/` it now lives under `trailbase/runtime/app/`.
 - The guest's current screens must be restyled to match legacy, and the missing transactional
   screens must be built ([[guest-frontend-feature-parity-gaps]],
   [[tb-0023-direct-shift-legacy-ui-to-guest]]).
 - The Node `frontend-ssr/plugins/import-from-v1/` copy of the data-migration tool was removed
   with the directory. A ported copy already exists on the guest at
-  `trailbase/src/runtime/app/plugins/import-from-v1/`; verifying it is
+  `trailbase/runtime/app/plugins/import-from-v1/`; verifying it is
   [[pos-0029-rebuild-v1-import-on-guest]].
 
 ## Alternatives considered
@@ -59,10 +59,10 @@ The captured legacy UI is the reference for this work
 ## Evidence
 
 - `frontend-ssr/` was deleted from the tree on 2026-09-27 (88 tracked files).
-- The guest is self-contained: `trailbase/src/runtime/app/compute/*.js` carries the shared arithmetic,
-  `trailbase/src/runtime/app/lib/*` the ported modules, and the Node-only id helper now lives at
-  `trailbase/src/tools/uuid.mjs`.
-- The Node-comparative harnesses (`trailbase/src/tools/guest-parity.mjs`, `perf-compare.mjs`) were
+- The guest is self-contained: `trailbase/runtime/app/compute/*.js` carries the shared arithmetic,
+  `trailbase/runtime/app/lib/*` the ported modules, and the Node-only id helper now lives at
+  `trailbase/tools/uuid.mjs`.
+- The Node-comparative harnesses (`trailbase/tools/guest-parity.mjs`, `perf-compare.mjs`) were
   deleted with the Node app; the guest's standalone checks (`guest-smoke.mjs`,
   `management-check.mjs`, `invoice-check.mjs`, `jobs-check.mjs`, `view-equivalence.mjs`) remain.
 - [[guest-app-host-port]] records the parity results that justified dropping the Node reference.

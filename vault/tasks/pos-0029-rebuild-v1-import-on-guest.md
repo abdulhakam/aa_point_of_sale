@@ -14,12 +14,12 @@ related_to: ["[[trailbase-client-side-migration-plugin]]", "[[pos-0027-migrate-p
 > Correction (2026-09-27): an earlier version of this task said the import tool had to be rebuilt
 > from scratch because `frontend-ssr/plugins/import-from-v1/` was deleted with the Node frontend.
 > That was wrong about the guest: a ported copy **already exists** at
-> `trailbase/src/runtime/app/plugins/import-from-v1/` (`meta.md` + `index.html`), committed in the
+> `trailbase/runtime/app/plugins/import-from-v1/` (`meta.md` + `index.html`), committed in the
 > tree. What is missing is not the code but verification.
 
 ## Current state
 
-- The guest plugin `trailbase/src/runtime/app/plugins/import-from-v1/` is present and tracked
+- The guest plugin `trailbase/runtime/app/plugins/import-from-v1/` is present and tracked
   (confirmed 2026-09-27). Its `meta.md` documents the full import: PocketBase REST → TrailBase
   record APIs in dependency order, id and enum translation, link-table expansion, optional
   clear/dry-run.
@@ -74,8 +74,8 @@ translated values; confirm the wipe path's plain-text `DELETE` tolerance; confir
 
 ## Evidence
 
-- `trailbase/src/runtime/app/plugins/import-from-v1/meta.md` — the ported plugin's own description.
-- `trailbase/src/runtime/app/lib/plugins.js` — the guest plugin registry.
+- `trailbase/runtime/app/plugins/import-from-v1/meta.md` — the ported plugin's own description.
+- `trailbase/runtime/app/lib/plugins.js` — the guest plugin registry.
 - `git log -- frontend-ssr/plugins/import-from-v1` — the deleted Node copy, for history.
 
 ## Related

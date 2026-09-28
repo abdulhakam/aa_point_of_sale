@@ -13,7 +13,7 @@ related_to: ["[[runtime-js-guest-platform]]", "[[backend]]"]
 The reports are the reason this rewrite exists, so their arithmetic is specified rather than
 implied. On the legacy side the arithmetic is SQL, inside PocketBase views ([[backend]]). On
 the new side there are no views at all — the same arithmetic is reimplemented in JavaScript
-in `trailbase/src/runtime/app/compute/views.js` and `trailbase/src/runtime/app/compute/reports.js`,
+in `trailbase/runtime/app/compute/views.js` and `trailbase/runtime/app/compute/reports.js`,
 deliberately reproducing the old
 view SQL so that report output matches for the same rows. The mapping is documented in
 `vault/references/reports-and-ledgers.md`, which is this file.
@@ -98,7 +98,7 @@ the caller assembles `ctx` from the warm snapshot:
 Note `productsale`'s title is **"Product Supply Summary"**, not "Product Sale Report" — the
 tile on the index is labelled with the latter. `ledgers/general` is the only report with no
 `refs` input, which is also why it is excluded from the warm-up list in
-`trailbase/src/runtime/ahscripts/routes/_app/route.ts`.
+`trailbase/runtime/ahscripts/routes/_app/route.ts`.
 
 The 4 ledger pages are reached at `/reports/ledgers/{area,booker,general,party}` and from
 `LEDGER_INDEX`; the other 11 from `REPORT_INDEX`.
@@ -124,7 +124,7 @@ from the legacy views.
 
 ## The assertions that pin the numbers
 
-The guest smoke suite (`node trailbase/src/tools/guest-smoke.mjs`) seeds a small consistent dataset
+The guest smoke suite (`node trailbase/tools/guest-smoke.mjs`) seeds a small consistent dataset
 through the
 record APIs and checks hand-computed values that must match the preserved view SQL — 71
 checks in total. The arithmetic ones:
@@ -141,7 +141,7 @@ checks in total. The arithmetic ones:
 The last row is the interesting one: it demonstrates that Payments By Company distributes a
 payment across companies **by revenue share**, not by direct attribution.
 
-Run it with `node trailbase/src/tools/guest-smoke.mjs` (see [[build-and-run]]). It boots its own
+Run it with `node trailbase/tools/guest-smoke.mjs` (see [[build-and-run]]). It boots its own
 throw-away TrailBase depot, so it does not touch development or production data.
 
 ## Where the old SQL is preserved

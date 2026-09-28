@@ -27,7 +27,7 @@ The plan's D3 wanted a separate Rust `minijinja` guest reached over HTTP.
 **`runtime-js` is the single app host for the first cut**, and rendering is **folded into it**
 rather than being a separate component:
 
-- A Rust `minijinja` module (`trailbase/src/host/src/render.rs`) is exposed to scripts as native
+- A Rust `minijinja` module (`trailbase/host/src/render.rs`) is exposed to scripts as native
   `render.html(name, ctxJson)` / `render.string(source, ctxJson)`. Templates load from
   `/app/views` (falling back to `/app/pages`); names resolve views-root-relative; the ten filters
   from the earlier Node frontend are ported; templates cache by mtime.
@@ -67,8 +67,8 @@ later option if isolation or the per-call deadline demands it.
 
 ## Evidence
 
-- `trailbase/src/host/src/render.rs` — the ported renderer and filters.
-- `trailbase/src/host/src/api.rs` — the `render` bridge; `trailbase/src/host/src/lib.rs` — the `{ html }` response.
+- `trailbase/host/src/render.rs` — the ported renderer and filters.
+- `trailbase/host/src/api.rs` — the `render` bridge; `trailbase/host/src/lib.rs` — the `{ html }` response.
 - Verified: `GET /page` → `200`, `content-type: text/html`, `{% extends "layout.html" %}` resolved,
   filters produced `1234.50`, `1 ctn 1 unit`, `24-Sep-2026`, `PROFIT REPORT`, `Yes`.
 - [[trail-runtime-js-reference]] — the adopted host and its measurements.

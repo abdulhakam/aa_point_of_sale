@@ -16,7 +16,7 @@ One screen: what exists, what is verified, what is not, and what could go wrong.
 | System | Directory | State | Verified how |
 | --- | --- | --- | --- |
 | [[trailbase]] | `trailbase/` | New / experimental | Migration applies clean to an empty depot; 17/17 record APIs resolve; behaviour exercised over HTTP on a seeded depot on `v0.33.15` and re-verified on `v0.33.22` |
-| [[runtime-js-guest-platform]] | `trailbase/src/`, `guests/` | New / experimental | Guest smoke **71/71** and differential **14/14** on a throw-away depot; management CRUD, fingerprint refresh, job queue and a first invoice-entry slice verified (`trailbase/src/tools/`) |
+| [[runtime-js-guest-platform]] | `trailbase/` | New / experimental | Guest smoke **71/71** and differential **14/14** on a throw-away depot; management CRUD, fingerprint refresh, job queue and a first invoice-entry slice verified (`trailbase/tools/`) |
 | [[backend]] | `backend/` | **Legacy / production** | Holds the production data; 23 migrations; PocketBase 0.22.55 |
 | [[frontend]] | `frontend/` | **Legacy / production** | The application staff use daily, including invoicing and printing |
 
@@ -49,14 +49,16 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 - Report arithmetic matches the preserved view SQL on the smoke seed — the six pinned values are in [[reports-and-ledgers]].
 - TrailBase guest-WASM Phase 0 (S1–S8) all pass on `v0.33.22`: runtime `eval` works, `app/` is readable through `--runtime-root-fs`, a single component serves requests in parallel, guest `fetch` reaches itself, and `UPDATE … RETURNING` claims atomically. Evidence in [[trailbase-guest-wasm-spike-results]].
 - The guest app-host serves the same reports as the legacy-preserved arithmetic: the smoke suite passes **71/71** (same seed and pinned totals) and the differential matched **14/14** report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work ([[guest-app-host-port]]).
-- A first **invoice-entry slice** runs on the guest and passes `trailbase/src/tools/invoice-check.mjs`: context endpoint with ETag/304, server-side invoice numbering, an edit lease, idempotent create and line add, and complete ([[tb-0021-invoices-cashmemos-printing]]).
+- A first **invoice-entry slice** runs on the guest and passes `trailbase/tools/invoice-check.mjs`: context endpoint with ETag/304, server-side invoice numbering, an edit lease, idempotent create and line add, and complete ([[tb-0021-invoices-cashmemos-printing]]).
 - Money is **2 dp everywhere** — report data, guest writes, and a backfill migration ([[money-is-2dp-everywhere]]).
 
 ## Open risks
 
 | Risk | Why it matters | Where |
 | --- | --- | --- |
-| No production data migrated | The new pair has never seen real volumes or real edge-case rows | [[pos-0027-migrate-production-data-to-trailbase]] |
+| No production data currently loaded | The import has run once (60,245 records, 0 errors) but the depot was reset, so nothing is loaded and the new pair's last real-data evidence is one timing run | [[pos-0027-migrate-production-data-to-trailbase]], [[new-system-report-timings]] |
+| The 14/14 report differential cannot be re-run | The flagship parity result has no harness left, so later changes to the views are unverified against legacy behaviour | [[guest-parity-differential-not-reproducible]] |
+| The guest's `/count/{table}` is unauthenticated | Row counts of every table are reachable without login, and a non-integer result panics the guest | [[trailbase-host-count-endpoint-sql-injection]] |
 | Cutover shape undecided | Determines whether the legacy Next.js UI is repointed or retired; blocks two other tasks | [[pos-0028-decide-cutover-plan]] |
 | Invoicing/printing have no new-side equivalent | The new pair cannot replace the product, only part of it; designed but unbuilt | [[guest-frontend-feature-parity-gaps]], [[tb-0021-invoices-cashmemos-printing]] |
 | The guest UI is not yet the legacy look | Parity is visual as well as behavioural; the guest must be restyled to match | [[guest-ui-is-a-direct-shift-of-legacy]], [[tb-0023-direct-shift-legacy-ui-to-guest]] |
@@ -67,7 +69,7 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 | Two SQL artefacts referenced by a wrong path | The READMEs' `../full_database_schema.sql` does not resolve, so the preserved view SQL looks missing | [[stale-schema-sql-paths]] |
 | Money is `REAL` | Float drift masked everywhere by `printf("%.2f")`; cheap to fix while the DB is empty | [[tb-0015-integer-cents-for-money]] |
 | "Company" means two different tables | `items.category` is labelled "Company" but there is now a real `companies` table | [[tb-0014-point-company-fields-at-companies]] |
-| Business identity differs between stacks | Legacy prints `SAMPLE TRADERS` + address + phone; the new side has only `APP_NAME` | [[environment]] |
+| Business identity differs between stacks | Mostly resolved: the guest reads `runtime/app/config/business.json` (legacy name/address/phone); the `config.textproto` application name is still `AA Point of Sale` and is what the header shows | [[environment]] |
 | Prior knowledge base removed from the tree | Its content is only in git; claims in it are partly superseded | [[previous-vault-recovery]] |
 | Guest latency is multiples of the legacy stack's | ~20–30 ms baseline; a cold profit report came close to the 20 s guest deadline; large payloads serialise across the JS↔Rust boundary | [[guest-vs-node-performance]], [[guest-report-performance-options]] |
 | Guest reports compute in JS, not SQL | As data grows the cold build approaches the 20 s deadline; the fix is SQL aggregation + a Rust render, keeping the SQL and templates as runtime files under `app/` | [[guest-report-performance-options]], [[report-logic-stays-runtime-file-based]] |

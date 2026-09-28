@@ -20,7 +20,7 @@ Where the time goes today (measured, [[guest-vs-node-performance]]), and what to
 
 Indexes are **not** the problem: the depot carries the legacy performance indexes
 (`idx_transactions_invoice`, `idx_payments_party_paid_type`, `idx_invoices_type_created`, …),
-verified in `trailbase/src/migrations/main`.
+verified in `trailbase/migrations/main`.
 
 ## Progress
 
@@ -30,13 +30,13 @@ verified in `trailbase/src/migrations/main`.
   report warm times barely moved (profit 4577→3932 ms), as expected. Details:
   [[dispatcher-transpiled-per-request]].
 - **Option 2 — IN PROGRESS (2026-09-27).** All 15 legacy report/ledger views extracted **verbatim**
-  from `backend/p_data/data.db` into `trailbase/src/runtime/app/reports/sql/views/` (the migrations only
+  from `backend/p_data/data.db` into `trailbase/runtime/app/reports/sql/views/` (the migrations only
   carry some), with two documented adaptations: PocketBase's double-quoted string literals
   normalised to single quotes, and `payments_view`'s `order_bookers.company` re-pointed at the
   `order_booker_companies` link table. A composer inlines dependencies as CTEs; **15/15 now run
   against the depot** with row counts matching PocketBase where comparable
   ([[legacy-report-sql-uses-company-columns]]). An equivalence gate
-  (`trailbase/src/tools/view-equivalence.mjs`) then showed **0/13 views identical**: the legacy SQL is
+  (`trailbase/tools/view-equivalence.mjs`) then showed **0/13 views identical**: the legacy SQL is
   not equivalent to the JS views serving the reports (formatting, columns, and genuine math
   differences). The parity reference is the **JS**, so each view is reconciled against it
   ([[legacy-sql-views-differ-from-js-views]]). Converting `printf` to numbers collapsed the

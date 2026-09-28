@@ -59,7 +59,7 @@ client the guest grows.
   may survive a whole test cycle and fail in production.
 - The `import-from-v1` plugin performs per-row deletes when its optional "clear destination
   first" is used, so it exercises this path in bulk. The guest copy at
-  `trailbase/src/runtime/app/plugins/import-from-v1/` already tolerates the plain-text body; verifying
+  `trailbase/runtime/app/plugins/import-from-v1/` already tolerates the plain-text body; verifying
   it is [[pos-0029-rebuild-v1-import-on-guest]].
 
 ## Why it is not going to change
@@ -71,11 +71,11 @@ it is recorded in [[api-contract-trailbase]] under *Writes*.
 
 - The former Node frontend's `src/lib/trailbase.js` (removed 2026-09-27) — the `request()` helper
   and its inline comment, plus `remove()` being a thin wrapper over it. Its guest counterpart,
-  `trailbase/src/runtime/app/lib/data.js`, reads the depot SQLite directly and makes no HTTP DELETE
+  `trailbase/runtime/app/lib/data.js`, reads the depot SQLite directly and makes no HTTP DELETE
   calls.
 - `trailbase/README.md` documents the client conventions; the former Node client header recorded
   the verified shapes.
-- `trailbase/src/runtime/app/plugins/import-from-v1/meta.md` says "Optionally clears the destination
+- `trailbase/runtime/app/plugins/import-from-v1/meta.md` says "Optionally clears the destination
   first", i.e. the bulk-delete path exists; verifying it is
   [[pos-0029-rebuild-v1-import-on-guest]].
 - The prior vault recorded this as `issues/trailbase-delete-returns-plain-text.md`; see

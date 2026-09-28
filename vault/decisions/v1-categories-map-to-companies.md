@@ -72,14 +72,14 @@ choose a side, because both new FK targets are live.
 
 ## Evidence
 
-- `trailbase/src/runtime/app/plugins/import-from-v1/index.html` — the `categories` step carries
+- `trailbase/runtime/app/plugins/import-from-v1/index.html` — the `categories` step carries
   `mirrorApi: "companies"`; `flush()` writes the same batch to both APIs under separate id maps.
-- `trailbase/src/runtime/app/plugins/import-from-v1/meta.md` — documents the mapping to the operator.
+- `trailbase/runtime/app/plugins/import-from-v1/meta.md` — documents the mapping to the operator.
 - `backend/p_data/data.db` census (2026-09-27): 15 categories, 207 items (206 with a category),
   4 bookers (5 company links), 942 parties (13 company links), no `companies` table.
 - A reference re-run of the mapping rules over that DB resolved **every** item, booker, party,
   invoice, transaction and payment reference (0 unresolved).
-- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql` — `items.category`
+- `trailbase/migrations/main/U1790208000__create_base_tables.sql` — `items.category`
   REFERENCES `categories`; `party_companies`/`order_booker_companies` REFERENCE `companies`.
 
 ## Related

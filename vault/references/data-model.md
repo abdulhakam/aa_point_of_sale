@@ -13,8 +13,8 @@ related_to: ["[[trailbase]]", "[[backend]]", "[[api-contract-trailbase]]"]
 The TrailBase schema is the target model; the PocketBase collections are what production runs
 today. This note is the table-by-table reference for both, plus the value translation between
 them. It is derived from
-`trailbase/src/migrations/main/U1790208000__create_base_tables.sql` (21,008 bytes, the
-only migration) and `trailbase/src/config.textproto`.
+`trailbase/migrations/main/U1790208000__create_base_tables.sql` (21,008 bytes, the
+only migration) and `trailbase/config.textproto`.
 
 ## Conventions used by every table
 
@@ -88,7 +88,7 @@ still referenced is refused, so a code cannot be orphaned.
 | `expenses` | `name`, `description`, `amount`, `date` |
 
 `sections` has no `deleted` column, which is why [[runtime-js-guest-platform]] hard-deletes
-sections and soft-deletes everything else — `trailbase/src/runtime/app/lib/management.js` records
+sections and soft-deletes everything else — `trailbase/runtime/app/lib/management.js` records
 `softDelete: false` for `sections` and `items`, `true` for the rest.
 
 `items` also has no `deleted`, and is the only table with a partial unique index (below).

@@ -71,6 +71,6 @@ native compute path is the cold fix those reports still need
 
 ## Evidence
 
-- `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — `RENDER_MAX_ROWS`, slicing, `rowInfo`.
-- `trailbase/src/runtime/app/views/reports/report.html` — the truncation notice.
+- `trailbase/runtime/ahscripts/routes/_app/route.ts` — `RENDER_MAX_ROWS`, slicing, `rowInfo`.
+- `trailbase/runtime/app/views/reports/report.html` — the truncation notice.
 - [[report-performance-baseline]] — measurement method and numbers; `guest-smoke` 71/71.

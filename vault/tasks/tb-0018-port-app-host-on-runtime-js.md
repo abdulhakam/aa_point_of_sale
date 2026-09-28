@@ -37,10 +37,10 @@ actual application, so the report engine can be verified against the Node app on
       `/reports/{status,refresh,ledgers,<key>}`, `/management[/<entity>]`, `/plugins`,
       `/static/*`, `/compute/*`, `/p`, `/p/<slug>`, `/p/<slug>/data`
 - [x] Differential harness: **14/14 report/ledger pages match the Node app** (totals exact, rows
-      equal after stripping raw ids) — `trailbase/src/tools/guest-parity.mjs`
+      equal after stripping raw ids) — `trailbase/tools/guest-parity.mjs`
 - [x] Management writes: create/update/delete + link-table sync + `invalidate()`
       (`db.execute` bridge, `unhex(hex)` for BLOBs, `CAST` for numbers — [[guest-writes-via-sql]])
-- [x] Management list cells (resolve/relations/enums/multi) — `trailbase/src/tools/management-check.mjs`
+- [x] Management list cells (resolve/relations/enums/multi) — `trailbase/tools/management-check.mjs`
 - [x] Login flow: the app's own `/login` POST — exchanges credentials via TrailBase's JSON login
       and sets the auth cookies ([[guest-outbound-http-and-login]]); bad password → 401
 - [ ] `/p/<slug>/data` gzip; binary static assets (current assets are all text)
@@ -52,7 +52,7 @@ actual application, so the report engine can be verified against the Node app on
 - [x] Jobs + worker queue — durable in-process queue done ([[jobs-in-process-durable-queue]]);
       HTTP worker fan-out not built
 - [x] Adapt the smoke suite to drive the guest (55/55 and pinned totals) —
-      `trailbase/src/tools/guest-smoke.mjs`, **71/71 checks pass** (guest is on TrailBase's own port;
+      `trailbase/tools/guest-smoke.mjs`, **71/71 checks pass** (guest is on TrailBase's own port;
       69 when this was written)
 
 ## Related

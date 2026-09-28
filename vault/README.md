@@ -19,14 +19,17 @@ them are answered from these documents instead of by re-reading source.
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs, validated against a running server |
-| [[runtime-js-guest-platform]] | `trailbase/src/`, `guests/` | **New / experimental** | WebAssembly app host: the new frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management |
+| [[runtime-js-guest-platform]] | `trailbase/` | **New / experimental** | WebAssembly app host: the new frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management |
 | [[backend]] | `backend/` | **Legacy / production** | PocketBase 0.22.55 serving the live POS |
 | [[frontend]] | `frontend/` | **Legacy / production** | Next.js 14 + Mantine SPA talking to PocketBase |
 
 **The legacy pair is what is actually running in production.** The new pair is the
 replacement under construction: the TrailBase schema and APIs are done and verified, and the
-guest frontend covers dashboard, reports and management — but no production data has been
-migrated and the legacy Next.js app does not talk to TrailBase yet. The guest platform is the
+guest frontend covers dashboard, reports and management. The production import **has been run once**
+through the guest `import-from-v1` plugin (60,245 records, 0 errors) and the reports were timed on
+it ([[new-system-report-timings]], [[report-performance-baseline]]), but the depot was reset
+afterwards ([[tb-0024-flatten-new-system-layout]]), so **no production data is currently loaded**;
+and the legacy Next.js app does not talk to TrailBase yet. The guest platform is the
 chosen replacement frontend and the legacy UI is to be shifted onto it screen-for-screen
 ([[guest-ui-is-a-direct-shift-of-legacy]]); the intermediate Node `frontend-ssr` experiment was
 removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and
@@ -68,10 +71,10 @@ removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and
 ## Status at a glance
 
 - 17 of 17 TrailBase tables exposed as record APIs; migration applies clean on an empty depot.
-- 14 reports implemented in `trailbase/src/runtime/app/compute/reports.js`; 14 declarative pages plus 4
-  ledger pages.
+- 10 reports + 4 ledgers (14 entries in `trailbase/runtime/app/compute/reports.js`, and 14
+  declarative page folders under `trailbase/runtime/app/pages/`).
 - The guest serves the same app without Node: smoke **71/71**, differential **14/14**
-  (`trailbase/src/tools/`), plus a first verified invoice-entry slice.
+  (`trailbase/tools/`), plus a first verified invoice-entry slice.
 - Legacy Next.js app still points at PocketBase (`NEXT_PUBLIC_PB_URL`), and PocketBase still holds the production data.
 - Parity target restated: the guest frontend is a direct shift of the legacy UI, same look
   ([[guest-ui-is-a-direct-shift-of-legacy]]); the remaining gaps are in

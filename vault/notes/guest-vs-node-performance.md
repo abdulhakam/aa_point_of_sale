@@ -15,7 +15,7 @@ both serving the same TrailBase depot (`trailbase/traildepot` copy: 8,927 invoic
 transactions, 26,526 payments). The Node app no longer exists in the tree, so its numbers are kept
 as a historical baseline; the guest's absolute measurements stand on their own.
 
-Tool: `trailbase/src/tools/perf-compare.mjs` — itself removed with the Node baseline, since it needed
+Tool: `trailbase/tools/perf-compare.mjs` — itself removed with the Node baseline, since it needed
 both apps running. Environment: `trail v0.33.22`, guest `--runtime-threads=4`, Node 24
 (`WORKER_THREADS=4`), Windows, one shared dev machine. "Cold" = the first request to that endpoint
 in the run; "warm" = median of 3 repeats.
@@ -66,7 +66,7 @@ The Node figures below are the historical baseline (see the note at the top).
 - The Node numbers (historical) depended on its warm-snapshot state (`REFRESH_INTERVAL_SECONDS=60`,
   `WORKER_THREADS=4`).
 - Both apps ran the **same** `compute/` code (the guest's copy is
-  `trailbase/src/runtime/app/compute/`); the difference was the runtime (interpreter vs JIT, single
+  `trailbase/runtime/app/compute/`); the difference was the runtime (interpreter vs JIT, single
   request thread vs a worker pool), not the logic.
 
 ## Implications

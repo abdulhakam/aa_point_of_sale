@@ -48,8 +48,8 @@ store.
 
 ## Evidence
 
-- `trailbase/src/runtime/app/lib/reports.js` — `cacheKey`, `run`, `invalidate`, `status`.
-- The guest smoke (`trailbase/src/tools/guest-smoke.mjs`) asserts a repeat run is a cache hit with an
+- `trailbase/runtime/app/lib/reports.js` — `cacheKey`, `run`, `invalidate`, `status`.
+- The guest smoke (`trailbase/tools/guest-smoke.mjs`) asserts a repeat run is a cache hit with an
   identical result: **71/71 checks pass**.
 
 ## Related

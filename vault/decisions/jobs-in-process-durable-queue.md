@@ -23,7 +23,7 @@ guest *can* reach itself, but that bridge is not implemented in this host.
 
 Implement the queue as **durable steps executed in-process**, with no worker fan-out:
 
-- **Schema** (`trailbase/src/migrations/main/U1790300000__create_job_tables.sql`):
+- **Schema** (`trailbase/migrations/main/U1790300000__create_job_tables.sql`):
   `job` (submitted unit), `job_step` (the unit of work — `idempotency_key UNIQUE`, `state`,
   `attempt`, `lease_until`), `job_artifact` (`step_key UNIQUE` — the recorded effect).
 - **Atomic claim** with one statement, which the guest can run through its read channel:
@@ -54,7 +54,7 @@ API: `POST /jobs`, `GET /jobs/{id}`, `GET /jobs/{id}/result`, `POST /jobs/{id}/c
 - The queue is durable and resumable across restarts, and every step is idempotent by
   construction.
 - No second component, no cross-component HTTP, no port plumbing.
-- Tests: `trailbase/src/tools/jobs-check.mjs` — submit → done, correct result, one artifact per step,
+- Tests: `trailbase/tools/jobs-check.mjs` — submit → done, correct result, one artifact per step,
   and a **genuine** re-dispatch after a forced lease expiry: the recovered step's `attempt` goes to
   **2** (it really re-ran) while `artifacts` stays **4** (the UNIQUE key blocked a second effect).
   Unknown job/401/404 paths are covered too.
@@ -74,13 +74,13 @@ API: `POST /jobs`, `GET /jobs/{id}`, `GET /jobs/{id}/result`, `POST /jobs/{id}/c
 
 ## Evidence
 
-- `trailbase/src/migrations/main/U1790300000__create_job_tables.sql`.
-- `trailbase/src/runtime/app/lib/queue.js` — specs, claim, run, execute, finalize, recover, fan-out.
-- `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — the `/jobs` routes and `/worker/{pool}/step`.
-- `trailbase/src/host/src/api/fetch.rs` — `http.postJson` (login) and `http.request` (fan-out).
-- `trailbase/src/tools/jobs-check.mjs` — all checks pass, including the fan-out path
+- `trailbase/migrations/main/U1790300000__create_job_tables.sql`.
+- `trailbase/runtime/app/lib/queue.js` — specs, claim, run, execute, finalize, recover, fan-out.
+- `trailbase/runtime/ahscripts/routes/_app/route.ts` — the `/jobs` routes and `/worker/{pool}/step`.
+- `trailbase/host/src/api/fetch.rs` — `http.postJson` (login) and `http.request` (fan-out).
+- `trailbase/tools/jobs-check.mjs` — all checks pass, including the fan-out path
   (`?fanout=1&concurrency=3`: three due steps dispatched, `artifacts` unchanged, job done).
-- The guest smoke (`trailbase/src/tools/guest-smoke.mjs`) passes **71/71** (69/69 when this was
+- The guest smoke (`trailbase/tools/guest-smoke.mjs`) passes **71/71** (69/69 when this was
   written).
 
 ## Related

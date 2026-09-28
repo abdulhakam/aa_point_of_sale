@@ -51,7 +51,7 @@ Build the missing screens on [[runtime-js-guest-platform]] and delete `frontend/
 - ⚠️ **Higher risk on the screens that matter.** Invoice entry and printing are where a mistake costs
   money and paper. They would be rewritten, not ported.
 - ⚠️ **No test suite for the legacy behaviour** to port against — the guest smoke suite
-  (`node trailbase/src/tools/guest-smoke.mjs`) covers [[runtime-js-guest-platform]] only. The legacy
+  (`node trailbase/tools/guest-smoke.mjs`) covers [[runtime-js-guest-platform]] only. The legacy
   app has none, so "the new screen behaves the same" would be asserted by hand.
 
 ## The questions this decision must answer

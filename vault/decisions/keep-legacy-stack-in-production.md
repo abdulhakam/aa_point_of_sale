@@ -80,7 +80,7 @@ The cutover itself is a **separate, explicit decision** with its own note:
   `1789890300_ledger_party_window_function.js`, `1789890310_payments_summary_view.js` — the
   performance programme, on the legacy side, after the TrailBase rewrite had begun. Dated
   epoch-`1789890xxx` (2026), i.e. contemporaneous with, not before, the new work.
-- `trailbase/src/config.textproto` — the comment contrasting PocketBase's `""` rules with TrailBase's
+- `trailbase/config.textproto` — the comment contrasting PocketBase's `""` rules with TrailBase's
   authenticated-only default.
 - `backend/DEV.BAT`, `RUN NEXTJS.BAT`, `RUN SERVE.BAT` — the legacy pair is still scripted and
   runnable ([[build-and-run]]).
