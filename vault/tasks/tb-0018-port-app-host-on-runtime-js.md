@@ -52,7 +52,8 @@ actual application, so the report engine can be verified against the Node app on
 - [x] Jobs + worker queue — durable in-process queue done ([[jobs-in-process-durable-queue]]);
       HTTP worker fan-out not built
 - [x] Adapt the smoke suite to drive the guest (55/55 and pinned totals) —
-      `trailbase/src/tools/guest-smoke.mjs`, **69/69 checks pass** (guest is on TrailBase's own port)
+      `trailbase/src/tools/guest-smoke.mjs`, **71/71 checks pass** (guest is on TrailBase's own port;
+      69 when this was written)
 
 ## Related
 

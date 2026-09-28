@@ -91,12 +91,12 @@ Writes are direct SQL through a new `db.execute` bridge, with BLOBs bound as `un
 numbers/enums as `CAST(? AS …)`, and ids emitted as URL-safe base64
 ([[guest-writes-via-sql]]). Management list cells are resolved (names, enums, relations, multi).
 
-## Verified: guest smoke (69/69)
+## Verified: guest smoke (71/71)
 
 `trailbase/src/tools/guest-smoke.mjs` boots a throw-away depot with the guest component, seeds the
 **same** dataset the former Node smoke used (`frontend-ssr/scripts/smoke.js`, removed 2026-09-27),
 logs in **through the app's own `/login`**
-(bad password → 401, good → 303 + cookies) and exercises every screen. **69/69 checks pass**,
+(bad password → 401, good → 303 + cookies) and exercises every screen. **71/71 checks pass**,
 including the pinned totals (`profit 91.00`, item sales `731.00/591.00`, stock `4510.00`, payments
 `800.00/150.00`, payments-by-company `500.00/300.00`, `403.85/161.54`), the page-data payload shape
 and ETag revalidation, relation/enum edit-form preselection, management create, fingerprint

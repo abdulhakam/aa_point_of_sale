@@ -80,7 +80,8 @@ API: `POST /jobs`, `GET /jobs/{id}`, `GET /jobs/{id}/result`, `POST /jobs/{id}/c
 - `trailbase/src/host/src/api/fetch.rs` — `http.postJson` (login) and `http.request` (fan-out).
 - `trailbase/src/tools/jobs-check.mjs` — all checks pass, including the fan-out path
   (`?fanout=1&concurrency=3`: three due steps dispatched, `artifacts` unchanged, job done).
-- The guest smoke (`trailbase/src/tools/guest-smoke.mjs`) passes **69/69**.
+- The guest smoke (`trailbase/src/tools/guest-smoke.mjs`) passes **71/71** (69/69 when this was
+  written).
 
 ## Related
 

@@ -53,6 +53,13 @@ verified in `trailbase/src/migrations/main`.
   dashboard cold 2.3 s → **0.26 s**, `/p` data 2.7 → 2.4 s; warm profit unchanged (~4 s — the
   JS↔Rust payload, which option 3 targets). Task: [[tb-0022-move-reports-to-sql]].
 
+**Correction (2026-09-28).** The switch was turned **off again** in `5ccebd8` (invoice entry):
+the SQL base views diverge on fresh invoices with an empty `dated`
+([[legacy-sql-views-differ-from-js-views]]). So the shipped code has `USE_SQL_VIEWS = false`, and
+the figures above measure the SQL path *when it was on*, not the running system. The code as shipped
+computes reports in JS; its timings are in [[new-system-report-timings]]. Note this was a
+**correctness** reversal, not a speed one — the SQL path was faster on cold builds.
+
 ## Ranked options
 
 1. **Cache the compiled dispatcher** (host) — **done** (see Progress).

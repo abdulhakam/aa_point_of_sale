@@ -58,7 +58,7 @@ module has no `login` (only `require_admin`), and its `fetch` returns **only the
 - `trailbase/src/host/src/lib.rs` — `{html}` honours `status`; `headers` may be a list.
 - `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — the `/login` POST.
 - Verified by hand (401 + error page; 303 + both cookies; dashboard 200) and by the guest smoke:
-  **69/69 checks pass**.
+  **71/71 checks pass** (69/69 when this was written; the suite has since grown).
 
 ## Related
 

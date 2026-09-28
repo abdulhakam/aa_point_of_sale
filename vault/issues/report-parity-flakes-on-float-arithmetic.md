@@ -27,7 +27,10 @@ guest-smoke:  71/71   (pinned totals unchanged)
 management-check: all checks passed
 ```
 
-`USE_SQL_VIEWS` is now **true** in `trailbase/src/runtime/app/lib/reports.js`.
+`USE_SQL_VIEWS` was **true** at the time of this measurement (the SQL path). **Corrected
+2026-09-28:** it is now **false** again — `5ccebd8` (invoice entry) turned it off because the SQL
+base views diverge on fresh invoices with an empty `dated`
+([[legacy-sql-views-differ-from-js-views]]). The earlier "is now true" claim is stale.
 
 ## Original finding
 

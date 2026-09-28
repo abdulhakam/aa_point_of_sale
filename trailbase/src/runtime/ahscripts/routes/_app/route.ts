@@ -369,8 +369,13 @@ async function dispatch(req: any): Promise<any> {
   if (path.startsWith("/plugins/")) {
     const rel = path.slice("/plugins/".length);
     if (!rel || rel.includes("..")) return text("Not found", 404);
-    const target = PLUGINS_DIR + "/" + (rel.endsWith("/") ? rel + "index.html" : rel);
-    return readStatic(target);
+    // Directory-style plugin URL -> its index.html. `path` arrives with the trailing slash
+    // normalised away, so treat any extension-less rel as a directory (not as a file).
+    if (rel.endsWith("/") || rel.indexOf(".") < 0) {
+      const res = await readStatic(PLUGINS_DIR + "/" + rel.replace(/\/$/, "") + "/index.html");
+      if (res && res.status !== 404) return res;
+    }
+    return readStatic(PLUGINS_DIR + "/" + rel);
   }
 
   if (path === "/dashboard") {

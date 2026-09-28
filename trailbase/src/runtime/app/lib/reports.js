@@ -15,12 +15,14 @@ import { rows as sqlViewRows } from "./sqlviews.js";
 /**
  * Views whose scan/join work can run in SQL instead of JS ([[convert-base-views-not-derivations]]).
  *
- * **Off by default.** The SQL views are verified against the JS ([[legacy-sql-views-differ-from-js-views]])
- * but SQLite does not guarantee the scan order feeding an aggregate, so its `SUM` accumulates
- * floats differently from the JS's fixed-order `+=`. The derived reports then drift by ~1e-12 and
- * *flakily* (the differential passes on some runs, fails on others). Until the accumulation is made
- * deterministic — or the float-sensitive aggregates stay in JS (`sql+js`) — the JS path is the
- * parity-safe default and this switch stays off.
+ * **Off in the shipped code.** It was briefly enabled (the 2 dp money rule removed the float
+ * flake), then turned off again in commit 5ccebd8: the SQL base views diverge on *fresh* invoices
+ * (a sale invoice with an empty `dated`, which invoice entry creates) — `ledgers/party`/`itemsales`
+ * error and `dailysale`/`itemsales`/`profit` row counts differ. The earlier float-accumulation
+ * concern (SQLite's unordered `SUM` vs the JS fixed-order `+=`, ~1e-12 drift) was handled by the
+ * 2 dp rule, but it is the fresh-invoice divergence that keeps this off. Re-enable only once the
+ * equivalence gate covers fresh/partial invoices ([[legacy-sql-views-differ-from-js-views]],
+ * [[convert-base-views-not-derivations]]).
  */
 const USE_SQL_VIEWS = false;
 

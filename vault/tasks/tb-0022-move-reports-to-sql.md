@@ -76,12 +76,18 @@ with `sql+js` for columns SQL cannot express (the `company` array).
 - `trailbase/src/runtime/app/lib/sqlviews.js`: loads `app/reports/sql/views/*.sql` at runtime, inlines
   dependencies as CTEs, derives column names (comment-aware), runs via `sqlite.all`, and appends
   `ORDER BY "id" DESC` to match the JS input order.
-- `trailbase/src/runtime/app/lib/reports.js`: a `SQL_VIEWS` map + `USE_SQL_VIEWS`, now **true**.
+- `trailbase/src/runtime/app/lib/reports.js`: a `SQL_VIEWS` map + `USE_SQL_VIEWS` (true at this
+  point in history; **off again since `5ccebd8`** — see the correction below).
 - Fixed a real **loader bug**: aliased named imports were inverted
   (`import { rows as x }` generated `{x: rows}`), which silently broke `sqlviews` until corrected.
 - **Enabled after enforcing the 2 dp money rule** ([[money-is-2dp-everywhere]]): with money at 2 dp
   the float flake disappears. Verified **14/14 on three consecutive differential runs** with the SQL
   path on, plus smoke 71/71 and management-check.
+
+**Correction (2026-09-28):** `USE_SQL_VIEWS` is **off** in the shipped code. `5ccebd8` (invoice
+entry) reversed the enablement because the SQL base views diverge on fresh invoices with an empty
+`dated` ([[legacy-sql-views-differ-from-js-views]]) — a correctness reversal, not a speed one. The
+table below therefore measures the SQL path when it was on.
 
 Measured with the SQL base views on ([[guest-vs-node-performance]] method):
 

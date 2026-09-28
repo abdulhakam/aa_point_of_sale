@@ -65,7 +65,8 @@ correct. A write calls `invalidate()` on the guest report service so the next re
   `syncLinks`.
 - `trailbase/src/tools/management-check.mjs` — create → list → update → verify → delete → verify for
   sections (hard delete) and items (relation + numeric fields): all checks pass.
-- Report parity is unaffected: `guest-parity.mjs` still 14/14 after the id-encoding change.
+- Report parity was unaffected at the time: the Node-vs-guest differential (`guest-parity.mjs`,
+  removed with the `frontend-ssr` baseline) was still 14/14 after the id-encoding change.
 
 ## Related
 
