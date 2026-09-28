@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD, { useAppliedFilters } from "@/app/api/useAPI";
+import useCRUD from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import PrintContent from "@/app/components/printing/PrintContent";
 import { ActionIcon, Button, Flex, Group, NumberInput, Stack, Table, Text } from "@mantine/core";
@@ -42,26 +42,16 @@ export default function AreaLedger() {
   const [section, setSection] = useState<any>("");
   const areas = useCRUD().fullList({ collection: "areas" });
   const sections = useCRUD().fullList({ collection: "sections" });
-
-  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
-  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
-  const { applied, apply, reset, initial } = useAppliedFilters({
-    fromDate: moment().startOf("year").toDate() as Date | null,
-    toDate: moment().endOf("day").toDate() as Date | null,
-    area: "",
-    section: "",
-  });
-
   const ledger = useCRUD().fullList({
     collection: "ledger_area",
     expand: "invoice,party",
     sort: "+created",
-    filter: `type="recieving" && (created >= '${moment(applied.fromDate)
+    filter: `type="recieving" && (created >= '${moment(fromDate)
       .startOf("day")
-      .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(applied.toDate)
+      .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(toDate)
       .endOf("day")
-      .format("YYYY-MM-DD HH:mm:ss")}' ) ${applied.area ? `&& party.area = '${applied.area}'` : ""} ${
-      applied.section ? `&& party.area.section = '${applied.section}'` : ""
+      .format("YYYY-MM-DD HH:mm:ss")}' ) ${area ? `&& party.area = '${area}'` : ""} ${
+      section ? `&& party.area.section = '${section}'` : ""
     }`,
   });
   const printRef = useRef();
@@ -140,16 +130,10 @@ export default function AreaLedger() {
               dataQueryValue={"id"}
               dataLabel={"name"}
             />
-            {/* POS-0026 — request the data only when Apply is pressed. */}
-            <Button onClick={() => apply({ fromDate, toDate, area, section })}>APPLY</Button>
             <Button
-              variant='default'
               onClick={() => {
-                setArea(initial.area);
-                setSection(initial.section);
-                setFromDate(initial.fromDate);
-                setToDate(initial.toDate);
-                reset();
+                setArea("");
+                setSection("");
               }}
             >
               Clear
@@ -163,10 +147,8 @@ export default function AreaLedger() {
                   AREA LEDGER{" "}
                 </Text>
                 <Group>
-                  {applied.section && (
-                    <div>Section: {sections.data.find((s) => s.id == applied.section)?.name}</div>
-                  )}
-                  {applied.area && <div>Area: {areas.data.find((a) => a.id == applied.area)?.name}</div>}
+                  {section && <div>Section: {sections.data.find((s) => s.id == section)?.name}</div>}
+                  {area && <div>Area: {areas.data.find((a) => a.id == area)?.name}</div>}
                 </Group>
                 <Table
                   stickyHeader

@@ -1,9 +1,9 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD, { useHydratedRefs, useAppliedFilters } from "@/app/api/useAPI";
+import useCRUD from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import { qtyDisplay } from "@/app/components/functions/qtyParser";
-import { ActionIcon, Button, Group, Table, Text } from "@mantine/core";
+import { ActionIcon, Group, Table, Text } from "@mantine/core";
 import { IconPrinter } from "@tabler/icons-react";
 import { DateInput } from "@mantine/dates";
 import { useForm } from "@mantine/form";
@@ -125,51 +125,28 @@ export default function ItemTransactionsReport() {
       item: "" as any,
     },
   });
-  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
-  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
-  const { applied, apply, reset, initial } = useAppliedFilters({
-    fromDate: moment().startOf("month").toDate() as Date | null,
-    toDate: moment().endOf("day").toDate() as Date | null,
-    company: "",
-    party: "",
-    booker: "",
-    area: "",
-    invoiceNo: "",
-    section: "",
-    item: "",
-  });
   const invoices = useCRUD().fullList({
     collection: "invoice_view",
     filter: 'type = "sale" || type = "return"',
   });
   const transactions = useCRUD().fullList({
     collection: "transactions_report",
+    expand: "item,company,party,party.area,party.area.section,booker",
     filter: `(type = "sale" || type = "return")
-            && (created >= '${moment(applied.fromDate).utc().format("YYYY-MM-DD")}' && created <= '${moment(applied.toDate)
+            && (created >= '${moment(fromDate).utc().format("YYYY-MM-DD")}' && created <= '${moment(toDate)
       .utc()
       .format("YYYY-MM-DD")}')
-            ${applied.company ? `&& (company = "${applied.company}")` : ""}
-            ${applied.party ? `&& (party = "${applied.party}")` : ""}
-            ${applied.booker ? `&& (booker = "${applied.booker}")` : ""}
-            ${applied.area ? `&& (area = "${applied.area}")` : ""}
-            ${applied.section ? `&& (section = "${applied.section}")` : ""}
-            ${applied.item ? `&& (item = "${applied.item}")` : ""}
-            ${applied.invoiceNo ? `&& (invoice = "${applied.invoiceNo}")` : ""}`,
+            ${form.values.company ? `&& (company = "${form.values.company}")` : ""}
+            ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
+            ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
+            ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
+            ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
+            ${form.values.item ? `&& (item = "${form.values.item}")` : ""}
+            ${form.values.invoiceNo ? `&& (invoice = "${form.values.invoiceNo}")` : ""}`,
   });
-  // POS-0015 — names are resolved client-side from cached reference collections
-  // instead of a server-side `party.area.section` deep expand (which serializes the
-  // related records for every row; ~1 MB per 500 rows).
-  const { data: rows, queries: refQueries } = useHydratedRefs(transactions.data, [
-    "item",
-    "company",
-    "party",
-    "booker",
-    "area",
-    "section",
-  ]);
-  const queries = [transactions, ...refQueries];
+  const queries = [transactions];
   if (checkSuccess(queries)) {
-    const { returns, sale, total } = calculator(rows);
+    const { returns, sale, total } = calculator(transactions.data);
     return (
       <>
         <ActionIcon
@@ -270,56 +247,54 @@ export default function ItemTransactionsReport() {
             }))}
             label={"Invoice"}
           />
-          {/* POS-0026 — request the data only when Apply is pressed. */}
-          <Button onClick={() => apply({ fromDate, toDate, ...form.values })}>APPLY</Button>
         </Group>
         <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
           <PrintContent>
             <Group justify='space-between'>
               <h2>All Transactions Report</h2>
               <Text size='md'>
-                <b>From:</b> {moment(applied.fromDate).format("DD-MMM-YYYY")} <b>To:</b>{" "}
-                {moment(applied.toDate).format("DD-MMM-YYYY")}
+                <b>From:</b> {moment(fromDate).format("DD-MMM-YYYY")} <b>To:</b>{" "}
+                {moment(toDate).format("DD-MMM-YYYY")}
               </Text>
             </Group>
             <Group justify='space-between'>
-              {applied.item && (
+              {form.values.item && (
                 <Text size='md'>
-                  <b>Item:</b> {rows?.[0]?.expand?.item?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  <b>Item:</b> {transactions.data?.[0]?.expand?.item?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
-              {applied.company && (
+              {form.values.company && (
                 <Text size='md'>
                   <b>Company:</b>{" "}
-                  {rows?.[0]?.expand?.company?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  {transactions.data?.[0]?.expand?.company?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
-              {applied.booker && (
+              {form.values.booker && (
                 <Text size='md'>
                   <b>Booker:</b>{" "}
-                  {rows?.[0]?.expand?.booker?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  {transactions.data?.[0]?.expand?.booker?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
-              {applied.party && (
+              {form.values.party && (
                 <Text size='md'>
-                  <b>Party:</b> {rows?.[0]?.expand?.party?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  <b>Party:</b> {transactions.data?.[0]?.expand?.party?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
-              {applied.area && (
+              {form.values.area && (
                 <Text size='md'>
-                  <b>Area:</b> {rows?.[0]?.expand?.area?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  <b>Area:</b> {transactions.data?.[0]?.expand?.area?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
-              {applied.section && (
+              {form.values.section && (
                 <Text size='md'>
                   <b>Section:</b>{" "}
-                  {rows?.[0]?.expand?.section?.name ?? "NO DATA OR TOO MANY FILTERS"}
+                  {transactions.data?.[0]?.expand?.section?.name ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
-              {applied.invoiceNo && (
+              {form.values.invoiceNo && (
                 <Text size='md'>
                   <b>Invoice:</b>{" "}
-                  {rows?.[0]?.expand?.invoice?.invoiceNo ?? "NO DATA OR TOO MANY FILTERS"}
+                  {transactions.data?.[0]?.expand?.invoice?.invoiceNo ?? "NO DATA OR TOO MANY FILTERS"}
                 </Text>
               )}
             </Group>
@@ -344,7 +319,7 @@ export default function ItemTransactionsReport() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {rows?.map((row) => (
+                {transactions.data?.map((row) => (
                   <Table.Tr key={`row-${row.id}`}>
                     {columns.map((col) =>
                       col.hidden ? null : (

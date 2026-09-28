@@ -4,13 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "serve": "http-server ./out/ -p 3000",
+    "build": "next build && node -e \"const fs = require('fs-extra'); fs.copySync('public', '.next/standalone/public', {overwrite: true}); fs.copySync('.next/static', '.next/standalone/.next/static', {overwrite: true});\"",
+    "start": "node .next/standalone/server.js",
     "lint": "next lint",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "build:standalone": "next build && robocopy .next\\standalone ..\\standalone /E /PURGE /NFL /NDL /NJH /NJS & robocopy .next\\static ..\\standalone\\.next\\static /E /PURGE /NFL /NDL /NJH /NJS & robocopy public ..\\standalone\\public /E /PURGE /NFL /NDL /NJH /NJS & exit /B 0"
+    "tauri": "tauri"
   },
   "dependencies": {
     "@mantine/core": "^7.3.1",
@@ -44,6 +43,7 @@
     "@storybook/nextjs": "^7.6.7",
     "@storybook/react": "^7.6.7",
     "@storybook/test": "^7.6.7",
+    "@tauri-apps/cli": "^1.5.10",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

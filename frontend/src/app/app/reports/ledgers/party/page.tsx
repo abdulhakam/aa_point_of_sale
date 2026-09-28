@@ -1,6 +1,6 @@
 "use client";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD, { useAppliedFilters } from "@/app/api/useAPI";
+import useCRUD from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import PrintContent from "@/app/components/printing/PrintContent";
 import { ActionIcon, Button, Flex, Group, NumberInput, Stack, Table, Text } from "@mantine/core";
@@ -46,24 +46,15 @@ export default function PartyLedgerReport() {
   const [fromDate, setFromDate] = useState<Date | null>(moment().startOf("month").toDate());
   const [toDate, setToDate] = useState<Date | null>(moment().endOf("day").toDate());
   const [party, setParty] = useState<any>("");
-
-  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
-  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
-  const { applied, apply, reset, initial } = useAppliedFilters({
-    fromDate: moment().startOf("month").toDate() as Date | null,
-    toDate: moment().endOf("day").toDate() as Date | null,
-    party: "",
-  });
-
   const ledger = useCRUD().fullList({
     collection: "ledger_party",
     expand: "invoice,party",
     sort: "+created",
-    filter: `(created >= '${moment(applied.fromDate)
+    filter: `(created >= '${moment(fromDate)
       .startOf("day")
-      .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(applied.toDate)
+      .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(toDate)
       .endOf("day")
-      .format("YYYY-MM-DD HH:mm:ss")}' ) ${applied.party ? `&& party = '${applied.party}'` : ""}`,
+      .format("YYYY-MM-DD HH:mm:ss")}' ) ${party ? `&& party = '${party}'` : ""}`,
   });
   const printRef = useRef();
   const handlePrint = useReactToPrint({
@@ -109,22 +100,10 @@ export default function PartyLedgerReport() {
               dataQueryValue={"id"}
               dataLabel={"name"}
             />
-            {/* POS-0026 — request the data only when Apply is pressed. */}
-            <Button onClick={() => apply({ fromDate, toDate, party })}>APPLY</Button>
-            <Button
-              variant='default'
-              onClick={() => {
-                setParty(initial.party);
-                setFromDate(initial.fromDate);
-                setToDate(initial.toDate);
-                reset();
-              }}
-            >
-              Clear
-            </Button>
+            <Button onClick={() => setParty("")}>Clear</Button>
           </Group>
           <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
-            {!applied.party ? (
+            {!party ? (
               <Text size='xl'>PLEASE SELECT A PARTY TO VIEW LEDGER</Text>
             ) : (
               <PrintContent>

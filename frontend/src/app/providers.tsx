@@ -20,20 +20,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            // POS-0009 — was `staleTime: 1000 / 2` (0.5 s) with refetchOnMount: true,
-            // so every navigation re-fetched 9k–26k row report views.
-            //
-            // Now: 60 s of freshness for transactional/report data means navigating
-            // back to a page serves cache instantly (in the background it refreshes
-            // only when stale). Reference data uses 5 min — see useAPI.ts
-            // (REFERENCE_STALE_TIME / referenceQueryOptions).
-            //
-            // refetchOnMount stays at its default (true) and is governed by staleTime.
-            // Setting it to false while mutations call a bare invalidateQueries()
-            // (which only refreshes *active* queries) would leave invalidated but
-            // inactive queries stale forever — i.e. screens showing pre-write data.
-            staleTime: 60 * 1000,
-            gcTime: 10 * 60 * 1000,
+            staleTime: 1000 / 2,
             refetchOnReconnect: true,
             refetchOnWindowFocus: false,
             refetchOnMount: true,

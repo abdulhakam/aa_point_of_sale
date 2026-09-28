@@ -1,6 +1,6 @@
 "use client";
 
-import useCRUD, { crud, useHydratedRefs } from "@/app/api/useAPI";
+import useCRUD, { crud } from "@/app/api/useAPI";
 import DataViewTable from "@/app/components/DataViewTable";
 import { Button, Checkbox, Group, Stack, TextInput } from "@mantine/core";
 import { modals } from "@mantine/modals";
@@ -34,10 +34,7 @@ export default function InvoiceOrders() {
       notifications.show({ title: "Error", message: "Order update failed", color: "red" });
     }
   });
-  // POS-0017 — drop `expand: "booker,invoice_maker,party"`; party/booker names are resolved
-  // client-side from the cached reference collections instead of serialised on every row.
-  const invoices = useCRUD().fullList({ collection: "invoice_view" });
-  const { data: invoiceRows } = useHydratedRefs(invoices.data, ["party", "booker"]);
+  const invoices = useCRUD().fullList({ collection: "invoice_view", expand: "booker,invoice_maker,party" });
   return (
     <>
       <h2>ALL INCOMPLETE ORDERS</h2>
@@ -50,7 +47,7 @@ export default function InvoiceOrders() {
         onRowClick={(record) => {
           orderModal(record, update);
         }}
-        data={invoiceRows}
+        data={invoices.data}
         columns={columns}
       />
     </>
