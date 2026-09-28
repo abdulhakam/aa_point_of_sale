@@ -172,6 +172,24 @@ async function app(): Promise<any> {
   return modules;
 }
 
+// ------------------------------------------------------------------ component handoff
+//
+// The split architecture hands data over by *name*: the `sql` component stores the rows in the
+// shared TrailBase KV store and answers with a key. The caller reads the bytes by that key and then
+// deletes it, so the store does not accumulate one multi-megabyte entry per request. The WASI
+// runtime root is read-only, so a spool file under /app is not an option.
+
+async function kvTakeJSONL(key: string): Promise<any[]> {
+  const kv: any = (globalThis as any).kv;
+  const raw = await kv.get(String(key));
+  const rows = String(raw)
+    .split("\n")
+    .filter((line: string) => line.length > 0)
+    .map((line: string) => JSON.parse(line));
+  try { await kv.delete(String(key)); } catch (e) { /* best effort */ }
+  return rows;
+}
+
 // ------------------------------------------------------------------ request/response
 
 function decode(s: string): string {
@@ -315,6 +333,201 @@ async function dispatch(req: any): Promise<any> {
 
   // Public surfaces.
   if (path === "/healthz") return { ok: true, workers: A.service.status() };
+
+  // Capability probes for the component-split work. Each isolates one bridge so a failure names
+  // the bridge rather than the route. Kept until the A/B is finished.
+  if (path === "/bench/ping") return { ok: true };
+  if (path === "/bench/t1") {
+    const raw = await db.all('SELECT "amount" FROM payments ORDER BY "id" DESC LIMIT 3', []);
+    return { t1: "ok", n: (raw ?? []).length, first: (raw ?? [])[0] };
+  }
+  if (path === "/bench/t2") {
+    const raw = await fs.readFile("/app/views/bench/payload.html");
+    return { t2: "ok", len: String(raw).length };
+  }
+  if (path === "/bench/t3") {
+    const out: string = (globalThis as any).render.html("bench/payload.html", { rows: [] });
+    return { t3: "ok", len: String(out).length };
+  }
+  if (path === "/bench/t4") {
+    const origin = (String(req.url || "").match(/^https?:\/\/[^/]+/) || [""])[0];
+    const res: any = await (globalThis as any).http.request({ method: "GET", url: origin + "/rpc/payload?limit=3" });
+    return { t4: "ok", status: res && res.status, body: String((res && res.body) || "").slice(0, 200) };
+  }
+
+  // Whether the DB bridge accepts PRAGMAs at all. The cold-mode flush depends on this, and both
+  // call sites swallow the error, so without this probe a silent no-op would look like a working
+  // feature. It also reports which PRAGMAs read back, since a rejected *set* is invisible.
+  if (path === "/bench/pragma") {
+    const out: any = {};
+    const probe = async (label: string, fn: () => Promise<any>) => {
+      try { out[label] = "ok: " + JSON.stringify(await fn()); }
+      catch (e) { out[label] = "ERR: " + (e && e.message ? e.message : String(e)); }
+    };
+    await probe("execute shrink_memory", () => db.execute("PRAGMA shrink_memory", []));
+    await probe("execute cache_size=1", () => db.execute("PRAGMA cache_size = 1", []));
+    await probe("query cache_size", () => db.all("PRAGMA cache_size", []));
+    await probe("query page_count", () => db.all("PRAGMA page_count", []));
+    return out;
+  }
+
+  // The report keys the sweep should cover, taken from the app's own registry so the bench cannot
+  // drift from the reports that actually exist.
+  if (path === "/bench/reportkeys" && method === "GET") {
+    return { keys: Object.keys(A.reportsCompute.REPORTS).slice().sort() };
+  }
+
+  // Per-report acquisition A/B, for the all-reports sweep.
+  //
+  // Scope, stated precisely: this measures acquiring the **base-table rows each report needs** —
+  // the step a component split would actually move. The report arithmetic (compute/reports.js)
+  // stays in the guest in both arms, because it is JavaScript; a component cannot serve it without
+  // porting it, which is separate work. So this is an acquisition benchmark per report, not a
+  // report benchmark.
+  if (path === "/bench/report" && method === "GET") {
+    const key = String(query.key || "");
+    const arm = String(query.arm || "inline");
+
+    let tables: string[] = [];
+    try {
+      const views = A.service.viewsForReport(key);
+      tables = A.views.tablesForViews(views).slice().sort();
+    } catch (e) {
+      return { error: "unknown report: " + key };
+    }
+
+    const t0 = Date.now();
+    let rows = 0;
+    let bytes = 0;
+    let acquireMs = 0;
+    let handoffMs = 0;
+    const perTable: any[] = [];
+
+    for (const table of tables) {
+      const tA = Date.now();
+      if (arm === "component") {
+        const origin = (String(req.url || "").match(/^https?:\/\/[^/]+/) || [""])[0];
+        const res: any = await (globalThis as any).http.request({
+          method: "GET",
+          url: origin + "/rpc/table?name=" + encodeURIComponent(table),
+        });
+        if (!res || Number(res.status) !== 200) return { error: "sql component failed on " + table + ": " + (res && res.status) };
+        const handle = JSON.parse(String(res.body));
+        acquireMs += Date.now() - tA;
+        const tH = Date.now();
+        const got = await kvTakeJSONL(String(handle.key));
+        handoffMs += Date.now() - tH;
+        rows += got.length;
+        bytes += Number(handle.bytes || 0);
+        perTable.push({ table, rows: got.length, bytes: handle.bytes, queryMs: handle.queryMs, writeMs: handle.writeMs });
+      } else if (arm === "raw") {
+        // Fair-comparison arm: the SAME work as the component (read columns, select all rows, no
+        // per-row normalisation), so the only difference from `component` is the packaging.
+        // `inline` instead calls the app's `readTable`, which additionally base64-encodes relation
+        // ids and coerces booleans per row — that is extra work, and comparing `inline` against
+        // `component` would credit the split with work it simply does not do.
+        //
+        // `PRAGMA table_info` is rejected by the DB bridge, but the table-valued
+        // `pragma_table_info(?)` form is a SELECT and works.
+        const info = await db.all("SELECT name FROM pragma_table_info(?)", [table]);
+        const cols = (info ?? []).map((r: any[]) => r[0]);
+        const select = cols.map((c: string) => '"' + c + '"').join(", ");
+        const got = await db.all('SELECT ' + select + ' FROM "' + table + '" ORDER BY "id" DESC', []);
+        acquireMs += Date.now() - tA;
+        rows += (got ?? []).length;
+        perTable.push({ table, rows: (got ?? []).length });
+      } else {
+        const got = await A.data.readTable(table);
+        acquireMs += Date.now() - tA;
+        rows += got.length;
+        perTable.push({ table, rows: got.length });
+      }
+    }
+
+    return {
+      key,
+      arm,
+      tables,
+      rows,
+      bytes,
+      acquireMs,
+      handoffMs,
+      totalMs: Date.now() - t0,
+      perTable,
+    };
+  }
+
+  // Component-split A/B. `?arm=inline` acquires the rows in this component and renders straight
+  // from the SQL result; `?arm=component` asks the separate `sql.wasm` component for the same rows
+  // and gets back only a *handle* (a spool file path), then renders from that file. Both arms
+  // produce byte-identical HTML from identical data — that equality is asserted by
+  // `tools/split-bench.mjs`, and the timings are the measurement recorded in
+  // vault/decisions/component-split-and-sql-materialised-tables.
+  if (path === "/bench/payload" && method === "GET") {
+    const arm = String(query.arm || "inline");
+    const limit = Math.max(1, Math.min(50000, Number(query.limit || 2000) || 2000));
+    const cols = ["amount", "paid", "payment_date", "description", "qty", "price", "discount_rs"];
+    const t0 = Date.now();
+
+    let rows: any[] = [];
+    let acquireMs = 0;
+    let handoffMs = 0;
+    let handle: any = null;
+
+    if (arm === "component") {
+      const tAcq = Date.now();
+      const origin = (String(req.url || "").match(/^https?:\/\/[^/]+/) || [""])[0];
+      const res: any = await (globalThis as any).http.request({
+        method: "GET",
+        url: origin + "/rpc/payload?limit=" + encodeURIComponent(String(limit)),
+      });
+      acquireMs = Date.now() - tAcq;
+      if (!res || Number(res.status) !== 200) return text("sql component failed: " + (res && res.status), 502);
+      handle = JSON.parse(String(res.body));
+
+      // The handoff: a name, not a value. Read the bytes the component left in the shared KV store.
+      const tHand = Date.now();
+      rows = await kvTakeJSONL(String(handle.key));
+      handoffMs = Date.now() - tHand;
+    } else {
+      const tAcq = Date.now();
+      // NOTE: there is no way to make this read cold from inside the guest. `PRAGMA cache_size` and
+      // `PRAGMA shrink_memory` are rejected by the DB bridge ("pragmas not supported"), verified via
+      // /bench/pragma, so an earlier `cold=1` implementation here was a silent no-op. Cold is now
+      // achieved by restarting the server between measurements (tools/run-bench.ps1 -ColdRestart).
+      const raw = await db.all(
+        'SELECT p."amount", p."paid", p."payment_date", p."description", t."qty", t."price", t."discount_rs" ' +
+          'FROM payments p LEFT JOIN transactions t ON t."id" = p."invoice" ' +
+          'ORDER BY p."id" DESC LIMIT ?',
+        [String(limit)]
+      );
+      rows = (raw ?? []).map((values: any[]) => {
+        const obj: any = {};
+        for (let i = 0; i < cols.length; i++) obj[cols[i]] = values[i];
+        return obj;
+      });
+      acquireMs = Date.now() - tAcq;
+    }
+
+    const tRender = Date.now();
+    const out: string = (globalThis as any).render.html("bench/payload.html", { rows });
+    const renderMs = Date.now() - tRender;
+
+    if (String(query.format || "") === "json") {
+      return {
+        arm,
+        limit,
+        rows: rows.length,
+        acquireMs,
+        handoffMs,
+        renderMs,
+        totalMs: Date.now() - t0,
+        bytes: out.length,
+        sqlComponent: handle,
+      };
+    }
+    return { html: out, status: 200 };
+  }
 
   // Worker endpoint for the optional fan-out. Internal: it executes one already-claimed step by
   // id, and re-running a step is idempotent, so it is reachable without a session (the fan-out

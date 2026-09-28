@@ -1,0 +1,5 @@
+{"run":1,"cold":true,"imported":"TOTAL 60245 60245 0","inlineMs":552,"compMs":517,"overhead":-6.3,"identical":"yes"}
+{"run":2,"cold":true,"imported":"TOTAL 60245 60245 0","inlineMs":468,"compMs":486,"overhead":3.8,"identical":"yes"}
+{"run":3,"cold":true,"imported":"TOTAL 60245 60245 0","inlineMs":458,"compMs":453,"overhead":-1.1,"identical":"yes"}
+{"run":4,"cold":true,"imported":"TOTAL 60245 60245 0","inlineMs":625,"compMs":599,"overhead":-4.2,"identical":"yes"}
+{"run":5,"cold":true,"imported":"TOTAL 60245 60245 0","inlineMs":465,"compMs":464,"overhead":-0.2,"identical":"yes"}
