@@ -98,9 +98,9 @@ trail run --dev --runtime-root-fs traildepot --demo --stderr-logging --public-di
 
 ## Status here
 
-**Adopted into this repo at `runtime-js/`** (Rust crate, `trailbase-wasm 0.6.1`, README + `.gitignore`
+**Adopted into this repo at `trailbase/src/`** (Rust crate, `trailbase-wasm 0.6.1`, README + `.gitignore`
 added, upstream attribution noted). It builds clean there
-(`runtime-js/target/wasm32-wasip2/release/trail_runtime_js.wasm`, 5,875,367 B).
+(`trailbase/src/host/target/wasm32-wasip2/release/trail_runtime_js.wasm`, 5,875,367 B).
 
 **Builds and runs against our stack.** The reference pins `trailbase-wasm 0.5.0`, which exports
 the `trailbase:component@0.1.0` world and is rejected by `trail v0.33.22`:
@@ -156,7 +156,7 @@ raw execution speed. Both engines must avoid long synchronous handlers.
 ## Rendering (D3) added here
 
 `minijinja` was folded into the `runtime-js` host as a native bridge (Rust side:
-`runtime-js/src/render.rs`), exposed to scripts as `render.html(name, ctxJson)` /
+`trailbase/src/host/src/render.rs`), exposed to scripts as `render.html(name, ctxJson)` /
 `render.string(source, ctxJson)`. Templates come from `/app/views` (falling back to `/app/pages`),
 names resolve views-root-relative exactly as the former Node frontend's render module
 (`frontend-ssr/src/lib/render.js`, removed 2026-09-27) did, and the ten custom filters are ported
@@ -177,8 +177,8 @@ GET /page -> 200  content-type: text/html; charset=utf-8
 ```
 
 **Parity harness.** The former Node frontend's `scripts/render-parity.mjs` (removed 2026-09-27)
-rendered all 34 `views/`+`pages/` templates (now `runtime-js/site/app/views/` and
-`runtime-js/site/app/pages/`) and the ten filters through both `minijinja-js` (Node) and the Rust
+rendered all 34 `views/`+`pages/` templates (now `trailbase/src/runtime/app/views/` and
+`trailbase/src/runtime/app/pages/`) and the ten filters through both `minijinja-js` (Node) and the Rust
 renderer, and diffed them. Result: **34/34 templates byte-identical** (CRLF, doctype case,
 `{% extends %}`/`{% include %}`/`{% import %}`, macros, loops, conditionals); filters **9/10
 identical**. The one divergence is `json`: `minijinja-js` serializes ctx objects as `{}` (its

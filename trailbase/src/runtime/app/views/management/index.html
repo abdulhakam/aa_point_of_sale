@@ -1,0 +1,9 @@
+{% extends 'layout.html' %}
+{% block body %}
+<h1 class="page-title">Manage</h1>
+<div class="mgmt-links">
+{% for e in entities %}
+  <a class="btn subtle" href="/management/{{ e.key }}">{{ e.label | lower }}</a>
+{% endfor %}
+</div>
+{% endblock %}

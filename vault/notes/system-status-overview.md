@@ -16,7 +16,7 @@ One screen: what exists, what is verified, what is not, and what could go wrong.
 | System | Directory | State | Verified how |
 | --- | --- | --- | --- |
 | [[trailbase]] | `trailbase/` | New / experimental | Migration applies clean to an empty depot; 17/17 record APIs resolve; behaviour exercised over HTTP on a seeded depot on `v0.33.15` and re-verified on `v0.33.22` |
-| [[runtime-js-guest-platform]] | `runtime-js/`, `guests/` | New / experimental | Guest smoke **71/71** and differential **14/14** on a throw-away depot; management CRUD, fingerprint refresh, job queue and a first invoice-entry slice verified (`runtime-js/tools/`) |
+| [[runtime-js-guest-platform]] | `trailbase/src/`, `guests/` | New / experimental | Guest smoke **71/71** and differential **14/14** on a throw-away depot; management CRUD, fingerprint refresh, job queue and a first invoice-entry slice verified (`trailbase/src/tools/`) |
 | [[backend]] | `backend/` | **Legacy / production** | Holds the production data; 23 migrations; PocketBase 0.22.55 |
 | [[frontend]] | `frontend/` | **Legacy / production** | The application staff use daily, including invoicing and printing |
 
@@ -49,7 +49,7 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 - Report arithmetic matches the preserved view SQL on the smoke seed — the six pinned values are in [[reports-and-ledgers]].
 - TrailBase guest-WASM Phase 0 (S1–S8) all pass on `v0.33.22`: runtime `eval` works, `app/` is readable through `--runtime-root-fs`, a single component serves requests in parallel, guest `fetch` reaches itself, and `UPDATE … RETURNING` claims atomically. Evidence in [[trailbase-guest-wasm-spike-results]].
 - The guest app-host serves the same reports as the legacy-preserved arithmetic: the smoke suite passes **71/71** (same seed and pinned totals) and the differential matched **14/14** report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work ([[guest-app-host-port]]).
-- A first **invoice-entry slice** runs on the guest and passes `runtime-js/tools/invoice-check.mjs`: context endpoint with ETag/304, server-side invoice numbering, an edit lease, idempotent create and line add, and complete ([[tb-0021-invoices-cashmemos-printing]]).
+- A first **invoice-entry slice** runs on the guest and passes `trailbase/src/tools/invoice-check.mjs`: context endpoint with ETag/304, server-side invoice numbering, an edit lease, idempotent create and line add, and complete ([[tb-0021-invoices-cashmemos-printing]]).
 - Money is **2 dp everywhere** — report data, guest writes, and a backfill migration ([[money-is-2dp-everywhere]]).
 
 ## Open risks

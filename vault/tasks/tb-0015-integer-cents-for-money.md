@@ -70,11 +70,11 @@ are multiplied into integers rather than summed.
 - [ ] Decide `invoiceNo`: `INTEGER` rather than cents
 - [ ] Write a **new** migration converting every column (a scaffold-era change; keep the applied one
       untouched)
-- [ ] Update `runtime-js/site/app/compute/views.js` and `runtime-js/site/app/compute/reports.js`
+- [ ] Update `trailbase/src/runtime/app/compute/views.js` and `trailbase/src/runtime/app/compute/reports.js`
       so the arithmetic works in integer units, and keep the `round2` boundaries in the same places
-- [ ] Update `runtime-js/site/app/lib/management.js` and `frontend/src/app/api/items.ts` field
+- [ ] Update `trailbase/src/runtime/app/lib/management.js` and `frontend/src/app/api/items.ts` field
       metadata
-- [ ] Re-run the guest smoke suite (`node runtime-js/tools/guest-smoke.mjs`) and confirm all 71
+- [ ] Re-run the guest smoke suite (`node trailbase/src/tools/guest-smoke.mjs`) and confirm all 71
       checks still pass, including the six pinned amounts
       (`91.00`, `731.00`, `4510.00`, `800.00`/`150.00`, `150.00`, `403.85`/`161.54`)
 - [ ] Update [[data-model]] and explain the unit in the conventions section

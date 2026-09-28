@@ -35,7 +35,7 @@ the `SCHEMA` permission; this one grants it.
 ## Authentication
 
 - Login returns `auth_token` (1 h) + `refresh_token` (30 d), configured in
-  `traildepot/config.textproto`.
+  `trailbase/src/config.textproto`.
 - **`Authorization: Bearer <auth_token>` is sufficient for reads *and* writes** — no CSRF header
   is needed, even though `csrf_token` is returned.
 - **An unauthenticated request is answered `403`** (no permission), not `401`. ⚠️
@@ -136,7 +136,7 @@ Allow-listed expansions, per `config.textproto`:
 So passing the base64 form back on a write is rejected with `400`. This is the single most
 common integration mistake. The former Node client's `relId` helper
 (`frontend-ssr/src/lib/uuid.js`, removed 2026-09-27) normalised either form on the read side; the
-Node-only id helper now lives at `runtime-js/tools/uuid.mjs`.
+Node-only id helper now lives at `trailbase/src/tools/uuid.mjs`.
 
 Also:
 
@@ -188,7 +188,7 @@ The checks below were exercised over HTTP against a seeded depot (the full table
 ## Client implementation notes (the former `frontend-ssr/src/lib/trailbase.js`, removed 2026-09-27)
 
 - `TrailBaseError` carried `status`, `body` and `path`; `trailbaseErrorHandler` in the ported
-  `runtime-js/site/app/lib/http.js` turns it into a rendered page rather than a stack trace.
+  `trailbase/src/runtime/app/lib/http.js` turns it into a rendered page rather than a stack trace.
 - `MAX_LIMIT = 1024` matches the server cap.
 - `listPage`, `listAll`, `count`, `getOne`, `create`, `update`, `remove`, `schema`, `login`,
   `refresh` — deliberately no caching, no retries, no model layer. TrailBase is used for CRUD and

@@ -43,8 +43,8 @@ them is not just a type edit.
 ## The two possible outcomes
 
 **Rework** — each screen fetches base tables and computes via the shared engine. The arithmetic is
-already written and verified: `runtime-js/site/app/compute/views.js` plus
-`runtime-js/site/app/compute/reports.js`, whose 14
+already written and verified: `trailbase/src/runtime/app/compute/views.js` plus
+`trailbase/src/runtime/app/compute/reports.js`, whose 14
 report keys map onto these screens ([[reports-and-ledgers]]). The natural move is to reuse those
 modules rather than re-derive the arithmetic in React.
 

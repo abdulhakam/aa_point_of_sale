@@ -81,7 +81,7 @@ wrong; see [[stale-schema-sql-paths]].
 - `trailbase/README.md` § *No views* in *Design decisions* — naming the four views that "could not
   be exposed at all" and stating that the rest "only ever produced report rows that the frontend
   filtered and summed again anyway".
-- `trailbase/traildepot/migrations/main/U1790208000__create_base_tables.sql` — 17 `CREATE TABLE`
+- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql` — 17 `CREATE TABLE`
   statements and **zero `CREATE VIEW`**.
 - The prior vault recorded this as `issues/trailbase-view-type-inference-limits.md`; see
   [[previous-vault-recovery]].

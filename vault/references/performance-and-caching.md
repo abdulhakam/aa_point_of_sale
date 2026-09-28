@@ -81,7 +81,7 @@ PocketBase view must be a single function call**, which is why `total_sending`,
 
 ## New side (experimental)
 
-### Incremental warm snapshot — `runtime-js/site/app/lib/reports.js`
+### Incremental warm snapshot — `trailbase/src/runtime/app/lib/reports.js`
 
 A snapshot of the 17 base tables **and** their derived views is held in memory and refreshed
 incrementally, spending CPU only on what changed:
@@ -131,7 +131,7 @@ Response hygiene on that endpoint:
 
 ### One implementation, two runtimes
 
-`runtime-js/site/app/compute/` is served at `/compute/*` (behind auth) as the *same file bytes* the
+`trailbase/src/runtime/app/compute/` is served at `/compute/*` (behind auth) as the *same file bytes* the
 guest dispatcher loads, so the browser runtime can run the identical report code in a worker. There
 is no second implementation to keep in sync, and no drift between what the server computed and what
 the client would compute.

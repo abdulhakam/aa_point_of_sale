@@ -3,7 +3,7 @@ title: runtime-js guest platform (WebAssembly app host)
 type: system
 status: experimental
 maturity: new
-locator: runtime-js/, guests/, runtime-js/site/
+locator: trailbase/src/, guests/
 runtime: TrailBase 0.33.22 + wasmtime guest, Rust + QuickJS (rquickjs) + minijinja
 created: 2026-09-27
 tags: [pos, wasm, guests, runtime-js, rquickjs, quickjs, minijinja, experimental]
@@ -28,8 +28,11 @@ direct shift of the legacy UI onto this host, same look
 
 | Directory | What it is |
 |---|---|
-| `runtime-js/` | The Rust host crate: `trailbase-wasm` SDK + `rquickjs` (QuickJS) + `minijinja`, built for `wasm32-wasip2` into a single `*.wasm` |
-| `runtime-js/site/` | The deployable app: `ahscripts/routes/_app/route.ts` (the dispatcher) and `app/` (views, pages, compute, lib, the report SQL) |
+| `trailbase/src/` | The **source of truth**: `config.textproto`, `metadata.textproto`, `migrations/`, `runtime/`, `host/`, `tools/` |
+| `trailbase/src/host/` | The Rust host crate: `trailbase-wasm` SDK + `rquickjs` (QuickJS) + `minijinja`, built for `wasm32-wasip2` into a single `*.wasm` |
+| `trailbase/src/runtime/` | The frontend: `ahscripts/routes/_app/route.ts` (the dispatcher) and `app/` (views, pages, compute, lib, the report SQL) |
+| `trailbase/src/tools/` | The verification harnesses (`guest-smoke.mjs`, `view-equivalence.mjs`, …) |
+| `trailbase/traildepot/` | **Generated** by `clear_db.bat` + `build.bat`: source copies + `wasm/runtime_js.wasm` + `data/` |
 | `guests/` | The throw-away **Phase 0 spike** guest (TS + Vite + `jco componentize`) that proved the platform's assumptions — S1–S8 ([[trailbase-guest-wasm-spike-results]]) |
 
 The host is adapted from, and documented in, [[trail-runtime-js-reference]]; the runtime defaults it
@@ -37,7 +40,7 @@ settled are in [[trailbase-guest-wasm-runtime-defaults]] and [[runtime-js-single
 
 ## How it works
 
-- **Routing**: one generic file route. `runtime-js/src/lib.rs` resolves `ahscripts/routes/<path>/route.*`
+- **Routing**: one generic file route. `trailbase/src/host/src/lib.rs` resolves `ahscripts/routes/<path>/route.*`
   and, when no route folder matches, falls back to `ahscripts/routes/_app/route.ts` — a single
   dispatcher that implements the whole URL space (dynamic paths included).
 - **Business logic** is runtime JS/TS: `app/compute/*.js` is the **same** `compute/` code the Node app
@@ -60,16 +63,19 @@ settled are in [[trailbase-guest-wasm-runtime-defaults]] and [[runtime-js-single
 
 ## Running it
 
+From `trailbase/`:
+
 ```powershell
-# build the host
-cd runtime-js; cargo build --target wasm32-wasip2 --release
-# deploy into a depot's wasm/ dir and run (the guest is served by TrailBase itself)
-trail --depot=<depot> run --address=127.0.0.1:4003 --runtime-root-fs=runtime-js/site
+clear_db.bat     # reset traildepot\ from src\ (wipes the database)
+build.bat        # cargo build wasm32-wasip2 + copy into traildepot\wasm\
+RUN.BAT          # trail run --runtime-root-fs=traildepot\runtime
 ```
 
-`--runtime-root-fs` is load-bearing: it is the WASI sandbox root, so the `app/` directory must live
-under it. Full build/deploy/verify commands are in [[build-and-run]]; ports and scratch depots in
-[[environment]].
+`--runtime-root-fs=traildepot/runtime` is load-bearing: it is the WASI sandbox root, so the
+frontend's `app/` and `ahscripts/` must live under it. Keeping it a subdirectory (not the depot
+root) keeps the depot's `data/` and `secrets/` out of the sandbox. `RUN.BAT` runs `clear_db.bat` and
+`build.bat` automatically when the depot is not prepared. Full build/deploy/verify commands are in
+[[build-and-run]]; ports and scratch depots in [[environment]].
 
 ## What it can do today
 

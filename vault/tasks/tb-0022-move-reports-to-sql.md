@@ -22,11 +22,11 @@ switched.
 ## Done
 
 - [x] Host: cache the transpiled route source by content hash ([[dispatcher-transpiled-per-request]])
-- [x] `runtime-js/tools/extract-legacy-views.mjs` — extracts all view SQL **verbatim** from
+- [x] `trailbase/src/tools/extract-legacy-views.mjs` — extracts all view SQL **verbatim** from
       `backend/p_data/data.db` (the migrations only carry some) and normalises PocketBase's
       double-quoted string literals (`"%.2f"`) to single quotes, which TrailBase's SQLite requires.
-      **15 views** written to `runtime-js/site/app/reports/sql/views/`
-- [x] `runtime-js/tools/verify-legacy-views.mjs` — composes each view with its dependencies inlined
+      **15 views** written to `trailbase/src/runtime/app/reports/sql/views/`
+- [x] `trailbase/src/tools/verify-legacy-views.mjs` — composes each view with its dependencies inlined
       as CTEs and runs it against the depot; **15/15 pass**, row counts matching PocketBase where
       comparable (`net_price` 23,414 = 23,414; `transaction_view` 23,413 = 23,413)
 - [x] Composer: wrap the target in a subquery so a view that starts with its own `WITH` works
@@ -35,7 +35,7 @@ switched.
       ([[legacy-report-sql-uses-company-columns]])
 - [x] Literal normalisation now consults the real schema (a token is only an identifier if it is a
       table/view/column name), which fixed `"sending"` and friends
-- [x] Equivalence gate: `runtime-js/tools/view-equivalence.mjs` compares SQL rows with
+- [x] Equivalence gate: `trailbase/src/tools/view-equivalence.mjs` compares SQL rows with
       `compute/views.js` rows on the same data. **0/13 identical** — the legacy SQL is *not*
       equivalent to the JS: `printf` numbers vs numbers, extra/missing columns, and genuine math
       differences (`ledger_*` credit/debit, `items_report` qty, `outstanding` 602 vs 0,
@@ -73,10 +73,10 @@ with `sql+js` for columns SQL cannot express (the `company` array).
 
 ## Runtime plumbing (2026-09-27)
 
-- `runtime-js/site/app/lib/sqlviews.js`: loads `app/reports/sql/views/*.sql` at runtime, inlines
+- `trailbase/src/runtime/app/lib/sqlviews.js`: loads `app/reports/sql/views/*.sql` at runtime, inlines
   dependencies as CTEs, derives column names (comment-aware), runs via `sqlite.all`, and appends
   `ORDER BY "id" DESC` to match the JS input order.
-- `runtime-js/site/app/lib/reports.js`: a `SQL_VIEWS` map + `USE_SQL_VIEWS`, now **true**.
+- `trailbase/src/runtime/app/lib/reports.js`: a `SQL_VIEWS` map + `USE_SQL_VIEWS`, now **true**.
 - Fixed a real **loader bug**: aliased named imports were inverted
   (`import { rows as x }` generated `{x: rows}`), which silently broke `sqlviews` until corrected.
 - **Enabled after enforcing the 2 dp money rule** ([[money-is-2dp-everywhere]]): with money at 2 dp

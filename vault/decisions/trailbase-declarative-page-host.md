@@ -47,10 +47,10 @@ single generic runtime serves it.
 }
 ```
 
-- The guest's generic page host (`runtime-js/site/ahscripts/routes/_app/route.ts`) **knows nothing
+- The guest's generic page host (`trailbase/src/runtime/ahscripts/routes/_app/route.ts`) **knows nothing
   about any specific page.** It discovers folders, renders the declared template, serves the
   declared tables, and dispatches the declared compute operation. Adding a page is adding a folder.
-- `runtime-js/site/app/lib/pages.js` is the registry: it normalises the manifest, resolves a filter
+- `trailbase/src/runtime/app/lib/pages.js` is the registry: it normalises the manifest, resolves a filter
   default through `compute/format.js` when it is `{ "fn": "…" }`, and derives `needs.tables` from
   `needs.views` (plus each `select` filter's `source`) so a page *cannot* under-declare the data
   it needs.
@@ -101,13 +101,13 @@ single generic runtime serves it.
 
 ## Evidence
 
-- `runtime-js/site/app/lib/pages.js` — the registry, `normalizeMeta`, `resolveDefault`,
+- `trailbase/src/runtime/app/lib/pages.js` — the registry, `normalizeMeta`, `resolveDefault`,
   `MAX_DEPTH = 6`, and the slug-escape rejection in `readPage`.
-- `runtime-js/site/ahscripts/routes/_app/route.ts` — the generic host, `filtersFor`, the
+- `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — the generic host, `filtersFor`, the
   `W/"v3-…"` ETag and gzip handling, and the `/p/<slug>` and `/p/<slug>/data` endpoints.
-- `runtime-js/site/app/pages/` — 14 folders, each `meta.json` + `page.html` (`reports/{payments,
+- `trailbase/src/runtime/app/pages/` — 14 folders, each `meta.json` + `page.html` (`reports/{payments,
   salesreport,paymentsbycompany,itemsales,profit,stock,difference,outstanding,productsale,
   dailysale}`, `ledgers/{area,booker,general,party}`).
-- `runtime-js/site/app/pages/reports/profit/meta.json` — the worked example quoted above.
+- `trailbase/src/runtime/app/pages/reports/profit/meta.json` — the worked example quoted above.
 - The prior vault's `decisions/trailbase-declarative-page-host.md` (`ea2bd12`) is the original
   record; see [[previous-vault-recovery]].

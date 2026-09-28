@@ -1,8 +1,14 @@
-# TrailBase runtime state. Only config.textproto and migrations/ are source.
+# The source of truth is src/. `traildepot/` is a build artefact assembled from src/ by
+# clear_db.bat + build.bat, so everything in it is generated and git-ignored.
+traildepot/config.textproto
+traildepot/metadata.textproto
+traildepot/migrations/
+traildepot/runtime/
+
+# TrailBase runtime state.
 traildepot/data/
 traildepot/backups/
 traildepot/uploads/
 traildepot/secrets/
 traildepot/wasm/
-traildepot/metadata.textproto
 *.log

@@ -80,9 +80,9 @@ Two design choices follow directly and are recorded elsewhere:
 - `backend/pocketbase.exe` — 44,842,496 bytes, version 0.22.55, committed.
 - `trailbase/.gitignore` / `traildepot/.gitignore` — only `config.textproto` and `migrations/`
   are source; `data/`, `backups/`, `uploads/`, `secrets/`, `wasm/` are runtime state.
-- `traildepot/config.textproto` — no SMTP, no OAuth, no anonymous or OTP sign-in; everything
+- `trailbase/src/config.textproto` — no SMTP, no OAuth, no anonymous or OTP sign-in; everything
   local.
-- `runtime-js/src/render.rs` and `runtime-js/site/app/views/` — templates read from disk at render
+- `trailbase/src/host/src/render.rs` and `trailbase/src/runtime/app/views/` — templates read from disk at render
   time, no bundler.
 - The prior vault recorded this as `decisions/offline-local-desktop-deployment.md`, and a related
   investigation into desktop packaging; see [[previous-vault-recovery]].

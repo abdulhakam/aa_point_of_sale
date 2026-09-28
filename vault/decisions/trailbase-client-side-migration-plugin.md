@@ -23,7 +23,7 @@ Where should that code live? Options considered:
 | Option | Problem |
 |---|---|
 | A PocketBase JS migration (`//go:build` hook or `pb_hooks`) | Runs *inside* the old server, which is meant to be left alone; it would also need to be deployed there |
-| A standalone Node script in `trailbase/` | A second place that needs TrailBase auth handling and paging — duplicating the guest's data layer (`runtime-js/site/app/lib/data.js`) |
+| A standalone Node script in `trailbase/` | A second place that needs TrailBase auth handling and paging — duplicating the guest's data layer (`trailbase/src/runtime/app/lib/data.js`) |
 | Server-side code in the guest frontend ([[runtime-js-guest-platform]]) | The migration becomes part of the running app's surface area forever, for something run once |
 | A browser page that talks to both servers | No backend code at all, and both credentials are already available to the operator doing it |
 
@@ -33,7 +33,7 @@ The migration is the bundled **`import-from-v1` plugin**: a self-contained folde
 `meta.md` + `index.html`, served at `/plugins/import-from-v1/` **behind the same login as the
 rest of the app**. It was written inside the former Node frontend
 (`frontend-ssr/plugins/import-from-v1/`, removed 2026-09-27) and has been ported to the guest at
-`runtime-js/site/app/plugins/import-from-v1/`; verifying it end-to-end is
+`trailbase/src/runtime/app/plugins/import-from-v1/`; verifying it end-to-end is
 [[pos-0029-rebuild-v1-import-on-guest]].
 
 It signs in to PocketBase (admin login + paged reads) and TrailBase (user login + bulk record
@@ -58,7 +58,7 @@ It does the translation work:
 - **The plugin contract is designed for exactly this.** `plugins/<slug>/{meta.md,index.html}` is
   a single self-contained page, addable and removable by copying or deleting a folder, with no
   change to `src/` or `views/` ([[runtime-js-guest-platform]]; the guest serves plugins from
-  `runtime-js/site/app/plugins/`). A one-off migration is the archetypal plugin.
+  `trailbase/src/runtime/app/plugins/`). A one-off migration is the archetypal plugin.
 - **It is behind the login**, so the page — and therefore the two sets of credentials it uses —
   is not reachable anonymously.
 - **Both servers are reachable from the operator's browser** (`:8090` and `:4000` on
@@ -94,13 +94,13 @@ It does the translation work:
 
 ## Evidence
 
-- `runtime-js/site/app/plugins/README.md` — the plugin format, and "Plugin pages are behind the
+- `trailbase/src/runtime/app/plugins/README.md` — the plugin format, and "Plugin pages are behind the
   same login as the rest of the app."
-- `runtime-js/site/app/plugins/import-from-v1/meta.md` — frontmatter (`author: Abdul Hakam`,
+- `trailbase/src/runtime/app/plugins/import-from-v1/meta.md` — frontmatter (`author: Abdul Hakam`,
   `license: MIT`, `tags: [migration, pocketbase, import, one-time]`, `order: 10`) and the "What it
   does" list quoted above; the Node copy carried the same text (removed 2026-09-27,
   [[guest-app-host-port]]). Verifying it is [[pos-0029-rebuild-v1-import-on-guest]].
-- `runtime-js/site/app/lib/plugins.js` and `runtime-js/site/ahscripts/routes/_app/route.ts` — the
+- `trailbase/src/runtime/app/lib/plugins.js` and `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — the
   hub that reads each `meta.md` and the `/plugins/*` route that serves the page.
 - The former Node frontend's `frontend-ssr/src/server.js` (removed 2026-09-27,
   [[guest-app-host-port]]) — `app.use("/plugins", requireAuth, express.static(config.pluginsDir, { index: "index.html" }))`.

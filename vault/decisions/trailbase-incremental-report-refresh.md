@@ -93,16 +93,16 @@ former Node frontend (`frontend-ssr`, removed 2026-09-27) ran it on a pool sized
 
 ## Evidence
 
-- `runtime-js/site/app/lib/data.js` — `TABLES` (the 17) and `readTable`/`readTables`.
-- `runtime-js/site/app/lib/reports.js` — the warm-snapshot service: `probeFingerprints` (the
+- `trailbase/src/runtime/app/lib/data.js` — `TABLES` (the 17) and `readTable`/`readTables`.
+- `trailbase/src/runtime/app/lib/reports.js` — the warm-snapshot service: `probeFingerprints` (the
   `count:newest updated` fingerprint and the comment explaining why it catches all three change
   kinds), `getViews`/`refresh`/`invalidate`, `cacheKey` keyed by nonce + `version`, the
   `viewsAffectedBy`-driven incremental rebuild, and the `status()` shape. Report work runs
   in-process here, so there is no counterpart to the Node frontend's `worker.js`.
-- `runtime-js/site/ahscripts/routes/_app/route.ts` — `GET /reports/status` and
+- `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — `GET /reports/status` and
   `POST /reports/refresh` including the `?full=1` path and the no-JS redirect fallback, the
   `A.service.invalidate()` calls after writes, and `/healthz` reporting the status;
-  `runtime-js/site/app/lib/report-pages.js` is the report/ledger page registry.
+  `trailbase/src/runtime/app/lib/report-pages.js` is the report/ledger page registry.
 - The former Node frontend's `frontend-ssr/src/server.js` (removed 2026-09-27,
   [[guest-app-host-port]]) — `reports.rememberToken(req.token)`, the `warm` list built from
   `REPORT_PAGES`, `reports.start()`, and graceful shutdown via `reports.close()`.

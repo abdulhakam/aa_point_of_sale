@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }} · {{ appName }}</title>
+<link rel="icon" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="appshell">
+{% if user %}
+{% include 'partials/topbar.html' %}
+<div class="appbody">
+{% include 'partials/nav.html' %}
+{% endif %}
+<main class="main{% if not user %} main-anon{% endif %}">
+{% include 'partials/flash.html' %}
+{% block body %}{% endblock %}
+</main>
+{% if user %}</div>{% endif %}
+</div>
+<script src="/static/js/app.js" defer></script>
+</body>
+</html>

@@ -24,7 +24,7 @@ Windows; the `.BAT` files are the supported entry points.
 
 2. trailbase\RUN.BAT                              TrailBase :4000
 3. guest frontend                                 TrailBase :4003   (needs 2 to be up)
-   trail --depot=<depot> run --address=127.0.0.1:4003 --runtime-root-fs=runtime-js/site
+   trail --depot=<depot> run --address=127.0.0.1:4003 --runtime-root-fs=trailbase/src/runtime
 ```
 
 Steps 1 and 2/3 are independent stacks — you can run the legacy pair, the new pair, or both at
@@ -130,21 +130,30 @@ exist. The new frontend is the guest-WASM platform below.
 
 ## Guest-WASM platform (the new frontend, experimental)
 
-There is no script yet; the loop is build → deploy → run → verify
-([[runtime-js-guest-platform]]).
+The depot is assembled from `trailbase/src/` and the built component by two `.bat` files, then served
+by TrailBase itself ([[runtime-js-guest-platform]]):
 
 ```powershell
-# 1. build the Rust host (Rust + wasm32-wasip2 target + QuickJS via rquickjs + minijinja)
-cd runtime-js
-cargo build --target wasm32-wasip2 --release        # -> target/wasm32-wasip2/release/trail_runtime_js.wasm
+# 1. reset traildepot/ from src/ (wipes the database)
+trailbase\clear_db.bat
 
-# 2. start a scratch depot against the site directory (the guest is served by TrailBase itself)
-#    copy the built wasm into <depot>/wasm/ first; a fresh depot also needs the base migration
-trail --depot=<depot> run --address=127.0.0.1:4003 --runtime-root-fs=runtime-js/site
+# 2. build the Rust host (Rust + wasm32-wasip2 + QuickJS via rquickjs + minijinja), copy it in
+trailbase\build.bat            # -> traildepot/wasm/runtime_js.wasm
+
+# 3. start the server
+trailbase\RUN.BAT              # trail --depot=traildepot run --runtime-root-fs=traildepot/runtime
 ```
 
-- `--runtime-root-fs=runtime-js/site` is **load-bearing**: it is the WASI sandbox root, so the
-  `app/` directory must live under it (S3, [[trailbase-guest-wasm-runtime-defaults]]).
+`RUN.BAT` runs 1 and 2 automatically if the depot is not prepared (no `traildepot/config.textproto`
+or no wasm component).
+
+- `--runtime-root-fs=traildepot/runtime` is **load-bearing**: it is the WASI sandbox root, so the
+  frontend's `app/` and `ahscripts/` live under it. Keeping it a subdirectory (not the depot root)
+  keeps the depot's `data/` and `secrets/` out of the guest sandbox
+  ([[trailbase-guest-wasm-runtime-defaults]]).
+- `trailbase/src/` is the source of truth (`config.textproto`, `metadata.textproto`, `migrations/`,
+  `runtime/` = the frontend, `host/` = the Rust crate, `tools/` = the harnesses); `traildepot/` is
+  generated from it.
 - Do **not** pass `--aot`: it doubles the size and is 2.3× slower to cold-load
   ([[trailbase-guest-aot-startup-cost]]).
 - The Phase-0 spike guest is separate: `cd guests; npm install; npm run build:wasm`, then start
@@ -153,17 +162,17 @@ trail --depot=<depot> run --address=127.0.0.1:4003 --runtime-root-fs=runtime-js/
 
 ### Verify
 
-All harnesses live in `runtime-js/tools/`. The Node-comparative ones (`guest-parity.mjs`,
+All harnesses live in `trailbase/src/tools/`. The Node-comparative ones (`guest-parity.mjs`,
 `perf-compare.mjs`) were deleted with `frontend-ssr`; the parity results they produced are
 recorded in [[guest-app-host-port]].
 
 | Command | Checks |
 |---|---|
-| `node runtime-js/tools/guest-smoke.mjs` | boots its own depot, seeds the smoke dataset and runs **71/71** checks |
-| `node runtime-js/tools/jobs-check.mjs` | durable queue, idempotency, worker fan-out, poller (`POLLER_TEST=1`) |
-| `node runtime-js/tools/management-check.mjs` | management create/update/delete |
-| `node runtime-js/tools/invoice-check.mjs` | context + ETag, idempotent create/lines, lease, complete |
-| `node runtime-js/tools/view-equivalence.mjs` | ported report SQL vs `compute/views.js` |
+| `node trailbase/src/tools/guest-smoke.mjs` | boots its own depot, seeds the smoke dataset and runs **71/71** checks |
+| `node trailbase/src/tools/jobs-check.mjs` | durable queue, idempotency, worker fan-out, poller (`POLLER_TEST=1`) |
+| `node trailbase/src/tools/management-check.mjs` | management create/update/delete |
+| `node trailbase/src/tools/invoice-check.mjs` | context + ETag, idempotent create/lines, lease, complete |
+| `node trailbase/src/tools/view-equivalence.mjs` | ported report SQL vs `compute/views.js` |
 
 ## Prerequisites
 
@@ -172,7 +181,7 @@ recorded in [[guest-app-host-port]].
 | `backend` | Windows; `pocketbase.exe` is bundled (0.22.55, 44 MB, committed) |
 | `frontend` | Node.js (Next 14 / React 18); `npm install` in `frontend/` |
 | `trailbase` | the `trail` binary on `PATH` (`iwr https://trailbase.io/install.ps1 \| iex`) |
-| `runtime-js` (guest) | Rust with the `wasm32-wasip2` target; `cargo build --target wasm32-wasip2 --release` in `runtime-js/`; Node for the tools |
+| `trailbase/src` (guest) | Rust with the `wasm32-wasip2` target; `trailbase\build.bat`; Node for the tools |
 
 ## Data directories (do not commit)
 
@@ -182,7 +191,7 @@ recorded in [[guest-app-host-port]].
 | `backend/pb_data_bench/` | git-ignored — benchmark data |
 | `backend/p_data/` | ⚠️ **committed** (`data.db`, `data.db-shm`, `data.db-wal`, `logs.db`, `types.d.ts`) — see [[pocketbase-data-dirs-in-git]] |
 | `trailbase/traildepot/data`, `backups`, `uploads`, `secrets`, `wasm` | git-ignored by `trailbase/.gitignore` |
-| `runtime-js/target/`, `runtime-js/.tbdemo-guest/` | build output and the smoke test's throw-away depot; git-ignored |
+| `trailbase/src/host/target/`, `trailbase/src/.tbdemo-guest/` | build output and the smoke test's throw-away depot; git-ignored |
 | `frontend/.env.local`, `.next/`, `out/` | git-ignored by the root `.gitignore` |
 
 ## Credentials
@@ -194,7 +203,7 @@ The logins each system needs are in the `credentials/` collection:
 | PocketBase (`backend/`) | production | `credentials/production-pocketbase.md` |
 | Next.js (`frontend/`) | production | `credentials/production-nextjs.md` |
 | TrailBase (`trailbase/`) | experimental | [[experimental-trailbase]] |
-| Guest frontend (`runtime-js/`) | experimental | — (no separate secret; uses TrailBase auth) |
+| Guest frontend (`trailbase/src/`) | experimental | — (no separate secret; uses TrailBase auth) |
 
 They are plaintext and tracked; see `credentials/README.md` for the warning.
 

@@ -30,7 +30,7 @@ still lacks ([[guest-frontend-feature-parity-gaps]] §1). Design and all owner d
 ### First slice — done (2026-09-27)
 
 The write API and its lease/idempotency are implemented on the guest and verified by
-`runtime-js/tools/invoice-check.mjs` (all checks pass, repeatedly):
+`trailbase/src/tools/invoice-check.mjs` (all checks pass, repeatedly):
 
 - [x] **Context endpoint** `GET /invoice/context?type=…` — items with advisory derived stock and
       prices, parties, bookers, areas, sections, categories, companies, and the next number per

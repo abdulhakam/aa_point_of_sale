@@ -1,0 +1,5 @@
+# Rust build output for the guest component.
+/host/target/
+
+# Throw-away depot the tools create when they run.
+/.tbdemo-guest/

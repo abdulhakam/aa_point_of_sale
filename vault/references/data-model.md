@@ -13,8 +13,8 @@ related_to: ["[[trailbase]]", "[[backend]]", "[[api-contract-trailbase]]"]
 The TrailBase schema is the target model; the PocketBase collections are what production runs
 today. This note is the table-by-table reference for both, plus the value translation between
 them. It is derived from
-`trailbase/traildepot/migrations/main/U1790208000__create_base_tables.sql` (21,008 bytes, the
-only migration) and `trailbase/traildepot/config.textproto`.
+`trailbase/src/migrations/main/U1790208000__create_base_tables.sql` (21,008 bytes, the
+only migration) and `trailbase/src/config.textproto`.
 
 ## Conventions used by every table
 
@@ -88,7 +88,7 @@ still referenced is refused, so a code cannot be orphaned.
 | `expenses` | `name`, `description`, `amount`, `date` |
 
 `sections` has no `deleted` column, which is why [[runtime-js-guest-platform]] hard-deletes
-sections and soft-deletes everything else — `runtime-js/site/app/lib/management.js` records
+sections and soft-deletes everything else — `trailbase/src/runtime/app/lib/management.js` records
 `softDelete: false` for `sections` and `items`, `true` for the rest.
 
 `items` also has no `deleted`, and is the only table with a partial unique index (below).
@@ -209,6 +209,7 @@ Required when migrating data out of [[backend]] ([[pos-0027-migrate-production-d
 | `invoices.type`: `''` / `purchase` / `sale` / `return` / `difference` | `NULL` / `0` / `1` / `2` / `3` |
 | `payments.type`: `''` / `sending` / `recieving` / `return` | `NULL` / `0` / `1` / `2` |
 | `parties.company`, `order_bookers.company` (JSON arrays of ids) | one `party_companies` / `order_booker_companies` row per id |
+| legacy `categories` (the one company list, shown as "Companies"; there is no legacy `companies` table) | a row in **both** new `categories` and `companies` — `items.category` FKs to the former, the link tables FK to the latter ([[v1-categories-map-to-companies]]) |
 | booleans `true`/`false` | `1`/`0` |
 | `'r…'` PocketBase ids | UUIDv7 (`uuid_v7()`), or keep the old ids by inserting with `uuid_parse()` |
 

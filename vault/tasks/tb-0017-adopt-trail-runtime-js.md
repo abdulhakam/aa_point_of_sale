@@ -28,7 +28,7 @@ See [[trail-runtime-js-reference]] for the full assessment.
 ## Subtasks
 
 - [x] Confirm the reference builds here (`cargo build --target wasm32-wasip2 --release`)
-- [x] Bring the crate into this repo as `runtime-js/` (attribution + README added); builds clean
+- [x] Bring the crate into this repo as `trailbase/src/` (attribution + README added); builds clean
       there (`target/wasm32-wasip2/release/trail_runtime_js.wasm`, 5,875,367 B)
 - [x] Run it in a scratch depot and exercise a `.ts` route end-to-end (self-test 6/6)
 - [ ] Fix `init`/`jobs` to accept `.ts` and run `init` at startup (upstream filters `.js` only

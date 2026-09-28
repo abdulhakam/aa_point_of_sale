@@ -12,7 +12,7 @@ related_to: ["[[trailbase]]", "[[build-and-run]]"]
 
 ## What happens
 
-`trailbase/traildepot/migrations/main/` holds a single migration,
+`trailbase/src/migrations/main/` holds a single migration,
 `U1790208000__create_base_tables.sql`. If that file's content changes — as it did when the schema
 was rewritten for integer enums and again when the table set changed — an **existing**
 `traildepot/data/` does **not** get the new schema.
@@ -71,7 +71,7 @@ today.
   migration whose checksum no longer matches, so a stale depot would keep the old schema."
 - `trailbase/RUN.BAT` — the bootstrap branch is guarded by `if exist "%DEPOT%\data" goto
   :start_server`, so an existing depot is never re-initialised.
-- `trailbase/traildepot/migrations/main/` — exactly one migration, i.e. there has been no
+- `trailbase/src/migrations/main/` — exactly one migration, i.e. there has been no
   opportunity to exercise an additive migration yet.
 - The prior vault recorded the same finding as `issues/trailbase-stale-depot-skips-migration.md`;
   see [[previous-vault-recovery]].

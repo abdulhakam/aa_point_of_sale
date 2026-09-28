@@ -34,7 +34,7 @@ The baseline dropped ~30–40 %; the report numbers barely moved, confirming tha
 
 ## What happens
 
-`runtime-js/src/runtime.rs::run_route` runs for **every** request that the wildcard dispatches
+`trailbase/src/host/src/runtime.rs::run_route` runs for **every** request that the wildcard dispatches
 (which is every app route):
 
 ```rust
@@ -74,8 +74,8 @@ This preserves live editing and removes the per-request transpile.
 
 ## Evidence
 
-- `runtime-js/src/runtime.rs` — `run_route` (read + `compile_ts` + wrapper + eval, no cache).
-- `runtime-js/site/ahscripts/routes/_app/route.ts` — the dispatcher, a `.ts` file, so swc runs.
+- `trailbase/src/host/src/runtime.rs` — `run_route` (read + `compile_ts` + wrapper + eval, no cache).
+- `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — the dispatcher, a `.ts` file, so swc runs.
 - [[guest-vs-node-performance]] — the baseline latency this explains.
 
 ## Related

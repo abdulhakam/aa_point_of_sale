@@ -27,11 +27,11 @@ guest-smoke:  71/71   (pinned totals unchanged)
 management-check: all checks passed
 ```
 
-`USE_SQL_VIEWS` is now **true** in `runtime-js/site/app/lib/reports.js`.
+`USE_SQL_VIEWS` is now **true** in `trailbase/src/runtime/app/lib/reports.js`.
 
 ## Original finding
 
-The Node-vs-guest differential (`runtime-js/tools/guest-parity.mjs`, exact JSON comparison) is not
+The Node-vs-guest differential (`trailbase/src/tools/guest-parity.mjs`, exact JSON comparison) is not
 perfectly deterministic. With **no SQL views in play** (the JS path, unchanged):
 
 ```text
@@ -61,7 +61,7 @@ reports as a mismatch even though no cent moved.
 ## Consequences
 
 - The **SQL base views are off by default** (`USE_SQL_VIEWS = false` in
-  `runtime-js/site/app/lib/reports.js`) until the accumulation is deterministic; the JS path is the
+  `trailbase/src/runtime/app/lib/reports.js`) until the accumulation is deterministic; the JS path is the
   parity-safe default ([[convert-base-views-not-derivations]]).
 - The differential should compare money with a tiny tolerance (e.g. 1e-6 absolute, far below a
   cent) rather than exact JSON, or the reports must be bit-deterministic. The equivalence gate
@@ -71,9 +71,9 @@ reports as a mismatch even though no cent moved.
 
 ## Evidence
 
-- `runtime-js/tools/guest-parity.mjs` — 13/14 then 14/14 on the same code and data.
-- `runtime-js/site/app/lib/reports.js` — `USE_SQL_VIEWS = false` with the reason.
-- `runtime-js/site/app/lib/sqlviews.js` — `ORDER BY "id" DESC` added to align order (helped but
+- `trailbase/src/tools/guest-parity.mjs` — 13/14 then 14/14 on the same code and data.
+- `trailbase/src/runtime/app/lib/reports.js` — `USE_SQL_VIEWS = false` with the reason.
+- `trailbase/src/runtime/app/lib/sqlviews.js` — `ORDER BY "id" DESC` added to align order (helped but
   cannot bind an aggregate's scan order).
 
 ## Related

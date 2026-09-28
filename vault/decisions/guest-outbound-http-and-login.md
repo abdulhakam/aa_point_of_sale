@@ -21,7 +21,7 @@ module has no `login` (only `require_admin`), and its `fetch` returns **only the
 
 ## Decision
 
-1. **Add an outbound bridge.** `runtime-js/src/api/fetch.rs` exposes `http.postJson(url, body)`
+1. **Add an outbound bridge.** `trailbase/src/host/src/api/fetch.rs` exposes `http.postJson(url, body)`
    built on `trailbase_wasm::fetch::fetch`, and `trailbase-wasm`'s `wstd` is added as a dependency
    **pinned to the exact version the SDK uses (`=0.5.6`)** so the component has one `wstd`.
    `String` is turned into a body with `wstd::http::body::IntoBody`.
@@ -54,9 +54,9 @@ module has no `login` (only `require_admin`), and its `fetch` returns **only the
 
 ## Evidence
 
-- `runtime-js/src/api/fetch.rs` — `http.postJson`; `runtime-js/Cargo.toml` — pinned `wstd`.
-- `runtime-js/src/lib.rs` — `{html}` honours `status`; `headers` may be a list.
-- `runtime-js/site/ahscripts/routes/_app/route.ts` — the `/login` POST.
+- `trailbase/src/host/src/api/fetch.rs` — `http.postJson`; `trailbase/src/host/Cargo.toml` — pinned `wstd`.
+- `trailbase/src/host/src/lib.rs` — `{html}` honours `status`; `headers` may be a list.
+- `trailbase/src/runtime/ahscripts/routes/_app/route.ts` — the `/login` POST.
 - Verified by hand (401 + error page; 303 + both cookies; dashboard 200) and by the guest smoke:
   **69/69 checks pass**.
 

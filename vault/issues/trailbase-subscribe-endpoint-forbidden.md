@@ -28,7 +28,7 @@ that reads normally:
 | `…/sections/subscribe/*` + **bearer token** | **403** |
 | `…/sections/subscribe/*` + cookie + `Origin: http://localhost:4000` | no response (host exited) |
 
-- No `realtime`/`subscribe`/`subscription` setting exists in `traildepot/config.textproto`, and
+- No `realtime`/`subscribe`/`subscription` setting exists in `trailbase/src/config.textproto`, and
   `trail run --help` exposes no such flag.
 - A PATCH performed while an SSE client was attached produced **no events** (0 bytes streamed) —
   and the host process then exited, after which the port refused connections. That is consistent

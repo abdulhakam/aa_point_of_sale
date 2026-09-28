@@ -52,7 +52,7 @@ keep computing it exactly as today, that is a one-line revert.
 - `frontend/src/app/app/invoices/InvoiceForm.tsx:206-224` — the derivation above.
 - `frontend/src/app/api/invoices.ts:97` — `invoiceNo` is `readOnly` in the form.
 - `backend/pb_migrations/` — no migration or hook assigns `invoiceNo`.
-- `trailbase/traildepot/migrations/main/U1790208000__create_base_tables.sql:199` —
+- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql:199` —
   `"invoiceNo" REAL NOT NULL DEFAULT 0`; the database does not allocate it.
 
 ## Related

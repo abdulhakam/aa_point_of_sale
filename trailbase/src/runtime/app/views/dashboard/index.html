@@ -1,0 +1,22 @@
+{% extends 'layout.html' %}
+{% import 'partials/icons.html' as icons %}
+{% block body %}
+<section class="card hub">
+  <div class="hub-title">Dashboard</div>
+  <div class="tiles">
+    <a class="tile" href="/reports"><span class="c-pink-4">{{ icons.svg('report', 64) }}</span><span class="tile-label">Reports</span></a>
+    <a class="tile" href="/management"><span class="c-gray-4">{{ icons.svg('settings', 64) }}</span><span class="tile-label">Management</span></a>
+  </div>
+</section>
+
+{# New-side addition: the legacy dashboard has no counters, but the runtime exposes them and the
+   smoke suite asserts the "Overview" heading, so it stays as a Mantine-style card below the tiles. #}
+<section class="card">
+  <h2>Overview</h2>
+  <div class="stat-grid">
+  {% for s in tiles %}
+    <div class="stat"><div class="stat-value">{{ s.value }}</div><div class="stat-label">{{ s.label }}</div></div>
+  {% endfor %}
+  </div>
+</section>
+{% endblock %}

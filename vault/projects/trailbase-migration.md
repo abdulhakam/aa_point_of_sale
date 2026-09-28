@@ -99,7 +99,7 @@ repointed at TrailBase or retired in favour of the guest.
   the preserved-view SQL path points at a directory that does not contain it. See
   [[stale-schema-sql-paths]].
 - **The old Node frontend is gone.** `frontend-ssr/` was deleted on 2026-09-27
-  ([[guest-ui-is-a-direct-shift-of-legacy]]); the guest's `runtime-js/site/` is now the app.
+  ([[guest-ui-is-a-direct-shift-of-legacy]]); the guest's `trailbase/src/runtime/` is now the app.
   Anything that pointed at `frontend-ssr/` is superseded — see [[previous-vault-recovery]] for
   history.
 
@@ -139,4 +139,4 @@ repointed at TrailBase or retired in favour of the guest.
 - [[trailbase-runtime-js-scheduler-not-running-jobs]] — why there is no background job poller.
 - [[legacy-ui-reference-captures]] — the captured legacy UI.
 - `trailbase/README.md` — the long-form evidence, including the validation table.
-- `runtime-js/README.md` — the app-host inventory and check commands.
+- `trailbase/src/host/README.md` — the app-host inventory and check commands.

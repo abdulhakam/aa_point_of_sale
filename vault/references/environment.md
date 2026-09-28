@@ -44,10 +44,10 @@ Key paths:
 
 | Path | Role |
 |---|---|
-| `runtime-js/target/wasm32-wasip2/release/trail_runtime_js.wasm` | the built host (git-ignored) |
-| `runtime-js/site/` | the `ahscripts/` dispatcher and `app/` (views, pages, compute, lib, SQL) the host reads — pass this as `--runtime-root-fs` |
+| `trailbase/src/host/target/wasm32-wasip2/release/trail_runtime_js.wasm` | the built host (git-ignored) |
+| `trailbase/src/runtime/` | the `ahscripts/` dispatcher and `app/` (views, pages, compute, lib, SQL) the host reads — pass this as `--runtime-root-fs` |
 | `guests/` | the Phase-0 spike guest (TS + Vite + `jco`); `guests/spikes/depot` is a scratch depot |
-| `runtime-js/tools/` | the verification harnesses (`guest-smoke`, `jobs-check`, `management-check`, `invoice-check`, `view-equivalence`, …) |
+| `trailbase/src/tools/` | the verification harnesses (`guest-smoke`, `jobs-check`, `management-check`, `invoice-check`, `view-equivalence`, …) |
 | `%TEMP%\kilo\aa-*-depot` | throw-away depots used by those harnesses |
 
 `--runtime-root-fs=<dir>` is the WASI sandbox root: `app/` must live under it, and `..` escapes are
@@ -68,17 +68,17 @@ defaults to IPv6-only (see above).
 All four are `NEXT_PUBLIC_*`, so they are compiled into the browser bundle — never put a secret
 here.
 
-### Guest frontend (`runtime-js/`) — no `.env`
+### Guest frontend (`trailbase/src/`) — no `.env`
 
 The guest app is served by TrailBase and reads no `.env`: its settings are the depot's
-`config.textproto` (below) plus the runtime files under `runtime-js/site/app/`. The former Node
+`config.textproto` (below) plus the runtime files under `trailbase/src/runtime/app/`. The former Node
 `frontend-ssr` `.env` — including its inert `CACHE_TTL_SECONDS` and its `SESSION_SECRET` — was
 removed with that app on 2026-09-27 ([[guest-ui-is-a-direct-shift-of-legacy]]). The guest uses
 TrailBase's own auth cookies, so there is no second session secret to rotate
 ([[guest-outbound-http-and-login]]). The `APP_NAME` shown in its header comes from the
 `config.textproto` application name.
 
-### `trailbase/traildepot/config.textproto` — not environment variables
+### `trailbase/src/config.textproto` — not environment variables
 
 TrailBase is configured by file, not by env vars. The values that behave like environment
 settings:
@@ -130,7 +130,7 @@ Three different business identities appear in configuration:
 |---|---|
 | `frontend/.env.local` | `SAMPLE TRADERS` + a Sample City address + phone |
 | `frontend/.env.local.example` | `AA_W_POS` + `abc 123 xyz` + `123 abc 789` |
-| guest frontend (`trailbase/traildepot/config.textproto` application name) | `AA Point of Sale` |
+| guest frontend (`trailbase/src/config.textproto` application name) | `AA Point of Sale` |
 
 Before a cutover, confirm which is correct: the legacy app prints the business name, address
 and phone on invoices, while the guest app only has an application name in its header. Losing

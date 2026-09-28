@@ -22,14 +22,14 @@ the workspace: `trade-and-distribution-management-system-specification.html` and
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs |
-| [[runtime-js-guest-platform]] | `runtime-js/`, `guests/` | **New / experimental** | TrailBase guest-WASM app host: the new frontend (dashboard, reports, management) |
+| [[runtime-js-guest-platform]] | `trailbase/src/`, `guests/` | **New / experimental** | TrailBase guest-WASM app host: the new frontend (dashboard, reports, management) |
 | [[backend]] | `backend/` | **Legacy / production** | PocketBase 0.22.55 — holds the production data |
 | [[frontend]] | `frontend/` | **Legacy / production** | Next.js 14 POS — what staff use |
 
 ```text
 PRODUCTION (live)                      IN PROGRESS (replacement)
 ┌───────────────────┐                  ┌───────────────────┐
-│ frontend/         │  PocketBase SDK  │ runtime-js/       │
+│ frontend/         │  PocketBase SDK  │ trailbase/src/       │
 │ Next.js 14 +      │ ───────────────▶ │ guest-WASM:       │ ───────────────▶ ┌────────────┐
 │ Mantine           │                  │ Rust + QuickJS +  │                  │ trailbase/ │
 └───────────────────┘                  │ minijinja         │                  │ 17 tables  │
@@ -59,7 +59,7 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
   unique index on `barcode`, duplicate link-pair rejection, `0`/`1` booleans.
 - The guest frontend: dashboard, 14 reports + 4 ledgers, 7 management entities, a declarative
   page host, a plugin hub, login, fingerprint refresh, KV report cache and a durable job
-  queue; `runtime-js/tools/guest-smoke.mjs` at 71/71.
+  queue; `trailbase/src/tools/guest-smoke.mjs` at 71/71.
 - Guest report arithmetic cross-checked against the preserved PocketBase view SQL
   with hand-computed amounts — see [[reports-and-ledgers]].
 

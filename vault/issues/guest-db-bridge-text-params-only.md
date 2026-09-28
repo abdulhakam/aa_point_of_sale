@@ -44,9 +44,9 @@ mode is invisible unless the bridge logs the underlying error.
 
 ## Evidence
 
-- `runtime-js/src/api.rs`, `runtime-js/src/api/sqlite.rs` — the `Opt<Vec<String>>` signatures and
+- `trailbase/src/host/src/api.rs`, `trailbase/src/host/src/api/sqlite.rs` — the `Opt<Vec<String>>` signatures and
   the added error logging.
-- `runtime-js/site/app/lib/invoicing.js` — `completeInvoice` now passes `String(...)`.
+- `trailbase/src/runtime/app/lib/invoicing.js` — `completeInvoice` now passes `String(...)`.
 
 ## Related
 

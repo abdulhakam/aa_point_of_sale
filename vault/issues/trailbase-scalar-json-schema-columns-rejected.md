@@ -50,7 +50,7 @@ in `config.textproto` prevents the server from booting
 (`JsonSchema(NotFound("..."))`). So a half-finished experiment — a `CHECK` left in the migration
 with the `schemas:` block removed — turns into a server that will not start.
 
-For that reason, `traildepot/config.textproto` deliberately declares **no `schemas:` block at
+For that reason, `trailbase/src/config.textproto` deliberately declares **no `schemas:` block at
 all**: there is no column that should be bound to one. The absence is a decision, not an omission.
 Anyone adding a JSON-schema-bound column in the future must add the block back *and* the migration
 that references it, together.
@@ -62,7 +62,7 @@ that references it, together.
 - `trailbase/README.md` § *Known TrailBase limitations* — the same limitation, re-checked on
   `v0.33.22`, noting that `v0.33.16`–`v0.33.22` changed WASM guests, the admin UI, schema-name
   parsing and batch error propagation, none of which touch this path.
-- `traildepot/config.textproto` — no `schemas:` block, with the surrounding comment explaining the
+- `trailbase/src/config.textproto` — no `schemas:` block, with the surrounding comment explaining the
   startup check.
 - The prior vault recorded this as `issues/trailbase-scalar-json-schema-columns-rejected.md`; see
   [[previous-vault-recovery]].

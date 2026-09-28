@@ -19,7 +19,7 @@ them are answered from these documents instead of by re-reading source.
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs, validated against a running server |
-| [[runtime-js-guest-platform]] | `runtime-js/`, `guests/`, `runtime-js/site/` | **New / experimental** | WebAssembly app host: the new frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management |
+| [[runtime-js-guest-platform]] | `trailbase/src/`, `guests/` | **New / experimental** | WebAssembly app host: the new frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management |
 | [[backend]] | `backend/` | **Legacy / production** | PocketBase 0.22.55 serving the live POS |
 | [[frontend]] | `frontend/` | **Legacy / production** | Next.js 14 + Mantine SPA talking to PocketBase |
 
@@ -68,10 +68,10 @@ removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and
 ## Status at a glance
 
 - 17 of 17 TrailBase tables exposed as record APIs; migration applies clean on an empty depot.
-- 14 reports implemented in `runtime-js/site/app/compute/reports.js`; 14 declarative pages plus 4
+- 14 reports implemented in `trailbase/src/runtime/app/compute/reports.js`; 14 declarative pages plus 4
   ledger pages.
 - The guest serves the same app without Node: smoke **71/71**, differential **14/14**
-  (`runtime-js/tools/`), plus a first verified invoice-entry slice.
+  (`trailbase/src/tools/`), plus a first verified invoice-entry slice.
 - Legacy Next.js app still points at PocketBase (`NEXT_PUBLIC_PB_URL`), and PocketBase still holds the production data.
 - Parity target restated: the guest frontend is a direct shift of the legacy UI, same look
   ([[guest-ui-is-a-direct-shift-of-legacy]]); the remaining gaps are in

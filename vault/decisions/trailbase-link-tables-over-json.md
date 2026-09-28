@@ -55,12 +55,12 @@ CREATE TABLE "party_companies" (
 - The `UNIQUE` constraint doubles as the party → company lookup index, and the explicit
   `idx_party_companies_company` / `idx_order_booker_companies_company` indexes add the reverse.
 - The guest frontend's management screens edit these directly:
-  `runtime-js/site/app/lib/management.js` declares a `multi` field type with
+  `trailbase/src/runtime/app/lib/management.js` declares a `multi` field type with
   `{link, field, other, source}`, e.g.
   `{ name: "company", type: "multi", link: "party_companies", field: "party", other: "company", source: "companies" }`.
 - The `import-from-v1` plugin expanded the PocketBase arrays into these tables, so the translation
   is already written. It is ported to the guest at
-  `runtime-js/site/app/plugins/import-from-v1/`; verifying it is
+  `trailbase/src/runtime/app/plugins/import-from-v1/`; verifying it is
   [[pos-0029-rebuild-v1-import-on-guest]].
 
 **Given up**
@@ -76,17 +76,17 @@ CREATE TABLE "party_companies" (
 
 ## Evidence
 
-- `trailbase/traildepot/migrations/main/U1790208000__create_base_tables.sql` — the link tables,
+- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql` — the link tables,
   with the comment explaining the surrogate key ("a composite PRIMARY KEY would be marginally
   smaller, but TrailBase can only expose a table whose primary key is a single INTEGER or UUID
   column").
-- `traildepot/config.textproto` — `party_companies` and `order_booker_companies` each declared with
+- `trailbase/src/config.textproto` — `party_companies` and `order_booker_companies` each declared with
   `expand: ["party","company"]` / `["order_booker","company"]`.
 - `trailbase/README.md` § *Design decisions* → "**No JSON columns.**" including the
   `company~"<id>"` filter note.
-- `runtime-js/site/app/lib/management.js` — the `multi` field and column definitions for `parties`
+- `trailbase/src/runtime/app/lib/management.js` — the `multi` field and column definitions for `parties`
   and `bookers`.
-- `runtime-js/site/app/plugins/import-from-v1/meta.md` — "Expands the multi-valued
+- `trailbase/src/runtime/app/plugins/import-from-v1/meta.md` — "Expands the multi-valued
   `parties.company` / `order_bookers.company` relations into the `party_companies` /
   `order_booker_companies` link tables." The Node copy had the same text
   (`frontend-ssr/plugins/import-from-v1/meta.md`, removed 2026-09-27, [[guest-app-host-port]]).

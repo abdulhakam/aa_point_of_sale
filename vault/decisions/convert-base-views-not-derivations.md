@@ -56,7 +56,7 @@ keeping the derivations as cheap passes over the already-joined rows is where th
 
 ## Evidence
 
-- `runtime-js/tools/view-equivalence.mjs` — `transactionView` and `invoiceView` identical;
+- `trailbase/src/tools/view-equivalence.mjs` — `transactionView` and `invoiceView` identical;
   `transactionsReport` down to 2/23,413 rows after a zero-denominator guard.
 - [[legacy-sql-views-differ-from-js-views]] — the per-view difference map this resolves.
 

@@ -24,7 +24,7 @@ adaptation, replacing the reference with a deterministic subquery over the link 
 
 `ORDER BY oc.id` on uuid_v7 link rows means "the first company linked", which is deterministic and
 the closest single-valued equivalent of PocketBase's `company` relation. With that, **all 15 views
-compose and run** (`runtime-js/tools/verify-legacy-views.mjs`, exit 0):
+compose and run** (`trailbase/src/tools/verify-legacy-views.mjs`, exit 0):
 
 ```text
 net_price               depot= 23414  pb= 23414
@@ -66,9 +66,9 @@ had a `company` field on the row; the rewrite moved it to a link table.
 
 ## Evidence
 
-- `runtime-js/tools/verify-legacy-views.mjs` — 15/15 composed and ran (exit 0).
-- `runtime-js/tools/extract-legacy-views.mjs` — the `ADAPTATIONS` map carrying the one change.
-- `trailbase/traildepot/migrations/main/U1790208000__create_base_tables.sql` — `order_bookers` has
+- `trailbase/src/tools/verify-legacy-views.mjs` — 15/15 composed and ran (exit 0).
+- `trailbase/src/tools/extract-legacy-views.mjs` — the `ADAPTATIONS` map carrying the one change.
+- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql` — `order_bookers` has
   no `company` column; `order_booker_companies`/`party_companies` exist instead.
 
 ## Related
@@ -99,7 +99,7 @@ The TrailBase schema deliberately does not carry company relation columns on `or
 ([[trailbase-link-tables-over-json]], [[tb-0014-point-company-fields-at-companies]]). PocketBase
 had a `company` field on the row; the rewrite moved it to a link table.
 
-Verified with `runtime-js/tools/verify-legacy-views.mjs` (composes each ported view, inlines its
+Verified with `trailbase/src/tools/verify-legacy-views.mjs` (composes each ported view, inlines its
 dependencies as CTEs, and runs it against the TrailBase depot):
 
 ```text
@@ -138,8 +138,8 @@ must merge CTEs instead of prefixing a second `WITH`. A composer fix, not a SQL 
 
 ## Evidence
 
-- `runtime-js/tools/verify-legacy-views.mjs` output above.
-- `trailbase/traildepot/migrations/main/U1790208000__create_base_tables.sql` — `order_bookers` has
+- `trailbase/src/tools/verify-legacy-views.mjs` output above.
+- `trailbase/src/migrations/main/U1790208000__create_base_tables.sql` — `order_bookers` has
   no `company` column; `order_booker_companies`/`party_companies` exist instead.
 - [[trailbase-link-tables-over-json]], [[tb-0014-point-company-fields-at-companies]].
 
