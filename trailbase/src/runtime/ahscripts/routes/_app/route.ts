@@ -232,6 +232,26 @@ function redirect(location: string, status?: number): any {
   return { redirect: location, status: status ?? 303 };
 }
 
+// Rendered-page cache (generic): a report page is one SQLite read on a repeat view instead of a
+// full compute + minijinja render of every row. The key is the live data fingerprint + the viewing
+// identity + the report + its filters, so a write (which moves the fingerprint) misses and re-renders.
+async function pageCacheGet(db: any, cacheKey: string): Promise<string | null> {
+  try {
+    const rows = await db.all("SELECT html FROM pagecache WHERE key = ?", [cacheKey]);
+    return rows && rows.length ? String(rows[0][0]) : null;
+  } catch {
+    return null;
+  }
+}
+async function pageCachePut(db: any, cacheKey: string, page: string): Promise<void> {
+  try {
+    await db.execute("CREATE TABLE IF NOT EXISTS pagecache (key TEXT PRIMARY KEY, html TEXT)");
+    await db.execute("INSERT OR REPLACE INTO pagecache(key,html) VALUES(?,?)", [cacheKey, page]);
+  } catch {
+    // Cache is best effort; the page was already rendered.
+  }
+}
+
 async function readStatic(fsPath: string): Promise<any> {
   try {
     const body: string = await fs.readFile(fsPath);
@@ -275,6 +295,12 @@ function shell(user: any, active: string, title: string): any {
 }
 
 // ------------------------------------------------------------------ routing
+
+// Rows a report page renders by default. The guest's minijinja render of tens of thousands of rows
+// is the dominant cold cost (and can cross the ~20 s call deadline), so a page renders the first
+// `RENDER_MAX_ROWS` rows with a "show all" link; `?all=1` renders everything, `?maxRows=N` overrides.
+// Totals are always computed over every row — only the table body is capped.
+const RENDER_MAX_ROWS = 1000;
 
 async function dispatch(req: any): Promise<any> {
   const A = await app();
@@ -434,11 +460,37 @@ async function dispatch(req: any): Promise<any> {
     const pageDef = A.reportPages.REPORT_PAGES[key];
     if (!pageDef || !A.reportsCompute.REPORTS[key]) return text("Not found", 404);
     const filters = A.reportPages.parseFilters(pageDef, query);
+
+    const showAll = String(query.all || "") === "1";
+    const requestedMax = Number(query.maxRows || 0);
+    const maxRows = showAll ? Number.POSITIVE_INFINITY : requestedMax > 0 ? requestedMax : RENDER_MAX_ROWS;
+
+    // Rendered-page cache lookup. The fingerprint is the live data version, so any write misses.
+    let cacheKey: string | null = null;
+    try {
+      const fp = await A.service.fingerprint();
+      cacheKey = JSON.stringify([fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax]);
+      const cached = await pageCacheGet(db, cacheKey);
+      if (cached !== null) return html(cached);
+    } catch {
+      cacheKey = null;
+    }
+
     const inputs = A.reportsCompute.REPORTS[key].inputs.concat(["refs"]);
     const snap = await A.service.getViews(inputs);
     const options = A.reportPages.filterOptions(snap.views.refs, pageDef.fields);
     const missing = (pageDef.requires || []).filter((name: string) => !filters[name]);
     const result = missing.length ? { rows: [], totals: {}, meta: {} } : await A.service.run(key, filters);
+    const allRows: any[] = result.rows || [];
+    const truncated = allRows.length > maxRows;
+    const rows = truncated ? allRows.slice(0, maxRows) : allRows;
+    const rawQuery = String(req.query || "");
+    const rowInfo = {
+      shown: rows.length,
+      total: allRows.length,
+      truncated,
+      allHref: `${path}?${rawQuery ? rawQuery + "&" : ""}all=1`,
+    };
     const appliedLabels = pageDef.fields
       .filter((field: any) => filters[field.name])
       .map((field: any) => {
@@ -451,20 +503,21 @@ async function dispatch(req: any): Promise<any> {
         return { label: field.label, value: raw };
       })
       .filter(Boolean);
-    return html(
-      A.http.page(shell(user, "reports", pageDef.title), pageDef.view || A.reportPages.DEFAULT_VIEW, {
-        def: pageDef,
-        basePath: "/reports/" + key,
-        filters,
-        options,
-        appliedLabels,
-        missing,
-        rows: result.rows,
-        totalsGroups: pageDef.totals ? pageDef.totals(result.totals || {}) : [],
-        opening: result.opening || null,
-        meta: result.meta || {},
-      })
-    );
+    const page = A.http.page(shell(user, "reports", pageDef.title), pageDef.view || A.reportPages.DEFAULT_VIEW, {
+      def: pageDef,
+      basePath: "/reports/" + key,
+      filters,
+      options,
+      appliedLabels,
+      missing,
+      rows,
+      rowInfo,
+      totalsGroups: pageDef.totals ? pageDef.totals(result.totals || {}) : [],
+      opening: result.opening || null,
+      meta: result.meta || {},
+    });
+    if (cacheKey) await pageCachePut(db, cacheKey, page);
+    return html(page);
   }
 
   if (path === "/management") {
@@ -538,7 +591,20 @@ async function dispatch(req: any): Promise<any> {
     const fanout = query.fanout === "1" || form.fanout === "1";
     const concurrency = Number(query.concurrency || form.concurrency || 1) || 1;
     const origin = (String(req.url || "").match(/^https?:\/\/[^/]+/) || [""])[0];
-    return { reconciled: await A.jobs.reconcile(db, fanout ? { origin, concurrency } : {}) };
+    const reconciled = await A.jobs.reconcile(db, fanout ? { origin, concurrency } : {});
+    // Report materialisation runs here, off the request path: the minutely job drives this route,
+    // so the heavy view snapshot is built once and persisted for every runtime thread instead of
+    // being built on a report request that would hit the ~20 s call deadline.
+    let materialized: any = null;
+    if (query.materialize !== "0") {
+      try {
+        const snap = await A.service.refresh(db);
+        materialized = { version: snap.version, views: snap.built.length };
+      } catch (error) {
+        console.log("report materialize failed: " + error);
+      }
+    }
+    return { reconciled, materialized };
   }
   const jobResultMatch = /^\/jobs\/([^/]+)\/result$/.exec(path);
   if (jobResultMatch && method === "GET") {

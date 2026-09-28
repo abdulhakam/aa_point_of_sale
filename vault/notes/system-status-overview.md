@@ -84,7 +84,8 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 [[trailbase-declarative-page-host]] · [[trailbase-incremental-report-refresh]] ·
 [[trailbase-client-side-migration-plugin]] · [[keep-legacy-stack-in-production]] ·
 [[offline-local-deployment]] · [[trailbase-guest-wasm-runtime-defaults]] ·
-[[guest-ui-is-a-direct-shift-of-legacy]]
+[[guest-ui-is-a-direct-shift-of-legacy]] · [[compiled-artifacts-are-generic-capabilities]] ·
+[[rendered-page-cache]]
 
 ## Health of this vault
 

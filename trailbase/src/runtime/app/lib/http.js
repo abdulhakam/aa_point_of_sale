@@ -15,6 +15,10 @@ export function page(shell, name, data) {
     nav: shell.nav ?? {},
     ...(data || {}),
   };
+  // NOTE: a direct JS→serde bridge exists (`render.html(name, ctx)` with an object is accepted and
+  // converted without a JSON string), but it measured no better and worse for large contexts than
+  // QuickJS `JSON.stringify` + Rust parse, so the proven string path is kept
+  // ([[direct-js-serde-bridge-no-win]]). Pass the object to use the direct path.
   return render.html(name, JSON.stringify(ctx));
 }
 

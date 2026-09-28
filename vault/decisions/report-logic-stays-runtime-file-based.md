@@ -6,7 +6,7 @@ decided_on: 2026-09-27
 created: 2026-09-27
 tags: [reports, sql, no-build, authoring, performance, trailbase]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[guest-report-performance-options]]", "[[guest-app-host-port]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[trailbase-drop-sql-views]]"]
+related_to: ["[[guest-report-performance-options]]", "[[guest-app-host-port]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[trailbase-drop-sql-views]]", "[[compiled-artifacts-are-generic-capabilities]]"]
 ---
 
 # Report logic stays runtime file-based; only the data pass moves to SQL

@@ -6,7 +6,7 @@ decided_on: 2026-09-26
 created: 2026-09-26
 tags: [trailbase, wasm, rquickjs, architecture, rendering, minijinja]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[trailbase-guest-wasm-spike-results]]"]
+related_to: ["[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[trailbase-guest-wasm-spike-results]]", "[[compiled-artifacts-are-generic-capabilities]]"]
 ---
 
 # Use runtime-js as the single app host (rendering folded in)
@@ -73,7 +73,16 @@ later option if isolation or the per-call deadline demands it.
   filters produced `1234.50`, `1 ctn 1 unit`, `24-Sep-2026`, `PROFIT REPORT`, `Yes`.
 - [[trail-runtime-js-reference]] — the adopted host and its measurements.
 
+## Amended framing (2026-09-28)
+
+[[compiled-artifacts-are-generic-capabilities]] generalises this decision: the folded-in renderer
+(and every other compiled piece) is a **generic capability**, so the one-component packaging chosen
+here is an optimization, not a constraint on the app model. Decoupling `render.rs` behind an HTTP or
+WIT boundary — as the alternative below already anticipated — changes packaging only, never app
+logic.
+
 ## Related
 
 - [[trailbase-guest-wasm-runtime-defaults]] — D1–D6, which this amends for D3.
+- [[compiled-artifacts-are-generic-capabilities]] — the general invariant this is a case of.
 - [[tb-0017-adopt-trail-runtime-js]] — the adoption task.

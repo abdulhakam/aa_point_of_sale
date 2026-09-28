@@ -68,8 +68,72 @@ is the whole cost the user waits for).
   migrated rows carry the import timestamp ([[guest-depot-created-is-import-time]]); a wide range
   returns the full dataset on both sides.
 
+## Legacy-vs-guest output comparison (2026-09-28)
+
+The legacy pair was up (`backend/` PocketBase `:8090`, Next.js `:3000`) and the guest was served from
+`trailbase/traildepot` (`:4000`, `trail --depot=traildepot run --runtime-root-fs=traildepot/runtime
+--address=127.0.0.1:4000`). Login `admin@localhost` / `administrator-0ne`; the legacy PocketBase views
+are world-readable, so `payments_view` / `items_report` / `transactions_report` could be read directly
+(row counts matched the depot: payments 26,526, items 207, transactions 23,413).
+
+Because the depot's `created` is the import timestamp ([[guest-depot-created-is-import-time]]), all
+comparisons used the wide range `2020-01-01 … 2030-12-31`; the legacy report defaults (current month)
+return zero rows.
+
+- **Real defect found and fixed:** the guest's payments/sales totals were computed from display rows
+  (all-zero receiving, a 108M "returns"). Fixed — see
+  [[payments-report-totals-computed-from-display-rows]]. After the fix the payments totals match the
+  legacy calculator to the cent, with a deliberate **+0.02** from the 2 dp backfill.
+- **Intended drift, not a defect:** stock/profit/itemsales cents differ from legacy because the
+  legacy sums **raw** values then `toFixed(2)`, while the guest rounds unit prices/rows with `round2`
+  first (stock total 3,337,165.56 vs legacy 3,337,165.49; CP `6.375 → 6.38`). This is exactly the
+  [[money-is-2dp-everywhere]] rule the owner chose, which states the reports' numbers *will* move.
+
+### Guest timings on the production depot (warm, wide range)
+
+| report | warm ms | status |
+|---|---|---|
+| stockreport | 86 | 200 |
+| difference | 104 | 200 |
+| ledgers/area | 99 | 200 |
+| salesreport | 1,257 | 200 |
+| payments | 3,877 | 200 |
+| ledgers/general | 4,093 | 200 |
+| profit | — | **500 @ 20 s** |
+| itemsales | — | **500 @ 20 s** |
+| paymentsbycompany | — | **500 @ 20 s** |
+
+### Heavy reports fail on the 20 s guest deadline unless the snapshot is pre-built
+
+`profit`, `itemsales` and `paymentsbycompany` cannot build `transactionsReport` (and then compute and
+render 21.8k rows) inside the guest's ~20 s per-call deadline; the host answers
+`component responded unexpectedly` at 20 s. They succeed only when a **completed** `POST
+/reports/refresh?full=1` has already built the whole snapshot, because then the request only computes
+and renders.
+
+That refresh is now itself at/over the deadline and unreliable on this dataset: one run returned 200
+at 20,948 ms, others 500 at 17.7–20.0 s, and a failed heavy call can leave the runtime wedged so
+subsequent calls (even `/reports/status`) fail in ~10–20 ms until restart. The earlier clean run
+measured the same refresh at **11,601 ms** — the margin that made the heavy reports work. This is the
+operational form of the "guest reports compute in JS, not SQL" risk in
+[[system-status-overview]], and it is the strongest argument for precomputing off the request path
+([[guest-report-performance-options]] options 2/4/5).
+
+## Materialised snapshot put to the test (2026-09-28)
+
+A generic materialised-snapshot capability (persist the built views to SQLite, hydrate per view) was
+implemented and measured on the production depot — see
+[[snapshot-persistence-hits-the-20s-deadline]]. It moved the failure boundary (itemsales/profit
+went from 500 @ 20 s to ~16.7 s) but did not clear it: `paymentsbycompany` still 500s, and small
+reports are slower on a cold thread (stockreport 86 ms → 2.0 s) because the large views are 13–17 MB
+JSON blobs. The bottleneck is QuickJS shaping + multi-MB JSON + the ~21k-row render inside the fixed
+20 s deadline, not view building alone.
+
 ## Related
 
+- [[report-performance-baseline]] — the fixed benchmark to compare future changes against.
+- [[snapshot-persistence-hits-the-20s-deadline]] — the implementation and its measured result.
+- [[payments-report-totals-computed-from-display-rows]] — the defect this run found.
 - [[guest-vs-legacy-report-performance]] — the legacy comparison (legacy pages at ~1.0–1.6 s per
   500 rows, so the same reports are far slower there).
 - [[guest-vs-node-performance]] — the earlier guest baseline.

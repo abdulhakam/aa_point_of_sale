@@ -66,7 +66,7 @@ const paymentsTotalsGroups = (t) => [
       { label: "Purchase Amount", value: t.sending },
       { label: "Paid Amount", value: t.sent },
       { label: "Returns", value: t.sendingReturns },
-      { label: "Payable Amount", value: t.totalSending },
+      { label: "Payable Amount", value: t.total },
     ],
   },
 ];

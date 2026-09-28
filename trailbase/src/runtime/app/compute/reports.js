@@ -129,21 +129,24 @@ function paymentFilters(p, f, ix) {
 
 export function reportPayments(ctx, f) {
   const ix = { ...indexRefs(ctx.refs), invoiceMap: new Map(ctx.invoiceView.map((i) => [i.id, i])) };
-  const rows = ctx.paymentsView
+  // Totals are computed from the RAW rows: `paymentsTotals` reads `p.type`/`p.paid`/`p.party_type`,
+  // which `paymentRow` replaces with display fields (a label string, no `paid`).
+  const filtered = ctx.paymentsView
     .filter((p) => inDateRange(p.created, f.from, f.to))
-    .filter((p) => paymentFilters(p, f, ix))
-    .map((p) => paymentRow(p, ix));
-  return { rows, totals: paymentsTotals(rows), meta: { from: f.from, to: f.to } };
+    .filter((p) => paymentFilters(p, f, ix));
+  const rows = filtered.map((p) => paymentRow(p, ix));
+  return { rows, totals: paymentsTotals(filtered), meta: { from: f.from, to: f.to } };
 }
 
 export function reportSalesPayments(ctx, f) {
   const ix = { ...indexRefs(ctx.refs), invoiceMap: new Map(ctx.invoiceView.map((i) => [i.id, i])) };
-  const rows = ctx.paymentsView
+  // Same as `reportPayments`: `salesTotals` reads the raw `type`/`paid`, so pass the raw rows.
+  const filtered = ctx.paymentsView
     .filter((p) => inDateRange(p.created, f.from, f.to))
     .filter((p) => num(p.paid) === 0 && (p.type === PAYMENT_TYPE.recieving || p.type === PAYMENT_TYPE.return))
-    .filter((p) => paymentFilters(p, f, ix))
-    .map((p) => paymentRow(p, ix));
-  return { rows, totals: salesTotals(rows), meta: { from: f.from, to: f.to } };
+    .filter((p) => paymentFilters(p, f, ix));
+  const rows = filtered.map((p) => paymentRow(p, ix));
+  return { rows, totals: salesTotals(filtered), meta: { from: f.from, to: f.to } };
 }
 
 export function reportPaymentsByCompany(ctx, f) {

@@ -51,6 +51,19 @@ not yet the legacy look. Step 3 is not started.
 Step 10 gates 11 and 13: how much of the legacy UI must be rebuilt depends on whether it is
 repointed at TrailBase or retired in favour of the guest.
 
+## Report performance (2026-09-28)
+
+The guest reports are numerically correct but the **cold** path (first view of a filter) is slow.
+Shipped so far: a fingerprint-keyed **materialised view snapshot** shared through SQLite
+([[snapshot-persistence-hits-the-20s-deadline]]), a **rendered-page cache** for repeat views
+([[rendered-page-cache]]), and a **render row cap** (1,000 rows/page, `?all=1` for the full page,
+[[report-render-row-cap]]). Baseline + comparison: [[report-performance-baseline]].
+
+**Next (cold path):** `itemsales`, `profit`, `ledgers/general` and `paymentsbycompany` stay ~20 s
+cold *even at 1,000 rendered rows* — their cost is the JS computation over every row, not the render.
+Moving that computation into SQL (runtime `.sql`) or a native compute path is the required next
+step ([[guest-report-performance-options]]).
+
 ## What has already been decided
 
 | Decision | Note |
@@ -73,6 +86,9 @@ repointed at TrailBase or retired in favour of the guest.
 | Convert the base views to SQL; keep the report-level derivations in JS | [[convert-base-views-not-derivations]] |
 | Guest has an outbound HTTP bridge; the app's own `/login` sets the cookies | [[guest-outbound-http-and-login]] |
 | The guest UI is a direct shift of the legacy UI, not a redesign | [[guest-ui-is-a-direct-shift-of-legacy]] |
+| Compiled artifacts are generic capabilities; all app/data logic stays in runtime files | [[compiled-artifacts-are-generic-capabilities]] |
+| Rendered report pages are cached by the live data fingerprint | [[rendered-page-cache]] |
+| Report pages cap rendered rows (1,000; `?all=1` for the full page) | [[report-render-row-cap]] |
 
 ## Known friction in the migration
 
