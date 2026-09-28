@@ -1,6 +1,6 @@
 // Invoice-entry check: context + ETag, idempotent create and line add, header patch, complete.
 //
-//   node trailbase/src/tools/invoice-check.mjs
+//   node trailbase/tools/invoice-check.mjs
 //
 // Mutates the depot it points at (GUEST_BASE); run against a throw-away depot.
 

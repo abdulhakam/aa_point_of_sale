@@ -1,7 +1,7 @@
 // Row-equivalence gate: do the ported SQL views produce the same rows as the JS views the app
 // runs today?
 //
-//   node trailbase/src/tools/view-equivalence.mjs
+//   node trailbase/tools/view-equivalence.mjs
 //
 // Reads the depot's base tables exactly as the guest's data layer does (same columns, same
 // `ORDER BY id DESC`, same relation/boolean normalisation), builds every view with
@@ -14,8 +14,8 @@ import { fileURLToPath } from "node:url";
 import * as V from "../runtime/app/compute/views.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repo = resolve(here, "../../..");
-const viewsDir = join(repo, "trailbase", "src", "runtime", "app", "reports", "sql", "views");
+const repo = resolve(here, "../..");
+const viewsDir = join(repo, "trailbase", "runtime", "app", "reports", "sql", "views");
 const depotDb = process.env.DEPOT_DB || "C:\\Users\\wajiz.pk\\AppData\\Local\\Temp\\kilo\\aa-perf-depot\\data\\main.db";
 
 const TABLES = [

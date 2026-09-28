@@ -1,5 +1,6 @@
-# The source of truth is src/. `traildepot/` is a build artefact assembled from src/ by
-# clear_db.bat + build.bat, so everything in it is generated and git-ignored.
+# `host/`, `app/`, `migrations/`, `tools/` and the two textproto files are the source of
+# truth. `traildepot/` is a build artefact assembled from them by clear_db.bat + build.bat,
+# so everything in it is generated and git-ignored.
 traildepot/config.textproto
 traildepot/metadata.textproto
 traildepot/migrations/
@@ -12,3 +13,9 @@ traildepot/uploads/
 traildepot/secrets/
 traildepot/wasm/
 *.log
+
+# Rust build output for the guest component.
+host/target/
+
+# Throw-away depot the tools create when they run.
+.tbdemo-guest/

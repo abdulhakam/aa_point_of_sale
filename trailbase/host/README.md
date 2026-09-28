@@ -47,13 +47,13 @@ From `trailbase/`:
 
 ```powershell
 .\build.bat     # cargo build --target wasm32-wasip2 --release, copy into traildepot\wasm\
-.\clear_db.bat  # (optional) reset traildepot\ from trailbase\src\
+.\clear_db.bat  # (optional) reset traildepot\ from the checked-in sources
 .\RUN.BAT       # trail run --runtime-root-fs=traildepot\runtime
 ```
 
-`--runtime-root-fs` is load-bearing: it is the WASI sandbox root, so the frontend's `ahscripts/`
+`--runtime-root-fs` is load-bearing: it is the WASI sandbox root, so the app's `ahscripts/`
 and `app/` must live inside the configured root — here the depot's `runtime/`, copied from
-`trailbase/src/runtime/`. Keeping it a subdirectory (not the depot root) keeps the depot's `data/`
+`trailbase/runtime/`. Keeping it a subdirectory (not the depot root) keeps the depot's `data/`
 and `secrets/` out of the sandbox.
 
 ## Verified

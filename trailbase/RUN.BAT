@@ -39,8 +39,9 @@ call :init_depot
 
 :start_server
 echo Starting TrailBase server on http://%ADDRESS% ...
-rem --runtime-root-fs points the guest at the frontend copy in the depot, so this one server
-rem serves both the APIs and the new frontend. clear_db.bat copies it from src\runtime\.
+rem --runtime-root-fs points the guest at the app copy in the depot, so this one server
+rem serves both the APIs and the new frontend. clear_db.bat copies it from runtime\ into
+rem %DEPOT%\runtime\.
 start "" trail "--depot=%DEPOT%" run --address=%ADDRESS% "--runtime-root-fs=%DEPOT%\runtime"
 
 rem Wait for the listener before opening the dashboard. A server that failed to start

@@ -1,6 +1,6 @@
 // Extract the legacy PocketBase view SQL verbatim into runtime files.
 //
-//   node trailbase/src/tools/extract-legacy-views.mjs
+//   node trailbase/tools/extract-legacy-views.mjs
 //
 // The migrations only carry *some* views (and sometimes as concatenated strings or backtick
 // templates). The authoritative, fully-assembled SQL lives in the PocketBase database itself
@@ -13,9 +13,9 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repo = resolve(here, "../../..");
+const repo = resolve(here, "../..");
 const dbPath = join(repo, "backend", "p_data", "data.db");
-const outDir = join(repo, "trailbase", "src", "runtime", "app", "reports", "sql", "views");
+const outDir = join(repo, "trailbase", "runtime", "app", "reports", "sql", "views");
 
 mkdirSync(outDir, { recursive: true });
 

@@ -1,7 +1,7 @@
 // Compose the extracted legacy views into self-contained SQL (dependencies inlined as CTEs) and
 // run each against the TrailBase depot, which has only tables — no PocketBase views to hide behind.
 //
-//   node trailbase/src/tools/verify-legacy-views.mjs
+//   node trailbase/tools/verify-legacy-views.mjs
 //
 // Also compares row counts with the same view in the PocketBase database, so a composition that
 // silently drops rows is visible.
@@ -12,8 +12,8 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repo = resolve(here, "../../..");
-const viewsDir = join(repo, "trailbase", "src", "runtime", "app", "reports", "sql", "views");
+const repo = resolve(here, "../..");
+const viewsDir = join(repo, "trailbase", "runtime", "app", "reports", "sql", "views");
 const depotDb = process.env.DEPOT_DB || "C:\\Users\\wajiz.pk\\AppData\\Local\\Temp\\kilo\\aa-perf-depot\\data\\main.db";
 const pbDb = join(repo, "backend", "p_data", "data.db");
 

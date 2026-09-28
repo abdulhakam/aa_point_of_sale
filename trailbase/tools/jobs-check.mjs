@@ -1,6 +1,6 @@
 // Jobs queue check: submit → completion, idempotency under re-dispatch, lease recovery.
 //
-//   node trailbase/src/tools/jobs-check.mjs
+//   node trailbase/tools/jobs-check.mjs
 //
 // Mutates the depot it points at (GUEST_BASE); run against a throw-away depot.
 

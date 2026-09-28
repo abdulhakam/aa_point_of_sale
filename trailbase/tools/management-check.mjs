@@ -1,7 +1,7 @@
 // Management CRUD check for the guest app: create → list → update → verify → delete → verify,
 // for a hard-deleted entity (sections) and a relation/number entity (items).
 //
-//   node trailbase/src/tools/management-check.mjs
+//   node trailbase/tools/management-check.mjs
 //
 // Mutates the depot it points at (GUEST_BASE); run it against a throw-away depot.
 

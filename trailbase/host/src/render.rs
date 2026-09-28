@@ -206,7 +206,7 @@ impl Renderer {
     }
 
     /// Render with a context already converted to serde (the direct JS→serde bridge path): no
-    /// JSON string round-trip. `trailbase/src/host/src/api.rs` converts the JS value here.
+    /// JSON string round-trip. `trailbase/host/src/api.rs` converts the JS value here.
     pub fn render_value(&mut self, name: &str, ctx: serde_json::Value) -> Result<String, String> {
         self.env.clear_templates();
         let ctx = Value::from_serialize(&ctx);

@@ -3,7 +3,7 @@
  * seeds a pinned small dataset, then exercises every screen over HTTP and asserts the pinned
  * totals.
  *
- *   node trailbase/src/tools/guest-smoke.mjs
+ *   node trailbase/tools/guest-smoke.mjs
  *   (needs the component built: run trailbase/build.bat first)
  *
  * Auth is TrailBase's own cookie (the guest has no session layer), so it logs in through
@@ -16,13 +16,12 @@ import { fileURLToPath } from "node:url";
 import { toUuid } from "./uuid.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const runtimeRoot = path.resolve(here, "..");                 // trailbase/src
-const repo = path.resolve(runtimeRoot, "..", "..");           // repo root
-const site = path.join(runtimeRoot, "runtime");               // the guest frontend (--runtime-root-fs)
-const wasm = path.join(repo, "trailbase", "traildepot", "wasm", "runtime_js.wasm"); // from build.bat
-const authUi = path.join(repo, "guests", "spikes", "depot", "wasm", "trailbase_auth_ui_component.wasm");
+const trailbaseRoot = path.resolve(here, "..");            // trailbase/
+const repo = path.resolve(trailbaseRoot, "..");             // repo root
+const site = path.join(trailbaseRoot, "runtime");          // the app tree (--runtime-root-fs)
+const wasm = path.join(trailbaseRoot, "traildepot", "wasm", "runtime_js.wasm"); // from build.bat
 
-const work = path.join(runtimeRoot, ".tbdemo-guest");
+const work = path.join(trailbaseRoot, ".tbdemo-guest");
 const depot = path.join(work, "depot");
 const TB_PORT = 4322;
 const TB = `http://127.0.0.1:${TB_PORT}`;
@@ -68,12 +67,10 @@ async function startTrail() {
   if (!fs.existsSync(wasm)) throw new Error(`guest wasm not built: ${wasm}`);
   fs.rmSync(depot, { recursive: true, force: true });
   fs.mkdirSync(path.join(depot, "wasm"), { recursive: true });
-  const src = path.join(repo, "trailbase", "src");
-  fs.copyFileSync(path.join(src, "config.textproto"), path.join(depot, "config.textproto"));
-  fs.copyFileSync(path.join(src, "metadata.textproto"), path.join(depot, "metadata.textproto"));
-  fs.cpSync(path.join(src, "migrations"), path.join(depot, "migrations"), { recursive: true });
+  fs.copyFileSync(path.join(trailbaseRoot, "config.textproto"), path.join(depot, "config.textproto"));
+  fs.copyFileSync(path.join(trailbaseRoot, "metadata.textproto"), path.join(depot, "metadata.textproto"));
+  fs.cpSync(path.join(trailbaseRoot, "migrations"), path.join(depot, "migrations"), { recursive: true });
   fs.copyFileSync(wasm, path.join(depot, "wasm", "runtime_js.wasm"));
-  if (fs.existsSync(authUi)) fs.copyFileSync(authUi, path.join(depot, "wasm", "trailbase_auth_ui_component.wasm"));
 
   const child = spawn("trail", [`--depot=${depot}`, "run", `--address=127.0.0.1:${TB_PORT}`, `--runtime-root-fs=${site}`], { cwd: depot });
   child.stdout.on("data", (d) => (trailLog += d));

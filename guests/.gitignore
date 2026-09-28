@@ -1,3 +1,0 @@
-# Build output and dependencies for the guest-WASM components.
-node_modules/
-dist/
