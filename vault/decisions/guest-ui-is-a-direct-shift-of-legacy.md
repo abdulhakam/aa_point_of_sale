@@ -6,7 +6,7 @@ decided_on: 2026-09-27
 created: 2026-09-27
 tags: [frontend, guest, wasm, parity, ui, cutover, legacy]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0028-guest-transactional-screens-and-mobile]]"]
 ---
 
 # The guest frontend is a direct shift of the legacy UI, not a redesign

@@ -163,6 +163,27 @@ or no wasm component).
 
 ### Verify
 
+**Deploying an app change to the production depot (the safe path).** `clear_db.bat` wipes
+`trailbase\traildepot\data` — the 60,245 imported production records — so it is **not** the way to
+push an edit. The server reads the *generated* copy under `traildepot\`, so sync the source across
+and restart:
+
+```powershell
+robocopy trailbase\runtime    trailbase\traildepot\runtime    /MIR /NFL /NDL /NJH /NJS /NP
+robocopy trailbase\migrations trailbase\traildepot\migrations /MIR /NFL /NDL /NJH /NJS /NP
+trail --depot=traildepot run --address=127.0.0.1:4000 --runtime-threads=4 --runtime-root-fs=traildepot\runtime
+```
+
+- **The restart is required for anything under `app/lib/`.** Modules are loaded once per QuickJS
+  context and cached on `globalThis.__AA_MODS__`, so a new export only appears after a restart —
+  otherwise the screen fails with `not a function` / `cannot read property … of undefined`. Edits to
+  `app/views/*.html`, `app/public/**` and to `ahscripts/routes/_app/route.ts` hot-reload.
+- Sync `migrations/` too. On 2026-09-29 the depot was found **missing** `config.textproto` and
+  missing one migration file, and the server refused to start at all — the repair and the diagnosis
+  are in [[production-depot-could-not-be-started]].
+- `RUN.BAT` must not be used on a prepared depot that has lost its `config.textproto`: it re-runs
+  `clear_db.bat`, which wipes the data.
+
 All eight harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-parity.mjs`,
 `perf-compare.mjs`) were deleted with `frontend-ssr`; the parity results they produced are
 recorded in [[guest-app-host-port]] and can no longer be reproduced
@@ -179,7 +200,9 @@ recorded in [[guest-app-host-port]] and can no longer be reproduced
 | `node trailbase/tools/invoice-check.mjs` | context + ETag, idempotent create/lines, lease, complete | yes — same default |
 
 The counts in the smoke row are **not** hard-coded: the harness prints `N/N` at runtime, so a
-changed number here means the suite changed. The current figure is **71/71**.
+changed number here means the suite changed. The current figure is **76/76** (raised from 71 by the
+invoice, payment and inventory screens; the suite had been *failing* since the categories→companies
+migration until 2026-09-29 — [[tb-0028-guest-transactional-screens-and-mobile]]).
 
 ## Prerequisites
 

@@ -5,7 +5,7 @@ status: open
 severity: high
 created: 2026-09-27
 tags: [guest, wasm, parity, gaps, cutover, risk, ui]
-related_to: ["[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[pos-0028-decide-cutover-plan]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[pos-0028-decide-cutover-plan]]", "[[tb-0028-guest-transactional-screens-and-mobile]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[heavy-report-blocks-runtime-threads]]"]
 ---
 
 # The guest frontend is not yet a replacement for the legacy UI — the parity gaps

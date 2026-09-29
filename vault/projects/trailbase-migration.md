@@ -39,10 +39,11 @@ not yet the legacy look. Step 3 is not started.
 [x] 2. Decide where report arithmetic lives              -> JavaScript, under app/compute/
 [x] 3. Build the guest read screens                       -> dashboard, 10 reports, 4 ledgers
 [x] 4. Build the guest management screens                 -> 7 entities
-[x] 5. Prove the numbers match the old views              -> guest smoke 71/71, differential 14/14
+[x] 5. Prove the numbers match the old views              -> guest smoke 76/76, differential 14/14
 [x] 6. Adopt the guest-WASM app platform                  -> runtime-js host (Phase 0 + app host port)
 [x] 6a. Flatten the layout, drop the guests spike        -> [[tb-0024-flatten-new-system-layout]]
 [ ] 7. Direct-shift the legacy UI onto the guest          -> [[tb-0023-direct-shift-legacy-ui-to-guest]]
+[ ] 7a. Invoice / payment / inventory screens + mobile   -> [[tb-0028-guest-transactional-screens-and-mobile]] (done 2026-09-29)
 [ ] 8. Build invoices / cash memos / printing on the guest -> [[tb-0021-invoices-cashmemos-printing]]
 [x] 9. Verify and finish the guest v1 (PocketBase) import  -> done 2026-09-29, 60,245/60,245, sums match
 [ ] 10. Decide the cutover shape                          -> [[pos-0028-decide-cutover-plan]]
@@ -59,6 +60,13 @@ not yet the legacy look. Step 3 is not started.
 
 Step 10 gates 11 and 13: how much of the legacy UI must be rebuilt depends on whether it is
 repointed at TrailBase or retired in favour of the guest.
+
+**Step 7a is a demonstration slice, not step 7 or step 8.** On 2026-09-29 the guest gained
+`/invoices` (sale + purchase entry), `/payments` (invoice-linked and standalone DA) and
+`/inventory` (live stock, item edit), plus a mobile layout for every page. Printing, the cash memo,
+return/difference invoices and expenses are still out — they are step 8
+([[tb-0021-invoices-cashmemos-printing]]) — and the guest UI is still not the legacy look, which is
+step 7. See [[mobile-layout-is-additive-to-the-legacy-look]] for the one decision it did settle.
 
 **Step 16 is now measured and decided (2026-09-28).** The all-reports sweep priced the
 cross-component handoff at **+71% (median) on like-for-like acquisition, slower in 14/14 reports**,
@@ -213,9 +221,10 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | [[tb-0018-port-app-host-on-runtime-js]] | port the app host (reports 14/14 parity; management/invoices left) |
 | [[tb-0019-guest-jobs-queue]] | durable in-process job queue — done |
 | [[tb-0020-guest-fingerprint-refresh]] | fingerprint-based incremental data refresh — done |
-| [[tb-0021-invoices-cashmemos-printing]] | invoices / cash memos / printing — designed, not built |
+| [[tb-0021-invoices-cashmemos-printing]] | invoices / cash memos / printing — entry + payments screens done 2026-09-29; printing, cash memo and expenses not built |
 | [[tb-0022-move-reports-to-sql]] | move report arithmetic into runtime SQL files — in progress |
 | [[tb-0023-direct-shift-legacy-ui-to-guest]] | make the guest UI match legacy, screen for screen |
+| [[tb-0028-guest-transactional-screens-and-mobile]] | invoice / payment / inventory screens + mobile layout — done 2026-09-29 |
 | [[pos-0027-migrate-production-data-to-trailbase]] | the actual data migration |
 | [[pos-0028-decide-cutover-plan]] | repoint-the-client vs retire-the-client |
 | [[pos-0029-rebuild-v1-import-on-guest]] | verify and finish the guest v1 import |

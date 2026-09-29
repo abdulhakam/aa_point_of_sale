@@ -32,11 +32,14 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 | Dashboard | ✅ | ✅ |
 | Reports (11) | ✅ | ✅ (10 — `areawise` omitted) |
 | Ledgers (4) | ✅ | ✅ |
-| Invoice entry (4 types + orders) | ✅ | ❌ (first slice only) |
+| Invoice entry (4 types + orders) | ✅ | 🟡 sale + purchase only, screens live |
+| Payments (invoice-linked + standalone DA) | ✅ | 🟡 invoice-linked + DA, no vouchers/returns |
+| Inventory (live stock, item edit) | ✅ | ✅ |
 | Invoice printing + queue | ✅ | ❌ |
 | Cash memo (vouchers, DA entry, expenses) | ✅ | ❌ |
 | Storybook | ✅ | — |
 | Server-rendered, works without JS | ❌ | ✅ |
+| Usable on a phone (≤768px) | ❌ | ✅ |
 | Access control on the API | ❌ (world-readable) | ✅ (authenticated) |
 
 ## Verified specifics worth trusting
@@ -48,8 +51,9 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 - `trail --depot=./traildepot schema invoices` reports `invoices.type` as `{"type":["null","integer"]}`, i.e. the nullable-integer enum shape is really what is exposed.
 - Report arithmetic matches the preserved view SQL on the smoke seed — the six pinned values are in [[reports-and-ledgers]].
 - TrailBase guest-WASM Phase 0 (S1–S8) all pass on `v0.33.22`: runtime `eval` works, `app/` is readable through `--runtime-root-fs`, a single component serves requests in parallel, guest `fetch` reaches itself, and `UPDATE … RETURNING` claims atomically. Evidence in [[trailbase-guest-wasm-spike-results]].
-- The guest app-host serves the same reports as the legacy-preserved arithmetic: the smoke suite passes **71/71** (same seed and pinned totals) and the differential matched **14/14** report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work ([[guest-app-host-port]]).
+- The guest app-host serves the same reports as the legacy-preserved arithmetic: the smoke suite passes **76/76** (same seed and pinned totals) and the differential matched **14/14** report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work ([[guest-app-host-port]], [[tb-0028-guest-transactional-screens-and-mobile]]).
 - A first **invoice-entry slice** runs on the guest and passes `trailbase/tools/invoice-check.mjs`: context endpoint with ETag/304, server-side invoice numbering, an edit lease, idempotent create and line add, and complete ([[tb-0021-invoices-cashmemos-printing]]).
+- The guest is now **operable end to end on a phone**: `/invoices` (sale + purchase entry), `/payments` (invoice-linked and standalone DA) and `/inventory` (live stock, item edit), with every page given a `≤768px` layout. Totals on the new screens were checked against the legacy formula on the production depot — an invoice of 180 900.00 over 36 lines, and recieving 25 907 041.11 / sending 22 657 296.66, which are the figures the import recorded ([[tb-0028-guest-transactional-screens-and-mobile]], [[mobile-layout-is-additive-to-the-legacy-look]]).
 - Money is **2 dp everywhere** — report data, guest writes, and a backfill migration ([[money-is-2dp-everywhere]]).
 
 ## Open risks
@@ -61,8 +65,10 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 | TrailBase subscriptions return 403 | No realtime push exists, so every "latest data" requirement is met by ETag polling, not a stream | [[trailbase-subscribe-endpoint-forbidden]] |
 | The guest's `/count/{table}` is unauthenticated | Row counts of every table are reachable without login, and a non-integer result panics the guest | [[trailbase-host-count-endpoint-sql-injection]] |
 | Cutover shape undecided | Determines whether the legacy Next.js UI is repointed or retired; blocks two other tasks | [[pos-0028-decide-cutover-plan]] |
-| Invoicing/printing have no new-side equivalent | The new pair cannot replace the product, only part of it; designed but unbuilt | [[guest-frontend-feature-parity-gaps]], [[tb-0021-invoices-cashmemos-printing]] |
+| Invoicing/printing have no new-side equivalent | Invoice entry and payments are on the guest; **printing, the cash memo and expenses are still unbuilt**, so the new pair still cannot replace the whole product | [[guest-frontend-feature-parity-gaps]], [[tb-0021-invoices-cashmemos-printing]] |
 | The guest UI is not yet the legacy look | Parity is visual as well as behavioural; the guest must be restyled to match | [[guest-ui-is-a-direct-shift-of-legacy]], [[tb-0023-direct-shift-legacy-ui-to-guest]] |
+| Four reports still fail the 20 s deadline, and a heavy one starves the other requests | `profit`, `itemsales`, `paymentsbycompany` and `ledgers/general` fail cold; while one runs, unrelated requests fail in ~200 ms | [[heavy-report-blocks-runtime-threads]] |
+| The production depot could not be started | The generated depot was missing its config and one migration; all six applied migrations now mismatch their checksums and are silently skipped | [[production-depot-could-not-be-started]] |
 | Dropped views break legacy screens | `pocketbase-types.ts` and several report screens depend on view endpoints that do not exist on TrailBase | [[tb-0013-rework-report-screens-without-views]] |
 | Id/encoding asymmetry | Reads give base64, relation writes need canonical UUID text — a silent `400` waiting to happen | [[api-contract-trailbase]] |
 | A live PocketBase data dir is committed | `backend/p_data/data.db` + WAL files are tracked; a real DB can be pushed by accident | [[pocketbase-data-dirs-in-git]] |

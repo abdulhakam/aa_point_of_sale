@@ -7,7 +7,7 @@ created: 2026-09-27
 updated: 2026-09-27
 tags: [invoices, cashmemo, printing, realtime, concurrency, pos]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[invoice-entry-freshness-and-writes]]", "[[legacy-invoice-numbering-is-racy]]", "[[guest-frontend-feature-parity-gaps]]", "[[jobs-in-process-durable-queue]]"]
+related_to: ["[[invoice-entry-freshness-and-writes]]", "[[legacy-invoice-numbering-is-racy]]", "[[guest-frontend-feature-parity-gaps]]", "[[jobs-in-process-durable-queue]]", "[[tb-0028-guest-transactional-screens-and-mobile]]"]
 ---
 
 # TB-0021 Invoices, cash memos and printing on the guest platform
@@ -53,14 +53,39 @@ The write API and its lease/idempotency are implemented on the guest and verifie
 
 ### Remaining
 
-- [ ] **Screens**: invoice entry (purchase/sale/return/difference), orders — a browser client that
-      polls the context and drives the API above
-- [ ] Cash memos: payment vouchers, receive vouchers, DA entry, expenses, payments
+Re-measured 2026-09-29 after [[tb-0028-guest-transactional-screens-and-mobile]] landed the first
+browser screens. What follows is the true remainder, not the original list.
+
+**Screens built** (sale + purchase only): `/invoices` list with type/date/party/unpaid filters and
+whole-set totals, `/invoices/{id}` entry screen (header, lines, add + delete line, complete/reopen,
+payments on the invoice), `/payments` list + new + delete, `/inventory` with live stock.
+
+- [ ] **Return and difference invoices** — the entry screen offers sale and purchase only. Return
+      needs `invoices_return_reference` (a return points at the original invoice); difference is how
+      stock is adjusted, so `/inventory` currently has no way to change a quantity.
+- [ ] **Orders** — `/app/invoices/orders` has no guest equivalent at all.
+- [ ] **Fields the schema has and the screen does not expose**: `duedate`; the header's
+      `discount_2`; per-line `discount_1`, `discount_2`, `scheme` ("Free") and a `cost_price`
+      override (the route defaults cost from the item). The route already accepts all of them — only
+      the form is missing.
+- [ ] **Line edit** — a line can be added and deleted, never modified. The JSON API has no line
+      `PATCH` either, so this is missing at both layers.
+- [ ] **Void / cancel** — there is no `status`, no void, and no way to delete an invoice. An
+      abandoned draft keeps its human number forever (F1).
+- [ ] **Stock guard** — nothing prevents selling below zero.
+- [ ] **Surface `lockHolder`** — the lease is enforced (409 for another device) but the screen never
+      says who holds it (F2).
+- [ ] Cash memos: payment vouchers, receive vouchers, DA entry, expenses, payments. Only the
+      payment *rows* exist (`/payments`), including a standalone DA entry; the five legacy screens
+      do not.
 - [ ] **Printing**: server-rendered pages; **A5 receipts, A4 reports**; browser `window.print()`;
-      a `print_job` queue (durable-queue job) for batch/reprint
+      a `print_job` queue (durable-queue job) for batch/reprint. The materialised invoice documents
+      ([[tb-0027-materialised-invoice-documents]]) are the input, and there is no template.
 - [ ] Lease **contention across two real users** in the check tool (needs a second user)
-- [ ] Resolve the F-items in [[invoice-entry-freshness-and-writes]] (invoice `status`/void,
-      per-line idempotency is done, totals recompute, coalescing)
+- [ ] Resolve the F-items in [[invoice-entry-freshness-and-writes]]: F1 status/void, F2 lock
+      lifecycle and stranding, F4 totals recompute, F5 invalidation storms. F3 is partly closed —
+      create and line-add carry an idempotency key and the header PATCH is full-state — but line
+      **delete** is not idempotent, and it is a hard delete, so a retry can remove a different line.
 
 ### Integration observations (to investigate)
 
