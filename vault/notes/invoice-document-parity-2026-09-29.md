@@ -36,19 +36,58 @@ false 12,432/23,413 "mismatch" that was purely an ordering artefact.
 
 ## 2. Trigger maintenance: works, and it is the point
 
-One `AFTER INSERT` trigger on `transactions` rewriting the parent document:
+**CORRECTION 2026-09-29, later the same day.** This section originally recorded **2.5 ms** per
+line insert. That figure came from a *narrow* trigger that used `json_set` to patch `total`, `lines`
+and `line_count` on the existing document. Rebuilding the **whole** document — the correct
+behaviour, and what the prototype should do — costs **0.89 ms** for the worst-case 36-line invoice.
+The narrow figure understated the work and the number to use from here on is the 0.89 ms one.
 
-```text
-a line insert + trigger took 2.5 ms
-total      180934.99  ->  181034.99      (+100.00 = 20.00 price x 5 qty)
-line count 36  ->  37
-sum of embedded line totals = 181034.99
-document.total agrees with its own lines: True
+Measured, worst-case invoice in the depot (36 lines), all figures best of 5:
+
+| | ms |
+|---|---|
+| header money only, one invoice | 0.02 |
+| **full document rebuild, correctly scoped** | **0.89** |
+| same rebuild, incorrectly scoped | 237.00 |
+| `UPDATE inv_doc SET doc = doc` (STORED columns recomputed) | 0.10 |
+| the same UPDATE on a table with no generated columns | 0.01 |
+
+The `STORED` generated columns cost **0.09 ms** and are not a factor. The derived total is written
+**in the same transaction as the line**, so no reader can ever see an invoice whose stored total
+disagrees with its own lines. This is the F4 "totals race" arriving pre-solved.
+
+Entering a 36-line invoice line by line, end to end:
+
+| lines | total | per line |
+|---|---|---|
+| 5 | 3.7 ms | 0.74 ms |
+| 20 | 17.2 ms | 0.86 ms |
+| 36 | 45.2 ms | 1.26 ms |
+| 100 | 156.8 ms | 1.57 ms |
+
+A statement-level trigger measures the same (33.3 ms for 36 lines), because inserting lines
+individually is 36 separate statements either way. Row-level is the simpler choice and also covers
+the case where lines arrive from different statements.
+
+### The scoping hazard, which cost 266× and is worth a guard
+
+The build SQL is correct for a **full rebuild** and badly wrong for a **trigger**: it aggregates the
+whole depot. A trigger built from it verbatim re-aggregated all 23,413 transactions and all 26,526
+payments on **every single line** — 237 ms per line, 8.7 s for a 36-line invoice, which would have
+made the till unusable.
+
+Scoping it to the affected invoice fixes it. The trap is that **three separate scans** need scoping,
+and `payments` has no `deleted` column, so two of those `FROM` clauses carry no `WHERE` to extend:
+
+```sql
+FROM "transactions" t WHERE t."deleted" = 0            AND t."invoice"   = NEW."invoice"
+FROM "payments"                                     WHERE "invoice"   = NEW."invoice"
+FROM "payments" pay                                 WHERE pay."invoice" = NEW."invoice"
 ```
 
-The derived total is written **in the same transaction as the line**, so no reader can ever see an
-invoice whose stored total disagrees with its own lines. This is the F4 "totals race" arriving
-pre-solved.
+A substitution written for the unaliased form silently missed the aliased `pjson`, and the assert
+that all three were scoped is what caught it. **The trigger variant must be generated from the build
+SQL and asserted to be scoped — never hand-copied.**
 
 ## 3. Refresh: yes, ~1.9 s
 
@@ -87,6 +126,11 @@ cash memo.
   invoice ([[guest-depot-created-is-import-time]]).
 - Document payload is **11.0 MB, 1.3 KB per invoice** (slightly larger than the 5.5 MB shape-only
   bench, because these carry `cost_price`, `scheme`, `unrounded_total` and payment descriptions).
+  The document replaces three `mview` entries — `invoiceView` 3.75 MB, `transactionsReport`
+  13.43 MB, `paymentsView` 13.41 MB — so **30.6 MB of JSON becomes 11.0 MB** of indexed tables.
+  `mview` is 82.2 MB in total ([[table-audit-2026-09-29]]). It does **not** cover
+  `paymentsInvoicesReport` (16.66 MB), which is a cross-invoice company split and needs the
+  aggregate tier rather than documents.
 - `readable_id` as a `STORED` generated column works and is indexable, which is the natural home for
   the 15-char human-readable id.
 
