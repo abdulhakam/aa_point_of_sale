@@ -32,14 +32,22 @@ normally on `:4003`).
 | Stock Report | `/app/reports/stockreport` | `/reports/stock` | ✅ |
 | Item transactions report | `/app/reports/stockreport/itemTransactionsReport` | — | ❌ |
 | Difference Report | `/app/reports/difference` | `/reports/difference` | ✅ |
-| Outstanding Payments | — (no legacy route) | `/reports/outstanding` | ❌ guest-only |
-| Product Sale Report | — (no legacy route) | `/reports/productsale` | ❌ guest-only |
-| Daily Sale Report | — (no legacy route) | `/reports/dailysale` | ❌ guest-only |
+| Outstanding Payments | `/app/reports/outstanding` | `/reports/outstanding` | ⚠️ **route exists but hangs** — see below |
+| Product Sale Report | `/app/reports/productsale` | `/reports/productsale` | ✅ (guest-only, renders 879 ms) |
+| Daily Sale Report | `/app/reports/dailysale` | `/reports/dailysale` | ✅ (guest-only, renders 1,406 ms) |
 | Ledgers index | `/app/reports/ledgers` | `/reports/ledgers` | ✅ |
 | Party Ledger | `/app/reports/ledgers/party` | `/reports/ledgers/party` | ✅ |
 | Booker Ledger | `/app/reports/ledgers/booker` | `/reports/ledgers/booker` | ✅ |
-| Area Ledger | `/app/reports/ledgers/area` | `/reports/ledgers/area` | ✅ |
 | General Ledger | `/app/reports/ledgers/general` | `/reports/ledgers/general` | ✅ |
+
+**CORRECTION 2026-09-29 — the three "no legacy route" rows above were wrong.** An earlier revision
+of this table recorded `outstanding`, `productsale` and `dailysale` as having no production route.
+The claim came from counting route **folders** under `frontend/src/app/app/reports/` without opening
+them. Driving the real browser shows all three routes exist, the nav renders links to all three, and
+each returns 200. `productsale` and `dailysale` render normally. `outstanding` returns 200 but stays
+on `Loading...` with no table — verified again after 30 s — so it is a **production hang**, not a
+missing route. Timings in [[browser-benchmark-2026-09-29]].
+
 | Management hub | `/app/management` | `/management` | ✅ |
 | Sections | `/app/management/sections` | `/management/sections` | ✅ |
 | Areas | `/app/management/areas` | `/management/areas` | ✅ |
