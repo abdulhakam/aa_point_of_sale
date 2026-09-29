@@ -100,6 +100,10 @@ client-side. The report did not reach "rows visible" inside the 30 s measurement
 
 ## Related
 
+- [[reports-parity-and-e2e-2026-09-29]] — re-measured on a fresh UI-driven import, range
+  1-Jan-2024 → today: guest cold/warm for all 14 reports, v1 stockreport 1,253 ms and difference
+  1,103 ms (same 209 rows), and **exact** per-column data parity. This note's v1 heavy-report
+  numbers are still the 2026-09-27 ones; they could not be re-captured.
 - [[guest-vs-node-performance]] — the earlier guest-vs-Node baseline.
 - [[guest-report-performance-options]] — the levers for the guest's on-request rebuild.
 - [[reports-and-ledgers]] — what the reports compute.

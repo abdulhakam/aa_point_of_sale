@@ -84,7 +84,7 @@ unchanged API surface.
 
 | File | Contents |
 |---|---|
-| `useAPI.ts` | `crud` helpers, the reference-collection cache policy, `hydrateRefs`, `useHydratedRefs`, `useAppliedFilters` |
+| `useAPI.ts` | `crud` helpers (`create`/`read`/`update`/`delete`/`listall`), and the `useCreate`/`useRead`/`useUpdate`/`useDelete`/`useFullList` hooks |
 | `pocketbase-types.ts` | generated record types — **including one per PocketBase view** |
 | `types.ts` | form-structure types shared by the generic form generator |
 | `permissions.js`, `users.js` | auth/permission helpers |
@@ -94,41 +94,28 @@ unchanged API surface.
 
 ### `useAPI.ts` in detail
 
-**Cache policy.** Reference data changes rarely, so it is cached for
-`REFERENCE_STALE_TIME = 5 * 60 * 1000`. `REFERENCE_COLLECTIONS` is exactly:
-`areas`, `sections`, `categories`, `items`, `parties`, `order_bookers`, `users`.
-Everything else (invoices, transactions, payments, ledgers) uses the global default
-`staleTime` from `providers.tsx`.
+**Corrected 2026-09-29.** This section previously described an API that **is not in the checked-out
+file**: `listPage`, `hydrateRefs`, `useHydratedRefs`, `useAppliedFilters` and a
+`REFERENCE_STALE_TIME = 5 min` reference cache. Verified against
+`frontend/src/app/api/useAPI.ts`, which is **77 lines** and exports only `crud`, `useCreate`,
+`useRead`, `useUpdate`, `useDelete` and `useFullList`. All five claimed symbols are absent, and
+`providers.tsx` sets a single global `staleTime: 1000 / 2` (500 ms) with no reference-collection
+override.
 
-The file records a deliberate decision about `refetchOnMount`: left at its default
-(`true`) while `staleTime` governs re-fetching, because the app's mutations call a bare
-`queryClient.invalidateQueries()`, which only refreshes *active* queries — with
-`refetchOnMount: false` an invalidated-but-inactive query would never refresh and screens
-could show pre-write data. Fresh data inside `staleTime` is served from cache instantly, so
-navigation stays instant.
+What the file actually does:
 
-**`crud`** exposes `create`, `read`, `update`, `remove`, `listall` (`getFullList`),
-and `listPage` (`getList(page, perPage, …)` — "POS-0011, real server-side pagination for
-transactional collections; use this instead of `getFullList` for
-invoices/transactions/payments"). `listall` carries a fix note: it used to drop its result
-(no `return`), so callers got `undefined`.
+- **`crud`** — `create`, `read`, `update`, `remove`, `listall` (`getFullList`).
+- **`useFullList({ collection, filter, sort, expand })`** — the React Query hook every report page
+  uses. It pages PocketBase with `?page=N&perPage=500` and concatenates, which is the mechanism
+  behind the legacy report timings in [[guest-vs-legacy-report-performance]].
+- **`useCreate` / `useRead` / `useUpdate` / `useDelete`** — thin mutation hooks.
 
-**`hydrateRefs(rows, maps, relations)`** synthesises a PocketBase-style `expand` object on
-rows fetched *without* a server-side expand, so existing `row.expand?...` render code keeps
-working unchanged after a change to how rows are fetched. `party` also hydrates the nested
-`party.area.section` chain that deep expands used to provide; `company`/`category` handle
-both array and single values; `invoice` is synthesised from the row's own `invoice` id plus
-its inline `invoiceNo`, because views carry the number inline. A relation is attached only
-when the target is actually present, so a partially-loaded map degrades to the raw id rather
-than throwing. `useHydratedRefs(rows, relations)` wraps it with the reference maps.
-
-**`useAppliedFilters(initial)`** implements POS-0026: it holds the filter values a report
-query actually reads, so editing inputs does not fire a request until the user presses
-APPLY. The page builds its PocketBase `filter` from `applied`, not from live form state;
-`apply(next)` snapshots the inputs and `reset()` returns to the initial snapshot — which is
-the page's defaults, so the page still loads once on mount. This is a deliberate
-performance pattern, kept on the new side ([[runtime-js-guest-platform]]) as the server-rendered
-APPLY/RESET form.
+**Consequence for the APPLY/RESET claim.** The vault previously recorded that the legacy app gates
+report queries behind `useAppliedFilters` (POS-0026) and that this is parity with the guest's
+server-rendered APPLY/RESET form. On the checked-out revision the report pages read
+`form.values` **live** and re-query as the form changes — there is no APPLY gate. So the guest's
+APPLY-gated form is a **behaviour difference**, not parity, and it should be re-decided rather than
+assumed equivalent.
 
 ### Form generation
 
@@ -157,8 +144,8 @@ App Router directories under `src/app/`, each with a `page.tsx`:
 - `/app/invoices` — plus `purchase`, `sale`, `return`, `difference`, `orders`, `print`,
   `printinvoice`, `printinvoice/queue`
 - `/app/management` — plus `areas`, `bookers`, `categories`, `items`, `parties`, `sections`
-- `/app/reports` — plus `dailysale`, `difference`, `outstanding`, `payments`,
-  `payments/areawise`, `paymentsbycompany`, `productsale`, `profit`, `salesreport`,
+- `/app/reports` — plus `difference`, `payments`,
+  `payments/areawise`, `paymentsbycompany`, `profit`, `salesreport`,
   `stockreport`, `stockreport/itemTransactionsReport`, `transactions/unified`, and
   `ledgers/{area,booker,general,party}`
 - `/views/invoice`

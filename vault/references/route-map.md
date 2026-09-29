@@ -32,9 +32,9 @@ normally on `:4003`).
 | Stock Report | `/app/reports/stockreport` | `/reports/stock` | ✅ |
 | Item transactions report | `/app/reports/stockreport/itemTransactionsReport` | — | ❌ |
 | Difference Report | `/app/reports/difference` | `/reports/difference` | ✅ |
-| Outstanding Payments | `/app/reports/outstanding` | `/reports/outstanding` | ✅ |
-| Product Sale Report | `/app/reports/productsale` | `/reports/productsale` | ✅ |
-| Daily Sale Report | `/app/reports/dailysale` | `/reports/dailysale` | ✅ |
+| Outstanding Payments | — (no legacy route) | `/reports/outstanding` | ❌ guest-only |
+| Product Sale Report | — (no legacy route) | `/reports/productsale` | ❌ guest-only |
+| Daily Sale Report | — (no legacy route) | `/reports/dailysale` | ❌ guest-only |
 | Ledgers index | `/app/reports/ledgers` | `/reports/ledgers` | ✅ |
 | Party Ledger | `/app/reports/ledgers/party` | `/reports/ledgers/party` | ✅ |
 | Booker Ledger | `/app/reports/ledgers/booker` | `/reports/ledgers/booker` | ✅ |
