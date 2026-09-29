@@ -1,94 +1,102 @@
 ---
-type: Reference
-status: Active
-created: 2026-09-19
-updated: 2026-09-19
-belongs_to:
-  - "[[AA Point of Sale]]"
-related_to:
-  - "[[Data Model]]"
-  - "[[Reports & Ledgers]]"
-tags:
-  - glossary
-  - terminology
-  - reference
+title: Glossary
+type: reference
+status: active
+system: both
+created: 2026-09-26
+tags: [pos, glossary, domain, terminology]
+related_to: ["[[data-model]]", "[[route-map]]"]
 ---
 
 # Glossary
 
-Project vocabulary. Where a term maps to a schema field, the field is named.
+Domain and code vocabulary, including the deliberate misspellings that must not be "fixed".
 
-## Business entities
+## Domain terms
 
-- **Party** — a customer or supplier. `parties.type` ∈ {`supplier`, `customer`}.
-- **Customer** — a party you sell to.
-- **Supplier** — a party you buy from.
-- **Booker** / **Order Booker** — a sales agent who takes orders; `order_bookers`.
-- **Company** — in the PocketBase app, the *category* of an item (`categories`); "Company" and
-  "category" were the same collection there, and report fields named `company` reference it. **In the
-  TrailBase system they are two different things**: `items.category` is vestigial and `company` carries
-  this meaning — see [[Decision — Company replaces category in the TrailBase model]].
-- **Category** — see Company.
-- **Area** — a territory, belonging to a section (`areas`).
-- **Section** — a grouping of areas (`sections`).
-- **Item** — a product (`items`) with cost price, sale price, carton size, and a category; see
-  **Company** for how TrailBase differs.
-- **Scheme** — free/extra quantity given on a line beyond billed `qty` (`transactions.scheme`).
+| Term | Meaning |
+|---|---|
+| **Party** | A customer or a supplier. `parties.type` is `0` customer / `1` supplier, `NULL` when unset. One table, two roles. |
+| **Section** | The top level of the party geography: `sections` → `areas` → `parties`. |
+| **Area** | The middle level of that hierarchy; `areas.section` points up. |
+| **Order Booker** | The salesperson / agent who books orders; `order_bookers`, linked to companies via `order_booker_companies`. |
+| **Company** | A trading company the party or booker is associated with. `companies`, reached through the link tables. Distinct from **Item Company**. |
+| **Item Company** | `categories` — the label the UI uses for it in both frontends ("Item Companies" in Management). See [[tb-0014-point-company-fields-at-companies]]. |
+| **Item** | A product: `name`, `category`, `barcode`, `display_id`, `cost_price`, `sale_price`, `box_size_qty`. |
+| **Carton Size** | `items.box_size_qty` — units per carton. Label is "Carton Size" in the UI, not "Box Size". |
+| **Invoice** | A document with a type: purchase, sale, return or difference. |
+| **Difference** | Not a sale or a purchase — a stock adjustment / write-off. `invoice_types` code `3`. |
+| **Transaction** | One **line** of an invoice (`transactions`), not a payment. This is the single most confusable word in the schema. |
+| **Payment** | Money in or out (`payments`). |
+| **Sending** | Money paid **out** to a supplier. `payment_types` code `0`. |
+| **Recieving** | Money taken **in** from a customer. `payment_types` code `1`. See the spelling note below. |
+| **Scheme** | Free quantity on an invoice line: `transactions.scheme`. Rendered as the "Free" column. |
+| **Discount 1 / Discount 2** | Two **multiplicative** percentage discounts, applied in sequence, on both `transactions` and `invoices`. |
+| **`discount_rs`** | A flat rupee amount, subtracted **after** the two percentages. |
+| **Dated / due date** | `invoices.dated` (the document date, falling back to `created`) and `invoices.duedate`. |
+| **Cash memo** | The legacy module holding the payment vouchers, receive vouchers, DA entry and expenses screens. No guest equivalent. |
+| **DA entry** | "Daily allowance"-style expense entry inside the cash-memo module. |
+| **Ledger** | A running statement: party, booker, area or general. |
+| **Outstanding** | What a party still owes or is owed — `outstanding_summary`. |
+| **Display ID** | A human-friendly item identifier (`items.display_id`), separate from `barcode`. |
+| **Booker** | Shorthand for order booker, used in report column names and route slugs (`/management/bookers`, `reportLedgerBooker`). |
 
-## Invoices and lines
+## Terminology traps
 
-- **Invoice type** — `purchase`, `sale`, `return`, or `difference`.
-- **Difference invoice** — an adjustment used to reconcile stock; only type counted by the
-  Difference Report.
-- **Return invoice** — reverses a prior invoice; linked via `invoices_return_reference`.
-- **Transaction** — one invoice line (`transactions`): item, price, qty, scheme, discounts.
-- **InvoiceNo** — human-facing invoice number (`invoices.invoiceNo`).
-- **Dated** — the business date of an invoice; falls back to `created` when unset.
-- **Discount_1 / Discount_2** — successive percentage discounts.
-- **Discount_rs** — flat currency discount (`discount_rs`).
+| Word | Means here |
+|---|---|
+| `transactions` | **invoice lines**, never payments |
+| "Transaction" (UI) | a ledger entry, in the General Ledger |
+| `receiving` | ✅ — the correct spelling. **Not** the one used in the schema. |
+| `recieving` | the spelling **actually used** across PocketBase, the old views, the ledger logic and the TrailBase migration. Keeping it is deliberate; renaming it would break the old data and the ledger arithmetic. |
+| "Company" in the Items form | means **`categories`** (item company), not `companies` |
+| `profit` inside `transaction_view` | **total cost**, not margin — the old SQL misnamed it |
+| `amount` in `payments` | a single positive magnitude; direction comes from `type`, not from the sign |
 
-## Money and totals
+`'recieving'` deserves emphasis: the TrailBase migration carries an explicit comment that it is
+spelled the way PocketBase spelled it, because "the frontend, the old views and the ledger
+logic all used that spelling". A future cleanup must change all of them at once, or none.
 
-- **total** — line total after line discounts.
-- **unrounded_total** — invoice total after invoice-level percentage discounts, before flat
-  discount.
-- **final_total** — invoice total after the flat `discount_rs`.
-- **net_amount** — line total after both line and invoice percentage discounts.
-- **final_amount** — `net_amount` less the line's proportional share of the invoice flat
-  discount (report-level).
-- **profit** — margin. Caution: in `transaction_view` the field named `profit` is actually
-  total **cost**; the real margin is in `transactions_report.profit`.
-- **net_price** — effective per-delivered-unit price after all discounts (`net_price` view).
+## Code and platform vocabulary
 
-## Payments
+| Term | Meaning |
+|---|---|
+| **View** | On the legacy side, a PocketBase SQL view (`payments_view`, `invoice_view`, …). On the new side, a *derived table rebuilt in JavaScript* in `compute/views.js`. Same name, different mechanism — see [[trailbase-drop-sql-views]]. |
+| **Snapshot / warm snapshot** | The in-memory copy of the 17 base tables **and** their derived views held by [[runtime-js-guest-platform]]'s report service. |
+| **Fingerprint / signature** | `{row count, newest updated}` per table, used to decide whether a table must be re-read. |
+| **Probe** | The single cheap request per table (`limit=1&order=-updated&count=true`) that produces the fingerprint. |
+| **View closure** | The transitive set of views a page needs, resolved from the views it declares (`viewClosure`). |
+| **Page host** | The generic `/p/<slug>` runtime: renders a `meta.json`-declared template, serves that page's data, and does not know any specific page. See [[trailbase-declarative-page-host]]. |
+| **Declarative page** | A folder `pages/<slug>/` containing `meta.json` + a template. Adding a page is adding a folder. |
+| **Plugin** | A folder `plugins/<slug>/` containing `meta.md` + `index.html`, served behind the login and listed by the plugin hub. |
+| **Compute module** | A file in `trailbase/runtime/app/compute/` that is environment-neutral and byte-for-byte shared between the guest host and the browser (served, behind auth, at `/compute/*`). |
+| **Warm-up** | Pre-rendering the reports that read a rebuilt view for their default filters, so the first visit after a change is already cached. |
+| **Depot** | A TrailBase data directory (`traildepot/`): `config.textproto`, `migrations/`, and the git-ignored runtime state. |
+| **Record API** | A TrailBase-exposed table at `/api/records/v1/<name>`, declared inside `config.textproto`'s `record_apis`. |
+| **`expand`** | TrailBase's one-hop, opt-in, allow-listed FK inlining. Not nested, unlike PocketBase's `expand`. |
+| **`acl_authenticated` / `acl_world`** | TrailBase per-API permission lists. `acl_world` is how you deliberately expose an API anonymously. |
+| **Collection** | PocketBase's word for a table/view. Also used for a vault collection — two different things, same word. |
+| **`_user`** | TrailBase's hidden built-in user table; can be targeted by a foreign key but never expanded. |
+| **Scroll / cursor pagination** | TrailBase's list paging: `?limit=` + the response `cursor`. Not PocketBase's page/perPage. |
+| **`getFullList` / `getList`** | PocketBase SDK helpers: fetch everything / fetch one page. Legacy code mixes both; see [[frontend]]. |
+| **Standalone build** | `npm run build:standalone` in `frontend/` — the Next.js standalone output copied to `../standalone`. |
 
-- **Payment type** — `sending` (outgoing), `recieving` (incoming; note the spelling),
-  or `return`.
-- **paid** — whether the payment has cleared (`payments.paid`).
-- **paid_to** — the booker a payment is attributed to.
-- **Cash memo** — the section of the app holding payments, expenses, and vouchers.
+## Reporting vocabulary
 
-## Reports and ledgers
-
-- **Ledger** — running debit/credit account, per party, booker, or area.
-- **General ledger / journal** — double-entry-style view (`ledger_journal`) with
-  `accounts_recievable`, `accounts_payable`, `cash`, `stock` columns.
-- **Credit / Debit** — ledger columns derived from payment type and `paid` state.
-- **DA entry** — daily-allowance entry screen under cash memo.
-- **Difference Report** — stock quantity from difference invoices only.
-- **Stock Report** — running item quantity across all invoice types (`items_report`).
-
-## Platform
-
-- **PocketBase (PB)** — the single-binary backend (HTTP API + SQLite + auth).
-- **View collection** — a read-only PocketBase collection backed by a SQL query.
-- **Tauri** — wrapper used to build a desktop app (`aa_pos`, `com.abdulhakam.aapos`).
-- **Standalone** — the prebuilt Next.js `output: "standalone"` server under `standalone/`.
+| Term | Meaning |
+|---|---|
+| **Unified Payments Report** | The main payments screen; groups payments by direction (sending/recieving) and paid/unpaid. |
+| **Payable / Recivable** | Derived totals: payable from unpaid `sending`; recivable from `recieving − recieved − returns`. |
+| **Payments By Company** | Distributes payments to companies by **revenue share**, not by direct attribution. |
+| **Item Sales Report** | Sales per item line; note the legacy route is `/app/reports/transactions/unified`. |
+| **Product Supply Summary** | The report *keyed* `productsale`; its tile is labelled "Product Sale Report". |
+| **Profit Report** | Real margin, from `transactions_report.profit` — **not** `transaction_view.profit` (which is cost). |
+| **Stock Report** | Quantity on hand derived from transactions; its "total" is a value, not a count. |
+| **Difference Report** | Stock adjustments / write-offs from difference invoices. |
+| **Area Ledger** | The one report with an intentional behavioural difference from the legacy SQL — see [[reports-and-ledgers]]. |
 
 ## Related
 
-- Schema detail: [[Data Model]].
-- Formula detail: [[Reports & Ledgers]].
-- Screen/route names for the report terms above: [[Route Map]].
-- Terms used across the subsystems: [[Frontend — Next.js Application]],
-  [[Backend — PocketBase Data Service]], [[Desktop & Deployment]].
+- [[data-model]] — the tables and codes these terms map to.
+- [[route-map]] — the screens these terms name.
+- [[reports-and-ledgers]] — the arithmetic behind the reporting vocabulary.

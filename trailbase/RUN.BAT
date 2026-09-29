@@ -25,12 +25,24 @@ if not defined ADDRESS set "ADDRESS=127.0.0.1:4000"
 set "ADMIN_USER=admin@localhost"
 set "ADMIN_PASSWORD=administrator-0ne"
 
+rem The depot is generated: if the source copies or the wasm component are missing, build them.
+if not exist "%DEPOT%\config.textproto" (
+  echo Depot is not prepared yet - running clear_db.bat then build.bat ...
+  call "%~dp0clear_db.bat"
+  if errorlevel 1 (echo ERROR: clear_db.bat failed. & endlocal & goto :eof)
+  call "%~dp0build.bat"
+  if errorlevel 1 (echo ERROR: build.bat failed. & endlocal & goto :eof)
+)
+
 if exist "%DEPOT%\data" goto :start_server
 call :init_depot
 
 :start_server
 echo Starting TrailBase server on http://%ADDRESS% ...
-start "" trail "--depot=%DEPOT%" run --address=%ADDRESS%
+rem --runtime-root-fs points the guest at the app copy in the depot, so this one server
+rem serves both the APIs and the new frontend. clear_db.bat copies it from runtime\ into
+rem %DEPOT%\runtime\.
+start "" trail "--depot=%DEPOT%" run --address=%ADDRESS% "--runtime-root-fs=%DEPOT%\runtime"
 
 rem Wait for the listener before opening the dashboard. A server that failed to start
 rem should say so, rather than opening a tab that cannot be reached.

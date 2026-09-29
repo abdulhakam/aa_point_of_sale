@@ -1,142 +1,164 @@
 ---
-type: Reference
-status: Active
-created: 2026-09-19
-updated: 2026-09-19
-belongs_to:
-  - "[[AA Point of Sale]]"
-related_to:
-  - "[[Backend — PocketBase Data Service]]"
-  - "[[Data Model]]"
-  - "[[Route Map]]"
-tags:
-  - reports
-  - ledgers
-  - sql
-  - views
-  - backend
+title: reports-and-ledgers
+type: reference
+status: active
+system: both
+created: 2026-09-26
+tags: [pos, reports, ledgers, arithmetic, parity]
+related_to: ["[[runtime-js-guest-platform]]", "[[backend]]"]
 ---
 
-# Reports & Ledgers
+# Report arithmetic and ledgers
 
-How every report is computed. The logic lives in PocketBase **view collections** (SQL),
-not in frontend code. Full SQL is stored in the live database and in
-`backend/pb_migrations/*.js`; the formulas below are the authoritative summary.
+The reports are the reason this rewrite exists, so their arithmetic is specified rather than
+implied. On the legacy side the arithmetic is SQL, inside PocketBase views ([[backend]]). On
+the new side there are no views at all — the same arithmetic is reimplemented in JavaScript
+in `trailbase/runtime/app/compute/views.js` and `trailbase/runtime/app/compute/reports.js`,
+deliberately reproducing the old
+view SQL so that report output matches for the same rows. The mapping is documented in
+`vault/references/reports-and-ledgers.md`, which is this file.
 
-This documents the **PocketBase** model. In the TrailBase rebuild, report fields named `company` must
-source an item's company from `companies` rather than `items.category` — see
-[[Decision — Company replaces category in the TrailBase model]].
+## Derived "views" rebuilt in JavaScript
 
-Legend: `d1`/`d2` are percentage discounts (0–100), `drs` is a flat discount in currency,
-`scheme` is free quantity, `qty` is billed quantity.
+`compute/views.js` (22,926 bytes) exports one builder per old view, plus closure helpers:
 
-## Line and invoice totals
+| Builder | Rebuilds |
+|---|---|
+| `buildTransactionView(base)` | `transaction_view` — one row per invoice line |
+| `buildInvoiceView(base, transactionView)` | `invoice_view` — one row per invoice, with invoice-level discounts applied |
+| `buildTransactionsReport(base, transactionView, invoiceView)` | `transactions_report` |
+| `buildPaymentsView(base, invoiceView)` | `payments_view` |
+| `buildPaymentsInvoicesReport(base, paymentsView, transactionsReport, invoiceView)` | `payments_invoices_report` |
+| `buildItemsReport(base, transactionView)` | `items_report` |
+| `buildItemsDifferenceReport(base, transactionView)` | `items_difference_report` |
+| `buildLedgerJournal(base, paymentsView)` | `ledger_journal` |
+| `buildLedgerBooker(paymentsView)` | `ledger_booker` |
+| `buildLedgerParty(paymentsView)` | `ledger_party` |
+| `buildLedgerArea(paymentsView)` | `ledger_area` |
+| `buildOutstanding(base, paymentsView)` | `outstanding_summary` |
+| `buildCounts(base)` | `counts_for_row_numbers` |
+| `buildRefs(base)` | `refs` — the reference maps the reports and filters read |
 
-### `transaction_view` — per invoice line
-- `total` = `(price × qty) × (1 − d1/100) × (1 − d2/100) − drs`
-- `net_amount` = `total × (1 − inv_d1/100) × (1 − inv_d2/100)` (adds invoice-level discounts)
-- `profit` = `cost_price × qty` — **note: this is total cost, not margin**, despite the name
-- Copies invoice discount fields into `inv_d1`, `inv_d2`, `inv_drs`; carries `type`,
-  `party_type`, `area`, `section`, `invoiceNo`.
+Plus the machinery that makes incremental rebuilds possible: `buildView`, `viewsAffectedBy`,
+`viewClosure`, `tablesForViews`, `buildViews`, `buildSelectedViews(base, previous, dirty)`.
 
-### `invoice_view` — per invoice
-- `total` = `Σ transaction_view.total`
-- `unrounded_total` = `Σtotal − Σtotal×invoice.discount_1/100 − (that)×invoice.discount_2/100`
-- `final_total` = `unrounded_total` less the flat `discount_rs`
-- `dated` = `invoices.dated` when set, else `invoices.created`
+`viewsAffectedBy(tables)` is what lets [[runtime-js-guest-platform]] rebuild only the views a
+changed table feeds, and `viewClosure(names)` is what lets a `meta.json` declare `"views":
+["transactionsReport"]` and have the transitive dependencies pulled in automatically.
 
-### `net_price` — per transaction
-- `net_price` = `price × qty × (1 − d1/100) × (1 − d2/100) × (1 − inv_d1/100) × (1 − inv_d2/100) ÷ (qty + scheme)`
-- `company` = the item's `category`. Used to reason about effective unit selling price
-  (note the denominator includes `scheme`, so it is a per-delivered-unit price).
+## The line and invoice math
 
-## Report views
+From `buildTransactionView`:
 
-### `transactions_report` — sales/profit/unified item reports
-`transaction_view` joined to `items` (for `company`) and `invoice_view` (for `booker`):
-- `final_amount` = `net_amount − (inv_drs × net_amount ÷ invoice_view.unrounded_total)`
-  (proportionally allocates the invoice's flat discount to each line)
-- `profit` = `final_amount − (cost_price × qty)` — **this** is the real per-line margin.
+```
+lineTotal  = price × qty × (1 − discount_1/100) × (1 − discount_2/100) − discount_rs
+net_amount = round2(lineTotal × (1 − inv_d1/100) × (1 − inv_d2/100))
+profit     = round2(cost_price × qty)          // see the quirk below
+```
 
-Feeds the Sales Report (`/app/reports/salesreport`), the "Item Sales Report"
-(`/app/reports/transactions/unified`), and the Profit Report (`/app/reports/profit`).
+Two discounts are multiplicative, not additive, and `discount_rs` is a flat amount subtracted
+after them. The invoice's own `discount_1` / `discount_2` are then applied per line to produce
+`net_amount` — which is how the Item Sale Report's sale total comes out at `731.00` for the
+smoke seed (`590.42 + 140.58`, i.e. the invoice-level `discount_rs` allocated per line).
 
-### `items_report` — stock report
-Per item, sum of signed quantity across all its transactions:
-- `sale` → `−(qty + scheme)`
-- `purchase` / other → `+(qty + scheme)`
-- `difference` → `+(qty + scheme)`
-- `return`: customer → `+(qty + scheme)`; supplier → `−(qty + scheme)`
+From `buildInvoiceView`:
 
-Feeds the Stock Report (`/app/reports/stockreport`).
+```
+total           = Σ round2(line total)                     // per invoice
+unrounded_total = total − total×d1/100, then − that×d2/100
+final_total     = round2(unrounded_total − discount_rs)
+```
 
-### `items_difference_report` — difference report
-Per item, `Σ(qty + scheme)` restricted to transactions whose invoice `type = 'difference'`.
-Feeds `/app/reports/difference`.
+`dated` falls back to `created` when unset (`inv.dated || inv.created`), matching the old
+`COALESCE`-style behaviour.
 
-## Payment views
+## The 14 reports
 
-### `payments_view`
-Payments joined to `invoice_view`, `parties`, `areas`, `sections`, `order_bookers`, and
-`invoices_return_reference`:
-- `payment_date` = `payments.payment_date` when set, else `payments.created`
-- `amount` = `payments.amount` when non-zero, else the invoice's `final_total`
-  (so an unset amount falls back to the full invoice value)
-- exposes `party_type`, `area`, `section`, `booker`, `company`, and `original_invoices`.
+`compute/reports.js` (23,580 bytes) exports `REPORTS` — a map of name → `{title, inputs, run}`
+— and `runReport(name, ctx, filters)`. `inputs` names the views each report needs, which is how
+the caller assembles `ctx` from the warm snapshot:
 
-### `payments_invoices_report` — company-split payments
-Splits a single payment across the item **companies** on the invoice, by revenue share:
-- `ratio` = `Σ transactions_report.net_amount` for that company and invoice
-  ÷ `invoice_view.unrounded_total`
-- `amount` = `ratio × payments_view.amount`
-- `type` mapping: `sending → purchase`, `recieving → sale`, `return → return`
+| Report key | Title | Inputs |
+|---|---|---|
+| `payments` | Unified Payments Report | `paymentsView`, `invoiceView`, `refs` |
+| `salesreport` | Sales Report | `paymentsView`, `invoiceView`, `refs` |
+| `paymentsbycompany` | Payments By Company | `paymentsInvoicesReport`, `invoiceView`, `refs` |
+| `profit` | Profit Report | `transactionsReport`, `refs` |
+| `itemsales` | Item Sales Report | `transactionsReport`, `refs` |
+| `stockreport` | Stock Report | `itemsReport`, `refs` |
+| `difference` | Difference Report | `itemsDifferenceReport`, `refs` |
+| `ledgers/party` | Party Ledger | `ledgerParty`, `invoiceView`, `refs` |
+| `ledgers/booker` | Booker Sales Ledger | `ledgerBooker`, `invoiceView`, `refs` |
+| `ledgers/area` | Area Ledger | `paymentsView`, `refs` |
+| `ledgers/general` | General Ledger | `ledgerJournal` |
+| `dailysale` | Daily Sale Report | `invoiceView`, `refs` |
+| `outstanding` | Outstanding Payments Report | `outstanding` |
+| `productsale` | Product Supply Summary | `transactionView`, `refs` |
 
-Feeds the Unified Payments Report (`/app/reports/payments`), payments-by-area
-(`/app/reports/payments/areawise`), and payments-by-company (`/app/reports/paymentsbycompany`).
+Note `productsale`'s title is **"Product Supply Summary"**, not "Product Sale Report" — the
+tile on the index is labelled with the latter. `ledgers/general` is the only report with no
+`refs` input, which is also why it is excluded from the warm-up list in
+`trailbase/runtime/ahscripts/routes/_app/route.ts`.
 
-## Ledger views
+The 4 ledger pages are reached at `/reports/ledgers/{area,booker,general,party}` and from
+`LEDGER_INDEX`; the other 11 from `REPORT_INDEX`.
 
-### `ledger_booker` — per-payment debit/credit
-- `credit` = `recieving & paid → amount`; else `sending & unpaid → amount`; else 0
-- `debit`  = `sending & paid → amount`; else `recieving & unpaid → amount`; else 0
-- Row-level only (no running balance); ordered by `payment_date`.
+## Inherited quirks, kept on purpose
 
-### `ledger_party` — per-party ledger with running balance
-Same `credit`/`debit` rules as `ledger_booker`, plus:
-- `balance` = running `Σ(paid → −amount, unpaid → +amount)` over that party's payments
-  with `payment_date ≤ current row` (formatted to 2 decimals).
+These are wrong but deliberate — they are in the old SQL too, and reproducing them is what
+makes the `71/71` comparisons meaningful:
 
-### `ledger_area` — area-scoped ledger
-Builds a per-party totals CTE (`credit` = paid amounts, `debit` = unpaid amounts) and emits
-`credit`/`debit`/`balance` grouped by party, for area-level review.
+1. **`transaction_view.profit` is total cost, not margin.** The old SQL misnamed it. The
+   `Profit Report` therefore uses `transactions_report.profit`, which *is* the real margin.
+   `views.js` carries a `// NOTE: named profit in the old SQL but it is total cost, not margin`
+   comment at exactly that line so nobody "fixes" it by accident.
+2. **`ledger_*.credit` / `debit` do not model the return case.**
+3. **`ledger_journal.stock` is always `0`.**
+4. **The `deleted` soft-delete flag is not applied consistently** across the derived views.
 
-### `ledger_journal` — general ledger / journal
-Unions `payments_view` (transaction type `payment` when paid, else `invoice`; account type =
-payment type) with `expenses` (type `expense`, account `cash`, always paid):
-- `accounts_recievable` = `recieving → (paid ? −amount : amount)`; `return & customer → −amount`
-- `accounts_payable`   = `sending → (paid ? −amount : amount)`; `return & supplier → −amount`
-- `cash` = `paid → (recieving ? amount : −amount)`
-- `stock` = **always 0** (stock accounting is not implemented here)
+One deviation *is* deliberate and is called out as such: **`ledger_area` grouped arbitrary
+`created`/`type` values from its `GROUP BY`**, which made its date and "recieving only" filters
+unreliable. The Area Ledger here filters the **source payments** instead, so the range and the
+type filter mean what the screen implies. That is the only intentional behavioural difference
+from the legacy views.
 
-Feeds the General Ledger (`/app/reports/ledgers/general`).
+## The assertions that pin the numbers
 
-## Dashboard
+The guest smoke suite (`node trailbase/tools/guest-smoke.mjs`) seeds a small consistent dataset
+through the
+record APIs and checks hand-computed values that must match the preserved view SQL — 71
+checks in total. The arithmetic ones:
 
-### `counts_for_row_numbers`
-Single row of counts: areas, sections, categories, purchase/sale/return invoices, items,
-order_bookers, parties, and recieving/sending payments.
+| Value | Expected | Why |
+|---|---|---|
+| Profit Report total | `91.00` | sale margin `90.42 + 40.58` minus return `40.00` |
+| Item Sales total sale | `731.00` | `590.42 + 140.58` (invoice-level `discount_rs` allocated per line) |
+| Stock Report total | `4510.00` | `91 × 50` Cola minus `2 × 20` Chips |
+| Payments payable / recivable | `800.00` / `150.00` | unpaid sending, and recieving − recieved − returns |
+| Outstanding balance | `150.00` | `500 − 200 − 150` for the seeded customer |
+| Payments By Company split | `403.85` / `161.54` | revenue share `598.50 / 741` and `142.50 / 741` of a `500` payment |
 
-## Known limitations (as implemented)
+The last row is the interesting one: it demonstrates that Payments By Company distributes a
+payment across companies **by revenue share**, not by direct attribution.
 
-- `ledger_*` SQL contains explicit `-- return case missing` comments: return invoices are
-  only partially handled in booker/area ledgers.
-- `ledger_journal.stock` is hard-coded to 0.
-- `transaction_view.profit` is total cost, not profit; use `transactions_report.profit`.
-- Many computed fields are `printf("%.2f", …)` strings typed as `json`.
-- View SQL does not consistently filter the soft-delete `deleted` flag.
+Run it with `node trailbase/tools/guest-smoke.mjs` (see [[build-and-run]]). It boots its own
+throw-away TrailBase depot, so it does not touch development or production data.
+
+## Where the old SQL is preserved
+
+The legacy SQL itself is kept verbatim in the PocketBase migrations — most recently
+`1789890300_ledger_party_window_function.js` and `1789890310_payments_summary_view.js` — and
+in the parent-directory artefacts `full_database_schema.sql` and
+`dltbl/views_from_pb/U1776088644__create_views.sql`. See [[stale-schema-sql-paths]] for why the
+paths cited in the READMEs do not resolve, and [[performance-and-caching]] for what those
+views do for speed.
+
+`trailbase/README.md` notes that this preserved SQL is also the reference for anyone who later
+wants the aggregation as a **WASM handler** or a materialised table inside TrailBase.
 
 ## Related
 
-- Field/relationship detail: [[Data Model]].
-- Which page renders each report: [[Route Map]].
-- Why logic sits in SQL: [[Backend — PocketBase Data Service]].
+- [[backend]] — the views listed per migration, including `payments_summary`'s eight columns.
+- [[runtime-js-guest-platform]] — the page host and the report service that run this code.
+- [[trailbase-drop-sql-views]] — why there are no views on the new side.
+- [[tb-0013-rework-report-screens-without-views]] — the legacy-side follow-up.

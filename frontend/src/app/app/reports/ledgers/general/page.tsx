@@ -1,11 +1,11 @@
 "use client";
 
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD, { useAppliedFilters } from "@/app/api/useAPI";
+import useCRUD from "@/app/api/useAPI";
 import DataViewTable from "@/app/components/DataViewTable";
 import PrintContent from "@/app/components/printing/PrintContent";
 import PrintHead from "@/app/components/printing/PrintHead";
-import { ActionIcon, Button, Flex, Group, NumberInput, Stack, Table, Text } from "@mantine/core";
+import { ActionIcon, Flex, Group, NumberInput, Stack, Table, Text } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { IconPrinter } from "@tabler/icons-react";
 import { DataTableColumn } from "mantine-datatable";
@@ -46,20 +46,12 @@ const tableStructure: DataTableColumn[] = [
 export default function LedgerReport() {
   const [fromDate, setFromDate] = useState<Date | null>(moment().startOf("month").toDate());
   const [toDate, setToDate] = useState<Date | null>(moment().endOf("day").toDate());
-
-  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
-  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
-  const { applied, apply, reset, initial } = useAppliedFilters({
-    fromDate: moment().startOf("month").toDate() as Date | null,
-    toDate: moment().endOf("day").toDate() as Date | null,
-  });
-
   const ledger = useCRUD().fullList({
     collection: "ledger_journal",
     sort: "+created",
-    filter: `(created >= '${moment(applied.fromDate)
+    filter: `(created >= '${moment(fromDate)
       .startOf("day")
-      .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(applied.toDate)
+      .format("YYYY-MM-DD HH:mm:ss")}' && created <= '${moment(toDate)
       .endOf("day")
       .format("YYYY-MM-DD HH:mm:ss")}')`,
   });
@@ -131,8 +123,6 @@ export default function LedgerReport() {
               onChange={(v) => setToDate(moment(v).endOf("day").utc().toDate())}
               label='Date To'
             />
-            {/* POS-0026 — request the data only when Apply is pressed. */}
-            <Button onClick={() => apply({ fromDate, toDate })}>APPLY</Button>
           </Group>
           <Group>
             <NumberInput

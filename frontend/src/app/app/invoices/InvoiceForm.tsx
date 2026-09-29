@@ -23,7 +23,7 @@ import { useForm } from "@mantine/form";
 import Transactions from "./transactions";
 import { useState } from "react";
 import idGenerator from "@/app/components/functions/idGenerator";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useDisclosure } from "@mantine/hooks";
 import { TransactionForm } from "./TransactionForm";
 import { DateInput } from "@mantine/dates";
@@ -51,36 +51,15 @@ export default function InvoiceForm(props) {
       description: "",
     },
   });
-  const invoiceType = props.type === "sale" ? "sale" : props.type === "purchase" ? "purchase" : "return";
-  // POS-0017 — the invoice selector no longer pulls the whole `invoice_view` with expands.
-  // It fetches 50 newest invoices and narrows server-side by invoice number; the selected
-  // invoice is loaded on demand below (and its `party`/`booker` ids come straight from the row).
-  const [invoiceSearch, setInvoiceSearch] = useState("");
-  const invoiceOptions = useCRUD().pagedList({
+  const invoices = useCRUD().fullList({
     collection: "invoice_view",
-    page: 1,
-    perPage: 50,
-    sort: "-invoiceNo",
-    filter: `type="${invoiceType}"${invoiceSearch ? ` && invoiceNo ~ "${invoiceSearch}"` : ""}`,
-    queryKey: `${props.type}InvoiceOptions`,
-  });
-  // Count of this invoice type, for the generated id — same view/filter the old list length used.
-  const invoiceCount = useCRUD().pagedList({
-    collection: "invoice_view",
-    page: 1,
-    perPage: 1,
-    filter: `type="${invoiceType}"`,
-    queryKey: `${props.type}InvoiceCount`,
-  });
-  const invoiceId = invoiceForm.values.invoiceNo;
-  const currentInvoice = useQuery({
-    queryKey: ["invoice_view", invoiceId],
-    queryFn: () => pb.collection("invoice_view").getOne(invoiceId),
-    enabled: invoiceId !== "new",
+    expand: "party,invoice_maker,booker",
+    filter: `type="${props.type === "sale" ? "sale" : props.type === "purchase" ? "purchase" : "return"}"`,
+    queryKey: `${props.type}Invoices`,
   });
   const parties = useCRUD().fullList({
     collection: "parties",
-    expand: "area",
+    expand: "area,area.section",
     filter:
       props.type === "sale"
         ? 'type="customer"||type="both"'
@@ -155,9 +134,9 @@ export default function InvoiceForm(props) {
       close();
     },
   });
-  async function getInvoiceData(value) {
+  function getInvoiceData(value) {
     if (value !== "new") {
-      const invoice = await pb.collection("invoice_view").getOne(value);
+      const invoice = invoices.data.find((inv) => inv.id === value);
       invoiceForm.setValues({
         discount_1: invoice.discount_1,
         discount_2: invoice.discount_2,
@@ -169,7 +148,7 @@ export default function InvoiceForm(props) {
   const [paidAmount, setPaidAmount] = useState(0);
   function paymentCreator() {
     const iid = idGenerator(
-      (invoiceCount.totalRecords ?? 0) + 1,
+      invoices.data.filter((inv) => inv.type === props.type).length + 1,
       props.type === "sale" ? "pos" : props.type === "purchase" ? "pop" : "rtn"
     );
     const data = {
@@ -206,7 +185,7 @@ export default function InvoiceForm(props) {
   function invoiceCreator() {
     const data = {
       id: idGenerator(
-        (invoiceCount.totalRecords ?? 0) + 1,
+        invoices.data.filter((inv) => inv.type === props.type).length + 1,
         props.type === "sale" ? "pos" : props.type === "purchase" ? "pop" : "rtn"
       ),
       invoiceNo:
@@ -236,7 +215,7 @@ export default function InvoiceForm(props) {
     };
     updateInvoice.mutate({ collection: "invoices", recordID: invoiceForm.values.invoiceNo, data: data });
   }
-  const invoice = currentInvoice.data;
+  const invoice = invoices.data?.find((inv) => inv.id === invoiceForm.values.invoiceNo);
   const final_total = () => {
     const dis_1 = invoice?.total * (invoiceForm.values.discount_1 / 100);
     const dis_2 = (invoice?.total - dis_1) * (invoiceForm.values.discount_2 / 100);
@@ -250,9 +229,11 @@ export default function InvoiceForm(props) {
       return Number(invoice.final_total);
     }
   };
-  const getInvoiceDate = (invoicedata) =>
-    invoicedata?.dated ? new Date(invoicedata.dated) : new Date(invoicedata?.created);
-  const queries = [invoiceOptions, invoiceCount, parties, user, items, counts, bookers, return_refs];
+  const getInvoiceDate = (invoice) => {
+    const invoicedata = invoices.data.find((inv) => inv.id === invoice);
+    return invoicedata.date ? new Date(invoicedata.date) : new Date(invoicedata.created);
+  };
+  const queries = [invoices, parties, user, items, counts, bookers, return_refs];
   if (checkSuccess(queries)) {
     return (
       <>
@@ -306,32 +287,26 @@ export default function InvoiceForm(props) {
                 disabled={editing ? true : false}
                 allowDeselect={false}
                 searchable
-                onSearchChange={(q) => setInvoiceSearch(q.replace(/\D/g, ""))}
                 data={[
-                  ...invoiceOptions.records.map((inv) => ({
-                    value: inv.id,
-                    label: String(inv.invoiceNo),
-                  })),
-                  ...(invoice && !invoiceOptions.records.some((inv) => inv.id === invoice.id)
-                    ? [{ value: invoice.id, label: String(invoice.invoiceNo) }]
-                    : []),
+                  ...invoices.data.map((inv) => ({ value: inv.id, label: String(inv.invoiceNo) })),
                   { value: "new", label: "new" },
                 ]}
                 {...invoiceForm.getInputProps("invoiceNo")}
-                onChange={async (v) => {
+                onChange={(v) => {
                   invoiceForm.setFieldValue("invoiceNo", v);
-                  if (v === "new") {
-                    invoiceForm.setFieldValue("date", new Date());
-                    return;
-                  }
-                  const inv = await pb.collection("invoice_view").getOne(v);
-                  invoiceForm.setFieldValue("booker", inv.booker);
-                  invoiceForm.setFieldValue("party", inv.party);
-                  invoiceForm.setFieldValue("date", getInvoiceDate(inv));
-                  if (props.type === "return") {
-                    const ref = return_refs.data?.find((r) => r.id === v);
-                    setOriginalInvoice(ref ? `${ref.expand?.original_invoices?.id ?? ""}` : null);
-                  }
+                  invoiceForm.setFieldValue(
+                    "booker",
+                    invoices.data.find((inv) => inv.id === v)?.expand.booker?.id
+                  );
+                  invoiceForm.setFieldValue(
+                    "party",
+                    invoices.data.find((inv) => inv.id === v)?.expand.party?.id
+                  );
+                  invoiceForm.setFieldValue("date", v === "new" ? new Date() : getInvoiceDate(v));
+                  props.type === "return" &&
+                    setOriginalInvoice(
+                      `${return_refs.data?.find((ref) => ref.id === v).expand.original_invoices.id}`
+                    );
                 }}
               />
               <DateInput

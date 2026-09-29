@@ -1,6 +1,0 @@
-[2026-09-26T10:19:10.924638Z INFO  trail] Created dedicated WASM runtime with 4 threads
-[2026-09-26T10:19:11.609597Z WARN  trailbase::config::vault] Vault not found. Falling back to empty default vault: The system cannot find the file specified. (os error 2)
-[2026-09-26T10:19:11.615376Z INFO  trailbase::email] Falling back to local sendmail: Missing: SMTP host
-[2026-09-26T10:19:11.616204Z INFO  trailbase::server] Initializing server version: v0.33.22-0-g3dfb2f70 2026-09-23
-[2026-09-26T10:19:11.625389Z INFO  trailbase::server] CORS: allow any origin
-[2026-09-26T10:19:13.590907Z ERROR trailbase::server] Failed to listen: Only one usage of each socket address (protocol/network address/port) is normally permitted. (os error 10048)

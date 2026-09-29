@@ -1,6 +1,0 @@
-(node:10016) [DEP_WEBPACK_MODULE_UPDATE_HASH] DeprecationWarning: Module.updateHash: Use new ChunkGraph API
-(Use `node --trace-deprecation ...` to show where the warning was created)
-Browserslist: caniuse-lite is outdated. Please run:
-  npx browserslist@latest --update-db
-  Why you should do it regularly: https://github.com/browserslist/browserslist#browsers-data-updating
- ⚠ Entire page /auth deopted into client-side rendering. https://nextjs.org/docs/messages/deopted-into-client-rendering /auth

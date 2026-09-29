@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Decisions collection schema",
+  "description": "Durable choices and their rationale. Documents may carry extra frontmatter fields; missing recommended fields are reported as warnings only.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Decision title."
+    },
+    "type": {
+      "type": "string",
+      "description": "Document type. Convention: decision."
+    },
+    "status": {
+      "type": "string",
+      "description": "Decision status.",
+      "examples": [
+        "proposed",
+        "accepted",
+        "superseded"
+      ]
+    },
+    "decided_on": {
+      "type": "string",
+      "format": "date",
+      "description": "Decision date (YYYY-MM-DD)."
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "description": "Creation date (YYYY-MM-DD)."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Topic tags (#tag style, lowercase)."
+    }
+  },
+  "required": [
+    "title",
+    "type",
+    "status",
+    "created"
+  ]
+}

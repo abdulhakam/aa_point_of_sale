@@ -1,0 +1,419 @@
+/**
+ * Guest smoke test: boots a throw-away TrailBase depot with the guest component and the site,
+ * seeds a pinned small dataset, then exercises every screen over HTTP and asserts the pinned
+ * totals.
+ *
+ *   node trailbase/tools/guest-smoke.mjs
+ *   (needs the component built: run trailbase/build.bat first)
+ *
+ * Auth is TrailBase's own cookie (the guest has no session layer), so it logs in through
+ * `/api/auth/v1/login` (form-encoded) rather than the app's `/login` POST.
+ */
+import { spawn, spawnSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { toUuid } from "./uuid.mjs";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const trailbaseRoot = path.resolve(here, "..");            // trailbase/
+const repo = path.resolve(trailbaseRoot, "..");             // repo root
+const site = path.join(trailbaseRoot, "runtime");          // the app tree (--runtime-root-fs)
+const wasm = path.join(trailbaseRoot, "traildepot", "wasm", "runtime_js.wasm"); // from build.bat
+
+const work = path.join(trailbaseRoot, ".tbdemo-guest");
+const depot = path.join(work, "depot");
+const TB_PORT = 4322;
+const TB = `http://127.0.0.1:${TB_PORT}`;
+// The guest is a TrailBase component, so the app and the APIs share one origin/port.
+const FE = TB;
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const results = [];
+
+function check(name, ok, detail = "") {
+  results.push({ name, ok, detail });
+  console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail && !ok ? `  — ${detail}` : ""}`);
+}
+
+function kill(child) {
+  if (!child || child.exitCode !== null) return;
+  try {
+    if (process.platform === "win32") spawnSync("taskkill", ["/F", "/T", "/PID", String(child.pid)], { stdio: "ignore" });
+    else child.kill("SIGKILL");
+  } catch {
+    /* best effort */
+  }
+}
+
+async function waitFor(fn, { tries = 120, delay = 500 } = {}) {
+  for (let i = 0; i < tries; i++) {
+    try {
+      const value = await fn();
+      if (value) return value;
+    } catch {
+      /* retry */
+    }
+    await sleep(delay);
+  }
+  return null;
+}
+
+/* --------------------------------------------------------------- TrailBase */
+
+let trailLog = "";
+
+async function startTrail() {
+  if (!fs.existsSync(wasm)) throw new Error(`guest wasm not built: ${wasm}`);
+  fs.rmSync(depot, { recursive: true, force: true });
+  fs.mkdirSync(path.join(depot, "wasm"), { recursive: true });
+  fs.copyFileSync(path.join(trailbaseRoot, "config.textproto"), path.join(depot, "config.textproto"));
+  fs.copyFileSync(path.join(trailbaseRoot, "metadata.textproto"), path.join(depot, "metadata.textproto"));
+  fs.cpSync(path.join(trailbaseRoot, "migrations"), path.join(depot, "migrations"), { recursive: true });
+  fs.copyFileSync(wasm, path.join(depot, "wasm", "runtime_js.wasm"));
+
+  const child = spawn("trail", [`--depot=${depot}`, "run", `--address=127.0.0.1:${TB_PORT}`, `--runtime-root-fs=${site}`], { cwd: depot });
+  child.stdout.on("data", (d) => (trailLog += d));
+  child.stderr.on("data", (d) => (trailLog += d));
+  const up = await waitFor(() => /Listening on/i.test(trailLog));
+  if (!up) throw new Error(`TrailBase did not start:\n${trailLog}`);
+  const creds = trailLog.match(/email:\s*'([^']+)'[\s\S]*?password:\s*'([^']+)'/);
+  if (!creds) throw new Error(`Could not read generated credentials:\n${trailLog}`);
+  return { child, email: creds[1], password: creds[2] };
+}
+
+let token = null;
+
+async function api(method, apiPath, body) {
+  const res = await fetch(TB + apiPath, {
+    method,
+    headers: { ...(token ? { authorization: `Bearer ${token}` } : {}), ...(body ? { "content-type": "application/json" } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`${method} ${apiPath} -> ${res.status} ${text}`);
+  return text ? JSON.parse(text) : null;
+}
+
+const create = async (apiName, body) => (await api("POST", `/api/records/v1/${apiName}`, body)).ids[0];
+
+/** The pinned smoke dataset (seed rows and hand-computed totals). */
+async function seed() {
+  const sectionA = await create("sections", { name: "North" });
+  const sectionB = await create("sections", { name: "South" });
+  const areaA = await create("areas", { name: "Area-1", section: toUuid(sectionA) });
+  const areaB = await create("areas", { name: "Area-2", section: toUuid(sectionB) });
+  const catA = await create("categories", { name: "Beverages" });
+  const catB = await create("categories", { name: "Snacks" });
+  const compA = await create("companies", { name: "Acme" });
+  const compB = await create("companies", { name: "Globex" });
+
+  const cust = await create("parties", { name: "Customer One", type: 0, area: toUuid(areaA), phone: "100" });
+  const supp = await create("parties", { name: "Supplier One", type: 1, area: toUuid(areaB), phone: "200" });
+  await create("party_companies", { party: toUuid(cust), company: toUuid(compA) });
+  await create("party_companies", { party: toUuid(supp), company: toUuid(compB) });
+
+  const booker = await create("order_bookers", { name: "Booker One", phone: "300" });
+  await create("order_booker_companies", { order_booker: toUuid(booker), company: toUuid(compA) });
+
+  const itemA = await create("items", { name: "Cola", category: toUuid(catA), cost_price: 50, sale_price: 70, box_size_qty: 12, barcode: "111" });
+  const itemB = await create("items", { name: "Chips", category: toUuid(catB), cost_price: 20, sale_price: 30, box_size_qty: 24, barcode: "222" });
+
+  const invSale = await create("invoices", {
+    type: 1, invoiceNo: 1001, party: toUuid(cust), booker: toUuid(booker), dated: "2026-09-10 10:00:00.000Z",
+    discount_1: 5, discount_2: 0, discount_rs: 10, completed: 1,
+  });
+  await create("transactions", { invoice: toUuid(invSale), item: toUuid(itemA), cost_price: 50, price: 70, qty: 10, scheme: 1, discount_1: 10, discount_2: 0, discount_rs: 0 });
+  await create("transactions", { invoice: toUuid(invSale), item: toUuid(itemB), cost_price: 20, price: 30, qty: 5, scheme: 0, discount_1: 0, discount_2: 0, discount_rs: 0 });
+
+  const invPurchase = await create("invoices", { type: 0, invoiceNo: 2001, party: toUuid(supp), dated: "2026-09-05 09:00:00.000Z" });
+  await create("transactions", { invoice: toUuid(invPurchase), item: toUuid(itemA), cost_price: 45, price: 50, qty: 100, scheme: 0 });
+
+  const invReturn = await create("invoices", { type: 2, invoiceNo: 3001, party: toUuid(cust), booker: toUuid(booker), dated: "2026-09-12 11:00:00.000Z" });
+  await create("transactions", { invoice: toUuid(invReturn), item: toUuid(itemA), cost_price: 50, price: 70, qty: 2, scheme: 0 });
+
+  const invDiff = await create("invoices", { type: 3, invoiceNo: 4001, dated: "2026-09-13 08:00:00.000Z", description: "stock count" });
+  await create("transactions", { invoice: toUuid(invDiff), item: toUuid(itemB), cost_price: 20, price: 0, qty: 3, scheme: 0 });
+
+  await create("payments", { invoice: toUuid(invSale), party: toUuid(cust), type: 1, amount: 500, paid: 0, payment_date: "2026-09-11 12:00:00.000Z", description: "invoice" });
+  await create("payments", { invoice: toUuid(invSale), party: toUuid(cust), type: 1, amount: 200, paid: 1, payment_date: "2026-09-12 12:00:00.000Z", description: "payment" });
+  await create("payments", { invoice: toUuid(invPurchase), party: toUuid(supp), type: 0, amount: 800, paid: 0, payment_date: "2026-09-06 12:00:00.000Z", description: "invoice" });
+  await create("payments", { party: toUuid(cust), type: 2, amount: 150, paid: 0, payment_date: "2026-09-14 12:00:00.000Z", description: "payment" });
+
+  await create("expenses", { name: "Fuel", description: "van", amount: 120, date: "2026-09-09 00:00:00.000Z" });
+
+  return { invoices: 4, items: 2, parties: 2 };
+}
+
+/* ------------------------------------------------------------------ guest app */
+
+function jar() {
+  let cookie = "";
+  return {
+    get cookie() {
+      return cookie;
+    },
+    set(res) {
+      const set = res.headers.getSetCookie ? res.headers.getSetCookie() : [];
+      if (set.length) cookie = set.map((c) => c.split(";")[0]).join("; ");
+    },
+  };
+}
+
+async function loginTrailBase(cookies, email, password) {
+  const res = await fetch(`${TB}/api/auth/v1/login`, {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: `email_or_username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+    redirect: "manual",
+  });
+  cookies.set(res);
+  return res.status;
+}
+
+async function get(cookies, url, opts = {}) {
+  const res = await fetch(FE + url, {
+    redirect: opts.redirect ?? "manual",
+    headers: { ...(cookies.cookie ? { cookie: cookies.cookie } : {}), ...(opts.headers ?? {}) },
+  });
+  cookies.set(res);
+  return { status: res.status, location: res.headers.get("location"), etag: res.headers.get("etag"), body: await res.text() };
+}
+
+async function postForm(cookies, url, fields) {
+  const res = await fetch(FE + url, {
+    method: "POST",
+    redirect: "manual",
+    headers: { "content-type": "application/x-www-form-urlencoded", ...(cookies.cookie ? { cookie: cookies.cookie } : {}) },
+    body: new URLSearchParams(fields).toString(),
+  });
+  cookies.set(res);
+  return { status: res.status, location: res.headers.get("location"), body: await res.text() };
+}
+
+async function waitForGuest() {
+  return waitFor(async () => {
+    const res = await fetch(`${FE}/healthz`);
+    return res.ok;
+  });
+}
+
+/* ------------------------------------------------------------------ the test */
+
+async function main() {
+  console.log("== preparing throw-away TrailBase depot with the guest component ==");
+  const trail = await startTrail();
+  try {
+    const login = await api("POST", "/api/auth/v1/login", { email: trail.email, password: trail.password });
+    token = login.auth_token;
+    if (!token) throw new Error("no auth token from TrailBase login");
+
+    const seeded = await seed();
+    console.log(`   seeded: ${JSON.stringify(seeded)}`);
+    if (!(await waitForGuest())) throw new Error(`guest app did not start:\n${trailLog}`);
+
+    const cookies = jar();
+
+    const anon = await get(cookies, "/dashboard");
+    check("anonymous /dashboard redirects to /login", (anon.status === 302 || anon.status === 303) && String(anon.location).startsWith("/login"), `${anon.status} ${anon.location}`);
+
+    const badLogin = await postForm(cookies, "/login", { email: trail.email, password: "wrong-password" });
+    check("login with a bad password is rejected", badLogin.status === 401, `${badLogin.status}`);
+
+    const okLogin = await postForm(cookies, "/login", { email: trail.email, password: trail.password, next: "/dashboard" });
+    check("login succeeds and sets a session", okLogin.status === 303 && okLogin.location === "/dashboard", `${okLogin.status} ${okLogin.location}`);
+    check("session cookie is set", cookies.cookie.includes("auth_token"), cookies.cookie.slice(0, 40));
+
+    const pages = [
+      ["/dashboard", "Overview"],
+      ["/reports", "Reports"],
+      ["/reports/ledgers", "Ledgers"],
+      ["/management", "Management"],
+      ["/management/sections", "New Section"],
+      ["/management/areas", "Areas"],
+      ["/management/parties", "Parties"],
+      ["/management/categories", "Item Companies"],
+      ["/management/companies", "Companies"],
+      ["/management/bookers", "Order Bookers"],
+      ["/management/items", "Items"],
+      ["/reports/payments", "Unified Payments Report"],
+      ["/reports/salesreport", "Sales Report"],
+      ["/reports/paymentsbycompany", "Payments By Company"],
+      ["/reports/itemsales", "Item Sales Report"],
+      ["/reports/profit", "Profit Report"],
+      ["/reports/stockreport", "Stock Report"],
+      ["/reports/difference", "Difference Report"],
+      ["/reports/dailysale", "Daily Sale Report"],
+      ["/reports/outstanding", "Outstanding Payments"],
+      ["/reports/productsale", "Product Sale Report"],
+      ["/reports/ledgers/area", "Area Ledger"],
+      ["/reports/ledgers/booker", "Please select a booker"],
+      ["/reports/ledgers/general", "General Ledger"],
+      ["/reports/ledgers/party", "Please select a party"],
+    ];
+
+    for (const [url, needle] of pages) {
+      const res = await get(cookies, url);
+      check(`GET ${url} renders (${needle})`, res.status === 200 && res.body.includes(needle), `${res.status}${res.body.includes(needle) ? "" : " missing needle"}`);
+    }
+
+    const stock = await get(cookies, "/reports/stockreport");
+    check("stock report contains a seeded item", stock.body.includes("Cola"), "");
+    const payments = await get(cookies, "/reports/payments");
+    check("payments report contains a seeded party", payments.body.includes("Customer One"), "");
+    const general = await get(cookies, "/reports/ledgers/general");
+    check("general ledger contains an expense row", general.body.includes("van"), "");
+
+    const sep = "from=2026-09-01&to=2026-09-30";
+
+    const profit = await get(cookies, `/reports/profit?${sep}`);
+    check("profit total is 91.00 (margin arithmetic)", profit.body.includes('class="right">91.00<'), "");
+    check("profit row uses final-margin 90.42", profit.body.includes("90.42"), "");
+
+    const pageProfit = await get(cookies, `/p/reports/profit/data?${sep}`);
+    const pageProfitPayload = pageProfit.status === 200 ? JSON.parse(pageProfit.body) : null;
+    check("page data returns a named report result", pageProfitPayload?.meta?.report === "profit" && Array.isArray(pageProfitPayload.result?.rows), pageProfit.body);
+    check("page data preserves profit total", pageProfitPayload?.result?.totals?.profit === "91.00", JSON.stringify(pageProfitPayload?.result?.totals));
+    check("page data ships select sources, not derived views", Array.isArray(pageProfitPayload?.tables?.items) && pageProfitPayload?.views === undefined, pageProfit.body);
+    const pageProfitCached = await get(cookies, `/p/reports/profit/data?${sep}`, { headers: { "if-none-match": pageProfit.etag } });
+    check("page data revalidates an unchanged filtered result", pageProfit.etag && pageProfitCached.status === 304, `${pageProfit.etag} ${pageProfitCached.status}`);
+
+    // The report result cache: a repeat run without revalidation is served from KV.
+    const repeated = await get(cookies, `/p/reports/profit/data?${sep}`);
+    const cacheState = JSON.parse((await get(cookies, "/reports/status")).body);
+    check("repeat report run is served from the KV cache", cacheState.reportCacheHits >= 1, JSON.stringify({ hits: cacheState.reportCacheHits, misses: cacheState.reportCacheMisses }));
+    check("cached result is identical", repeated.status === 200 && JSON.parse(repeated.body)?.result?.totals?.profit === "91.00", `${repeated.status}`);
+
+    const refreshed = await postForm(cookies, "/reports/refresh", {});
+    check("manual refresh redirects back without JS", refreshed.status === 303 && String(refreshed.location || "").startsWith("/"), `${refreshed.status} ${refreshed.location} ${refreshed.body.slice(0, 300)}`);
+    const refreshedFull = await postForm(cookies, "/reports/refresh?full=1", {});
+    check("manual refresh accepts a full re-read", refreshedFull.status === 303, `${refreshedFull.status} ${refreshedFull.location} ${refreshedFull.body.slice(0, 300)}`);
+    const refreshedJson = await fetch(FE + "/reports/refresh", { method: "POST", redirect: "manual", headers: { accept: "application/json", cookie: cookies.cookie } });
+    const refreshedStateText = await refreshedJson.text();
+    const refreshedState = refreshedJson.status === 200 ? JSON.parse(refreshedStateText) : null;
+    check("manual refresh answers JSON when asked", refreshedState?.ready === true && refreshedState?.phase === "idle", `${refreshedJson.status} ${refreshedStateText.slice(0, 300)}`);
+    const afterRefresh = await get(cookies, "/reports/status");
+    const afterState = afterRefresh.status === 200 ? JSON.parse(afterRefresh.body) : null;
+    check("manual refresh leaves the snapshot ready", afterState?.ready === true && afterState?.build > 0, afterRefresh.body);
+
+    const itemsales = await get(cookies, `/reports/itemsales?${sep}`);
+    check("item sales total sale is 731.00", itemsales.body.includes('class="right">731.00<'), "");
+    check("item sales net total is 591.00", itemsales.body.includes('class="right">591.00<'), "");
+
+    const stock2 = await get(cookies, "/reports/stockreport");
+    check("stock quantity displays cartons+units", stock2.body.includes("7 ctns 7 units"), "");
+    check("stock total is 4510.00", stock2.body.includes('class="right">4510.00<'), "");
+
+    const diff = await get(cookies, "/reports/difference");
+    check("difference report counts only difference invoices", diff.body.includes("Chips") && diff.body.includes("0 ctns 3 units"), "");
+
+    const pay = await get(cookies, `/reports/payments?${sep}`);
+    check("payments payable amount is 800.00", pay.body.includes('class="right">800.00<'), "");
+    check("payments recivable amount is 150.00", pay.body.includes('class="right">150.00<'), "");
+
+    const outc = await get(cookies, "/reports/outstanding");
+    check("outstanding balance for the customer is 150.00", outc.body.includes("Customer One") && outc.body.includes('class="right">150.00<'), "");
+
+    const byCompany = await get(cookies, `/reports/paymentsbycompany?${sep}&applyDate=on`);
+    check("payments-by-company lists seeded item companies", byCompany.body.includes("Beverages") && byCompany.body.includes("Snacks"), "");
+    check("payments-by-company splits by revenue share", byCompany.body.includes("403.85") && byCompany.body.includes("161.54"), "");
+    check("payments-by-company invoice total is 500.00", byCompany.body.includes('class="right">500.00<'), "");
+    check("payments-by-company total is 300.00", byCompany.body.includes('class="right">300.00<'), "");
+
+    const partiesList = await get(cookies, "/management/parties");
+    const partyId = /href="\/management\/parties\?edit=([^"&]+)/.exec(partiesList.body);
+    if (partyId) {
+      const ledger = await get(cookies, `/reports/ledgers/party?party=${encodeURIComponent(partyId[1])}`);
+      check("party ledger renders for a selected party", ledger.status === 200 && ledger.body.includes("Party Ledger"), `${ledger.status}`);
+    } else {
+      check("party ledger renders for a selected party", false, "no party id found in the list page");
+    }
+
+    const created = await postForm(cookies, "/management/sections/create", { name: "Smoke Section" });
+    check("management create redirects", created.status === 303 || created.status === 302, `${created.status}`);
+    const sections = await get(cookies, "/management/sections");
+    check("created record appears in the list", sections.body.includes("Smoke Section"), "");
+
+    // Fingerprint refresh: after a write, an incremental refresh must name the changed table
+    // and rebuild the views that depend on it.
+    const refreshAfterWrite = await fetch(`${FE}/reports/refresh`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { accept: "application/json", cookie: cookies.cookie },
+    });
+    const fingerprintState = refreshAfterWrite.status === 200 ? await refreshAfterWrite.json() : null;
+    check(
+      "incremental refresh names the changed table",
+      Array.isArray(fingerprintState?.lastRefresh?.changed) && fingerprintState.lastRefresh.changed.includes("sections"),
+      JSON.stringify(fingerprintState?.lastRefresh)
+    );
+    check(
+      "incremental refresh rebuilds the affected views",
+      Array.isArray(fingerprintState?.lastRefresh?.rebuilt) && fingerprintState.lastRefresh.rebuilt.includes("refs"),
+      JSON.stringify(fingerprintState?.lastRefresh?.rebuilt)
+    );
+
+    check("party list resolves area and section names", partiesList.body.includes("Area-1") && partiesList.body.includes("North"), "");
+
+    const areasList = await get(cookies, "/management/areas");
+    const areaEdit = /href="\/management\/areas\?edit=([^"&]+)/.exec(areasList.body);
+    if (areaEdit) {
+      const form = await get(cookies, `/management/areas?edit=${encodeURIComponent(areaEdit[1])}`);
+      check("edit form preselects the record's relation", /<option value="[^"]+" selected>North<\/option>/.test(form.body), "");
+    } else {
+      check("edit form preselects the record's relation", false, "no area edit link found");
+    }
+
+    if (partyId) {
+      const form = await get(cookies, `/management/parties?edit=${encodeURIComponent(partyId[1])}`);
+      check("party edit form preselects the enum type", /<option value="0" selected>customer<\/option>/.test(form.body), "");
+    }
+
+    const filteredStock = await get(cookies, "/reports/stockreport");
+    check("stock report still renders after a write", filteredStock.status === 200, `${filteredStock.status}`);
+
+    const health = await fetch(`${FE}/healthz`).then((r) => r.json());
+    check("report worker pool is running", health.workers.workers >= 1, JSON.stringify(health.workers));
+
+    // Invariants.
+    const anonApi = await fetch(`${FE}/api/records/v1/items`);
+    check("anonymous record API is rejected", anonApi.status === 401 || anonApi.status === 403, `${anonApi.status}`);
+
+    const unknownPage = await get(cookies, "/p/no/such/page");
+    check("unknown page is 404", unknownPage.status === 404, `${unknownPage.status}`);
+
+    const unknownEntity = await get(cookies, "/management/does-not-exist");
+    check("unknown management entity is 404", unknownEntity.status === 404, `${unknownEntity.status}`);
+
+    const unknownRoute = await get(cookies, "/no/such/route");
+    check("unknown route is 404", unknownRoute.status === 404, `${unknownRoute.status}`);
+
+    const logout = await get(cookies, "/logout");
+    check("logout redirects to TrailBase's auth endpoint", (logout.status === 302 || logout.status === 303) && String(logout.location).includes("auth"), `${logout.status} ${logout.location}`);
+  } finally {
+    kill(trail.child);
+    await sleep(1200);
+  }
+
+  const failed = results.filter((r) => !r.ok);
+  console.log(`\n== ${results.length - failed.length}/${results.length} checks passed ==`);
+  if (failed.length) {
+    console.log("failures:");
+    failed.forEach((f) => console.log(`  - ${f.name} ${f.detail}`));
+    process.exitCode = 1;
+  }
+}
+
+main()
+  .catch((error) => {
+    console.error("\nGUEST SMOKE ERROR:", error.message);
+    console.error("--- trail output ---\n" + trailLog.slice(-4000));
+    process.exitCode = 1;
+  })
+  .finally(() => {
+    try {
+      fs.rmSync(work, { recursive: true, force: true });
+    } catch {
+      /* ignore */
+    }
+  });

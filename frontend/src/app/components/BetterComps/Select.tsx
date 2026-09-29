@@ -18,21 +18,20 @@ import CreateRecord from "../CreateRecord/CreateRecord";
  * @return {JSX.Element} the rendered select component
  */
 export function NSelect(
-  props: Omit<SelectProps & MultiSelectProps, "value" | "onChange"> & {
-    value?: any;
-    onChange?: any;
-    dataQuery?: { collectionName: string };
-    dataQueryValue?: string;
-    dataLabel?: string;
-    multiselect?: boolean;
-    withCreate?: boolean;
-    createForm?: {
-      fields: any;
-      collectionName: string;
-    };
-    options?: { sort?: string; filter?: string; expand?: string };
-    optionsFilter?: OptionsFilter;
-  }
+  props: SelectProps &
+    MultiSelectProps & {
+      dataQuery?: { collectionName: string };
+      dataQueryValue?: string;
+      dataLabel?: string;
+      multiselect?: boolean;
+      withCreate?: boolean;
+      createForm?: {
+        fields: any;
+        collectionName: string;
+      };
+      options?: { sort?: string; filter?: string; expand?: string };
+      optionsFilter?: OptionsFilter;
+    }
 ) {
   const query = useQuery({
     enabled: props.dataQuery ? true : false,

@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Import from v1 · AA Point of Sale</title>
+<link rel="icon" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/app.css">
+<style>
+  .page { max-width: 74rem; margin: 0 auto; padding: 1rem; }
+  .brandbar { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.15rem 0.75rem; padding: 0.75rem 0 1rem; }
+  .brandbar .brand { font-size: 1.15rem; font-weight: 700; }
+  .brandbar .sub { color: var(--muted); }
+  .cols { display: flex; flex-wrap: wrap; gap: 1rem; }
+  .cols > .card { flex: 1 1 22rem; min-width: 0; margin: 0; }
+  .pbar { position: relative; height: 1.5rem; border: 1px solid var(--border); border-radius: 999px; background: #eef1f4; overflow: hidden; }
+  .pfill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--accent); transition: width 0.2s ease; }
+  .plabel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; text-shadow: 0 0 4px var(--surface), 0 0 4px var(--surface); }
+  .tablewrap { overflow-x: auto; }
+  .stat-grid .stat-value { font-size: 1.2rem; }
+  #mig-log li { padding: 0.1rem 0; }
+  #mig-log li.warn { color: #8a6100; }
+  #mig-log li.error { color: var(--danger); }
+  @media (max-width: 640px) {
+    .page { padding: 0.6rem; }
+    .cols > .card { flex-basis: 100%; }
+    .stat-grid .stat { flex: 1 1 8rem; min-width: 0; }
+    .stat-grid .stat-value { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="crumbs"><a href="/plugins">← Plugins</a> · <a href="/dashboard">Dashboard</a></p>
+  <div class="brandbar">
+    <span class="brand">Import from v1</span>
+    <span class="sub">Copy a PocketBase (v1) database into TrailBase</span>
+  </div>
+
+  <div class="flash" id="mig-flash" hidden></div>
+
+  <div class="cols">
+    <section class="card">
+      <h2>Source — PocketBase</h2>
+      <label class="field"><span>PocketBase URL</span>
+        <input id="pb-url" type="text" value="http://127.0.0.1:8090" placeholder="http://127.0.0.1:8090">
+      </label>
+      <label class="field"><span>Admin email / identity</span>
+        <input id="pb-identity" type="text" autocomplete="off">
+      </label>
+      <label class="field"><span>Admin password</span>
+        <input id="pb-password" type="password" autocomplete="off">
+      </label>
+    </section>
+
+    <section class="card">
+      <h2>Destination — TrailBase</h2>
+      <label class="field"><span>TrailBase URL</span>
+        <input id="tb-url" type="text" value="http://127.0.0.1:4000" placeholder="http://127.0.0.1:4000">
+      </label>
+      <label class="field"><span>User email</span>
+        <input id="tb-identity" type="text" autocomplete="off">
+      </label>
+      <label class="field"><span>Password</span>
+        <input id="tb-password" type="password" autocomplete="off">
+      </label>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Options</h2>
+    <label class="field check"><input id="opt-wipe" type="checkbox"> <span>Clear existing TrailBase data first (slow: one delete request per row)</span></label>
+    <label class="field check"><input id="opt-dry" type="checkbox"> <span>Dry run (read only, nothing is written)</span></label>
+    <div class="form-actions">
+      <button id="mig-start" class="btn primary" type="button">Start import</button>
+      <button id="mig-stop" class="btn danger" type="button" hidden>Stop</button>
+    </div>
+    <p class="report-opening" style="margin-top:0.75rem">
+      Both servers must be running and reachable from this browser. Credentials are used only for the
+      requests below; nothing is stored or sent anywhere else. Reloading the page aborts a run.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Progress</h2>
+    <p class="report-meta">
+      <span>status: <b id="mig-status">idle</b></span>
+      <span id="mig-message"></span>
+    </p>
+    <div class="pbar" role="progressbar" aria-label="Migration progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+      <div class="pfill" id="mig-fill"></div>
+      <span class="plabel" id="mig-pct">0%</span>
+    </div>
+    <div class="stat-grid" style="margin-top:0.75rem">
+      <div class="stat"><div class="stat-value" id="mig-records">—</div><div class="stat-label">Records</div></div>
+      <div class="stat"><div class="stat-value" id="mig-speed">—</div><div class="stat-label">Speed</div></div>
+      <div class="stat"><div class="stat-value" id="mig-current">—</div><div class="stat-label">Collection</div></div>
+    </div>
+
+    <h2 style="margin-top:1rem">Log</h2>
+    <ul id="mig-log" class="notice" style="list-style:none;margin:0;padding:0.5rem 0.75rem;max-height:16rem;overflow:auto"></ul>
+
+    <h2 style="margin-top:1rem">Errors <span id="mig-error-total" class="who-name"></span></h2>
+    <div class="tablewrap">
+      <table class="data">
+        <thead><tr><th>Collection</th><th>Source id</th><th>Message</th></tr></thead>
+        <tbody id="mig-errors-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Result</h2>
+    <div class="tablewrap">
+      <table class="data">
+        <thead><tr><th>Collection</th><th class="right">Read</th><th class="right">Created</th><th class="right">Failed</th><th class="right">Links</th></tr></thead>
+        <tbody id="mig-summary-body"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+/*
+ * Standalone, backend-free import. It talks straight from this browser to a
+ * running PocketBase server and to TrailBase:
+ *   - PocketBase admin login + paged record reads,
+ *   - TrailBase user login + record writes (bulk insert, and per-row delete for wipe).
+ * Both servers allow cross-origin requests, so no server-side helper is needed.
+ * This is a plugin: everything lives in this folder and it can be deleted whole.
+ */
+(function () {
+  "use strict";
+
+  var ENUM_CODES = {
+    party_types: { customer: 0, supplier: 1 },
+    invoice_types: { purchase: 0, sale: 1, return: 2, difference: 3 },
+    payment_types: { sending: 0, recieving: 1, return: 2 }
+  };
+
+  // Collections in dependency order. `fields` values are either a transform of
+  // the source value, or {rel}/{enum} descriptors. `links` map a source array
+  // column onto a TrailBase link table.
+  var PLAN = [
+    { collection: "sections", api: "sections", fields: { name: text } },
+    // The legacy `categories` collection IS the company list, and it is written straight
+    // into the new `companies` table. There is nothing to mirror.
+    //
+    // The legacy frontend names that collection "categories" in the database but calls it
+    // "companies" everywhere a user meets it: the management nav entry is
+    // { text: "companies", path: "management/categories" }, paymentsbycompany reads
+    // `categories` into a variable called `companies`, the stock and difference report
+    // filters are labelled "Company", and "Create Supplier" inserts into it. The rows are
+    // business names (BAKE PARLOR, ZEESHAN PAPAR, NATIONAL RECIPIE), so `items.category`
+    // has always meant "which company owns this item".
+    //
+    // This step previously wrote the same 15 names into BOTH `categories` and `companies`
+    // under different ids, which left items resolving into one table and the party/booker
+    // company links into the other. migration U1790300400 retires `categories`;
+    // `items.category` now references `companies`.
+    { collection: "categories", api: "companies", fields: { name: text, deleted: flag } },
+    { collection: "areas", api: "areas", fields: { name: text, section: { rel: "sections" }, deleted: flag } },
+    { collection: "parties", api: "parties",
+      fields: { name: text, type: { enum: "party_types" }, phone: text, address: text, area: { rel: "areas" }, deleted: flag },
+      links: [{ api: "party_companies", self: "party", field: "company", other: "company", target: "companies" }] },
+    { collection: "order_bookers", api: "order_bookers",
+      fields: { name: text, phone: text, deleted: flag },
+      links: [{ api: "order_booker_companies", self: "order_booker", field: "company", other: "company", target: "companies" }] },
+    { collection: "items", api: "items",
+      fields: { name: text, category: { rel: "companies" }, barcode: text, display_id: text, cost_price: num, sale_price: num, box_size_qty: num } },
+    { collection: "expenses", api: "expenses", fields: { name: text, description: text, amount: num, date: text } },
+    { collection: "invoices", api: "invoices",
+      fields: { type: { enum: "invoice_types" }, invoiceNo: num, party: { rel: "parties" }, booker: { rel: "order_bookers" }, dated: text, duedate: text, description: text, discount_1: num, discount_2: num, discount_rs: num, completed: flag, deleted: flag } },
+    { collection: "invoices_return_reference", api: "invoices_return_reference", fields: { original_invoices: { rel: "invoices" } } },
+    { collection: "transactions", api: "transactions",
+      fields: { invoice: { rel: "invoices", required: true }, item: { rel: "items", required: true }, cost_price: num, price: num, qty: num, scheme: num, discount_1: num, discount_2: num, discount_rs: num, deleted: flag } },
+    { collection: "payments", api: "payments",
+      fields: { invoice: { rel: "invoices" }, party: { rel: "parties" }, paid_to: { rel: "order_bookers" }, type: { enum: "payment_types" }, amount: num, paid: flag, payment_date: text, description: text } }
+  ];
+
+  var WIPE_ORDER = ["payments", "transactions", "invoices_return_reference", "invoices", "party_companies", "order_booker_companies", "items", "order_bookers", "parties", "expenses", "areas", "companies", "categories", "sections"];
+
+  var BATCH = 500, MAX_ERRORS = 500, PAGE = 500, RATE_WINDOW_MS = 5000;
+
+  function text(v) { return v === undefined || v === null ? "" : String(v); }
+  function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
+  function flag(v) { return v === true || v === 1 || v === "1" || v === "true" ? 1 : 0; }
+
+  function trimSlash(u) { return String(u || "").trim().replace(/\/+$/, ""); }
+  function withScheme(u) { u = String(u || "").trim(); return u && !/^https?:\/\//i.test(u) ? "http://" + u : u; }
+
+  function toUuid(id) {
+    try {
+      var std = id.replace(/-/g, "+").replace(/_/g, "/");
+      std += "=".repeat((4 - (std.length % 4)) % 4);
+      var bin = atob(std), hex = "";
+      for (var i = 0; i < bin.length; i++) hex += ("0" + bin.charCodeAt(i).toString(16)).slice(-2);
+      if (hex.length !== 32) return id;
+      return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
+    } catch (e) { return id; }
+  }
+
+  async function readError(res, path) {
+    var body = await res.text();
+    return new Error("HTTP " + res.status + " on " + path + ": " + body.slice(0, 300));
+  }
+
+  /* ------------------------------------------------------------- PocketBase */
+  function pocketBase(baseUrl) {
+    var base = trimSlash(withScheme(baseUrl)), token = null;
+    async function req(method, path, body, auth) {
+      var headers = {};
+      if (auth !== false && token) headers.Authorization = token;
+      if (body !== undefined) headers["Content-Type"] = "application/json";
+      var res = await fetch(base + path, { method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      if (!res.ok) throw await readError(res, path);
+      var raw = await res.text();
+      return raw ? JSON.parse(raw) : null;
+    }
+    return {
+      base: function () { return base; },
+      async login(identity, password) {
+        var paths = ["/api/admins/auth-with-password", "/api/collections/_superusers/auth-with-password"], last = null;
+        for (var i = 0; i < paths.length; i++) {
+          try {
+            var r = await req("POST", paths[i], { identity: identity, password: password }, false);
+            if (r && r.token) { token = r.token; return; }
+            last = new Error("no token from " + paths[i]);
+          } catch (e) { last = e; }
+        }
+        throw last || new Error("PocketBase authentication failed");
+      },
+      async count(collection) {
+        var r = await req("GET", "/api/collections/" + encodeURIComponent(collection) + "/records?page=1&perPage=1");
+        return (r && r.totalItems) || 0;
+      },
+      async *iterate(collection) {
+        for (var page = 1; ; page++) {
+          var r = await req("GET", "/api/collections/" + encodeURIComponent(collection) + "/records?page=" + page + "&perPage=" + PAGE + "&sort=" + encodeURIComponent("+created"));
+          var items = (r && r.items) || [];
+          for (var i = 0; i < items.length; i++) yield items[i];
+          if (!items.length || page >= ((r && r.totalPages) || 0)) break;
+        }
+      }
+    };
+  }
+
+  /* -------------------------------------------------------------- TrailBase */
+  function trailBase(baseUrl) {
+    var base = trimSlash(withScheme(baseUrl)), token = null;
+    async function req(method, path, body, auth) {
+      var headers = {};
+      if (auth !== false && token) headers.Authorization = "Bearer " + token;
+      if (body !== undefined) headers["Content-Type"] = "application/json";
+      var res = await fetch(base + path, { method: method, headers: headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      if (!res.ok) throw await readError(res, path);
+      var raw = await res.text();
+      if (!raw) return null;
+      try { return JSON.parse(raw); } catch (e) { return raw; }
+    }
+    return {
+      base: function () { return base; },
+      async login(email, password) {
+        var r = await req("POST", "/api/auth/v1/login", { email: email, password: password }, false);
+        if (!r || !r.auth_token) throw new Error("TrailBase returned no auth token");
+        token = r.auth_token;
+      },
+      async createMany(api, bodies) {
+        var r = await req("POST", "/api/records/v1/" + api, bodies);
+        return (r && r.ids) || [];
+      },
+      async create(api, body) {
+        var r = await req("POST", "/api/records/v1/" + api, body);
+        return r && r.ids ? r.ids[0] : undefined;
+      },
+      async remove(api, id) { await req("DELETE", "/api/records/v1/" + api + "/" + encodeURIComponent(id)); },
+      async listTable(api, max) {
+        var out = [], cursor = null, guard = 0;
+        while (guard++ < 1000) {
+          var q = "/api/records/v1/" + api + "?limit=1024" + (cursor ? "&cursor=" + encodeURIComponent(cursor) : "");
+          var r = await req("GET", q);
+          var records = (r && r.records) || [];
+          out = out.concat(records);
+          if (out.length >= max || records.length < 1024 || !(r && r.cursor)) break;
+          cursor = r.cursor;
+        }
+        return out;
+      }
+    };
+  }
+
+  /* -------------------------------------------------------------- the state */
+  var state = { status: "idle", phase: "", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, droppedMakers: 0, stop: false };
+  var el = function (id) { return document.getElementById(id); };
+  var fill = function (id, v) { var e = el(id); if (e) e.textContent = v == null ? "" : String(v); };
+  var int = function (n) { return Number(n || 0).toLocaleString(); };
+
+  function formatSpeed(rate) {
+    if (rate == null || !isFinite(rate) || rate <= 0) return "—";
+    if (rate >= 1) return (rate >= 10 ? rate.toFixed(0) : rate.toFixed(1)) + " rec/s";
+    return (1 / rate).toFixed(1) + " s/rec";
+  }
+
+  // Records-per-second over a short sliding window, so the readout tracks the
+  // current burst instead of averaging in the initial setup pause.
+  var rateBuf = [];
+  function sampleRate(done) {
+    if (!done) { rateBuf = []; return null; }
+    var now = Date.now(), last = rateBuf[rateBuf.length - 1];
+    if (!last || now - last.t >= 250) rateBuf.push({ t: now, done: done });
+    while (rateBuf.length > 1 && now - rateBuf[0].t > RATE_WINDOW_MS) rateBuf.shift();
+    var first = rateBuf[0], dt = (now - first.t) / 1000;
+    if (dt <= 0 || done <= first.done) return state.rate;
+    return (done - first.done) / dt;
+  }
+
+  function log(level, message) {
+    state.log.unshift({ level: level, message: message });
+    if (state.log.length > 200) state.log.pop();
+    render();
+  }
+  function err(collection, id, message) {
+    state.errorTotal++;
+    if (state.errors.length < MAX_ERRORS) state.errors.push({ collection: collection, id: id, message: message });
+  }
+
+  function row(cells) {
+    var tr = document.createElement("tr");
+    cells.forEach(function (v) { var td = document.createElement("td"); td.textContent = v == null ? "" : String(v); tr.appendChild(td); });
+    return tr;
+  }
+
+  function render() {
+    fill("mig-status", state.status + (state.phase ? " · " + state.phase : ""));
+    fill("mig-message", state.message);
+
+    var total = state.total, done = state.done;
+    var pct = total > 0 ? Math.min(100, (done / total) * 100) : 0;
+    el("mig-fill").style.width = pct.toFixed(1) + "%";
+    el("mig-pct").textContent = total > 0 ? pct.toFixed(1) + "%" : (state.phase === "wipe" ? "clearing…" : "0%");
+    var bar = el("mig-fill").parentNode;
+    if (bar && bar.setAttribute) bar.setAttribute("aria-valuenow", String(Math.round(pct)));
+
+    fill("mig-records", total > 0 ? int(done) + " / " + int(total) : "—");
+    fill("mig-speed", formatSpeed(state.rate));
+    fill("mig-current", state.current || "—");
+    fill("mig-error-total", state.errorTotal ? state.errorTotal + " error(s)" : "");
+
+    var ul = el("mig-log"); ul.textContent = "";
+    state.log.slice(0, 80).forEach(function (entry) {
+      var li = document.createElement("li"); li.className = entry.level; li.textContent = entry.message; ul.appendChild(li);
+    });
+    var eb = el("mig-errors-body"); eb.textContent = "";
+    state.errors.slice(-100).forEach(function (e) { eb.appendChild(row([e.collection, e.id, e.message])); });
+    var sb = el("mig-summary-body"); sb.textContent = "";
+    if (state.summary) {
+      Object.keys(state.summary).forEach(function (name) {
+        var c = state.summary[name];
+        sb.appendChild(row([name + (c.absent ? " (absent)" : ""), int(c.read), int(c.created), int(c.failed), int(c.links)]));
+      });
+    }
+    el("mig-start").disabled = state.status === "running";
+    el("mig-stop").hidden = state.status !== "running";
+  }
+
+  // The record loop can update tens of thousands of times; coalesce DOM work.
+  var renderQueued = false;
+  function scheduleRender() {
+    if (renderQueued) return;
+    renderQueued = true;
+    setTimeout(function () { renderQueued = false; render(); }, 200);
+  }
+
+  function flash(kind, message) {
+    var f = el("mig-flash"); f.hidden = false; f.className = "flash " + kind; f.textContent = message;
+  }
+
+  function buildBody(step, src, ids) {
+    var body = {};
+    for (var col in step.fields) {
+      var spec = step.fields[col];
+      if (typeof spec === "function") { body[col] = spec(src[col]); continue; }
+      if (spec.enum) {
+        var raw = src[col];
+        body[col] = (raw === undefined || raw === null || raw === "") ? null : (ENUM_CODES[spec.enum][String(raw)] !== undefined ? ENUM_CODES[spec.enum][String(raw)] : null);
+        continue;
+      }
+      var mapped = src[col] ? (ids[spec.rel] && ids[spec.rel].get(src[col])) || null : null;
+      if (!mapped && spec.required) return { error: col + " references missing " + spec.rel + " record " + (src[col] || "(empty)") };
+      body[col] = mapped ? toUuid(mapped) : null;
+    }
+    return { body: body };
+  }
+
+  async function createBatch(tb, step, bodies, sourceIds, idMap, stats) {
+    function record(id, i) { if (id) { idMap.set(sourceIds[i], id); stats.created++; } else stats.failed++; }
+    try {
+      var ids = await tb.createMany(step.api, bodies);
+      for (var i = 0; i < ids.length; i++) record(ids[i], i);
+      for (var j = ids.length; j < bodies.length; j++) { stats.failed++; err(step.collection, sourceIds[j], "bulk insert returned fewer ids than rows"); }
+      return;
+    } catch (e) { /* one bad row rejects the batch: retry row by row below */ }
+    for (var k = 0; k < bodies.length; k++) {
+      try { record(await tb.create(step.api, bodies[k]), k); }
+      catch (e2) { stats.failed++; err(step.collection, sourceIds[k], e2.message); }
+    }
+  }
+
+  async function wipe(tb) {
+    for (var i = 0; i < WIPE_ORDER.length; i++) {
+      var table = WIPE_ORDER[i], removed = 0;
+      state.phase = "wipe"; state.current = table; state.message = "Clearing " + table + " ...";
+      scheduleRender();
+      for (;;) {
+        if (state.stop) return;
+        var rows = await tb.listTable(table, 1000);
+        if (!rows.length) break;
+        for (var r = 0; r < rows.length; r++) {
+          if (state.stop) return;
+          await tb.remove(table, rows[r].id);
+          removed++;
+        }
+        state.message = "Clearing " + table + " (" + int(removed) + " removed) ...";
+        scheduleRender();
+      }
+      log("info", "Wiped " + int(removed) + " row(s) from " + table + ".");
+    }
+  }
+
+  async function run() {
+    el("mig-flash").hidden = true;
+    var pbUrl = withScheme(el("pb-url").value), tbUrl = withScheme(el("tb-url").value);
+    var pbIdentity = el("pb-identity").value.trim(), pbPassword = el("pb-password").value;
+    var tbIdentity = el("tb-identity").value.trim(), tbPassword = el("tb-password").value;
+    var wipeFirst = el("opt-wipe").checked, dryRun = el("opt-dry").checked;
+    if (!pbUrl || !pbIdentity || !pbPassword) return flash("error", "PocketBase URL, identity and password are required.");
+    if (!tbUrl || !tbIdentity || !tbPassword) return flash("error", "TrailBase URL, user email and password are required.");
+
+    state = { status: "running", phase: "starting", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, droppedMakers: 0, stop: false };
+    rateBuf = [];
+    render();
+
+    try {
+      var pb = pocketBase(pbUrl), tb = trailBase(tbUrl);
+      log("info", "Signing in to PocketBase at " + pb.base() + " ...");
+      await pb.login(pbIdentity, pbPassword);
+      log("info", "Signing in to TrailBase at " + tb.base() + " ...");
+      await tb.login(tbIdentity, tbPassword);
+      log("info", "Signed in to both servers.");
+
+      var totals = {}, absent = {};
+      state.summary = {};
+      for (var s = 0; s < PLAN.length; s++) {
+        var step = PLAN[s];
+      state.summary[step.collection] = { read: 0, created: 0, failed: 0, links: 0, absent: false };
+        try {
+          totals[step.collection] = await pb.count(step.collection);
+          state.total += totals[step.collection];
+        } catch (e) {
+          totals[step.collection] = 0;
+          if (e.message.indexOf("HTTP 404") === 0) { absent[step.collection] = true; state.summary[step.collection].absent = true; log("warn", step.collection + ": not present on the source server, skipped."); }
+          else { log("warn", "Could not count " + step.collection + ": " + e.message); }
+        }
+      }
+
+      if (wipeFirst && !dryRun) { state.phase = "wipe"; state.message = "Clearing existing TrailBase rows ..."; render(); await wipe(tb); }
+
+      if (dryRun) log("info", "Total source records: " + int(state.total) + " (dry run: nothing is written).");
+
+      var ids = {};
+      // Link targets and `{rel: ...}` fields resolve against the TRAILBASE name -- "companies",
+      // "areas", "parties" -- so the id maps are keyed by `step.api`, not `step.collection`.
+      // For every step except `categories` the two are the same string, so this changes nothing
+      // for them; for `categories` it is the whole point, because the source collection is
+      // `categories` while the destination is `companies`.
+      function resolveTarget(name, sourceId) {
+        var direct = ids[name] && ids[name].get(sourceId);
+        return direct || null;
+      }
+      for (var p = 0; p < PLAN.length; p++) {
+        if (state.stop) break;
+        var step2 = PLAN[p], stats = state.summary[step2.collection];
+        if (absent[step2.collection]) continue;
+        state.phase = "migrate"; state.current = step2.collection; state.message = ""; render();
+
+        var idMap = (ids[step2.api] = new Map()), pendingLinks = [], bodies = [], sourceIds = [];
+        var flush = async function () {
+          if (!bodies.length) return;
+          var b = bodies, si = sourceIds; bodies = []; sourceIds = [];
+          await createBatch(tb, step2, b, si, idMap, stats);
+        };
+
+        try {
+          for await (var src of pb.iterate(step2.collection)) {
+            if (state.stop) break;
+            stats.read++;
+            state.done++;
+            if (step2.collection === "invoices" && src.invoice_maker) state.droppedMakers++;
+            state.rate = sampleRate(state.done);
+            scheduleRender();
+            if (!dryRun) {
+              var built = buildBody(step2, src, ids);
+              if (built.error) { stats.failed++; err(step2.collection, src.id, built.error); }
+              else { bodies.push(built.body); sourceIds.push(src.id); if (bodies.length >= BATCH) await flush(); }
+            }
+            (step2.links || []).forEach(function (link) {
+              var targets = Array.isArray(src[link.field]) ? src[link.field] : [];
+              if (targets.length) pendingLinks.push({ link: link, sourceId: src.id, targets: targets });
+            });
+          }
+        } catch (e2) {
+          if (e2.message.indexOf("HTTP 404") === 0) log("warn", step2.collection + ": not present on the source server, skipped.");
+          else { log("warn", "Stopped reading " + step2.collection + " after " + int(stats.read) + " row(s): " + e2.message); err(step2.collection, "", e2.message); }
+        }
+        await flush();
+
+        if (!dryRun) {
+          for (var l = 0; l < pendingLinks.length; l++) {
+            var pl = pendingLinks[l], selfId = idMap.get(pl.sourceId), rows = [];
+            if (!selfId) continue;
+            pl.targets.forEach(function (tid) { var m = resolveTarget(pl.link.target, tid); if (m) { var o = {}; o[pl.link.self] = toUuid(selfId); o[pl.link.other] = toUuid(m); rows.push(o); } });
+            if (!rows.length) continue;
+            try { stats.links += (await tb.createMany(pl.link.api, rows)).length; }
+            catch (e3) { for (var q = 0; q < rows.length; q++) { try { await tb.create(pl.link.api, rows[q]); stats.links++; } catch (e4) { err(pl.link.api, pl.sourceId, e4.message); } } }
+          }
+        }
+        log("info", step2.collection + ": read " + int(stats.read) + ", created " + int(stats.created) +
+          (step2.links ? ", links " + int(stats.links) : "") +
+          ", failed " + int(stats.failed) + (dryRun ? " (dry run)" : "") + ".");
+        render();
+      }
+
+      state.status = state.stop ? "stopped" : (state.errorTotal ? "done-with-errors" : "done");
+      state.phase = "finished"; state.current = ""; state.rate = null;
+      if (state.droppedMakers) log("warn", int(state.droppedMakers) + " invoice(s) had invoice_maker set; that reference is dropped (PocketBase _user ids have no TrailBase counterpart).");
+      log("info", "Finished. " + (state.errorTotal ? state.errorTotal + " error(s)." : "No errors."));
+      flash(state.errorTotal ? "warn" : "ok", "Import " + state.status + ".");
+    } catch (e5) {
+      state.status = "failed"; state.phase = "failed"; state.message = e5.message || String(e5); state.rate = null;
+      log("error", state.message);
+      flash("error", "Import failed: " + state.message);
+    }
+    state.stop = false;
+    render();
+  }
+
+  el("mig-start").addEventListener("click", function () { run(); });
+  el("mig-stop").addEventListener("click", function () { state.stop = true; log("warn", "Stop requested; finishing the current request ..."); render(); });
+  window.__mig = { state: function () { return state; }, formatSpeed: formatSpeed, run: run };
+  render();
+})();
+</script>
+</body>
+</html>

@@ -6,6 +6,8 @@
 /frontend/.pnp.js
 /frontend/.yarn/install-state.gz
 
+/node_modules
+/guests/node_modules
 # testing
 /frontend/coverage
 
@@ -57,3 +59,11 @@ standalone
 /scripts/pg_before.txt
 /scripts/pg_after.txt
 /scripts/views_dump.txt
+# SQLite WAL sidecars. backend/p_data/data.db is tracked AND runs in WAL mode, so these
+# must never be staged: a live -wal beside a tracked -db makes the committed file
+# disagree with the running database. Seen produced by read-only connections too.
+*.db-wal
+*.db-shm
+
+# Python bytecode from the bench harnesses in trailbase/tools
+__pycache__/

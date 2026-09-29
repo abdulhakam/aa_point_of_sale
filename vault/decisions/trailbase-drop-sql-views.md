@@ -1,83 +1,97 @@
 ---
-type: Decision
-status: Accepted
-created: 2026-09-24
-updated: 2026-09-24
-belongs_to:
-  - "[[TrailBase Backend]]"
-related_to:
-  - "[[Backend — TrailBase Server]]"
-  - "[[Reports & Ledgers]]"
-affects:
-  - "[[TrailBase Backend]]"
-tags:
-  - trailbase
-  - schema
-  - views
-  - reports
+title: Drop SQL views and aggregate reports client-side
+type: decision
+status: accepted
+decided_on: 2026-09-24
+created: 2026-09-26
+tags: [trailbase, views, reports, aggregation]
+belongs_to: "[[trailbase-migration]]"
+related_to: ["[[reports-and-ledgers]]", "[[backend]]"]
 ---
 
-# Decision — Drop SQL views; aggregate reports client-side
-
-## Status
-
-Accepted (2026-09-24). In force in the TrailBase schema.
+# Drop SQL views and aggregate reports client-side
 
 ## Context
 
-PocketBase carries the report and ledger arithmetic in **view collections** (15 of them), which is why
-"where is X computed" answers live in view SQL — see [[Decision — Use PocketBase and Next.js]]. The
-earlier TrailBase scaffold ported 14 of those views, and against TrailBase's rules four of them could
-not be exposed through a record API at all (`ledger_journal` needs `UNION ALL`, `payments_summary` and
-`payments_invoices_report` have no base-table key matching their grain, `counts_for_row_numbers` is a
-single synthetic row).
+The PocketBase backend expresses report arithmetic as SQL views — `payments_view`,
+`invoice_view`, `transaction_view`, `transactions_report`, `items_report`,
+`items_difference_report`, `payments_invoices_report`, `ledger_journal`, `ledger_party`,
+`ledger_booker`, `ledger_area`, `net_price`, `outstanding_summary`, `counts_for_row_numbers`
+([[backend]]). They are consumed as if they were tables: `pocketbase-types.ts` has one generated
+record type per view, and report screens fetch whole views.
+
+TrailBase cannot expose most of them. A view can only be exposed when **every output column is
+statically typeable**, which rules out `WITH`, `UNION`, reading from another view, and any grain
+whose `id` is not a base-table primary key that is also the grouping key. Under those rules four
+views could not be exposed at all, and the remaining ones only ever produced rows the client
+re-filtered and re-summed anyway.
 
 ## Decision
 
-The TrailBase schema has **no views**. It exposes base tables plus indexes, and report/ledger
-aggregation is done by the client from those tables. The existing view SQL is retained as the
-specification of the arithmetic, not as a deployed object.
+**TrailBase has no views.** The schema is 17 base tables only. Report arithmetic moves into
+JavaScript, in `trailbase/runtime/app/compute/views.js` and `trailbase/runtime/app/compute/reports.js`,
+where it is written to reproduce the old view SQL exactly — including its known quirks — so that
+output can be compared for the same rows.
+
+## Why not the alternatives
+
+| Alternative | Why not |
+|---|---|
+| Materialised tables maintained by triggers | Correct but much more schema to own, and the arithmetic still has to be written somewhere; deferred, not rejected — `trailbase/README.md` keeps it as the option for later |
+| A TrailBase WASM handler | Would keep the arithmetic server-side and is explicitly named as a future option in `trailbase/README.md`; too much machinery for the first cut |
+| Rewrite the views so they satisfy TrailBase's typing rules | That means rewriting them into grains nobody asked for (per-day, per-party) — the report screens filter and total per request, so their shape would have to change too |
+| Keep PocketBase | The whole point of the workstream ([[aa-point-of-sale]]); the views are also the main performance problem ([[performance-and-caching]]) |
 
 ## Consequences
 
-- No recomputed-on-read scans: every report query is now a direct, indexable base-table query
-  (`transactions` by `invoice`/`item`, `invoices` by `party`/`booker`/`type`/`date`, ...).
-- The frontend loses the view endpoints it used (`transaction_view`, `invoice_view`, `items_report`,
-  `items_difference_report`, `net_price`, `payments_view`, `ledger_*`, `transactions_report`,
-  `outstanding_summary`) and must aggregate itself. This is the largest part of the frontend rework
-  in [[TB-0002 Wire a frontend to the TrailBase server]].
-- Money arithmetic that previously had one SQL definition can now be written in more than one place,
-  which is a real regression risk: the SQL in `full_database_schema.sql` and
-  `../dltbl/views_from_pb/U1776088644__create_views.sql` is the reference that keeps the client honest.
-- Fewer moving parts: no view SQL to keep consistent with the schema on every migration.
+**Accepted**
 
-## Alternatives considered
+- `trailbase/runtime/app/compute/views.js` rebuilds all 14 derived views plus `refs` and `counts`
+  ([[reports-and-ledgers]] lists the builders).
+- The arithmetic is **one implementation, two runtimes**: the files are served at `/compute/*`
+  (behind auth) as the same bytes the guest imports, so the browser can run them with no drift.
+- Because the rebuild is pure and incremental, only the views a changed table feeds are
+  recomputed (`viewsAffectedBy`), and the results are cached — see
+  [[trailbase-incremental-report-refresh]].
+- Report screens must total in the client, which is what they already did; the change is that
+  the *row set* is now a base-table slice rather than a view.
 
-- **Keep the views unexposed** (SQLite views usable only from the admin query tool / SQL) — still
-  recomputed on every read and still not indexable, so it pays the cost without the API benefit.
-- **Materialise the hot views into tables** maintained by triggers — write-time cost and staleness;
-  this was the PocketBase-side plan ([[POS-0021 Materialize hot report views into tables]]) and it
-  only ever paid off where a specific report was still too slow *after* indexing.
-- **A WASM custom handler running the old view SQL** — the most faithful port, but it adds a build
-  artifact and a runtime to maintain. Kept as the first escalation if client aggregation proves too slow.
+**Given up**
+
+- No server-side aggregation on the new side. A very large `transactions` table is read whole
+  into the snapshot. This is the same trade PocketBase's later migrations attacked from the SQL
+  side (`payments_summary`, `add_performance_indexes`), so it is a genuine regression in that
+  specific dimension — mitigated by the warm snapshot being read once per change rather than per
+  request, and by the indexes in [[data-model]].
+- The old SQL is now a *specification*, not executable code. It is preserved verbatim in the
+  PocketBase migrations and in the parent-directory artefacts
+  (`full_database_schema.sql`, `dltbl/views_from_pb/…`), which is also the reference for anyone
+  adding a WASM handler later. See [[stale-schema-sql-paths]].
+- The legacy frontend's view-shaped endpoints have no TrailBase equivalent, which is a real
+  migration cost: [[tb-0013-rework-report-screens-without-views]].
 
 ## Evidence
 
-- The four unexposable views and the type-inference rules are recorded in
-  [[Issue — TrailBase view type-inference limits]].
-- The view SQL is preserved verbatim in `full_database_schema.sql` and `../dltbl/views_from_pb/`.
-- The TrailBase schema ships zero `CREATE VIEW` statements (single migration,
-  `traildepot/migrations/main/U1790208000__create_base_tables.sql`), and the server boots with all
-  record APIs resolving.
+- `trailbase/README.md` § *Design decisions* → "**No views.**" with the typing rules spelled out,
+  and § *Known TrailBase limitations* which records this as measured against `v0.33.15` and
+  re-checked on `v0.33.22`.
+- `trailbase/runtime/app/compute/views.js` — `buildView` / `viewsAffectedBy` / `viewClosure`
+  / `tablesForViews` / `buildViews` / `buildSelectedViews`.
+- `trailbase/runtime/app/lib/reports.js` — runs `buildView` and `runReport` **in-process** (the
+  guest has no `worker.js` or `worker_threads` fan-out).
+- The `refs` pseudo-view, which is not from the old SQL at all but exists so a view-based page
+  can also receive the reference maps its filters need.
 
-## Revisit when
+## Superseded in part
 
-- A report measured on real data is too slow for client aggregation. Escalate in order: a WASM handler
-  running the preserved SQL, then a materialised table with a refresh trigger.
-- Report correctness drifts between the client implementation and the preserved SQL (then centralise).
+This decision is **reversed for the report path** by [[component-split-and-sql-materialised-tables]]
+(2026-09-28): the old SQL came back as runtime `.sql` files plus a separate `sql.wasm` component,
+because the in-process QuickJS path is what pushes the four heavy reports past the 20 s deadline.
 
-## Related
+Its **reasoning about typeability still holds** — TrailBase still has no *exposed* views, and the
+SQL is still not reachable as record APIs. What changed is that the arithmetic can run as ordinary
+SQL inside a component rather than needing to be exposed as a table.
 
-- [[Issue — TrailBase view type-inference limits]]
-- [[Reports & Ledgers]] — what each report computed, from the live view SQL.
-- [[Backend — TrailBase Server]]
+As of 2026-09-29 the preserved `.sql` files had drifted out of use badly enough to return nothing
+(see [[report-sql-filters-on-text-enums-returns-nothing]]), which is the cost of leaving a
+specification unexecuted for a while. `USE_SQL_VIEWS` is still off.

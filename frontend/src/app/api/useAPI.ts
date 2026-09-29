@@ -1,44 +1,5 @@
 import pb from "@/app/pocketbase";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useMemo, useRef, useState } from "react";
-
-/**
- * POS-0009 / POS-0011 — shared data-access layer.
- *
- * Cache strategy (see vault reference "Performance Baseline"):
- *  - reference data (areas, sections, categories, items, parties, bookers) changes
- *    rarely, so it is cached for REFERENCE_STALE_TIME (5 min).
- *  - everything else (invoices, transactions, payments, ledgers) uses the global
- *    default staleTime from providers.tsx: long enough that navigating back to a page
- *    does not re-fetch a 9k-26k row view, short enough that writes are picked up.
- *
- * NOTE on `refetchOnMount`: left at its default (true) while `staleTime` governs
- * re-fetching. The app's mutations call a bare `queryClient.invalidateQueries()`, which
- * only refreshes *active* queries; with `refetchOnMount: false` an invalidated-but-
- * inactive query would never refresh and screens could show pre-write data. Fresh data
- * within staleTime is served from cache instantly, so navigation stays instant.
- */
-
-/** Collections that rarely change and are safe to cache aggressively. */
-export const REFERENCE_COLLECTIONS = [
-  "areas",
-  "sections",
-  "categories",
-  "items",
-  "parties",
-  "order_bookers",
-  "users",
-];
-
-/** 5 minutes — used for reference data only. */
-export const REFERENCE_STALE_TIME = 5 * 60 * 1000;
-
-export const isReferenceCollection = (collection: string) =>
-  REFERENCE_COLLECTIONS.indexOf(collection) !== -1;
-
-/** Options helper so any query can opt into the reference-data cache window. */
-export const referenceQueryOptions = (collection: string) =>
-  isReferenceCollection(collection) ? { staleTime: REFERENCE_STALE_TIME } : {};
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const crud = {
   create: async ({ collection, data }) => await pb.collection(collection).create(data),
@@ -47,35 +8,16 @@ export const crud = {
       expand: expand,
     }),
   update: async ({ collection, data, recordID }) => {
-    return await pb.collection(collection).update(recordID, data);
+    await pb.collection(collection).update(recordID, data);
   },
   remove: async ({ collection, recordID }) => {
-    return await pb.collection(collection).delete(recordID);
+    await pb.collection(collection).delete(recordID);
   },
-  listall: async ({ collection, expand = "", filter = "", sort = "-created" }) => {
-    // POS bug fix: this used to drop its result (no `return`), so callers got undefined.
-    return await pb.collection(collection).getFullList({
+  listall: async ({ collection, expand = "", filter = "", sort = "-created"}) => {
+    await pb.collection(collection).getFullList({
       sort: sort,
       expand: expand,
       filter: filter,
-    });
-  },
-  /**
-   * POS-0011 — real server-side pagination for transactional collections.
-   * Use this instead of `getFullList` for invoices/transactions/payments.
-   */
-  listPage: async ({
-    collection,
-    page = 1,
-    perPage = 50,
-    sort = "-created",
-    filter = "",
-    expand = "",
-  }) => {
-    return await pb.collection(collection).getList(page, perPage, {
-      sort: sort,
-      filter: filter,
-      expand: expand,
     });
   },
 };
@@ -83,9 +25,9 @@ export const crud = {
 /////////////////////////CREATE///////////////////////////////////
 export const useCreate = ({ collection, data }) => {
   const qc = useQueryClient();
-  return useMutation({
+  useMutation({
     mutationFn: async () => await pb.collection(collection).create(data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [collection] }),
+    onSuccess: () => qc.invalidateQueries(collection),
   });
 };
 /////////////////////////READ/////////////////////////////////////
@@ -96,38 +38,31 @@ export const useRead = ({ collection, recordID, expand = "" }) => {
       await pb.collection(collection).getOne(recordID, {
         expand: expand,
       }),
-    ...referenceQueryOptions(collection),
   });
 };
 /////////////////////////UPDATE///////////////////////////////////
 export const useUpdate = ({ collection, data, recordID }) => {
   const qc = useQueryClient();
-  return useMutation({
+  useMutation({
     mutationFn: async () => await pb.collection(collection).update(recordID, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [collection] }),
+    onSuccess: () => qc.invalidateQueries(collection),
   });
 };
 /////////////////////////DELETE///////////////////////////////////
 export const useDelete = ({ collection, recordID }) => {
   const qc = useQueryClient();
-  return useMutation({
+  useMutation({
     mutationFn: async () => await pb.collection(collection).delete(recordID),
-    onSuccess: () => qc.invalidateQueries({ queryKey: [collection] }),
+    onSuccess: () => qc.invalidateQueries(collection),
   });
 };
 /////////////////////////FULL LIST ///////////////////////////////
-/**
- * Kept for small, cached reference data only (areas, sections, categories, items,
- * parties, bookers). Do NOT use it for invoices/transactions/payments — use
- * `usePagedList` instead.
- */
 export function useFullList({
   collection,
   expand = "",
   filter = "",
   sort = "-created",
   queryKey = collection,
-  enabled = true,
 }) {
   return useQuery({
     queryKey: [queryKey, expand, filter],
@@ -137,198 +72,9 @@ export function useFullList({
         expand: expand,
         filter: filter,
       }),
-    enabled: enabled,
-    ...referenceQueryOptions(collection),
   });
-}
-
-/////////////////////////PAGED LIST //////////////////////////////
-/**
- * POS-0011 — paginated list of a transactional collection.
- *
- * Returns the raw PocketBase list response plus convenience fields, so it can be
- * fed straight into `mantine-datatable` (records / totalRecords / page).
- */
-export function usePagedList({
-  collection,
-  page = 1,
-  perPage = 50,
-  sort = "-created",
-  filter = "",
-  expand = "",
-  queryKey = collection,
-  enabled = true,
-}) {
-  const query = useQuery({
-    queryKey: [queryKey, "page", page, perPage, sort, filter, expand],
-    queryFn: () =>
-      pb.collection(collection).getList(page, perPage, {
-        sort: sort,
-        filter: filter,
-        expand: expand,
-      }),
-    // Keep the previous page visible while the next one loads (no flicker).
-    placeholderData: keepPreviousData,
-    enabled: enabled,
-  });
-
-  // NOTE: `refetchOnMount` is governed by the default staleTime in providers.tsx, not by
-  // the explicit false setting the app used for every query before POS-0009. Letting it fold
-  // in means a page that leaves the cache window re-fetches (correct after a write); inside
-  // staleTime it serves from cache and never cancels the in-flight request. If you instead
-  // want stale-time-backed pages to *not* re-fetch on mount, set refetchOnMount: false
-  // **and** ensure mutations invalidate by [collection] key so QueryClient.invalidateQueries
-  // actually finds the active query. The app currently calls bare
-  // `queryClient.invalidateQueries()` (no key) plus bare `invalidateQueries(collection)` in
-  // some mutation onSuccess handlers; under v5 `invalidateQueries(string)` is treated as an
-  // exact query-key match and will not match `[queryKey, "page", ...]`, so stale data would
-  // survive. Until that is fixed globally (see POS-0009), do not change the default here.
-
-  return {
-    ...query,
-    records: query.data?.items ?? [],
-    totalRecords: query.data?.totalItems ?? 0,
-    totalPages: query.data?.totalPages ?? 0,
-    page: query.data?.page ?? page,
-    perPage: query.data?.perPage ?? perPage,
-  };
 }
 
 export default function useCRUD() {
-  return {
-    create: useCreate,
-    read: useRead,
-    update: useUpdate,
-    remove: useDelete,
-    fullList: useFullList,
-    pagedList: usePagedList,
-  };
-}
-
-///////////////////////// REFERENCE MAPS /////////////////////////
-/**
- * POS-0015 — client-side reference resolver.
- *
- * Report views denormalize their foreign keys as plain ids (`party`, `area`,
- * `section`, `company`, `booker`, `item`). Asking PocketBase to `expand` them —
- * especially the chain `party.area.section` — makes the server serialize the
- * related records for every row (~1 MB per 500 rows). Instead we fetch the small
- * reference collections once (they are cached for REFERENCE_STALE_TIME) and
- * resolve ids to records in the client, then re-attach them as `row.expand`.
- */
-function indexById(rows) {
-  const map = {};
-  for (const row of rows ?? []) map[row.id] = row;
-  return map;
-}
-
-export function useRefMaps(enabled = true) {
-  const queryOpts = (collection) => ({
-    queryKey: ["refmap", collection],
-    queryFn: () => pb.collection(collection).getFullList(),
-    staleTime: REFERENCE_STALE_TIME,
-    enabled,
-  });
-  const areasQ = useQuery(queryOpts("areas"));
-  const sectionsQ = useQuery(queryOpts("sections"));
-  const categoriesQ = useQuery(queryOpts("categories"));
-  const itemsQ = useQuery(queryOpts("items"));
-  const partiesQ = useQuery(queryOpts("parties"));
-  const bookersQ = useQuery(queryOpts("order_bookers"));
-
-  // Stable identity keyed on the underlying data, so consumers can memoize on `maps`.
-  const maps = useMemo(
-    () => ({
-      areas: indexById(areasQ.data),
-      sections: indexById(sectionsQ.data),
-      categories: indexById(categoriesQ.data),
-      items: indexById(itemsQ.data),
-      parties: indexById(partiesQ.data),
-      bookers: indexById(bookersQ.data),
-    }),
-    [areasQ.data, sectionsQ.data, categoriesQ.data, itemsQ.data, partiesQ.data, bookersQ.data]
-  );
-
-  const queries = [areasQ, sectionsQ, categoriesQ, itemsQ, partiesQ, bookersQ];
-  return {
-    maps,
-    queries,
-    isLoading: queries.some((q) => q.isLoading),
-    isSuccess: queries.every((q) => q.isSuccess),
-  };
-}
-
-/**
- * Synthesize a PocketBase-style `expand` object on rows fetched WITHOUT a server
- * expand, so existing `row.expand?...` render code keeps working unchanged.
- *
- * `relations` lists the top-level foreign keys to hydrate. `party` also hydrates
- * the nested `party.area.section` chain the deep expands used to provide.
- * A relation is only attached when the target record is actually present, so a
- * partially-loaded map degrades to the raw id rather than throwing.
- */
-export function hydrateRefs(rows: any[], maps: any, relations: string[]) {
-  if (!rows || !maps) return rows ?? [];
-  return rows.map((row) => {
-    const expand: Record<string, any> = {};
-    for (const rel of relations) {
-      const id = row[rel];
-      if (!id) continue;
-      if (rel === "party") {
-        const party = maps.parties[id];
-        if (!party) continue;
-        const area = party.area ? maps.areas[party.area] : null;
-        const section = area && area.section ? maps.sections[area.section] : null;
-        expand.party = { ...party, expand: { area: area ? { ...area, expand: { section } } : null } };
-      } else if (rel === "item") {
-        const item = maps.items[id];
-        if (item) expand.item = item;
-      } else if (rel === "company" || rel === "category") {
-        const ids = Array.isArray(id) ? id : [id];
-        const recs = ids.map((one) => maps.categories[one]).filter(Boolean);
-        if (recs.length) expand[rel] = Array.isArray(id) ? recs : recs[0];
-      } else if (rel === "booker") {
-        const booker = maps.bookers[id];
-        if (booker) expand.booker = booker;
-      } else if (rel === "area") {
-        const area = maps.areas[id];
-        if (area) expand.area = area;
-      } else if (rel === "section") {
-        const section = maps.sections[id];
-        if (section) expand.section = section;
-      } else if (rel === "invoice") {
-        // Views carry the invoice number inline, so no extra lookup is needed.
-        expand.invoice = { id: row.invoice, invoiceNo: row.invoiceNo };
-      }
-    }
-    return { ...row, expand };
-  });
-}
-
-/** Convenience hook: fetch the reference maps and hydrate a fetched list. */
-export function useHydratedRefs(rows, relations) {
-  const { maps, queries, isLoading, isSuccess } = useRefMaps();
-  const relationsKey = relations.join(",");
-  const data = useMemo(
-    () => hydrateRefs(rows, maps, relationsKey ? relationsKey.split(",") : []),
-    [rows, maps, relationsKey]
-  );
-  return { data, maps, queries, isLoading, isSuccess };
-}
-
-///////////////////////// APPLIED FILTERS /////////////////////////
-/**
- * POS-0026 — hold the filter values a report query actually reads, so editing inputs does not
- * fire a request until the user presses Apply.
- *
- * The page builds its PocketBase `filter` from `applied`, not from live form state;
- * `apply(next)` snapshots the current inputs and `reset()` returns to the initial snapshot.
- * The first snapshot is the page's defaults, so the page still loads once on mount.
- */
-export function useAppliedFilters<T extends Record<string, any>>(initial: T) {
-  const initialRef = useRef(initial);
-  const [applied, setApplied] = useState<T>(initial);
-  const apply = useCallback((next: T) => setApplied(next), []);
-  const reset = useCallback(() => setApplied(initialRef.current), []);
-  return { applied, apply, reset, initial: initialRef.current };
+  return { create: useCreate, read: useRead, update: useUpdate, remove: useDelete, fullList: useFullList };
 }

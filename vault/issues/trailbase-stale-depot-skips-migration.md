@@ -1,64 +1,77 @@
 ---
-type: Issue
-status: Open
-created: 2026-09-24
-updated: 2026-09-24
-belongs_to:
-  - "[[TrailBase Backend]]"
-related_to:
-  - "[[Backend — TrailBase Server]]"
-affects:
-  - "[[TrailBase Backend]]"
-tags:
-  - trailbase
-  - migrations
-  - risk
+title: A stale depot keeps the old schema because refinery skips a changed migration
+type: issue
+status: known-limitation
+severity: high
+created: 2026-09-26
+tags: [trailbase, migrations, refinery, gotcha, depot]
+related_to: ["[[trailbase]]", "[[build-and-run]]"]
 ---
 
-# Issue — A stale TrailBase depot silently keeps an old schema
+# A stale depot keeps the old schema because refinery skips a changed migration
 
-## Summary
+## What happens
 
-TrailBase applies migrations with refinery, which records each applied migration's **checksum**. If a
-migration file is later edited, the checksum no longer matches, and the divergent migration is
-**skipped with a `WARN`** rather than failing. So an existing `traildepot/data/` keeps the old tables
-while the server starts normally — the schema change appears to have done nothing.
+`trailbase/migrations/main/` holds a single migration,
+`U1790208000__create_base_tables.sql`. If that file's content changes — as it did when the schema
+was rewritten for integer enums and again when the table set changed — an **existing**
+`traildepot/data/` does **not** get the new schema.
 
-The mirror image is also true: deleting an already-applied migration file aborts startup with
-`migration V…__name is missing from the filesystem`.
+Refinery (the migration runner TrailBase uses) records a checksum for each applied migration and
+**silently skips** a migration whose checksum no longer matches. It does not error, and it does not
+re-run. So the server starts happily against the *old* schema.
 
-## Evidence (observed 2026-09-24, `trail v0.33.15`)
+## Why it is dangerous
 
-- Editing the migration while a populated `data/` existed:
-  `WARN trailbase_refinery::traits::divergent] applied migration V1__initial is different than filesystem one U1__test => skipping U1__test`
-  — startup continued with the old schema.
-- Deleting an applied migration file:
-  `Migration error for 'main' DB (asnyc): migration V1790209001__probe is missing from the filesystem` → startup failed.
+- **The failure is silent.** "Migration applied successfully" is not printed, and nothing warns.
+  The symptom appears later as a mysterious API or column error against a schema nobody believes
+  is current.
+- It specifically defeats the "re-scaffold by re-running `RUN.BAT`" instinct, because `RUN.BAT`
+  only bootstraps when `%DEPOT%\data` does not exist.
+- It makes a bad first impression on a fresh developer: the documented first run and the
+  documented schema disagree, and the only clue is in the FAQ of one README.
 
-## Impact
+## The rule
 
-- A schema redesign (like [[TB-0001 Redesign the TrailBase schema]]) can be silently ineffective on any
-  machine that already has a `data/` directory, and the only signal is one `WARN` line in the startup
-  log. Everything downstream then fails in confusing ways.
-- Conversely, removing or renaming a committed migration breaks other people's depots on startup.
+> **If you previously ran an earlier scaffold of this depot, delete `traildepot/data/` before
+> starting the server.**
 
-## Mitigation
+`trailbase/README.md` states this explicitly, in bold, and the delete is safe because the depot
+holds no production data — the real data is still in PocketBase ([[backend]]) until
+[[pos-0027-migrate-production-data-to-trailbase]].
 
-- `traildepot/data/` is git-ignored and never shared, so treat it as disposable. After any migration
-  change, delete it and let the server recreate it from scratch — this is documented in the README as
-  the first-run instruction.
-- Treat the migration set as append-only once a depot exists outside your machine: add a new migration
-  instead of editing an applied one.
-- The warning lives in the startup log; a deployment script that only checks the exit code will not see it.
+```powershell
+Remove-Item -Recurse -Force trailbase\traildepot\data
+trailbase\RUN.BAT          # recreates the depot, applies the migration, sets the fixed password
+```
 
-## Options
+Deleting `data/` also resets the admin password to the `RUN.BAT` default
+(`admin@localhost` / `administrator-0ne`), because the bootstrap path runs again
+([[build-and-run]]).
 
-1. Keep the "delete `data/` on schema change" rule (current, adequate while there is no production data).
-2. Add a checksum guard to the run path (`trail --depot=… schema <api>` plus a log scan) once real data
-   starts arriving with [[TB-0003 Migrate PocketBase data into the TrailBase schema]].
-3. Adopt append-only migrations and stop editing applied files.
+## The longer-term fix
 
-## Related
+Once there is real data (after the migration, or once the depot is used in earnest), "delete the
+depot" stops being available and this becomes a genuine operational hazard. At that point the
+migration discipline has to change to what refinery expects:
 
-- [[Backend — TrailBase Server]] — how the depot is laid out.
-- [[TB-0001 Redesign the TrailBase schema]] — where this was hit.
+- Never edit an applied migration. Add a new, higher-numbered one instead
+  (`U<epoch>__describe_the_change.sql`).
+- Treat a checksum change in an applied migration as a bug, not a convenience — which is exactly
+  the property that makes the current setup safe during scaffolding and unsafe afterwards.
+
+There is also a schema-drift risk even with correct discipline: a dump of the live schema should be
+compared against the migration files rather than trusted. Nothing in the repository does that
+today.
+
+## Evidence
+
+- `trailbase/README.md` — "**If you previously ran the earlier scaffold, delete `traildepot/data/`
+  first.** The table set and the migration contents changed, and refinery silently *skips* a
+  migration whose checksum no longer matches, so a stale depot would keep the old schema."
+- `trailbase/RUN.BAT` — the bootstrap branch is guarded by `if exist "%DEPOT%\data" goto
+  :start_server`, so an existing depot is never re-initialised.
+- `trailbase/migrations/main/` — exactly one migration, i.e. there has been no
+  opportunity to exercise an additive migration yet.
+- The prior vault recorded the same finding as `issues/trailbase-stale-depot-skips-migration.md`;
+  see [[previous-vault-recovery]].

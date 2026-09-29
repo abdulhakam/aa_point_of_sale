@@ -1,111 +1,113 @@
 ---
-type: Decision
-status: Accepted
-belongs_to:
-  - "[[TrailBase Backend]]"
-related_to:
-  - "[[Frontend — TrailBase Server-Rendered App]]"
-  - "[[Decision — Refresh the report snapshot incrementally from table fingerprints]]"
-  - "[[TB-0009 Retire the legacy report routes in favour of the page host]]"
-affects:
-  - "[[Frontend — TrailBase Server-Rendered App]]"
-created: 2026-09-25T00:00:00.000Z
-updated: 2026-09-25T00:00:00.000Z
-tags:
-  - trailbase
-  - frontend
-  - architecture
-  - pages
-  - wasm
+title: Make report pages declarative manifests, not code
+type: decision
+status: accepted
+decided_on: 2026-09-25
+created: 2026-09-26
+tags: [guest, pages, page-host, declarative]
+belongs_to: "[[trailbase-migration]]"
+related_to: ["[[runtime-js-guest-platform]]", "[[performance-and-caching]]"]
 ---
 
-# Decision — Declarative pages: a folder is a page, the server is a generic host
-
-## Status
-
-Accepted (2026-09-25). The page host now runs each manifest's trusted named report on the local worker-thread
-pool and returns its result rather than whole views. Live-dataset performance remeasurement remains tracked by
-[[TB-0008 Serve report results from the page host instead of whole views]].
+# Make report pages declarative manifests, not code
 
 ## Context
 
-The Node frontend was full of per-page code: `src/routes/reports.js` held a page definition per report
-(title, defaults, filter fields, columns, totals), `src/lib/reports/reports.js` held one function per report,
-`src/lib/entities.js` held the management screens, and only `render.js` / `auth.js` / `trailbase.js` were
-generic.
+The legacy frontend implements each report as a hand-written React page: it builds its own
+PocketBase filter, fetches the view it needs, computes totals in the component, and renders a
+`mantine-datatable`. Fourteen reports plus four ledgers means eighteen places where the same
+decisions (which data, which filter fields, which columns, which totals, when to fetch) are made
+again slightly differently.
 
-The owner's goal is that **Node should eventually be replaced** — by a Go or Rust service, or by TrailBase
-WASI components. That requires the Node process to shrink to something generic: adding a page must not change
-a single line of Node.
+Two things made this worth changing rather than porting:
+
+1. POS-0026 established that filters should be APPLY-gated — the request fires when the user
+   presses APPLY, not on every keystroke — which is a *pattern*, not a per-page choice.
+2. The TrailBase rewrite had to move report arithmetic out of SQL anyway
+   ([[trailbase-drop-sql-views]]), so each page's data flow was being rewritten regardless.
+
+The first increment (commit `bd81f2f`/`ea2bd12`) went further: a report's rows, totals and the
+reference tables its filters need should be assembled server-side and handed to the browser as a
+finished result.
 
 ## Decision
 
-**A page is a folder.** Everything page-specific is data or a template, never Node code:
+A page is a **folder of declarative data** — `pages/<slug>/meta.json` plus a template — and a
+single generic runtime serves it.
 
-```text
-pages/<slug>/
-  meta.json      # title, needs.views (+ any raw tables), compute.report, requires,
-                 # filters, columns, totals — declarative, passed through verbatim
-  page.html      # Jinja template; usually two lines extending the layout and
-                 # including the shared partial
-  (optional) a page-specific module the browser loads; Node never imports it
+```jsonc
+{
+  "title": "Profit Report",
+  "template": "page.html",                                  // optional, defaults to page.html
+  "needs": { "views": ["transactionsReport", "refs"] },     // tables derived from these
+  "compute": { "report": "profit" },                        // a trusted named operation
+  "filters": [ { "name": "from", "type": "date", "default": { "fn": "monthStart" } } ],
+  "columns": [ { "key": "profitText", "label": "Profit", "right": true } ],
+  "totals": [{ "label": "Total Profit", "key": "profit" }]
+}
 ```
 
-Node keeps exactly three generic routes plus a shared static mount:
+- The guest's generic page host (`trailbase/runtime/ahscripts/routes/_app/route.ts`) **knows nothing
+  about any specific page.** It discovers folders, renders the declared template, serves the
+  declared tables, and dispatches the declared compute operation. Adding a page is adding a folder.
+- `trailbase/runtime/app/lib/pages.js` is the registry: it normalises the manifest, resolves a filter
+  default through `compute/format.js` when it is `{ "fn": "…" }`, and derives `needs.tables` from
+  `needs.views` (plus each `select` filter's `source`) so a page *cannot* under-declare the data
+  it needs.
+- `/p/<slug>/data` returns `{version, slug, filters, result, meta}` plus only the tables needed
+  for the select filters. **The browser renders a finished result and does no report
+  computation.**
+- All 14 existing reports and 4 ledgers were converted, and `/reports/*` was kept as the
+  user-visible URL space for them.
 
-| Route | Purpose |
-|---|---|
-| `GET /p` | list every folder under `pages/` that has a `meta.json` |
-| `GET /p/<slug>` | render the declared template with the manifest embedded as JSON |
-| `GET /p/<slug>/data` | the manifest's named report result plus select-source tables, gzipped, `ETag` = snapshot + filters |
-| `GET /compute/*` | the environment-neutral compute modules, retained as a portable module surface |
+## Why
 
-**The compute layer is shared, not duplicated.** `compute/` (`views.js`, `reports.js`, `format.js`, `ids.js`)
-touches no Node API. The local report service dispatches trusted named operations to its `worker_threads` pool;
-the browser receives the completed result and only renders it.
+- **One place decides the data contract.** Filter types, defaults, column definitions and totals
+  are data, so they can be diffed, reviewed and reused instead of being re-implemented.
+- **A page cannot fetch the wrong thing.** `needs.tables` is derived, not declared, so the class
+  of bug where a page reads a view it forgot to list cannot happen.
+- **The compute surface is closed.** A manifest names a *trusted operation* (`compute.report`),
+  not arbitrary code, so a page cannot introduce new client-side logic — which is what makes it
+  safe to serve results rather than raw views.
+- **Filters stay APPLY-gated for free**, because the form and the request are both generated from
+  the same `filters` array.
+- **The same compute code runs in both runtimes.** `compute/` is served at `/compute/*` (behind
+  auth) as the identical bytes the guest imports, so the browser and the guest cannot drift.
 
 ## Consequences
 
-- **Adding a page is adding a folder** — `meta.json` + a two-line template. Demonstrated by adding the Stock
-  page mid-session with no Node change and no restart.
-- **Node keeps only generic work**: discover folders, parse manifests, resolve snapshot inputs, dispatch a
-  named compute operation, render a Jinja template and hold the session. These are explicit local module
-  boundaries, not separate deployed services.
-- **The browser owns presentation.** Filters render server-side in the template; options, rows and totals are
-  filled by the runtime. CPU-bound report work stays in the local Node `worker_threads` pool.
-- **The views-on-the-wire regression is removed structurally.** The endpoint now returns `{rows, totals}` and
-  lightweight select sources; live performance must still be remeasured before declaring TB-0008 complete.
-- **Data pages need JavaScript.** The shell and filters are still server-rendered, but rows are not.
-- Two traps found and recorded: MiniJinja hands templates a *proxy*, so `| json` on a value produces `{}` —
-  manifests are serialised in Node (`metaJson`); and a module worker's script is cached aggressively, so the
-  worker URL carries a version query.
+**Accepted**
 
-## Alternatives considered
+- 14 page folders, each two files, replacing 14 bespoke pages. `/p` lists them; `/p/<slug>` and
+  `/p/<slug>/data` serve them.
+- The `meta.json` shape is a contract: the data payload's ETag carries a `v3` revision
+  (`W/"v3-…"` in the route), bumped when the payload shape changes so client caches invalidate.
+- `metaJson` is serialised in the guest host rather than in the template, because MiniJinja hands
+  templates a proxy and `| json` on it yields `{}`; `<` is escaped so it cannot close the script
+  tag.
+- `readPage` rejects anything escaping `pagesDir` (`..`, `\`, NUL).
 
-- **Keep server rendering only** — rejected as the end state: it keeps every page's definition inside Node.
-- **A client SPA framework** — rejected: the app is deliberately framework-free, and manifest-plus-template
-  already gives the wanted decoupling.
-- **Browser worker computation** — removed: serialising whole views and structured-cloning them to a browser
-  worker caused the measured page-host regression; the existing server worker pool is cheaper and portable.
-- **An IndexedDB cache of the base tables** — implemented, measured, then **removed**: writing ~60k row
-  objects took ~36 s. The browser's own HTTP cache (revalidation via `ETag`) does the job.
+**Given up**
+
+- The legacy `/reports/*` routes still exist and duplicate the new ones. They are not equivalent:
+  the legacy screen computes client-side from a view. Retiring them is
+  [[tb-0013-rework-report-screens-without-views]] / the old `tb-0009` task; the old vault also
+  recorded a follow-up that the declarative path was *slower* than server rendering
+  (`issues/declarative-pages-slower-than-server-rendering.md`), which is worth re-measuring
+  before trusting the new path at volume — see [[previous-vault-recovery]].
+- A page that genuinely needs imperative behaviour does not fit the manifest and would need a
+  real route again. None does today.
+- The template still has to exist, so "one folder" is really "two files plus a manifest".
 
 ## Evidence
 
-- All 14 reports now exist as pages; `profit` and `stock` render **identical** totals and rows to their
-  server-rendered counterparts on both a seeded throwaway depot and the live 60k-row dataset
-  (profit `400.00` / stock `-600.00` on the seeded fixture).
-- `npm run smoke` 59/59 after the result endpoint change, including report-result parity, select-source-only
-  payload shape and filtered ETag revalidation.
-
-## Revisit when
-
-- Re-measure the result payload on the 60k-row live dataset. If it remains slower than the legacy rendered
-  route, investigate the measured bottleneck before changing the local module boundaries.
-
-## Related
-
-- [[Issue — Declarative pages ship whole views and are slower than server rendering]]
-- [[Decision — Refresh the report snapshot incrementally from table fingerprints]]
-- [[Frontend — TrailBase Server-Rendered App]]
-- [[TB-0009 Retire the legacy report routes in favour of the page host]]
+- `trailbase/runtime/app/lib/pages.js` — the registry, `normalizeMeta`, `resolveDefault`,
+  `MAX_DEPTH = 6`, and the slug-escape rejection in `readPage`.
+- `trailbase/runtime/ahscripts/routes/_app/route.ts` — the generic host, `filtersFor`, the
+  `W/"v3-…"` ETag and gzip handling, and the `/p/<slug>` and `/p/<slug>/data` endpoints.
+- `trailbase/runtime/app/pages/` — 14 folders, each `meta.json` + `page.html` (`reports/{payments,
+  salesreport,paymentsbycompany,itemsales,profit,stock,difference,outstanding,productsale,
+  dailysale}`, `ledgers/{area,booker,general,party}`).
+- `trailbase/runtime/app/pages/reports/profit/meta.json` — the worked example quoted above.
+- The prior vault's `decisions/trailbase-declarative-page-host.md` (`ea2bd12`) is the original
+  record; see [[previous-vault-recovery]].

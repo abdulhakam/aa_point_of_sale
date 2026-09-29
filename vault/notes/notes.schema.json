@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Notes collection schema",
+  "description": "General notes, ideas, references and scratch material. Documents may carry extra frontmatter fields; missing recommended fields are reported as warnings only.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Document title."
+    },
+    "type": {
+      "type": "string",
+      "description": "Document type. Convention: note."
+    },
+    "status": {
+      "type": "string",
+      "description": "Lifecycle status.",
+      "examples": [
+        "idea",
+        "active",
+        "done",
+        "archived"
+      ]
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "description": "Creation date (YYYY-MM-DD)."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Topic tags (#tag style, lowercase)."
+    }
+  },
+  "required": [
+    "title",
+    "type",
+    "created"
+  ]
+}

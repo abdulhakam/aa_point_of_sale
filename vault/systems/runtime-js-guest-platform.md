@@ -1,0 +1,126 @@
+---
+title: runtime-js guest platform (WebAssembly app host)
+type: system
+status: experimental
+maturity: new
+locator: trailbase/
+runtime: TrailBase 0.33.22 + wasmtime guest, Rust + QuickJS (rquickjs) + minijinja
+created: 2026-09-27
+tags: [pos, wasm, guests, runtime-js, rquickjs, quickjs, minijinja, experimental]
+related_to: ["[[trailbase]]", "[[frontend]]", "[[guest-app-host-port]]", "[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[guest-ui-is-a-direct-shift-of-legacy]]"]
+---
+
+# runtime-js guest platform (WebAssembly app host)
+
+**New / experimental.** The new frontend: the whole app runs as **TrailBase guest-WASM
+components** on the server's own wasmtime, with no separate Node process. The architecture is
+compiled once; pages, templates and report logic are files under an `app/` directory, read and
+evaluated **at runtime** — adding a report or a page means editing files, not rebuilding a
+component. The intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
+([[guest-ui-is-a-direct-shift-of-legacy]]).
+
+It is the implementation of the wasm app-platform plan and is **not wired to production**; the
+legacy pair ([[backend]] + [[frontend]]) is still what runs the shop. The intended end state is a
+direct shift of the legacy UI onto this host, same look
+([[tb-0023-direct-shift-legacy-ui-to-guest]]).
+
+## The pieces
+
+| Directory | What it is |
+|---|---|
+| `trailbase/` | The **source of truth**: `config.textproto`, `metadata.textproto`, `migrations/`, `runtime/`, `host/`, `tools/`, and the three `.bat` drivers |
+| `trailbase/host/` | The **compiled engine**: the Rust guest crate `trail_runtime_js` — `trailbase-wasm` SDK + `rquickjs` (QuickJS) + `minijinja`, built for `wasm32-wasip2` into a single `*.wasm`. Changing it needs `build.bat` |
+| `trailbase/runtime/` | The **editable application**: `ahscripts/routes/_app/route.ts` (the dispatcher) and `app/` (views, pages, compute, lib, the report SQL). Read at request time — no rebuild |
+| `trailbase/tools/` | The verification harnesses (`guest-smoke.mjs`, `view-equivalence.mjs`, …) |
+| `trailbase/traildepot/` | **Generated** by `clear_db.bat` + `build.bat`: source copies + `wasm/runtime_js.wasm` + `data/` |
+| `guests/` | **Deleted 2026-09-28.** The throw-away **Phase 0 spike** guest (TS + Vite + `jco componentize`) that proved the platform's assumptions — S1–S8 ([[trailbase-guest-wasm-spike-results]]). Nothing loaded it once `host/` shipped, so the tree was removed; the spike findings survive in that note and in the [[trailbase-guest-aot-startup-cost]] / [[trailbase-guest-cpu-js-limits]] issues |
+
+The host is adapted from, and documented in, [[trail-runtime-js-reference]]; the runtime defaults it
+settled are in [[trailbase-guest-wasm-runtime-defaults]] and [[runtime-js-single-host]].
+
+## How it works
+
+- **Routing**: one generic file route. `trailbase/host/src/lib.rs` resolves `ahscripts/routes/<path>/route.*`
+  and, when no route folder matches, falls back to `ahscripts/routes/_app/route.ts` — a single
+  dispatcher that implements the whole URL space (dynamic paths included).
+- **Business logic** is runtime JS/TS: `app/compute/*.js` is the **same** `compute/` code the Node app
+  runs, and `app/lib/*.js` are the guest ports of the Node `src/lib`. The dispatcher loads modules
+  itself through an ESM→CJS shim ([[guest-app-host-port]]).
+- **Rendering** is Rust `minijinja` folded into the host: scripts call `render.html(name, ctxJson)` /
+  `render.string`, with templates under `app/views` and the ten `compute/format.js` filters ported
+  ([[report-logic-stays-runtime-file-based]]).
+- **Data**: base tables are read **directly from the depot's SQLite** (order-sensitive: `ORDER BY id
+  DESC`, engine-independent `compareText` sorting — [[deterministic-sort-and-sql-reads-in-guest]]),
+  and the legacy report SQL is available as a switchable SQL path
+  ([[convert-base-views-not-derivations]]).
+- **Writes**: direct SQL through a `db.execute` bridge, with BLOBs bound as `unhex(hex)` and numbers
+  as `CAST(? AS REAL)` ([[guest-writes-via-sql]]).
+- **Auth**: TrailBase's own cookie/`req.user()`, not a second session layer; the app's `/login`
+  exchanges credentials via the JSON auth API and sets the cookies
+  ([[guest-outbound-http-and-login]]).
+- **Jobs**: a durable, leased, idempotent SQLite queue with a minute poller and opt-in worker
+  fan-out ([[jobs-in-process-durable-queue]]).
+
+## Running it
+
+From `trailbase/`:
+
+```powershell
+clear_db.bat     # reset traildepot\ from src\ (wipes the database)
+build.bat        # cargo build wasm32-wasip2 + copy into traildepot\wasm\
+RUN.BAT          # trail run --runtime-root-fs=traildepot\runtime
+```
+
+`--runtime-root-fs=traildepot/runtime` is load-bearing: it is the WASI sandbox root, so the
+frontend's `app/` and `ahscripts/` must live under it. Keeping it a subdirectory (not the depot
+root) keeps the depot's `data/` and `secrets/` out of the sandbox. `RUN.BAT` runs `clear_db.bat` and
+`build.bat` automatically when the depot is not prepared. Full build/deploy/verify commands are in
+[[build-and-run]]; ports and scratch depots in [[environment]].
+
+## What it can do today
+
+All four of the Node app's surfaces run on the guest and match it: the adapted smoke suite passes
+**71/71** on the same seed and pinned totals, and the differential matches **14/14** report/ledger
+pages on real data ([[guest-app-host-port]]). Management CRUD, the KV report cache, fingerprint
+refresh, jobs, and the app's own login work. A first **invoice-entry slice** (context endpoint,
+server-side numbering, edit lease, idempotent create/lines, complete) is built and verified
+([[tb-0021-invoices-cashmemos-printing]]).
+
+## Known limitations (measured, not assumed)
+
+- **~20 s call deadline** and an interpreter-only JS engine (~1×10⁶ loop iterations/s): a long
+  synchronous handler fails. This is no longer hypothetical — on production-sized data
+  `profit`, `itemsales` and `paymentsbycompany` **returned 500 at the deadline**, and stay ~20 s
+  cold even at 1,000 rendered rows, because the cost is the JS pass over every row rather than the
+  render ([[trailbase-guest-cpu-js-limits]], [[guest-vs-node-performance]],
+  [[new-system-report-timings]], [[snapshot-persistence-hits-the-20s-deadline]]).
+- Guest latency is multiples of Node's (~20–30 ms baseline vs ~3–7 ms). The 9–18 ms figure in
+  `notes/trail-runtime-js-reference.md` is pre-cache and pre-dispatcher, and does not apply.
+- **Do not pass `--aot`**: it doubles size and is 2.3× slower to cold-load
+  ([[trailbase-guest-aot-startup-cost]]).
+- TrailBase **subscriptions return 403**, so realtime push is unavailable; the app polls
+  ([[trailbase-subscribe-endpoint-forbidden]]).
+- The host's own `ahscripts/jobs` discovery does not run job files; the poller calls the reconcile
+  route directly ([[trailbase-runtime-js-scheduler-not-running-jobs]]).
+- A dropped streaming request can panic the host bridge (`wstd` connection reset).
+- SQLite errors and the DB bridge surface opaque errors unless the bridge logs them
+  ([[guest-db-bridge-text-params-only]], [[trailbase-guest-error-string-opaque]]).
+
+## Status
+
+Experimental, **not** wired to production and **not** currently holding production data. It has
+been exercised on a real-data-sized depot once (the V1 import, 60,245 records, then timing the
+reports — [[new-system-report-timings]], [[report-performance-baseline]]), and that depot has since
+been reset ([[tb-0024-flatten-new-system-layout]]). The report-parity differential that established
+14/14 against the legacy app can no longer be re-run
+([[guest-parity-differential-not-reproducible]]). This system supersedes parts of
+[[trailbase-migration]]'s plan for the app host; the report arithmetic, jobs, money handling and the
+invoice design all have their own decisions recorded in this vault.
+
+## Related
+
+- [[guest-app-host-port]] — the port itself and what is verified.
+- [[trail-runtime-js-reference]] — the adopted host and its measurements.
+- [[frontend]] — the legacy UI it is to replace, screen for screen.
+- [[guest-ui-is-a-direct-shift-of-legacy]] — the look-and-behaviour mandate.
+- [[build-and-run]] / [[environment]] — how to start it.

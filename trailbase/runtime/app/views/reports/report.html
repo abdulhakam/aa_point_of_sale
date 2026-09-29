@@ -1,0 +1,37 @@
+{% extends 'layout.html' %}
+{% import 'partials/filters.html' as fl %}
+{% import 'partials/table.html' as tb %}
+{% block body %}
+<h1 class="page-title">{% block report_title %}{{ def.title }}{% endblock %}</h1>
+
+<form class="filters" method="get" action="{{ basePath }}">
+{% for field in def.fields %}{{ fl.render_field(field, filters, options) }}{% endfor %}
+{% block extra_inputs %}{% endblock %}
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">APPLY</button>
+    <a class="btn" href="{{ basePath }}">RESET</a>
+    <button class="btn" type="button" data-print>PRINT</button>
+  </div>
+</form>
+
+{% if missing|length %}
+<p class="notice">Please select a {{ missing[0] }} to view this report.</p>
+{% else %}
+<div class="report" id="report">
+{# Legacy print header (PrintHead): the business identity on every printed report. #}
+<header class="print-head">
+  <div class="print-head-title">{{ businessName }}</div>
+  <div class="print-head-line">{{ businessAddress }}</div>
+  <div class="print-head-line">Contact: {{ businessPhone }}</div>
+</header>
+{% include 'partials/report_meta.html' %}
+{% block before_table %}{% endblock %}
+{{ tb.simple(def.columns, rows) }}
+{% if rowInfo and rowInfo.truncated %}
+<p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>
+{% endif %}
+{% block after_table %}{% endblock %}
+{% include 'partials/totals.html' %}
+</div>
+{% endif %}
+{% endblock %}

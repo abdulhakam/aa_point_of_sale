@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Tasks collection schema",
+  "description": "Concrete, actionable work items with GFM checkboxes for subtasks. Documents may carry extra frontmatter fields; missing recommended fields are reported as warnings only.",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Task title."
+    },
+    "type": {
+      "type": "string",
+      "description": "Document type. Convention: task."
+    },
+    "status": {
+      "type": "string",
+      "description": "Workflow status.",
+      "examples": [
+        "todo",
+        "doing",
+        "blocked",
+        "done"
+      ]
+    },
+    "priority": {
+      "type": "string",
+      "description": "Priority.",
+      "examples": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "created": {
+      "type": "string",
+      "format": "date",
+      "description": "Creation date (YYYY-MM-DD)."
+    },
+    "due": {
+      "type": "string",
+      "format": "date",
+      "description": "Due date (YYYY-MM-DD)."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Topic tags (#tag style, lowercase)."
+    },
+    "belongs_to": {
+      "type": "string",
+      "description": "Parent document as a wikilink, e.g. \"[[project-x]]\"."
+    },
+    "related_to": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Peer documents as wikilinks."
+    }
+  },
+  "required": [
+    "title",
+    "type",
+    "status",
+    "created"
+  ]
+}

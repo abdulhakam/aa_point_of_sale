@@ -1,78 +1,87 @@
 ---
-type: Issue
-status: Open
-created: 2026-09-24
-updated: 2026-09-24
-belongs_to:
-  - "[[TrailBase Backend]]"
-related_to:
-  - "[[Backend — TrailBase Server]]"
-  - "[[Reports & Ledgers]]"
-affects:
-  - "[[TrailBase Backend]]"
-tags:
-  - trailbase
-  - views
-  - limitation
-  - reports
+title: TrailBase can only expose a view whose output columns are all statically typeable
+type: issue
+status: known-limitation
+severity: medium
+created: 2026-09-26
+tags: [trailbase, views, upstream, limitations]
+related_to: ["[[trailbase-drop-sql-views]]", "[[reports-and-ledgers]]"]
 ---
 
-# Issue — TrailBase view type-inference limits
+# TrailBase can only expose a view whose output columns are all statically typeable
 
-## Summary
+## The limitation
 
-TrailBase can only expose a `VIEW` as a record API when **every** output column has a statically
-inferable type, and the exposed `id` must be a base-table primary-key column that is also the grouping
-key. PocketBase's 15 report/ledger view collections were built without those constraints, so a faithful
-port is not exposable.
+A SQLite view can be exposed as a record API only when every output column is statically
+typeable. In practice that rules out:
+
+- `WITH` (common table expressions),
+- `UNION`,
+- reading from another view,
+- any grain whose `id` is not a **base-table primary key that is also the grouping key**.
+
+Determined empirically against `trail v0.33.15` and re-checked on `v0.33.22`. The releases in
+between (`v0.33.16`–`v0.33.22`) changed WASM guests, the admin UI, schema-name parsing and batch
+error propagation — none of which touch this path.
+
+## What it cost
+
+Four of the legacy views could not be exposed **at all**:
+
+| View | Why it fails |
+|---|---|
+| `ledger_journal` | grain is not a base-table primary key (and it aggregates across sources) |
+| `payments_summary` | grouped by day + dimensions; `id` is not a base-table PK that is also the grouping key |
+| `payments_invoices_report` | joins/aggregates beyond a single base table's PK |
+| `counts_for_row_numbers` | a set of independent counts, not a row keyed by a base PK |
+
+The remaining views *could* in principle be exposed, but they only ever produced report rows that
+the frontend filtered and summed again — so exposing them would have bought nothing except the
+ability to keep view-shaped endpoints.
+
+Because of this, the TrailBase schema has **no views at all**; report arithmetic moved into
+JavaScript ([[trailbase-drop-sql-views]]), and the whole design follows from that
+([[reports-and-ledgers]]).
+
+## What is still possible
+
+This is a *view* limitation, not a general one. The preserved SQL can be brought back
+server-side in at least two ways that were explicitly left open in `trailbase/README.md`:
+
+1. **A materialised table** maintained by triggers — a real table with a real primary key, so it
+   is exposable, and the query result is indexable.
+2. **A TrailBase WASM handler** — arbitrary code server-side, which is also the natural home for
+   the aggregation if it is ever wanted off the client.
+
+Neither is started. The option matters because the current JavaScript aggregation reads whole base
+tables into the snapshot ([[performance-and-caching]]), so a materialised `payments_summary`-style
+table is the obvious answer if the data grows.
+
+The SQL for both is preserved in the PocketBase migrations —
+`1789890300_ledger_party_window_function.js`, `1789890310_payments_summary_view.js` — and in the
+parent-directory artefacts `full_database_schema.sql` /
+`dltbl/views_from_pb/U1776088644__create_views.sql`. ⚠️ The READMEs' path to those artefacts is
+wrong; see [[stale-schema-sql-paths]].
+
+## Secondary effects
+
+- `pocketbase-types.ts` still carries a record type per view (`PaymentsViewRecord`,
+  `InvoiceViewRecord`, …). Those types can never be generated from a TrailBase server, so any
+  frontend that keeps them must keep them by hand — a permanent source of drift until
+  [[tb-0013-rework-report-screens-without-views]].
+- `counts_for_row_numbers` is used by the dashboard in both frontends. On the TrailBase side it is
+  `buildCounts(base)` in `compute/views.js`, i.e. a client-side computation, not a `COUNT(*)` — the
+  dashboard therefore depends on the snapshot being warm ([[trailbase-incremental-report-refresh]]).
 
 ## Evidence
 
-Recorded while porting the PocketBase views in this directory (measured against `trail v0.33.15` at the
-time, by probing which view definitions the server would accept). **Not re-measured on 2026-09-24**,
-because the views were removed rather than fixed; treat this as the prior empirical result, not as a
-fresh observation.
-
-Constructs that are **not** supported:
-
-| Construct | Consequence |
-|---|---|
-| Reading from another `VIEW` (PocketBase layered `payments_view` → `invoice_view` → `transaction_view`) | Each view had to be flattened to recompute invoice totals from `transactions`. |
-| Common table expressions (`WITH …`) | `ledger_area`'s `WITH balances` had to become aggregates in the same `GROUP BY`. |
-| `UNION` / `UNION ALL` | `ledger_journal` merges payment and expense rows, so it cannot be exposed at all. |
-| A synthetic or expression primary key (`ROW_NUMBER() OVER ()`, a literal, `CAST(1 AS INTEGER)`) | The exposed `id` must be a base-table PK reference that is also the grouping key. |
-| `GROUP BY` on a non-key while exposing a different `id` | Same rule. |
-
-Supported: a direct base-table column reference; an aggregate/`GROUP BY`/window function **over base
-tables** wrapped in a top-level `CAST(...)`; a scalar subquery or `CASE` wrapped in `CAST(...)`.
-
-Consequently four views could never be exposed: `ledger_journal` (needs `UNION ALL`), `payments_summary`
-and `payments_invoices_report` (no base key matches their grain), and `counts_for_row_numbers` (one
-synthetic row).
-
-## Impact
-
-- Report and ledger logic cannot live in the database the way it does in PocketBase, which removes the
-  "one SQL definition of money math" property the PocketBase decision relied on — see
-  [[Decision — Use PocketBase and Next.js]] and [[Decision — Drop SQL views; aggregate reports client-side]].
-- It also means a `VIEW` cannot be used as a cheap compatibility shim for a shape the API cannot express
-  directly, so schema changes land in the client instead.
-
-## Options
-
-1. Aggregate in the client from indexed base tables (current choice; see the drop-views decision).
-2. A WASM custom handler that runs the preserved SQL and returns the rows, bypassing record-API typing.
-3. Materialise the hot results into real tables maintained by triggers, then expose the table.
-4. Re-check on upgrade — the rules are version-specific and may loosen.
-
-## Workaround
-
-The original SQL is preserved verbatim in `../full_database_schema.sql` and
-`../dltbl/views_from_pb/U1776088644__create_views.sql`, and remains runnable through the admin query
-tool or a WASM handler, so the arithmetic itself is not lost.
-
-## Related
-
-- [[Decision — Drop SQL views; aggregate reports client-side]]
-- [[Reports & Ledgers]] — what each view computed.
-- [[Issue — TrailBase rejects scalar JSON-schema columns]] — the other empirically-found limitation.
+- `trailbase/README.md` § *Design decisions* → "**No views.**" with the typing rules spelled out,
+  and § *Known TrailBase limitations* → the first bullet, verbatim, naming `WITH`, `UNION`,
+  reading from another view, and the PK/grouping-key rule.
+- `trailbase/README.md` § *No views* in *Design decisions* — naming the four views that "could not
+  be exposed at all" and stating that the rest "only ever produced report rows that the frontend
+  filtered and summed again anyway".
+- `trailbase/migrations/main/U1790208000__create_base_tables.sql` — 17 `CREATE TABLE`
+  statements and **zero `CREATE VIEW`**.
+- The prior vault recorded this as `issues/trailbase-view-type-inference-limits.md`; see
+  [[previous-vault-recovery]].

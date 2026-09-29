@@ -1,6 +1,6 @@
 "use client";
 import { DataTableColumn } from "mantine-datatable";
-import useCRUD, { useAppliedFilters } from "@/app/api/useAPI";
+import useCRUD from "@/app/api/useAPI";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
 import { useRef, useState } from "react";
 import { ActionIcon, Button, Flex, Group, Modal, Select, Table, Text, TextInput } from "@mantine/core";
@@ -46,17 +46,10 @@ export default function ItemsReport() {
   });
   const [opened, { open, close }] = useDisclosure(true);
   const [filterValue, setFilter] = useState("");
-
-  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
-  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
-  const { applied, apply, reset, initial } = useAppliedFilters({
-    filterValue: "",
-  });
-
   const itemsReport = useCRUD().fullList({
     collection: "items_report",
     expand: "category",
-    filter: `${applied.filterValue ? `category = '${applied.filterValue}'` : ""}`,
+    filter: `${filterValue ? `category = '${filterValue}'` : ""}`,
   });
   const categories = useCRUD().fullList({ collection: "categories" });
   const filteredData = itemsReport.data;
@@ -78,8 +71,6 @@ export default function ItemsReport() {
             value={filterValue}
             onChange={setFilter}
           />
-          {/* POS-0026 — request the data only when Apply is pressed. */}
-          <Button onClick={() => apply({ filterValue })}>APPLY</Button>
           <Button onClick={close}>OK</Button>
         </Modal>
         <ActionIcon
@@ -105,7 +96,7 @@ export default function ItemsReport() {
             >
               {`STOCK REPORT`}
             </Button>
-            {applied.filterValue && <Text size='sm'>Company: {categories.data?.find((cat) => cat.id === applied.filterValue)?.name}</Text>}
+            {filterValue && <Text size='sm'>Company: {categories.data?.find((cat) => cat.id === filterValue)?.name}</Text>}
             <Table
               horizontalSpacing={1}
               verticalSpacing={0}

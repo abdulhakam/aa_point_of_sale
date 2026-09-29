@@ -8,7 +8,7 @@ import PrintContent from "@/app/components/printing/PrintContent";
 import moment from "moment";
 import { DateInput } from "@mantine/dates";
 import StatusCheck, { checkSuccess } from "@/app/api/StatusCheck";
-import useCRUD, { useHydratedRefs, useAppliedFilters } from "@/app/api/useAPI";
+import useCRUD from "@/app/api/useAPI";
 import { NSelect } from "@/app/components/BetterComps/Select";
 import styles from "@/app/components/printing/styles.module.css";
 import { useForm } from "@mantine/form";
@@ -37,33 +37,19 @@ export default function Payments() {
     },
   });
 
-  // POS-0026 — the report query reads this APPLIED snapshot, so changing the inputs above does
-  // not fire a request until the user presses Apply. Reset restores the inputs and it together.
-  const { applied, apply, reset, initial } = useAppliedFilters({
-    fromDate: moment().utc().startOf("month").toDate() as Date | null,
-    toDate: moment().utc().endOf("day").toDate() as Date | null,
-    reportType: "",
-    booker: "",
-    area: "",
-    section: "",
-    party: "",
-    paymentType: "",
-    invoiceFilter: "",
-    company: "",
-  });
-
   const payments = useCRUD().fullList({
     collection: "payments_view",
-    filter: `(created >= '${moment(applied.fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
-      && created <= '${moment(applied.toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
-      ${applied.booker ? `&& (booker = "${applied.booker}")` : ""}
-      ${applied.area ? `&& (area = "${applied.area}")` : ""}
-      ${applied.section ? `&& (section = "${applied.section}")` : ""}
-      ${applied.party ? `&& (party = "${applied.party}")` : ""}
-      ${applied.paymentType ? `&& (type = "${applied.paymentType}")` : ""}
+    expand: "invoice,party,area,section,booker",
+    filter: `(created >= '${moment(fromDate).startOf("day").format("YYYY-MM-DD HH:mm:ss")}' 
+      && created <= '${moment(toDate).utc().endOf("day").format("YYYY-MM-DD HH:mm:ss")}')
+      ${form.values.booker ? `&& (booker = "${form.values.booker}")` : ""}
+      ${form.values.area ? `&& (area = "${form.values.area}")` : ""}
+      ${form.values.section ? `&& (section = "${form.values.section}")` : ""}
+      ${form.values.party ? `&& (party = "${form.values.party}")` : ""}
+      ${form.values.paymentType ? `&& (type = "${form.values.paymentType}")` : ""}
       ${
-        applied.invoiceFilter
-          ? `&& ( original_invoices ~ "${applied.invoiceFilter}" || invoice = "${applied.invoiceFilter}")`
+        form.values.invoiceFilter
+          ? `&& ( original_invoices ~ "${form.values.invoiceFilter}" || invoice = "${form.values.invoiceFilter}")`
           : ""
       }
       `,
@@ -74,24 +60,15 @@ export default function Payments() {
   const bookers = useCRUD().fullList({ collection: "order_bookers" });
   const invoices = useCRUD().fullList({ collection: "invoices", sort: "+id" });
 
-  // POS-0015 — names resolved client-side; see reports/payments/page.tsx.
-  const { data: rows, queries: refQueries } = useHydratedRefs(payments.data, [
-    "invoice",
-    "party",
-    "area",
-    "section",
-    "booker",
-  ]);
-
-  const queries = [payments, areas, sections, bookers, parties, invoices, ...refQueries];
+  const queries = [payments, areas, sections, bookers, parties, invoices];
 
   if (checkSuccess(queries)) {
-    const party = parties.data.find((parties) => applied.party === parties.id)?.name;
-    const area = areas.data.find((areas) => applied.area === areas.id)?.name;
-    const section = sections.data.find((sections) => applied.section === sections.id)?.name;
-    const booker = bookers.data.find((bookers) => applied.booker === bookers.id)?.name;
+    const party = parties.data.find((parties) => form.values.party === parties.id)?.name;
+    const area = areas.data.find((areas) => form.values.area === areas.id)?.name;
+    const section = sections.data.find((sections) => form.values.section === sections.id)?.name;
+    const booker = bookers.data.find((bookers) => form.values.booker === bookers.id)?.name;
     const invoice =
-      invoices.data.find((invoices) => applied.invoiceFilter === invoices.id)?.invoiceNo;
+      invoices.data.find((invoices) => form.values.invoiceFilter === invoices.id)?.invoiceNo;
     return (
       <>
         <ActionIcon
@@ -203,15 +180,9 @@ export default function Payments() {
               label: `${inv.invoiceNo} ${inv.type.toUpperCase().charAt(0)}`,
             }))}
           />
-          {/* POS-0026 — request the data only when Apply is pressed. */}
-          <Button onClick={() => apply({ fromDate, toDate, ...form.values })}>APPLY</Button>
           <Button
-            variant='default'
             onClick={() => {
               form.reset();
-              setFromDate(initial.fromDate);
-              setToDate(initial.toDate);
-              reset();
             }}
           >
             RESET
@@ -220,9 +191,9 @@ export default function Payments() {
         <div style={{ marginLeft: "1em", marginRight: "1em" }} ref={printRef}>
           <PrintContent>
             <PaymentsReport
-              fromDate={applied.fromDate}
-              toDate={applied.toDate}
-              payments={rows}
+              fromDate={fromDate}
+              toDate={toDate}
+              payments={payments.data}
               area={area}
               section={section}
               booker={booker}

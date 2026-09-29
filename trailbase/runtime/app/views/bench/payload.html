@@ -1,0 +1,23 @@
+{# /*
+  Shared render target for the component-split A/B.
+
+  Both arms must render byte-identical HTML from identical rows, so the template is deliberately
+  boring and proportional: one table row per record, with the money column put through the same
+  filter. The point of the benchmark is the *acquisition and handoff* cost, not the template.
+*/ #}
+<table class="bench">
+  <thead><tr><th>amount</th><th>paid</th><th>payment_date</th><th>description</th><th>qty</th><th>price</th><th>discount_rs</th></tr></thead>
+  <tbody>
+  {%- for row in rows %}
+    <tr>
+      <td>{{ row.amount | money }}</td>
+      <td>{{ row.paid | money }}</td>
+      <td>{{ row.payment_date }}</td>
+      <td>{{ row.description }}</td>
+      <td>{{ row.qty }}</td>
+      <td>{{ row.price | money }}</td>
+      <td>{{ row.discount_rs | money }}</td>
+    </tr>
+  {%- endfor %}
+  </tbody>
+</table>
