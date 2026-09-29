@@ -27,9 +27,13 @@ them are answered from these documents instead of by re-reading source.
 replacement under construction: the TrailBase schema and APIs are done and verified, and the
 guest frontend covers dashboard, reports and management. The production import **has been run once**
 through the guest `import-from-v1` plugin (60,245 records, 0 errors) and the reports were timed on
-it ([[new-system-report-timings]], [[report-performance-baseline]]), but the depot was reset
-afterwards ([[tb-0024-flatten-new-system-layout]]), so **no production data is currently loaded**;
-and the legacy Next.js app does not talk to TrailBase yet. The guest platform is the
+it ([[new-system-report-timings]], [[report-performance-baseline]]). **The depot was rebuilt and
+re-imported on 2026-09-29 and is currently loaded** — 60,245 records, 0 failures, run through the
+browser UI, with per-table money and quantity sums verified equal to PocketBase
+([[reports-parity-and-e2e-2026-09-29]]). An earlier revision of this paragraph said the depot was
+reset and "no production data is currently loaded"; that was stale and is corrected here and in
+[[aa-point-of-sale]], [[system-status-overview]] and [[trailbase-migration]]. The legacy Next.js app
+still does not talk to TrailBase. The guest platform is the
 chosen replacement frontend and the legacy UI is to be shifted onto it screen-for-screen
 ([[guest-ui-is-a-direct-shift-of-legacy]]); the intermediate Node `frontend-ssr` experiment was
 removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and

@@ -23,11 +23,12 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
    included — and looks like the legacy UI ([[guest-ui-is-a-direct-shift-of-legacy]]).
 3. The legacy PocketBase server is no longer written to, and a rollback path is documented.
 
-Step 1 has been run once but is not finished: the guest import plugin was run against `traildepot`
-(60,245 records, 0 errors, [[new-system-report-timings]]) and the depot was then reset
-([[tb-0024-flatten-new-system-layout]]), so the import and its reconciliation must be re-run from
-scratch ([[pos-0029-rebuild-v1-import-on-guest]], [[pos-0027-migrate-production-data-to-trailbase]]).
-Step 2 is roughly half done: the read-heavy and
+Step 1 is **done and verified (2026-09-29)**: the guest import plugin was run through the browser
+UI at `/plugins/import-from-v1/` — 60,245 / 60,245 records, 0 failures, per collection
+`read == created` — and per-table money and quantity sums match PocketBase exactly
+([[reports-parity-and-e2e-2026-09-29]], [[clean-slate-benchmark-cycle]]). The depot currently holds
+that data. An earlier revision of this note said the depot had been reset and no data was loaded;
+that was stale. Step 2 is roughly half done: the read-heavy and
 management surfaces exist on the guest, but the transactional screens are unbuilt and the UI is
 not yet the legacy look. Step 3 is not started.
 
@@ -43,7 +44,7 @@ not yet the legacy look. Step 3 is not started.
 [x] 6a. Flatten the layout, drop the guests spike        -> [[tb-0024-flatten-new-system-layout]]
 [ ] 7. Direct-shift the legacy UI onto the guest          -> [[tb-0023-direct-shift-legacy-ui-to-guest]]
 [ ] 8. Build invoices / cash memos / printing on the guest -> [[tb-0021-invoices-cashmemos-printing]]
-[ ] 9. Verify and finish the guest v1 (PocketBase) import  -> [[pos-0029-rebuild-v1-import-on-guest]]
+[x] 9. Verify and finish the guest v1 (PocketBase) import  -> done 2026-09-29, 60,245/60,245, sums match
 [ ] 10. Decide the cutover shape                          -> [[pos-0028-decide-cutover-plan]]
 [ ] 11. Repoint or retire the legacy Next.js client       -> [[tb-0012-wire-nextjs-frontend-to-trailbase]]
 [ ] 12. Recover the dropped-view endpoints on the legacy side

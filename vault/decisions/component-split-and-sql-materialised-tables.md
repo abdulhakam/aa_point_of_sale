@@ -112,6 +112,7 @@ first, exact cents afterwards.
 | `REAL` + `printf('%.2f', …)` in SQL | Cheapest to write and byte-matches legacy's `printf`, but not exact, and it pays a per-row format over ~60k rows. Retained as the parity check, not the representation. |
 | TTL or timer-based refresh of materialised tables | Reintroduces the staleness `reports.no_precomputation` exists to prevent. |
 | Hand-maintained dependency graph in YAML | Two sources of truth with the trigger definitions; drift is silent. |
+| PoloDB as a WASM component for the materialised store | It **cannot**: v5.0.0 lists "Remove WASM support" and "Remove memory db" as breaking changes, and made RocksDB the mandatory backend via the non-optional `polodb-librocksdb-sys` C/C++ crate. RocksDB needs a filesystem, mmap and POSIX locking, so it does not build for `wasm32`. A second engine also cannot commit in the **same transaction** as the SQLite base write, which would demote the materialised store from tier 2 to a cache — the exact failure §2 exists to prevent. Its MongoDB-shaped document API is already available in SQLite via `STORED` generated columns ([[document-model-bench-2026-09-29]]). |
 | Columnar row transport (JSON-free) | Already disproved: warm profit 4.00 → 4.32 s. The warm cost is the ~21.8k-row minijinja render, not JSON. |
 | A direct JS→`serde_json` render bridge | Already disproved: payments cold 5,528 → 9,277 ms. |
 | `sql` + `js` hybrid for `paymentsView` | Already disproved: parity fell to 9–12/14 and was flaky; reverted. |

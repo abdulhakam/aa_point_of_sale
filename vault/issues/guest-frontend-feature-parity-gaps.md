@@ -46,6 +46,24 @@ The tables exist on the TrailBase side (`invoices`, `transactions`, `payments`, 
 `invoices_return_reference`), and `enable_record_transactions: true` exists so an invoice plus
 its transactions can be written atomically. This is unbuilt UI, not a missing backend.
 
+Four defects inside that surface were verified on 2026-09-29 and are recorded with evidence:
+
+- **`createInvoice` writes no `payments` placeholder.** Legacy creates a `payments` row with
+  `amount: 0, paid: false` per invoice and `payments_view` substitutes the invoice's `final_total`
+  for it, so **every outstanding and DA figure is wrong until this is built**. There is no
+  `INSERT INTO "payments"` anywhere in the guest runtime.
+- **`payments` has no `deleted` column.** The legacy Payments screen has a delete button, so on the
+  new side a payment delete is a **hard delete** that erases it from running balances and the ledger.
+  Needs a decision before cash memo. Schema verified directly against `traildepot`.
+- **`dated` is blank on 21 of 8,927 invoices** in the guest where legacy had a value; those fall back
+  to `created`, which is the import timestamp, so the date field would read 2026 for a 2024 invoice.
+- **`invoices_return_reference` is never written**, and legacy's `payments_view.original_invoices`
+  relies on the placeholder's id *being* the payment id. With `uuid_v7` ids that equality cannot
+  hold, so returns need a real relation rather than a port.
+
+See [[invoice-document-parity-2026-09-29]] for the invoice-document prototype, which reproduces
+legacy money exactly and covers the `final_total` rounding quirk.
+
 ### 2. UI is not yet the legacy look
 
 The guest's dashboard, report, ledger and management screens render their own layout. The
@@ -59,12 +77,36 @@ the bulk of [[tb-0023-direct-shift-legacy-ui-to-guest]] and is not a functional 
 - **`reports/stockreport/itemTransactionsReport`** — legacy-only screen with no new-side
   equivalent.
 
+### 3a. Verified 2026-09-29 — three "legacy" reports that do not exist in v1
+
+`outstanding`, `productsale` and `dailysale` were being carried as reports that exist in **both**
+systems. They do not: inspecting `frontend/src/app/app/reports/` finds **15 route folders, none of
+which is any of the three**. They are **guest-only screens**, so they cannot regress against v1 —
+there is nothing to match. `vault/references/route-map.md` and `vault/systems/frontend.md` listed
+them as legacy routes and have been corrected. Recorded in
+[[reports-parity-and-e2e-2026-09-29]].
+
+This cuts the other way too, and is worth stating plainly: the guest has three report screens v1
+never had, so "parity" here is not a one-to-one screen count.
+
+### 3b. Verified 2026-09-29 — the APPLY-gate parity claim is wrong
+
+This note recorded the guest's server-rendered APPLY/RESET form as **parity** with the legacy
+`useAppliedFilters` (POS-0026). On the checked-out revision `frontend/src/app/api/useAPI.ts` is 77
+lines and **exports no `useAppliedFilters`**, no `listPage`, no `hydrateRefs`, and no
+`REFERENCE_STALE_TIME`; `providers.tsx` sets one global `staleTime` of 500 ms, and the report pages
+read `form.values` **live**. The legacy app therefore re-queries as filters change, while the guest
+waits for APPLY. That is a **behaviour difference to decide**, not parity. Corrected in
+`vault/systems/frontend.md`.
+
 ### 4. Behaviour differences that are not gaps but must be decided
 
 - **The General Ledger's opening-balance inputs are not persisted** in either app — per-request
   form values in legacy, and no storage on the new side either.
 - **Report filters are APPLY-gated** on the new side as a server-rendered form; the legacy app
   reaches the same behaviour through `useAppliedFilters` (POS-0026), so this is parity.
+  — **CORRECTED 2026-09-29: this is not parity.** `useAppliedFilters` does not exist in the
+  checked-out `useAPI.ts`; see §3b. Re-decide.
 - **Two business identities.** Legacy prints `SAMPLE TRADERS` + address + phone; the new side has
   only `APP_NAME`. A cutover without this resolved loses the printout header
   ([[environment]]).

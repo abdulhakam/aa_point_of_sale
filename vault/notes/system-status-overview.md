@@ -56,8 +56,9 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 
 | Risk | Why it matters | Where |
 | --- | --- | --- |
-| No production data currently loaded | The import has run once (60,245 records, 0 errors) but the depot was reset, so nothing is loaded and the new pair's last real-data evidence is one timing run | [[pos-0027-migrate-production-data-to-trailbase]], [[new-system-report-timings]] |
+| No parity oracle for the new work | The 14/14 differential cannot be re-run, so report changes are unverified against legacy behaviour; the money screens about to be built have no regression net either | [[guest-parity-differential-not-reproducible]] |
 | The 14/14 report differential cannot be re-run | The flagship parity result has no harness left, so later changes to the views are unverified against legacy behaviour | [[guest-parity-differential-not-reproducible]] |
+| TrailBase subscriptions return 403 | No realtime push exists, so every "latest data" requirement is met by ETag polling, not a stream | [[trailbase-subscribe-endpoint-forbidden]] |
 | The guest's `/count/{table}` is unauthenticated | Row counts of every table are reachable without login, and a non-integer result panics the guest | [[trailbase-host-count-endpoint-sql-injection]] |
 | Cutover shape undecided | Determines whether the legacy Next.js UI is repointed or retired; blocks two other tasks | [[pos-0028-decide-cutover-plan]] |
 | Invoicing/printing have no new-side equivalent | The new pair cannot replace the product, only part of it; designed but unbuilt | [[guest-frontend-feature-parity-gaps]], [[tb-0021-invoices-cashmemos-printing]] |

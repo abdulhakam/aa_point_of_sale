@@ -35,8 +35,9 @@ PRODUCTION (live)                      IN PROGRESS (replacement)
 └───────────────────┘                  │ minijinja         │                  │ 17 tables  │
         (the whole product:            └───────────────────┘                  │ record APIs│
          invoices, printing,                          ▲                        └────────────┘
-         cash memo, reports)                          │ no production data currently loaded;
-┌───────────────────┐                                 │ no legacy client yet
+          cash memo, reports)                          │ production data IS loaded
+┌───────────────────┐                                 │ (60,245 records, 2026-09-29);
+│ backend/          │  ◀── the data to re-import ─────┘ no legacy client yet
 │ backend/          │  ◀── the data to re-import ─────┘
 │ PocketBase 0.22.55│
 └───────────────────┘
@@ -67,10 +68,17 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 
 **Not done**
 
-- No production data is currently loaded on the new side. The `import-from-v1` plugin **has** been
-  run against `traildepot` — 60,245 records, 0 errors ([[new-system-report-timings]]) — but the
-  depot was reset afterwards ([[tb-0024-flatten-new-system-layout]]), so the import must be re-run
-  and reconciled ([[pos-0029-rebuild-v1-import-on-guest]], [[pos-0027-migrate-production-data-to-trailbase]]).
+- **Production data IS loaded.** The `import-from-v1` plugin was run through the **browser UI** at
+  `/plugins/import-from-v1/` on 2026-09-29 — **60,245 / 60,245 records, 0 failures** — and per
+  collection `read == created`. Per-table money and quantity sums were then compared directly in
+  SQL against `backend/p_data/data.db` and **all match**; payments agree to the cent (recieving
+  25,907,041.11, sending 22,657,296.66). Verified again 2026-09-29 against the live depot on
+  `:4000`: 8,927 invoices, 23,413 transactions, 26,526 payments, 88 expenses.
+  See [[reports-parity-and-e2e-2026-09-29]]. An earlier revision of this note said the depot had
+  been reset and no data was loaded; that was stale.
+  Outstanding: the guest's `created` is the import timestamp, not the business date
+  ([[guest-depot-created-is-import-time]]), and 8,927 `invoice_maker` references are dropped
+  ([[import-from-v1-drops-invoice-maker]]).
 - The legacy Next.js app still reads and writes PocketBase; nothing points it at TrailBase.
 - Invoicing, cash memo, expenses and printing have no guest equivalent yet
   ([[guest-frontend-feature-parity-gaps]]).
