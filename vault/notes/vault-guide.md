@@ -144,8 +144,51 @@ The vault is meant to be updated **as work happens**, not batched at the end:
 - Keep "what is next" in the project note's `Sequence` section so a fresh session can pick up
   from the vault alone.
 
+## Settle a structural claim with the artifact that owns it
+
+**Never record a claim about the shape, meaning or usage of the system on the strength of a proxy
+signal.** A schema listing, a directory listing, a keyword scan and a name match are *proxies*:
+they usually point the right way and they are cheap, which is exactly what makes them dangerous.
+Each one has lied in this project, and each time one direct check overturned the claim in under a
+minute. Before writing a sentence that asserts *what something is for*, open the thing that
+behaves:
+
+| claim | the proxy that produced it | the artifact that settles it |
+|---|---|---|
+| "no production data is loaded" | the depot was reset in an old note | `SELECT COUNT(*)` per table |
+| "no legacy route for X" | counted folders under a route dir | open the route / drive the browser |
+| "`companies` was invented by the migration" | it is absent from the PocketBase collection list | grep the **frontend** for what it reads that collection as |
+| "table T is unreferenced" | a per-line SQL-keyword scan | the constant, map key or `base.<table>` the code binds it through |
+| "15/15 views pass" | the harness exited 0 | read what the harness actually asserted |
+
+The recurring shape: **absence in a listing was read as absence in the system.** A table missing
+from a collection list may still be a misnamed one; a route folder may not exist while the route
+does; a table name may not appear on any line that says `SELECT` and still be the most-referenced
+table in the runtime.
+
+Rules that follow:
+
+- **Absence of evidence is not evidence of absence.** Before writing "X does not exist", find the
+  one check that would prove it, and run that.
+- **A negative claim is a claim.** It needs the same evidence as a positive one, and it is wrong
+  at least as often.
+- **Check the consumer, not just the container.** Whether a table is "invented" is a question about
+  what the *application* did with it, which the schema cannot answer. The `categories`/companies
+  confusion was invisible in both databases and obvious in one frontend file.
+- **Distrust a confident tool verdict that would justify a destructive change.** A clean table of
+  per-table results can be wrong because the *method* was narrow. Cross-check against a second
+  method before acting.
+- **Say which artifact you opened.** Record the evidence path, so the next session can re-check
+  rather than re-derive.
+- **When a claim does turn out wrong, correct it in place and name the old claim** — never quietly
+  rewrite it. [[categories-is-the-company-list]] and [[table-audit-2026-09-29]] are the worked
+  example: the audit asserted the wrong direction and the correction reverses it, in both files,
+  with the evidence that reversed it. [[settle-structural-claims-with-the-owning-artifact]] lists
+  all five instances from one session.
+
 ## Related
 
 - [[system-status-overview]] — the current state in one screen.
 - [[previous-vault-recovery]] — the earlier knowledge base, still in git history.
+- [[settle-structural-claims-with-the-owning-artifact]] — the five worked examples behind the verification rule above.
 - [[README]] — the vault index.
