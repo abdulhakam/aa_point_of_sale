@@ -31,6 +31,13 @@ const FE = TB;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const results = [];
 
+/**
+ * A right-aligned cell holding exactly `value`. The cell also carries `data-label` (the mobile
+ * card layout prints it), so the class attribute is not necessarily the last one — matching
+ * `class="right">` alone would pass only while the attribute order held.
+ */
+const hasRightCell = (html, value) => new RegExp(`class="right"[^>]*>${value}<`).test(html);
+
 function check(name, ok, detail = "") {
   results.push({ name, ok, detail });
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail && !ok ? `  — ${detail}` : ""}`);
@@ -103,8 +110,12 @@ async function seed() {
   const sectionB = await create("sections", { name: "South" });
   const areaA = await create("areas", { name: "Area-1", section: toUuid(sectionA) });
   const areaB = await create("areas", { name: "Area-2", section: toUuid(sectionB) });
-  const catA = await create("categories", { name: "Beverages" });
-  const catB = await create("categories", { name: "Snacks" });
+  // The legacy `categories` collection IS the company list and maps onto `companies`
+  // (U1790300400__map_pocketbase_categories_to_companies), so the item company is a company. The
+  // two item companies are separate rows from the parties' companies so the pinned company
+  // groupings below stay exactly as they were.
+  const itemCoA = await create("companies", { name: "Beverages" });
+  const itemCoB = await create("companies", { name: "Snacks" });
   const compA = await create("companies", { name: "Acme" });
   const compB = await create("companies", { name: "Globex" });
 
@@ -116,8 +127,8 @@ async function seed() {
   const booker = await create("order_bookers", { name: "Booker One", phone: "300" });
   await create("order_booker_companies", { order_booker: toUuid(booker), company: toUuid(compA) });
 
-  const itemA = await create("items", { name: "Cola", category: toUuid(catA), cost_price: 50, sale_price: 70, box_size_qty: 12, barcode: "111" });
-  const itemB = await create("items", { name: "Chips", category: toUuid(catB), cost_price: 20, sale_price: 30, box_size_qty: 24, barcode: "222" });
+  const itemA = await create("items", { name: "Cola", category: toUuid(itemCoA), cost_price: 50, sale_price: 70, box_size_qty: 12, barcode: "111" });
+  const itemB = await create("items", { name: "Chips", category: toUuid(itemCoB), cost_price: 20, sale_price: 30, box_size_qty: 24, barcode: "222" });
 
   const invSale = await create("invoices", {
     type: 1, invoiceNo: 1001, party: toUuid(cust), booker: toUuid(booker), dated: "2026-09-10 10:00:00.000Z",
@@ -232,10 +243,15 @@ async function main() {
       ["/management/sections", "New Section"],
       ["/management/areas", "Areas"],
       ["/management/parties", "Parties"],
-      ["/management/categories", "Item Companies"],
       ["/management/companies", "Companies"],
       ["/management/bookers", "Order Bookers"],
       ["/management/items", "Items"],
+      ["/invoices", "Invoices"],
+      ["/invoices/new?type=1", "Start a sale invoice"],
+      ["/invoices/new?type=0", "Start a purchase invoice"],
+      ["/payments", "Payments"],
+      ["/payments/new", "New Payment"],
+      ["/inventory", "Inventory"],
       ["/reports/payments", "Unified Payments Report"],
       ["/reports/salesreport", "Sales Report"],
       ["/reports/paymentsbycompany", "Payments By Company"],
@@ -267,7 +283,7 @@ async function main() {
     const sep = "from=2026-09-01&to=2026-09-30";
 
     const profit = await get(cookies, `/reports/profit?${sep}`);
-    check("profit total is 91.00 (margin arithmetic)", profit.body.includes('class="right">91.00<'), "");
+  check("profit total is 91.00 (margin arithmetic)", hasRightCell(profit.body, "91.00"), "");
     check("profit row uses final-margin 90.42", profit.body.includes("90.42"), "");
 
     const pageProfit = await get(cookies, `/p/reports/profit/data?${sep}`);
@@ -297,28 +313,28 @@ async function main() {
     check("manual refresh leaves the snapshot ready", afterState?.ready === true && afterState?.build > 0, afterRefresh.body);
 
     const itemsales = await get(cookies, `/reports/itemsales?${sep}`);
-    check("item sales total sale is 731.00", itemsales.body.includes('class="right">731.00<'), "");
-    check("item sales net total is 591.00", itemsales.body.includes('class="right">591.00<'), "");
+  check("item sales total sale is 731.00", hasRightCell(itemsales.body, "731.00"), "");
+  check("item sales net total is 591.00", hasRightCell(itemsales.body, "591.00"), "");
 
     const stock2 = await get(cookies, "/reports/stockreport");
     check("stock quantity displays cartons+units", stock2.body.includes("7 ctns 7 units"), "");
-    check("stock total is 4510.00", stock2.body.includes('class="right">4510.00<'), "");
+  check("stock total is 4510.00", hasRightCell(stock2.body, "4510.00"), "");
 
     const diff = await get(cookies, "/reports/difference");
     check("difference report counts only difference invoices", diff.body.includes("Chips") && diff.body.includes("0 ctns 3 units"), "");
 
     const pay = await get(cookies, `/reports/payments?${sep}`);
-    check("payments payable amount is 800.00", pay.body.includes('class="right">800.00<'), "");
-    check("payments recivable amount is 150.00", pay.body.includes('class="right">150.00<'), "");
+  check("payments payable amount is 800.00", hasRightCell(pay.body, "800.00"), "");
+  check("payments recivable amount is 150.00", hasRightCell(pay.body, "150.00"), "");
 
     const outc = await get(cookies, "/reports/outstanding");
-    check("outstanding balance for the customer is 150.00", outc.body.includes("Customer One") && outc.body.includes('class="right">150.00<'), "");
+  check("outstanding balance for the customer is 150.00", outc.body.includes("Customer One") && hasRightCell(outc.body, "150.00"), "");
 
     const byCompany = await get(cookies, `/reports/paymentsbycompany?${sep}&applyDate=on`);
     check("payments-by-company lists seeded item companies", byCompany.body.includes("Beverages") && byCompany.body.includes("Snacks"), "");
     check("payments-by-company splits by revenue share", byCompany.body.includes("403.85") && byCompany.body.includes("161.54"), "");
-    check("payments-by-company invoice total is 500.00", byCompany.body.includes('class="right">500.00<'), "");
-    check("payments-by-company total is 300.00", byCompany.body.includes('class="right">300.00<'), "");
+  check("payments-by-company invoice total is 500.00", hasRightCell(byCompany.body, "500.00"), "");
+  check("payments-by-company total is 300.00", hasRightCell(byCompany.body, "300.00"), "");
 
     const partiesList = await get(cookies, "/management/parties");
     const partyId = /href="\/management\/parties\?edit=([^"&]+)/.exec(partiesList.body);
