@@ -85,6 +85,24 @@ invoices. The underlying choice (accept vs. match-by-email) is recorded under
 
 Option 1 or 4 is the honest minimum; option 2 is the one that actually preserves the data.
 
+## Resolution (2026-09-29) — a fifth option was chosen
+
+**Attribute every migrated invoice to the user logged in when the import runs.** Tracked as
+[[tb-0026-attribute-imported-invoice-maker-to-logged-in-user]], and **deferred far into the
+future** — it is not on the critical path for the invoice and cash-memo work.
+
+It sits outside the four above because it is cheaper than all of them: no account matching, no
+account creation, no side column, and no schema migration, because the column, its FK and its index
+already exist. The run log's `8,927 invoice(s) had invoice_maker set; that reference is dropped`
+will become a count of attributed invoices.
+
+The cost is a **semantic split** that has to stay visible: for imported rows `invoice_maker` means
+*imported by*, for rows created after cutover it means *created by*. The alternative reading — that
+the operator genuinely entered 8,927 invoices — is false and must not be stated anywhere.
+
+The one genuinely open part is how the plugin learns the destination `_user` id: the plugin already
+authenticates and holds a token, but `_user` is hidden and has no record API to read.
+
 ## Related decisions this touches
 
 - [[trailbase-encode-enums-as-integer-codes]] — the other place the migration must translate values
