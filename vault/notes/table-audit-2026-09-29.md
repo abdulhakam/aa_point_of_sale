@@ -6,7 +6,7 @@ created: 2026-09-29
 system: new
 tags: [schema, audit, tables, cache, migration, cleanup]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[data-model]]", "[[component-split-and-sql-materialised-tables]]", "[[document-model-bench-2026-09-29]]", "[[invoice-document-parity-2026-09-29]]", "[[import-from-v1-drops-invoice-maker]]", "[[guest-frontend-feature-parity-gaps]]", "[[report-enum-translation-2026-09-29]]"]
+related_to: ["[[data-model]]", "[[categories-is-the-company-list]]", "[[component-split-and-sql-materialised-tables]]", "[[document-model-bench-2026-09-29]]", "[[invoice-document-parity-2026-09-29]]", "[[import-from-v1-drops-invoice-maker]]", "[[guest-frontend-feature-parity-gaps]]", "[[report-enum-translation-2026-09-29]]"]
 ---
 
 # Table audit 2026-09-29 — no base table is dead, but three are worth acting on
@@ -17,7 +17,8 @@ Audit of the live depot (`traildepot/data/main.db`, 27,277 pages of 4,096 = **10
 ## Answer: no base table is unused
 
 All **17 base tables** are simultaneously (a) referenced by runtime code, (b) declared as a record
-API in `config.textproto`, and (c) tied into the foreign-key graph. None can be dropped.
+API in `config.textproto`, and (c) tied into the foreign-key graph. None can be dropped as they
+stand — though see item 3 for the one that becomes redundant under a small data migration.
 
 ```
 areas(59) categories(15) companies(15) expenses(88) invoice_types(4) invoices(8927)
@@ -75,30 +76,36 @@ replacement is **11.0 MB of indexed `STORED`-generated-column tables** for 8,927
 34 rows, currently ~0 KB. Pure derived state, written and read only by `route.ts`. No unique
 information. Free insurance either way; not worth a migration on its own.
 
-### 3. `companies` — a duplicate the migration invented, and it is not in the source
+### 3. `companies` vs `categories` — **the opposite of what this note first said**
 
-`companies` has the same columns as `categories`, holds **the same 15 names**, under **different
-ids**, with no link between them:
+**CORRECTION 2026-09-29, same day.** An earlier revision of this note called `companies` "a
+duplicate the migration invented, and it is not in the source". That was wrong in substance, and
+[[categories-is-the-company-list]] has the full evidence.
 
-| | categories | companies |
-|---|---|---|
-| rows | 15 | 15 |
-| same name set | \multicolumn{2}{c}{**yes**} | |
-| same id set | \multicolumn{2}{c}{**no**} | |
-| referenced by | `items.category` | `party_companies.company`, `order_booker_companies.company` |
+PocketBase indeed has no `companies` collection and no `companies` view. But the **company
+dimension is real and pre-existing in the legacy system** — it is simply *stored* in a collection
+named `categories`. The legacy nav entry is `{ text: "companies", path: "management/categories" }`,
+`paymentsbycompany/page.jsx:111` reads `categories` into a variable called `companies`, the stock
+and difference report filters are labelled **"Company"**, and `CreateSupplier.tsx:36` creates a
+supplier by inserting into `categories`. The 15 names are business names — BAKE PARLOR, ZEESHAN
+PAPAR, NATIONAL RECIPIE — not product categories.
 
-**PocketBase has no `companies` collection and no `companies` view.** It has 12 base collections
-and 13 views, and `companies` is in neither list. The import log confirms it: the dry run reported
-`companies: not present on the source server, skipped`.
+So the migration did the **right** thing promoting them to a separate `companies` table: legacy
+genuinely conflates two concepts in one collection. **The redundant table is `categories`.**
 
-So `companies` is **synthesised during migration**, not ported. The company dimension is real and
-used — `party_companies`, `order_booker_companies`, `refs.companies`, the management screen, and the
-preserved report SQL — but the *names* now live in two places that can drift: renaming a company and
-renaming a category are independent operations with no consistency between them.
+The data shows items resolve into the wrong one of the pair:
 
-It is **not a removal candidate**; it is a design question. The options are to keep it as a genuine
-second entity (accepting the drift), or to derive it from `categories` again the way the legacy
-system did in application code, which removes the duplicate without removing the dimension.
+```
+items.category                  -> categories     206 of 207 items
+party_companies.company         -> companies      13 of 13
+order_booker_companies.company  -> companies       5 of 5
+```
+
+Same 15 names, different ids, no link. The guest already labels them differently —
+`app/lib/entities.js:36` calls the `categories` API **"Item Companies"**, `:45` calls the other
+**"Companies"**. Retiring `categories` means repointing `items.category` at `companies`, not
+dropping rows. That is [[tb-0014-point-company-fields-at-companies]], now with the evidence that
+resolves it.
 
 ## One read-only gap (already recorded, re-confirmed)
 

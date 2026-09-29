@@ -101,9 +101,14 @@ The ❌ rows are the parity work in [[guest-frontend-feature-parity-gaps]] and
 - The legacy Item Sales Report lives at `reports/transactions/unified` while the guest version
   is `reports/itemsales`; the *title* is the same ("Item Sales Report"). Do not assume route
   path equality when comparing.
-- The guest management hub additionally exposes **Companies**, which the legacy app has no
-  screen for even though the `companies` collection exists. This is part of the open naming
-  question in [[tb-0014-point-company-fields-at-companies]].
+- **CORRECTION 2026-09-29 — the claim below was wrong on both counts.** The guest management hub
+  does **not** additionally expose Companies, and the legacy app is **not** without a screen for it.
+  The legacy has `frontend/src/app/app/management/categories/` and its nav entry is
+  `{ text: "companies", path: "management/categories" }` — the label is "companies", the route is
+  "categories". And the legacy has **no `companies` collection at all**: PocketBase has 12 base
+  collections and 13 views, and `companies` is in neither. What legacy stores in a collection named
+  `categories` is the **company** list, which is why every user-facing surface calls it "companies".
+  See [[categories-is-the-company-list]].
 - Both apps use the same *labels* for the report tiles, so the tiles were copied deliberately
   rather than reinvented — the direct-shift mandate is [[guest-ui-is-a-direct-shift-of-legacy]].
 - Ports: legacy frontend `:3000`, PocketBase `:8090`, TrailBase `:4000`, guest frontend
