@@ -81,3 +81,17 @@ output can be compared for the same rows.
   guest has no `worker.js` or `worker_threads` fan-out).
 - The `refs` pseudo-view, which is not from the old SQL at all but exists so a view-based page
   can also receive the reference maps its filters need.
+
+## Superseded in part
+
+This decision is **reversed for the report path** by [[component-split-and-sql-materialised-tables]]
+(2026-09-28): the old SQL came back as runtime `.sql` files plus a separate `sql.wasm` component,
+because the in-process QuickJS path is what pushes the four heavy reports past the 20 s deadline.
+
+Its **reasoning about typeability still holds** — TrailBase still has no *exposed* views, and the
+SQL is still not reachable as record APIs. What changed is that the arithmetic can run as ordinary
+SQL inside a component rather than needing to be exposed as a table.
+
+As of 2026-09-29 the preserved `.sql` files had drifted out of use badly enough to return nothing
+(see [[report-sql-filters-on-text-enums-returns-nothing]]), which is the cost of leaving a
+specification unexecuted for a while. `USE_SQL_VIEWS` is still off.

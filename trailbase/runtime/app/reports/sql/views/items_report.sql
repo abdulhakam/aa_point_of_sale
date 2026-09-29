@@ -8,13 +8,13 @@ SELECT
   items.box_size_qty, 
   items.category, 
   sum(
-  CASE WHEN transaction_view.type == 'return' 
-  THEN (CASE WHEN transaction_view.party_type == 'customer' 
+  CASE WHEN transaction_view.type == 2 
+  THEN (CASE WHEN transaction_view.party_type == 0 
     THEN transaction_view.qty+transaction_view.scheme 
     ELSE -transaction_view.qty-transaction_view.scheme END) 
-  WHEN transaction_view.type == 'difference'
+  WHEN transaction_view.type == 3
   THEN transaction_view.qty+transaction_view.scheme
-  ELSE (CASE WHEN transaction_view.type='sale' 
+  ELSE (CASE WHEN transaction_view.type=1 
     THEN -transaction_view.qty-transaction_view.scheme 
     ELSE transaction_view.qty+transaction_view.scheme END) END) as qty
 FROM items

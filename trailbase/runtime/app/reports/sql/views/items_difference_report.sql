@@ -8,7 +8,7 @@ SELECT
   items.box_size_qty, 
   items.category, 
   sum(
-  CASE WHEN transaction_view.type == 'difference'
+  CASE WHEN transaction_view.type == 3
   THEN transaction_view.qty+transaction_view.scheme
   ELSE 0 END) as qty
 FROM items

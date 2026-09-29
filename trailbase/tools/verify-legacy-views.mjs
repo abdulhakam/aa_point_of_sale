@@ -51,6 +51,7 @@ const pb = new DatabaseSync(pbDb, { readOnly: true });
 
 let ok = 0;
 const failures = [];
+const mismatches = [];
 for (const name of [...views.keys()].sort()) {
   const sql = compose(name);
   try {
@@ -61,13 +62,25 @@ for (const name of [...views.keys()].sort()) {
     } catch {
       pbCount = "n/a";
     }
-    ok++;
-    console.log(`ok   ${name.padEnd(28)} depot=${String(rows.length).padStart(6)}  pb=${pbCount.padStart(6)}`);
+    // A view that compiles and returns zero rows is exactly how the TEXT-enum defect
+    // survived for so long, so the PocketBase count is COMPARED, not just printed.
+    // It used to be printed and ignored, which made every view report "ok".
+    const agrees = pbCount === "n/a" || pbCount === String(rows.length);
+    if (agrees) {
+      ok++;
+    } else {
+      mismatches.push(name);
+    }
+    console.log(
+      `${agrees ? "ok  " : "DIFF"} ${name.padEnd(28)} depot=${String(rows.length).padStart(6)}` +
+      `  pb=${pbCount.padStart(6)}` + (agrees ? "" : `  (${rows.length - Number(pbCount) >= 0 ? "+" : ""}${rows.length - Number(pbCount)})`));
   } catch (e) {
     failures.push(name);
     console.log(`FAIL ${name.padEnd(28)} ${e.message}`);
   }
 }
 
-console.log(`\n== ${ok} view(s) composed and ran, ${failures.length} failed ==`);
-process.exit(failures.length ? 1 : 0);
+console.log(`\n== ${ok} view(s) agree with PocketBase, ` +
+  `${mismatches.length} row-count mismatch(es), ${failures.length} failed ==`);
+if (mismatches.length) console.log(`   mismatched: ${mismatches.join(", ")}`);
+process.exit(failures.length || mismatches.length ? 1 : 0);

@@ -5,9 +5,9 @@ status: doing
 priority: high
 created: 2026-09-27
 updated: 2026-09-29
-tags: [reports, sql, no-build, performance, blocked]
+tags: [reports, sql, no-build, performance]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[report-sql-filters-on-text-enums-returns-nothing]]", "[[report-logic-stays-runtime-file-based]]", "[[guest-report-performance-options]]", "[[legacy-report-sql-uses-company-columns]]", "[[dispatcher-transpiled-per-request]]", "[[component-split-and-sql-materialised-tables]]", "[[manifest-driven-routing-and-data-dag]]"]
+related_to: ["[[report-enum-translation-2026-09-29]]", "[[report-sql-filters-on-text-enums-returns-nothing]]", "[[legacy-sql-views-differ-from-js-views]]", "[[report-logic-stays-runtime-file-based]]", "[[guest-report-performance-options]]", "[[legacy-report-sql-uses-company-columns]]", "[[dispatcher-transpiled-per-request]]", "[[component-split-and-sql-materialised-tables]]", "[[manifest-driven-routing-and-data-dag]]"]
 ---
 
 # TB-0022 Move report arithmetic into SQL (runtime .sql files)
@@ -29,6 +29,12 @@ switched.
 - [x] `trailbase/tools/verify-legacy-views.mjs` — composes each view with its dependencies inlined
       as CTEs and runs it against the depot; **15/15 pass**, row counts matching PocketBase where
       comparable (`net_price` 23,414 = 23,414; `transaction_view` 23,413 = 23,413)
+      **CORRECTED 2026-09-29 — this check verified nothing.** It counted `ok++` for any view that
+      *ran*, and printed the PocketBase count without comparing it, so a view returning 0 rows
+      passed. "15/15 pass" meant "none threw". The tool now compares counts and exits non-zero on a
+      mismatch. It also defaulted `DEPOT_DB` to a stale scratch copy in `%TEMP%`, which made
+      `outstanding_summary` report 609 parties instead of 602. See
+      [[report-enum-translation-2026-09-29]].
 - [x] Composer: wrap the target in a subquery so a view that starts with its own `WITH` works
 - [x] Adapt the one real schema divergence: `payments_view.order_bookers.company` →
       a deterministic subquery over `order_booker_companies`
@@ -41,6 +47,33 @@ switched.
       differences (`ledger_*` credit/debit, `items_report` qty, `outstanding` 602 vs 0,
       `payments_invoices_report` 33,129 vs 29,984). The parity reference is the **JS**
       ([[legacy-sql-views-differ-from-js-views]]).
+- [x] **2026-09-29 — enum translation, 53 sites across 10 files**
+      (`trailbase/tools/translate-enums.mjs`), the blocker in
+      [[report-sql-filters-on-text-enums-returns-nothing]]: the preserved SQL compared enum columns
+      against **text** while the schema stores **integers**, so every such comparison was false and
+      the affected views returned 0 rows. The translation is **asymmetric** — comparison side
+      becomes an integer, output labels stay text, because
+      `buildPaymentsInvoicesReport()` emits the label. Two non-enum consequences of the same schema
+      move were fixed at the same time: `!= ''` → `IS NOT NULL` (ids are uuid BLOBs, so an absent
+      link is NULL) and `'cash'` → the sentinel `-1` in `ledger_journal.sql`.
+- [x] **2026-09-29 — two structural defects the pass exposed, both silent, both understating money**
+      ([[report-enum-translation-2026-09-29]]):
+      - `payments_invoices_report.sql` had an outer `GROUP BY` the JS does not have, collapsing
+        distinct payment records that share an invoice and timestamp. **5,980 of 33,556 rows lost**
+        (27,576 instead of 33,556).
+      - `outstanding_summary.sql` joined a subquery keyed on (party, invoice) back to
+        `payments_view` on **party alone**, fanning out by the party's outstanding-invoice count.
+        The report totalled **28,656,988.99 against a true 3,698,209.31**, and one party appeared to
+        hold 30.7M of the world's 29.7M of receivables. `GROUP_CONCAT(DISTINCT ...)` on
+        `invoice_nos` masked it. **Outstanding is the first cash-memo number on screen.**
+- [x] **2026-09-29 — verification** (`verify-translated-views.py`,
+      `verify-guest-only-views.py`): all 13 comparable views now match PocketBase row for row.
+      `outstanding_summary` matches the JS on **602/602 parties**, 601 balances identical and 1
+      differing by 0.01 from float accumulation order. `payments_view` matches to the cent
+      (108,057,580.14).
+- [ ] **Remaining before `USE_SQL_VIEWS` can be enabled:** a full per-column diff of all 15 views
+      against `compute/`. Row counts agreeing is necessary, not sufficient, and only 3 of 15 views
+      are actually compared against PocketBase today.
 
 ## Reconciliation status (2026-09-27)
 

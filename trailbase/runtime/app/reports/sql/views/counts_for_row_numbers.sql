@@ -2,11 +2,11 @@ SELECT cast(`id` as text) `id`,`areas`,`sections`,`categories`,`purchase_invoice
 (SELECT COUNT (id) FROM areas) as areas,
 (SELECT COUNT (id) FROM sections) as sections,
 (SELECT COUNT (id) FROM categories) as categories,
-(SELECT COUNT (id) FROM invoices WHERE type='purchase') as purchase_invoices,
-(SELECT COUNT (id) FROM invoices WHERE type='sale') as sale_invoices,
-(SELECT COUNT (id) FROM invoices WHERE type='return') as return_invoices,
+(SELECT COUNT (id) FROM invoices WHERE type=0) as purchase_invoices,
+(SELECT COUNT (id) FROM invoices WHERE type=1) as sale_invoices,
+(SELECT COUNT (id) FROM invoices WHERE type=2) as return_invoices,
 (SELECT COUNT (id) FROM items) as items,
 (SELECT COUNT (id) FROM order_bookers) as order_bookers,
 (SELECT COUNT (id) FROM parties) as parties,
-(SELECT COUNT (id) FROM payments WHERE type = 'recieving') as recieving_payments,
-(SELECT COUNT (id) FROM payments WHERE type = 'sending') as sending_payments)
+(SELECT COUNT (id) FROM payments WHERE type = 1) as recieving_payments,
+(SELECT COUNT (id) FROM payments WHERE type = 0) as sending_payments)

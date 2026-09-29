@@ -8,25 +8,25 @@ SELECT
   party_type,
   (
     CASE
-      WHEN account_type == 'recieving'
+      WHEN account_type == 1
       THEN (CASE WHEN paid == TRUE THEN -amount ELSE amount END)
-      WHEN account_type == 'return'
-      THEN (CASE WHEN party_type == 'customer' THEN -amount ELSE 0 END)
+      WHEN account_type == 2
+      THEN (CASE WHEN party_type == 0 THEN -amount ELSE 0 END)
       ELSE 0 END
   ) AS accounts_recievable,
   (
     CASE
-      WHEN account_type == 'sending'
+      WHEN account_type == 0
       THEN (CASE WHEN paid == TRUE THEN -amount ELSE amount END)
-      WHEN account_type == 'return'
-      THEN (CASE WHEN party_type == 'supplier' THEN -amount ELSE 0 END)
+      WHEN account_type == 2
+      THEN (CASE WHEN party_type == 1 THEN -amount ELSE 0 END)
       ELSE 0 END
   ) AS accounts_payable,
   (
     CASE
       WHEN paid IS TRUE THEN (
         CASE
-          WHEN account_type == 'recieving' THEN amount
+          WHEN account_type == 1 THEN amount
           ELSE -amount
         END
       )
@@ -74,7 +74,7 @@ FROM
           created,
           description AS description,
           'expense' AS transaction_type,
-          'cash' AS account_type,
+          -1 AS account_type,
           NULL AS party_type,
           0 AS stock_amount,
           amount AS amount,
