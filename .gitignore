@@ -64,3 +64,6 @@ standalone
 # disagree with the running database. Seen produced by read-only connections too.
 *.db-wal
 *.db-shm
+
+# Python bytecode from the bench harnesses in trailbase/tools
+__pycache__/
