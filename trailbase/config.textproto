@@ -79,7 +79,8 @@ record_apis: [
 
   # --- Master data ------------------------------------------------------
   { name: "sections"       table_name: "sections"       acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] },
-  { name: "categories"     table_name: "categories"     acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] },
+  # The legacy `categories` collection maps onto `companies`; there is no separate
+  # categories API. See migrations/main/U1790300400__map_pocketbase_categories_to_companies.sql
   { name: "companies"      table_name: "companies"      acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] },
   { name: "areas"          table_name: "areas"          acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["section"] },
   { name: "parties"        table_name: "parties"        acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["area", "type"] },

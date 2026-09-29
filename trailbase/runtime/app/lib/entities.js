@@ -31,15 +31,9 @@ export const ENTITIES = {
       { key: "section", label: "Section", resolve: "sections" },
     ],
   },
-  categories: {
-    api: "categories",
-    label: "Item Companies",
-    singular: "Item Company",
-    softDelete: true,
-    sort: "+name",
-    fields: [{ name: "name", label: "Name", type: "text", required: true }],
-    columns: [{ key: "name", label: "Name" }],
-  },
+  // There is no separate "Item Companies" entity. The legacy `categories` collection
+  // maps onto `companies`, and this screen used to sit directly beside the identical
+  // "Companies" screen one row apart -- two screens, one list of business names.
   companies: {
     api: "companies",
     label: "Companies",
@@ -99,7 +93,7 @@ export const ENTITIES = {
     sort: "+name",
     fields: [
       { name: "name", label: "Name", type: "text", required: true },
-      { name: "category", label: "Company", type: "relation", source: "categories" },
+      { name: "category", label: "Company", type: "relation", source: "companies" },
       { name: "barcode", label: "Barcode", type: "text" },
       { name: "display_id", label: "Display ID", type: "text" },
       { name: "cost_price", label: "Cost Price", type: "number" },
@@ -108,7 +102,7 @@ export const ENTITIES = {
     ],
     columns: [
       { key: "name", label: "Name" },
-      { key: "category", label: "Company", resolve: "categories" },
+      { key: "category", label: "Company", resolve: "companies" },
       { key: "display_id", label: "Display ID" },
       { key: "barcode", label: "Barcode" },
       { key: "cost_price", label: "CP", align: "right" },
@@ -119,4 +113,4 @@ export const ENTITIES = {
 };
 
 /** Natural display order in the management hub. */
-export const ENTITY_ORDER = ["items", "parties", "bookers", "categories", "companies", "areas", "sections"];
+export const ENTITY_ORDER = ["items", "parties", "bookers", "companies", "areas", "sections"];

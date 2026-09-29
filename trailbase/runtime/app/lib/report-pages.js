@@ -110,7 +110,7 @@ export const REPORT_PAGES = {
     defaults: { from: monthStart(), to: today(), applyDate: "on" },
     fields: [
       F.date("from", "Date From"), F.date("to", "Date To"), F.check("applyDate", "Apply Date Filter"),
-      F.select("company", "Company", "categories"), F.select("party", "Party", "parties"),
+      F.select("company", "Company", "companies"), F.select("party", "Party", "parties"),
       F.select("area", "Area", "areas"), F.select("section", "Section", "sections"),
       F.select("booker", "Booker", "order_bookers"),
     ],
@@ -131,7 +131,7 @@ export const REPORT_PAGES = {
     defaults: { from: monthStart(), to: today() },
     fields: [
       F.date("from", "Date From"), F.date("to", "Date To"),
-      F.select("company", "Company", "categories"), F.select("party", "Party", "parties"),
+      F.select("company", "Company", "companies"), F.select("party", "Party", "parties"),
       F.select("booker", "Booker", "order_bookers"), F.select("area", "Area", "areas"),
       F.select("section", "Section", "sections"), F.select("item", "Item", "items"),
       F.text("invoice", "Invoice #"),
@@ -152,7 +152,7 @@ export const REPORT_PAGES = {
     defaults: { from: monthStart(), to: today() },
     fields: [
       F.date("from", "Date From"), F.date("to", "Date To"),
-      F.select("company", "Company", "categories"), F.select("party", "Party", "parties"),
+      F.select("company", "Company", "companies"), F.select("party", "Party", "parties"),
       F.select("booker", "Booker", "order_bookers"), F.select("area", "Area", "areas"),
       F.select("section", "Section", "sections"), F.select("item", "Item", "items"),
       F.text("invoice", "Invoice #"),
@@ -163,14 +163,14 @@ export const REPORT_PAGES = {
   stockreport: {
     title: "Stock Report",
     defaults: {},
-    fields: [F.select("company", "Company", "categories")],
+    fields: [F.select("company", "Company", "companies")],
     columns: [COMPANY, C("name", "Name"), C("costText", "CP", RIGHT), QTY, CARTON, C("stockAmountText", "Stock Amount", RIGHT)],
     totals: (t) => [{ rows: [{ label: "Total Stock", value: t.stockAmount }] }],
   },
   difference: {
     title: "Difference Report",
     defaults: {},
-    fields: [F.select("company", "Company", "categories")],
+    fields: [F.select("company", "Company", "companies")],
     columns: [COMPANY, C("name", "Name"), CARTON, QTY],
     totals: () => [],
   },
@@ -302,7 +302,7 @@ export function filterOptions(refs, fields) {
     areas: refs.areas,
     parties: refs.parties,
     order_bookers: refs.bookers,
-    categories: refs.categories,
+    companies: refs.companies,
     companies: refs.companies,
     items: refs.items,
     party_types: refs.partyTypes,

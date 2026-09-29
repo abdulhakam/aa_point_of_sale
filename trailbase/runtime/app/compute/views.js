@@ -477,7 +477,10 @@ export function buildCounts(base) {
   return {
     areas: base.areas.length,
     sections: base.sections.length,
-    categories: base.categories.length,
+    // The KEY stays `categories` because that is the legacy field name the report
+    // shape consumes; the SOURCE is now `companies`, which is the same list under
+    // the name the legacy UI actually used.
+    categories: base.companies.length,
     purchase_invoices: countType(0),
     sale_invoices: countType(1),
     return_invoices: countType(2),
@@ -493,7 +496,8 @@ export function buildCounts(base) {
 export function buildRefs(base) {
   return {
     sections: base.sections,
-    categories: base.categories,
+    // no `categories` entry: the legacy categories collection maps onto `companies`,
+    // and consumers of the company list read `refs.companies`.
     companies: base.companies,
     areas: base.areas,
     parties: base.parties,
@@ -527,13 +531,12 @@ export const VIEW_DEPS = {
   ledgerArea: { tables: [], views: ["paymentsView"] },
   outstanding: { tables: ["parties", "areas"], views: ["paymentsView"] },
   counts: {
-    tables: ["invoices", "payments", "areas", "sections", "categories", "items", "order_bookers", "parties"],
+    tables: ["invoices", "payments", "areas", "sections", "companies", "items", "order_bookers", "parties"],
     views: [],
   },
   refs: {
     tables: [
       "sections",
-      "categories",
       "companies",
       "areas",
       "parties",

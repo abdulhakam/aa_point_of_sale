@@ -14,7 +14,9 @@ export const TABLES = [
   "invoice_types",
   "payment_types",
   "sections",
-  "categories",
+  // The legacy `categories` collection IS the company list and maps onto `companies`
+  // directly. There is no separate categories table -- see
+  // migrations/main/U1790300400__map_pocketbase_categories_to_companies.sql.
   "companies",
   "areas",
   "parties",
@@ -42,7 +44,6 @@ const RELATIONS = {
 };
 
 const BOOLEANS = {
-  categories: ["deleted"],
   companies: ["deleted"],
   areas: ["deleted"],
   parties: ["deleted"],

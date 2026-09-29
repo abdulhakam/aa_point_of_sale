@@ -52,113 +52,57 @@ def scratch_copy():
 # --------------------------------------------------------------------------
 # 1. build the document table
 # --------------------------------------------------------------------------
-LINE_EXPR = ("(t.\"price\"*t.\"qty\")*(1-t.\"discount_1\"/100.0)"
-             "*(1-t.\"discount_2\"/100.0)-t.\"discount_rs\"")
+MIGRATION = os.path.join(REPO, "trailbase", "migrations", "main",
+                        "U1790300300__materialised_invoice_documents.sql")
 
-BUILD_DOC = """
-WITH lt AS (
-  -- one row per live transaction line, with legacy's exact line arithmetic
-  SELECT t."invoice" AS inv, t."id" AS line_id, t."item" AS item,
-         t."qty" AS qty, t."price" AS price, t."cost_price" AS cost_price,
-         t."scheme" AS scheme, t."discount_1" AS d1, t."discount_2" AS d2,
-         t."discount_rs" AS drs,
-         printf('%.2f', LINEEXPR) AS line_rounded,
-         LINEEXPR AS line_raw
-  FROM "transactions" t WHERE t."deleted" = 0
-),
-sums AS (
-  -- legacy rounds EACH line to 2dp before summing, then applies invoice discounts
-  SELECT i."id" AS inv,
-         printf('%.2f', COALESCE(SUM(CAST(lt.line_rounded AS REAL)), 0)) AS total,
-         i."discount_1" AS d1, i."discount_2" AS d2, i."discount_rs" AS drs
-  FROM "invoices" i LEFT JOIN lt ON lt.inv = i."id"
-  WHERE i."deleted" = 0 GROUP BY i."id"
-),
-money AS (
-  -- LEGACY QUIRK, verified against PocketBase: unrounded_total is itself rounded to
-  -- 2dp by printf, and final_total subtracts discount_rs from the ROUNDED value.
-  -- Getting this wrong moves 4 invoices by half a cent and one by a whole cent.
-  SELECT s.inv, s.total, s.d1, s.d2, s.drs,
-         printf('%.2f', s.total - (s.total * s.d1 / 100.0)
-                              - ((s.total - (s.total * s.d1 / 100.0)) * s.d2 / 100.0))
-           AS unrounded_total,
-         printf('%.2f', printf('%.2f', s.total - (s.total * s.d1 / 100.0)
-                              - ((s.total - (s.total * s.d1 / 100.0)) * s.d2 / 100.0))
-                         - s.drs) AS final_total
-  FROM sums s
-),
-paid AS (
-  -- NOTE: payments has NO "deleted" column in this schema, so nothing filters here.
-  SELECT "invoice" AS inv,
-         printf('%.2f', COALESCE(SUM(CASE WHEN "paid" = 1 THEN "amount" ELSE 0 END), 0)) AS paid_total
-  FROM "payments" GROUP BY "invoice"
-),
-ljson AS (
-  SELECT inv, json_group_array(json_object(
-           'id', hex(line_id), 'item', hex(item), 'qty', qty, 'price', price,
-           'cost_price', cost_price, 'scheme', scheme,
-           'd1', d1, 'd2', d2, 'drs', drs,
-           'total', line_rounded, 'total_raw', line_raw)) AS lines
-  FROM lt GROUP BY inv
-),
-pjson AS (
-  SELECT pay."invoice" AS inv, json_group_array(json_object(
-           'id', hex(pay."id"), 'type', pay."type", 'amount', pay."amount",
-           'paid', pay."paid", 'payment_date', pay."payment_date",
-           'description', pay."description")) AS pays
-  FROM "payments" pay GROUP BY pay."invoice"
-)
-INSERT INTO inv (id, doc)
-SELECT i."id",
-  json_object(
-    'readable_id', 'inv-' || i."invoiceNo",
-    'type', i."type", 'invoiceNo', i."invoiceNo",
-    'party', hex(i."party"), 'booker', hex(i."booker"),
-    'dated', i."dated", 'completed', i."completed",
-    'd1', i."discount_1", 'd2', i."discount_2", 'drs', i."discount_rs",
-    'total', m.total,
-    'unrounded_total', m.unrounded_total,
-    'final_total', m.final_total,
-    'paid_total', COALESCE(p.paid_total, 0),
-    'remaining', m.final_total - COALESCE(p.paid_total, 0),
-    'lines', json(COALESCE(l.lines, '[]')),
-    'payments', json(COALESCE(pj.pays, '[]'))
-  )
-FROM "invoices" i
-JOIN money m ON m.inv = i."id"
-LEFT JOIN paid p ON p.inv = i."id"
-LEFT JOIN ljson l ON l.inv = i."id"
-LEFT JOIN pjson pj ON pj.inv = i."id"
-WHERE i."deleted" = 0
-""".replace("LINEEXPR", LINE_EXPR)
+
+def read_migration_sql():
+    """The backfill is read OUT OF THE MIGRATION, not restated here.
+
+    The money arithmetic exists in exactly one place in the repository, and the
+    migration is that place. Restating it in this harness would create the second
+    copy the whole design exists to avoid.
+    """
+    src = open(MIGRATION, encoding="utf-8").read()
+    start = src.index("WITH lt AS (")
+    end = src.index('WHERE i."deleted" = 0;', start) + len('WHERE i."deleted" = 0;')
+    return src, src[start:end]
+
+
+MIGRATION_TEXT, BUILD_DOC = read_migration_sql()
 
 CREATE_INV = """
-CREATE TABLE inv (
-  id          BLOB PRIMARY KEY,
-  doc         TEXT NOT NULL CHECK (json_valid(doc)),
-  readable_id TEXT    GENERATED ALWAYS AS (json_extract(doc,'$.readable_id')) STORED,
-  type        INTEGER GENERATED ALWAYS AS (json_extract(doc,'$.type'))        STORED,
-  invoice_no  REAL    GENERATED ALWAYS AS (json_extract(doc,'$.invoiceNo'))   STORED,
-  party       TEXT    GENERATED ALWAYS AS (json_extract(doc,'$.party'))       STORED,
-  dated       TEXT    GENERATED ALWAYS AS (json_extract(doc,'$.dated'))       STORED,
-  completed   INTEGER GENERATED ALWAYS AS (json_extract(doc,'$.completed'))   STORED,
-  total       REAL    GENERATED ALWAYS AS (CAST(json_extract(doc,'$.total') AS REAL))       STORED,
-  final_total REAL    GENERATED ALWAYS AS (CAST(json_extract(doc,'$.final_total') AS REAL)) STORED,
-  paid_total  REAL    GENERATED ALWAYS AS (CAST(json_extract(doc,'$.paid_total') AS REAL))  STORED,
-  remaining   REAL    GENERATED ALWAYS AS (CAST(json_extract(doc,'$.remaining') AS REAL))   STORED,
-  line_count  INTEGER GENERATED ALWAYS AS (json_array_length(json_extract(doc,'$.lines'))) STORED
+CREATE TABLE "inv_doc" (
+  "id"          BLOB PRIMARY KEY NOT NULL,
+  "doc"         TEXT NOT NULL CHECK (json_valid("doc")),
+  "readable_id" TEXT    GENERATED ALWAYS AS (json_extract("doc", '$.readable_id')) STORED,
+  "inv_type"    INTEGER GENERATED ALWAYS AS (json_extract("doc", '$.type'))        STORED,
+  "invoice_no"  REAL    GENERATED ALWAYS AS (json_extract("doc", '$.invoiceNo'))   STORED,
+  "party"       TEXT    GENERATED ALWAYS AS (json_extract("doc", '$.party'))       STORED,
+  "booker"      TEXT    GENERATED ALWAYS AS (json_extract("doc", '$.booker'))      STORED,
+  "dated"       TEXT    GENERATED ALWAYS AS (json_extract("doc", '$.dated'))       STORED,
+  "completed"   INTEGER GENERATED ALWAYS AS (json_extract("doc", '$.completed'))   STORED,
+  "total"       REAL    GENERATED ALWAYS AS (CAST(json_extract("doc", '$.total') AS REAL))       STORED,
+  "final_total" REAL    GENERATED ALWAYS AS (CAST(json_extract("doc", '$.final_total') AS REAL)) STORED,
+  "paid_total"  REAL    GENERATED ALWAYS AS (CAST(json_extract("doc", '$.paid_total') AS REAL))  STORED,
+  "remaining"   REAL    GENERATED ALWAYS AS (CAST(json_extract("doc", '$.remaining') AS REAL))   STORED,
+  "line_count"  INTEGER GENERATED ALWAYS AS (json_array_length(json_extract("doc", '$.lines')))  STORED
 )
 """
 
 INDEXES = """
-CREATE INDEX inv_party     ON inv(party);
-CREATE INDEX inv_dated     ON inv(dated);
-CREATE INDEX inv_type_done ON inv(type, completed);
-CREATE INDEX inv_readable  ON inv(readable_id);
+CREATE INDEX inv_doc__party     ON "inv_doc"("party");
+CREATE INDEX inv_doc__dated     ON "inv_doc"("dated");
+CREATE INDEX inv_doc__type_done ON "inv_doc"("inv_type", "completed");
+CREATE INDEX inv_doc__readable  ON "inv_doc"("readable_id");
 """
 
 
 def build(con):
+    # The migration now creates and back-fills inv_doc for real. Drop it and rebuild
+    # from the migration's OWN backfill SQL, so this harness verifies the SQL that
+    # actually ships rather than a copy of it in this file.
+    con.execute('DROP TABLE IF EXISTS "inv_doc"')
     con.execute(CREATE_INV)
     con.execute(BUILD_DOC)
     for stmt in INDEXES.strip().split(";\n"):
@@ -175,10 +119,10 @@ def diff(con, pb):
                   for (t, n, tot, unr, fin) in pb.execute(
                       'SELECT "type","invoiceNo","total","unrounded_total","final_total"'
                       ' FROM invoice_view')}
-    gt = con.execute('SELECT type,invoice_no,total,'
+    gt = con.execute('SELECT inv_type,invoice_no,total,'
                      ' CAST(json_extract(doc,\'$.unrounded_total\') AS REAL),final_total,'
                      ' remaining,paid_total'
-                     ' FROM inv').fetchall()
+                     ' FROM "inv_doc"').fetchall()
 
     bad_total = bad_unr = bad_final = 0
     worst = []
@@ -217,7 +161,7 @@ def diff_lines(con, pb):
 
     n = bad = 0
     worst = 0.0
-    for (t, no, doc) in con.execute('SELECT type,invoice_no,doc FROM inv'):
+    for (t, no, doc) in con.execute('SELECT inv_type,invoice_no,doc FROM "inv_doc"'):
         key = (t, float(no or 0))
         if key not in pb_lines:
             continue
@@ -246,7 +190,7 @@ def diff_payments(con, pb):
         if key:
             pb_pay.setdefault(key, []).append(float(amt or 0))
     n = bad = 0
-    for (t, no, doc) in con.execute('SELECT type,invoice_no,doc FROM inv'):
+    for (t, no, doc) in con.execute('SELECT inv_type,invoice_no,doc FROM "inv_doc"'):
         key = (t, float(no or 0))
         if key not in pb_pay:
             continue
@@ -267,36 +211,75 @@ def diff_payments(con, pb):
 
 # --------------------------------------------------------------------------
 # 3. the trigger path
+#
+# The trigger is GENERATED from the migration's backfill, never hand-written.
+# Two reasons, both learned the hard way:
+#
+#   1. One definition. A hand-written trigger is a SECOND copy of the money
+#      arithmetic, and two copies drift silently.
+#   2. Scoping. The backfill aggregates the WHOLE depot, which is right for a
+#      full rebuild and catastrophic in a trigger: 23,413 transactions and 26,526
+#      payments re-aggregated on every line, 237 ms per line, 8.7 s for a 36-line
+#      invoice. Scoping it to the affected invoice is 0.89 ms. THREE separate
+#      scans need scoping, and two carry no WHERE to extend because `payments` has
+#      no deleted column -- so a substitution written for one form silently misses
+#      the other. Hence the assertions.
 # --------------------------------------------------------------------------
-TRIGGERS = """
--- Maintain the parent document when a line changes. This is the whole argument for
--- tier 2: the derived total is written in the SAME transaction as the line, so a
--- reader can never see an invoice whose stored total disagrees with its lines.
-CREATE TRIGGER trg_inv_sync AFTER INSERT ON "transactions" FOR EACH ROW
-BEGIN
-  UPDATE inv SET doc = json_set(
-    json_set(doc,
-      '$.total', (SELECT printf('%.2f', COALESCE(SUM(CAST(printf('%.2f',
-           (t."price"*t."qty")*(1-t."discount_1"/100.0)
-                             *(1-t."discount_2"/100.0)-t."discount_rs") AS REAL)), 0))
-         FROM "transactions" t WHERE t."invoice" = NEW."invoice" AND t."deleted" = 0),
-      '$.lines', json((SELECT json_group_array(json_object(
-           'id', hex(t."id"), 'item', hex(t."item"), 'qty', t."qty", 'price', t."price",
-           'total', printf('%.2f', (t."price"*t."qty")*(1-t."discount_1"/100.0)
-                                          *(1-t."discount_2"/100.0)-t."discount_rs")))
-         FROM "transactions" t WHERE t."invoice" = NEW."invoice" AND t."deleted" = 0))),
-      '$.line_count', (SELECT COUNT(*) FROM "transactions" t
-                       WHERE t."invoice" = NEW."invoice" AND t."deleted" = 0)
-  ) WHERE id = NEW."invoice";
-END;
-"""
+# The migration's `paid` and `pjson` CTEs share the identical FROM text, so one
+# replacement scopes both. `payments` carries no deleted column, which is why these
+# clauses have no WHERE to extend and the filter has to be added whole.
+SCOPINGS = [
+    ('FROM "transactions" t WHERE t."deleted" = 0',
+     'FROM "transactions" t WHERE t."deleted" = 0 AND t."invoice" = NEW."invoice"'),
+    ('FROM "payments" GROUP BY "invoice"',
+     'FROM "payments" WHERE "invoice" = NEW."invoice" GROUP BY "invoice"'),
+    # `sums` and the outer SELECT also walk `invoices`, and BOTH need the filter.
+    # Leaving either unscoped makes the trigger's sub-select return a row for all
+    # 8,927 invoices, and SQLite takes an arbitrary one -- which is an invoice with
+    # no lines, so the document silently becomes total 0 with 0 lines.
+    ('FROM "invoices" i LEFT JOIN lt ON lt.inv = i."id"\n  WHERE i."deleted" = 0 GROUP BY i."id"',
+     'FROM "invoices" i LEFT JOIN lt ON lt.inv = i."id"\n'
+     '  WHERE i."id" = NEW."invoice" AND i."deleted" = 0 GROUP BY i."id"'),
+    ('WHERE i."deleted" = 0;', 'WHERE i."id" = NEW."invoice" AND i."deleted" = 0;'),
+]
+SCOPED_PROBES = ('t."invoice" = NEW."invoice"', '"invoice" = NEW."invoice"',
+                 'i."id" = NEW."invoice" AND i."deleted" = 0 GROUP BY i."id"',
+                 'WHERE i."id" = NEW."invoice" AND i."deleted" = 0;')
+
+
+def build_trigger(event="INSERT"):
+    """Derive the per-invoice trigger body from the migration's own backfill.
+
+    Scoping is applied to the WHOLE statement before it is split, because the
+    filters live in both halves -- the `sums` CTE and the outer SELECT each walk
+    `invoices`, and both need the invoice filter.
+    """
+    scoped = BUILD_DOC
+    for src, dst in SCOPINGS:
+        if src not in scoped:
+            raise AssertionError(f"scoping substitution missed: {src!r}")
+        scoped = scoped.replace(src, dst)
+    for probe in SCOPED_PROBES:
+        if probe not in scoped:
+            raise AssertionError(f"trigger body is NOT scoped: missing {probe}")
+    ctes = scoped.split('INSERT INTO "inv_doc"')[0]
+    # take the json_object(...) expression only -- the backfill's SELECT also emits
+    # i."id", and a one-column SET target cannot take a two-column sub-select. The
+    # SELECT keyword has to be kept: the CTEs need one after them.
+    head = 'SELECT i."id",'
+    at = scoped.index(head) + len(head)
+    select = "SELECT\n  " + scoped[at:].strip().rstrip(";").strip()
+    return (f'CREATE TRIGGER trg_inv_doc_sync AFTER {event} ON "transactions" '
+            f'FOR EACH ROW BEGIN\n'
+            f'  UPDATE "inv_doc" SET "doc" = ({ctes}\n{select}) WHERE "id" = NEW."invoice";\n'
+            f'END;')
 
 
 def test_trigger(con):
     row = con.execute(
-        'SELECT id FROM inv WHERE line_count >= 3 ORDER BY line_count DESC LIMIT 1').fetchone()
+        'SELECT id FROM "inv_doc" WHERE line_count >= 3 ORDER BY line_count DESC LIMIT 1').fetchone()
     inv_id = row[0]
-    before = json.loads(con.execute('SELECT doc FROM inv WHERE id=?', (inv_id,)).fetchone()[0])
+    before = json.loads(con.execute('SELECT doc FROM "inv_doc" WHERE id=?', (inv_id,)).fetchone()[0])
     item = con.execute('SELECT "id" FROM "items" LIMIT 1').fetchone()[0]
 
     t0 = time.perf_counter()
@@ -308,7 +291,7 @@ def test_trigger(con):
     con.execute('COMMIT')
     ms = (time.perf_counter() - t0) * 1000
 
-    after = json.loads(con.execute('SELECT doc FROM inv WHERE id=?', (inv_id,)).fetchone()[0])
+    after = json.loads(con.execute('SELECT doc FROM "inv_doc" WHERE id=?', (inv_id,)).fetchone()[0])
     # put it back
     con.execute('DELETE FROM "transactions" WHERE "invoice"=? AND "item"=? AND "qty"=5.0'
                 ' AND "price"=20.0', (inv_id, item))
@@ -322,15 +305,15 @@ def test_trigger(con):
 def time_refresh(con):
     t0 = time.perf_counter()
     con.execute("DROP TABLE IF EXISTS inv_rebuild")
-    con.execute(CREATE_INV.replace("CREATE TABLE inv (", "CREATE TABLE inv_rebuild ("))
-    con.execute(BUILD_DOC.replace("INSERT INTO inv (", "INSERT INTO inv_rebuild ("))
+    con.execute(CREATE_INV.replace('CREATE TABLE "inv_doc"', 'CREATE TABLE "inv_rebuild"'))
+    con.execute(BUILD_DOC.replace('INSERT INTO "inv_doc"', 'INSERT INTO "inv_rebuild"'))
     con.commit()
     build_ms = (time.perf_counter() - t0) * 1000
 
     t0 = time.perf_counter()
     con.execute("BEGIN IMMEDIATE")
-    con.execute("DELETE FROM inv")
-    con.execute("INSERT INTO inv (id,doc) SELECT id,doc FROM inv_rebuild")
+    con.execute("DELETE FROM " + chr(34) + "inv_doc" + chr(34))
+    con.execute('INSERT INTO "inv_doc" (id,doc) SELECT id,doc FROM "inv_rebuild"')
     con.execute("DROP TABLE inv_rebuild")
     con.execute("COMMIT")
     swap_ms = (time.perf_counter() - t0) * 1000
@@ -345,8 +328,8 @@ def main():
     t0 = time.perf_counter()
     build(con)
     build_ms = (time.perf_counter() - t0) * 1000
-    n = con.execute("SELECT COUNT(*) FROM inv").fetchone()[0]
-    payload = con.execute("SELECT SUM(LENGTH(doc)) FROM inv").fetchone()[0]
+    n = con.execute('SELECT COUNT(*) FROM "inv_doc"').fetchone()[0]
+    payload = con.execute('SELECT SUM(LENGTH(doc)) FROM "inv_doc"').fetchone()[0]
     print(f"\nbuilt {n} documents in {build_ms:.0f} ms, "
           f"{payload/1048576:.1f} MB ({payload/n/1024:.1f} KB each)")
 
@@ -365,7 +348,7 @@ def main():
     print(f"  payments (COALESCE rule): {n}   mismatches: {bad}")
 
     print("\n--- 2. the trigger path: is the document current after a write? ---")
-    con.execute(TRIGGERS)
+    con.execute(build_trigger("INSERT"))
     con.commit()
     before, after, ms = test_trigger(con)
     print(f"  a line insert + trigger took {ms:.1f} ms")
@@ -375,11 +358,11 @@ def main():
     print(f"  sum of embedded line totals = {recomputed}")
     print(f"  document.total agrees with its own lines: "
           f"{abs(recomputed - float(after['total'])) < 0.005}")
-    con.execute("DROP TRIGGER trg_inv_sync")
+    con.execute('DROP TRIGGER IF EXISTS "trg_inv_doc_sync"')
     con.commit()
 
     print("\n--- 3. the refresh: rebuild from scratch ---")
-    con.execute("DROP TABLE inv")
+    con.execute("DROP TABLE " + chr(34) + "inv_doc" + chr(34))
     con.commit()
     t0 = time.perf_counter()
     build(con)

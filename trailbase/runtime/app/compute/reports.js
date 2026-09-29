@@ -28,7 +28,7 @@ export function indexRefs(refs) {
     party: m(refs.parties),
     area: m(refs.areas),
     section: m(refs.sections),
-    category: m(refs.categories),
+    category: m(refs.companies),
     company: m(refs.companies),
     item: m(refs.items),
     booker: m(refs.bookers),

@@ -143,15 +143,22 @@
   // column onto a TrailBase link table.
   var PLAN = [
     { collection: "sections", api: "sections", fields: { name: text } },
-    // The legacy frontend shows `categories` as "Companies", and both `items.category` and the
-    // `company` arrays on parties/order_bookers reference *that one* collection — legacy has no
-    // separate `companies` table (verified against backend/p_data/data.db). The new schema,
-    // though, keeps two tables: `items.category` FKs to `categories`, while the party/booker link
-    // tables FK to `companies`. So one legacy company list is written to both (`mirrorApi`):
-    // `categories` keeps the item relation and the item-company reports working, and `companies`
-    // makes the party/booker links resolvable.
-    { collection: "categories", api: "categories", mirrorApi: "companies", fields: { name: text, deleted: flag } },
-    { collection: "companies", api: "companies", fields: { name: text, deleted: flag } },
+    // The legacy `categories` collection IS the company list, and it is written straight
+    // into the new `companies` table. There is nothing to mirror.
+    //
+    // The legacy frontend names that collection "categories" in the database but calls it
+    // "companies" everywhere a user meets it: the management nav entry is
+    // { text: "companies", path: "management/categories" }, paymentsbycompany reads
+    // `categories` into a variable called `companies`, the stock and difference report
+    // filters are labelled "Company", and "Create Supplier" inserts into it. The rows are
+    // business names (BAKE PARLOR, ZEESHAN PAPAR, NATIONAL RECIPIE), so `items.category`
+    // has always meant "which company owns this item".
+    //
+    // This step previously wrote the same 15 names into BOTH `categories` and `companies`
+    // under different ids, which left items resolving into one table and the party/booker
+    // company links into the other. migration U1790300400 retires `categories`;
+    // `items.category` now references `companies`.
+    { collection: "categories", api: "companies", fields: { name: text, deleted: flag } },
     { collection: "areas", api: "areas", fields: { name: text, section: { rel: "sections" }, deleted: flag } },
     { collection: "parties", api: "parties",
       fields: { name: text, type: { enum: "party_types" }, phone: text, address: text, area: { rel: "areas" }, deleted: flag },
@@ -160,7 +167,7 @@
       fields: { name: text, phone: text, deleted: flag },
       links: [{ api: "order_booker_companies", self: "order_booker", field: "company", other: "company", target: "companies" }] },
     { collection: "items", api: "items",
-      fields: { name: text, category: { rel: "categories" }, barcode: text, display_id: text, cost_price: num, sale_price: num, box_size_qty: num } },
+      fields: { name: text, category: { rel: "companies" }, barcode: text, display_id: text, cost_price: num, sale_price: num, box_size_qty: num } },
     { collection: "expenses", api: "expenses", fields: { name: text, description: text, amount: num, date: text } },
     { collection: "invoices", api: "invoices",
       fields: { type: { enum: "invoice_types" }, invoiceNo: num, party: { rel: "parties" }, booker: { rel: "order_bookers" }, dated: text, duedate: text, description: text, discount_1: num, discount_2: num, discount_rs: num, completed: flag, deleted: flag } },
@@ -445,7 +452,7 @@
       state.summary = {};
       for (var s = 0; s < PLAN.length; s++) {
         var step = PLAN[s];
-        state.summary[step.collection] = { read: 0, created: 0, failed: 0, links: 0, mirrored: 0, absent: false };
+      state.summary[step.collection] = { read: 0, created: 0, failed: 0, links: 0, absent: false };
         try {
           totals[step.collection] = await pb.count(step.collection);
           state.total += totals[step.collection];
@@ -461,14 +468,14 @@
       if (dryRun) log("info", "Total source records: " + int(state.total) + " (dry run: nothing is written).");
 
       var ids = {};
-      // Link targets resolve against the straight id map first, then a `categories -> companies`
-      // mirror map. The mirror keeps its own key (not `ids.companies`) so the later `companies`
-      // step, which resets its own id map, cannot clobber the mirrored category -> company ids.
+      // Link targets and `{rel: ...}` fields resolve against the TRAILBASE name -- "companies",
+      // "areas", "parties" -- so the id maps are keyed by `step.api`, not `step.collection`.
+      // For every step except `categories` the two are the same string, so this changes nothing
+      // for them; for `categories` it is the whole point, because the source collection is
+      // `categories` while the destination is `companies`.
       function resolveTarget(name, sourceId) {
         var direct = ids[name] && ids[name].get(sourceId);
-        if (direct) return direct;
-        var mirror = ids["mirror:" + name] && ids["mirror:" + name].get(sourceId);
-        return mirror || null;
+        return direct || null;
       }
       for (var p = 0; p < PLAN.length; p++) {
         if (state.stop) break;
@@ -476,20 +483,11 @@
         if (absent[step2.collection]) continue;
         state.phase = "migrate"; state.current = step2.collection; state.message = ""; render();
 
-        var idMap = (ids[step2.collection] = new Map()), pendingLinks = [], bodies = [], sourceIds = [];
-        // `mirrorApi` also writes each row to a second table under its own id map (see the PLAN
-        // comment on `categories`): the primary map feeds `items.category`, the mirror feeds the
-        // party/booker link tables.
-        if (step2.mirrorApi) ids["mirror:" + step2.mirrorApi] = new Map();
+        var idMap = (ids[step2.api] = new Map()), pendingLinks = [], bodies = [], sourceIds = [];
         var flush = async function () {
           if (!bodies.length) return;
           var b = bodies, si = sourceIds; bodies = []; sourceIds = [];
           await createBatch(tb, step2, b, si, idMap, stats);
-          if (step2.mirrorApi) {
-            var mStats = { created: 0, failed: 0 };
-            await createBatch(tb, { api: step2.mirrorApi, collection: step2.mirrorApi }, b, si, ids["mirror:" + step2.mirrorApi], mStats);
-            stats.mirrored += mStats.created;
-          }
         };
 
         try {
@@ -527,7 +525,6 @@
           }
         }
         log("info", step2.collection + ": read " + int(stats.read) + ", created " + int(stats.created) +
-          (stats.mirrored ? ", mirrored " + int(stats.mirrored) + " into " + step2.mirrorApi : "") +
           (step2.links ? ", links " + int(stats.links) : "") +
           ", failed " + int(stats.failed) + (dryRun ? " (dry run)" : "") + ".");
         render();

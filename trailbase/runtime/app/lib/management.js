@@ -20,12 +20,12 @@ export function sortRows(rows, sort) {
   return rows.slice().sort((a, b) => direction * compareText(a[key], b[key]));
 }
 
-const OPTION_SOURCES = ["sections", "areas", "categories", "companies", "party_types", "invoice_types", "payment_types"];
+const OPTION_SOURCES = ["sections", "areas", "companies", "party_types", "invoice_types", "payment_types"];
 
 const refLists = (refs) => ({
   sections: refs.sections,
   areas: refs.areas,
-  categories: refs.categories,
+  companies: refs.companies,
   companies: refs.companies,
   party_types: refs.partyTypes,
   invoice_types: refs.invoiceTypes,
