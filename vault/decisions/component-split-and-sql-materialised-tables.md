@@ -64,6 +64,16 @@ This is what keeps `reports.no_precomputation` satisfied while still removing th
 trigger-maintained table cannot disagree with its base table, whereas TTL-based or timer-based
 refresh reintroduces exactly the staleness that constraint exists to forbid.
 
+**Tier 2 is now realised, once, for invoices.** `inv_doc` holds one document per invoice,
+maintained by 14 triggers in the same transaction as the write, rebuildable on demand via the
+durable job queue. The design, the measurements, and the one-definition enforcement are in
+[[invoice-document-write-through-and-rebuild]]; the harness that defends it is
+[[invoice-doc-sync]]. Two things there are the general case rather than the invoice case and are
+worth carrying to the next tier-2 table: a trigger body is a *copy* of the build statement
+(SQLite cannot call one from a trigger), so the copies are machine-checked against the original
+rather than trusted; and a rename on a denormalised field re-derives the affected documents
+rather than patching the field, because a patch is a second copy of the document's field list.
+
 - A frontend-triggered invalidation may refresh **Tier 3 only**. `service.invalidate()` dropping
   Tier 2 synchronously after every management write — today's behaviour — is retired.
 - Refresh **priority** (get the required data first, let the rest catch up) applies to Tier 3 and is

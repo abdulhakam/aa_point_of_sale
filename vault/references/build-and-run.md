@@ -209,7 +209,7 @@ The logins each system needs are in the `credentials/` collection:
 |---|---|---|
 | PocketBase (`backend/`) | production | `credentials/production-pocketbase.md` |
 | Next.js (`frontend/`) | production | `credentials/production-nextjs.md` |
-| TrailBase (`trailbase/`) | experimental | [[experimental-trailbase]] |
+| TrailBase (`trailbase/`) | experimental | [[trailbase]] |
 | Guest app (`trailbase/runtime/`) | experimental | — (no separate secret; uses TrailBase auth) |
 
 They are plaintext and tracked; see `credentials/README.md` for the warning.

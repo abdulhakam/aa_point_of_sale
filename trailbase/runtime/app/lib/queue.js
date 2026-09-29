@@ -40,6 +40,39 @@
         return { steps: results.length, sum: results.reduce((n, r) => n + (Number(r?.value) || 0), 0) };
       },
     },
+
+    // Rebuild the materialised documents (tb-0027). One step, because a rebuild is a single
+    // statement: splitting it would mean two steps that could each fail with the cache half-built.
+    //
+    // On the queue rather than inline in the request because a full rebuild is seconds of SQLite
+    // work against a guest call deadline of about 20 s: run inline, the rebuild finishes and the
+    // HTTP response is lost to the deadline. The route enqueues and returns a job id; the minutely
+    // poller runs it, and `?reconcile=1` runs it in the same call for tests and small depots.
+    //
+    // The one step records its outcome under a UNIQUE key, so a redelivery after a crash cannot
+    // rebuild twice. `rebuild()` is idempotent anyway, but a duplicate that costs seconds is
+    // exactly what this path exists to avoid.
+    "invdoc.rebuild": {
+      steps(input) {
+        return [{ name: "rebuild", input: { kind: input?.kind || "invoice.build", reason: input?.reason || "manual" } }];
+      },
+      async runStep(step, ctx) {
+        if (!globalThis.__AA_INVDOC__) {
+          const source = await fs.readFile("/app/lib/invoice-doc.js");
+          (0, eval)(source);
+        }
+        const result = await globalThis.__AA_INVDOC__.rebuild({
+          kind: step.input?.kind,
+          reason: step.input?.reason,
+        });
+        if (!result.ok) throw new Error(result.error || "rebuild failed");
+        await ctx.record(JSON.stringify({ documents: result.documents, durationMs: result.durationMs }));
+        return { documents: result.documents, durationMs: result.durationMs, reason: result.reason };
+      },
+      reduce(results) {
+        return { rebuilt: results.length, documents: results[0]?.documents ?? 0, durationMs: results[0]?.durationMs ?? 0 };
+      },
+    },
   };
 
   async function enqueue(db, name, input) {

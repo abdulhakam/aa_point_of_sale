@@ -1,33 +1,48 @@
 ---
-title: Invoice document prototype — exact money parity with legacy, trigger maintenance, and a 1.9 s refresh
+title: Invoice document — exact money parity with legacy, and the measurements the shipped design rests on
 type: note
 status: active
 created: 2026-09-29
 system: new
+updated: 2026-09-29
 tags: [invoices, document-model, json, parity, triggers, materialised, refresh, benchmark]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[document-model-bench-2026-09-29]]", "[[component-split-and-sql-materialised-tables]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[money-is-2dp-everywhere]]", "[[report-sql-filters-on-text-enums-returns-nothing]]", "[[api-contract-trailbase]]"]
+related_to: ["[[document-model-bench-2026-09-29]]", "[[component-split-and-sql-materialised-tables]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[tb-0027-materialised-invoice-documents]]", "[[invoice-document-write-through-and-rebuild]]", "[[invoice-doc-sync]]", "[[money-is-2dp-everywhere]]", "[[report-sql-filters-on-text-enums-returns-nothing]]", "[[api-contract-trailbase]]"]
 ---
 
-# Invoice document prototype — exact money parity with legacy, trigger maintenance, and a 1.9 s refresh
+# Invoice document — exact money parity with legacy, and the measurements the shipped design rests on
 
 Built and measured by `python trailbase/tools/invoice-document-parity.py`. It copies
 `traildepot/data/main.db` to a scratch file (**the live depot is never written**), builds one
 self-contained JSON document per invoice with `STORED` generated columns, and diffs every money figure
 against PocketBase.
 
+> **SHIPPED (2026-09-29).** The prototype in this note is now the real thing. The build statement
+> lives in `U1790300500__invoice_document_sync.sql` and is maintained by 14 triggers; this harness
+> reads its SQL out of the migration rather than restating it, and section 2 below now installs the
+> migration's own triggers instead of deriving one. The decisions and the full measurement set are
+> in [[invoice-document-write-through-and-rebuild]]; the shipped checks are in [[invoice-doc-sync]].
+> Read those two for the current state — this note keeps the evidence and the reasoning.
+>
+> Two numbers in the body are **superseded** and are marked where they appear: the "~1.9 s
+> refresh" and the "0.89 ms" per-line figure were measured on an idle machine before the
+> document carried names, and the ranges that replace them are in the decision note.
+
 ## 1. Money parity: exact
 
-Join key is `(invoice type code, invoiceNo)` — verified unique in **both** databases, 8,927 rows each,
-no key present on only one side.
+Join key is `(invoice type code, invoiceNo)` — verified unique in **both** databases, no key
+present on only one side.
 
 | compared | rows | mismatches |
 |---|---|---|
-| `invoice_view.total` | 8,927 | **0** |
-| `invoice_view.unrounded_total` | 8,927 | **0** |
-| `invoice_view.final_total` | 8,927 | **0** |
+| `invoice_view.total` | 8,935 | **0** |
+| `invoice_view.unrounded_total` | 8,935 | **0** |
+| `invoice_view.final_total` | 8,935 | **0** |
 | `transaction_view.total` (per line) | 23,413 | **0** — worst delta `0.000e+00` |
 | `payments_view.amount` (COALESCE rule) | 26,526 | **0** |
+
+(8,935 rather than the 8,927 recorded when this was first run: the invoice-entry slice has added
+test invoices since, in the guest depot. The parity is over every key present on both sides.)
 
 Lines are compared **order-independently** (sort both sides' multisets). Guest ids are `uuid_v7` and
 legacy ids are 15-char text, so there is no line-level join key, and the document preserves insertion
@@ -43,6 +58,12 @@ behaviour, and what the prototype should do — costs **0.89 ms** for the worst-
 The narrow figure understated the work and the number to use from here on is the 0.89 ms one.
 
 Measured, worst-case invoice in the depot (36 lines), all figures best of 5:
+
+> **Superseded.** These are prototype numbers for a document without names, on an idle machine.
+> The shipped ranges — 0.9–2.9 ms for a line insert, 0.1–2.0 ms for a line update, and the fact
+> that the cost scales with the size of the invoice — are in
+> [[invoice-document-write-through-and-rebuild]]. The 237 ms figure, the point of the table, is
+> unchanged.
 
 | | ms |
 |---|---|
@@ -89,7 +110,14 @@ A substitution written for the unaliased form silently missed the aliased `pjson
 that all three were scoped is what caught it. **The trigger variant must be generated from the build
 SQL and asserted to be scoped — never hand-copied.**
 
-## 3. Refresh: yes, ~1.9 s
+## 3. Refresh: ~1.9 s as a prototype, 3–18 s as shipped
+
+> **Superseded.** Measured on an idle machine, and on a document without names. The shipped
+> document is 16.9 MB at 1.9 KB each rather than 11.0 MB at 1.3 KB, and the machine was busier:
+> 3–18 s depending on shape. The important consequence is not the number, it is that **the slow
+> end crosses the guest's ~20 s call deadline**, so the rebuild is a job on the durable queue and
+> not a statement inside a request. Run inline, it completes the work and then loses the HTTP
+> response to the deadline — which is exactly what happened when it was first tried.
 
 | step | cost |
 |---|---|
@@ -124,13 +152,15 @@ cash memo.
 - `dated` is blank on **21 of 8,927** invoices in the guest, where legacy had a value. They fall back
   to `created`, which is the import timestamp — so an invoice date field would show 2026 for a 2024
   invoice ([[guest-depot-created-is-import-time]]).
-- Document payload is **11.0 MB, 1.3 KB per invoice** (slightly larger than the 5.5 MB shape-only
-  bench, because these carry `cost_price`, `scheme`, `unrounded_total` and payment descriptions).
-  The document replaces three `mview` entries — `invoiceView` 3.75 MB, `transactionsReport`
-  13.43 MB, `paymentsView` 13.41 MB — so **30.6 MB of JSON becomes 11.0 MB** of indexed tables.
-  `mview` is 82.2 MB in total ([[table-audit-2026-09-29]]). It does **not** cover
-  `paymentsInvoicesReport` (16.66 MB), which is a cross-invoice company split and needs the
-  aggregate tier rather than documents.
+- Document payload is **11.0 MB, 1.3 KB per invoice** as a prototype (slightly larger than the
+  5.5 MB shape-only bench, because these carry `cost_price`, `scheme`, `unrounded_total` and payment
+  descriptions). **Shipped it is 16.9 MB at 1.9 KB each**, because the document now also carries
+  party/item/booker/type names, phone, duedate, description, and each payment's type and party.
+  That is the cost of "a read needs no join at all", and it is still far better than the
+  `mview` entries it would replace — `invoiceView` 3.75 MB, `transactionsReport` 13.43 MB,
+  `paymentsView` 13.41 MB. It does **not** cover `paymentsInvoicesReport` (16.66 MB), which is a
+  cross-invoice company split and needs the aggregate tier rather than documents
+  ([[table-audit-2026-09-29]]).
 - `readable_id` as a `STORED` generated column works and is indexable, which is the natural home for
   the 15-char human-readable id.
 

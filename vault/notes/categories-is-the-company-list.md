@@ -6,7 +6,7 @@ created: 2026-09-29
 system: legacy
 tags: [legacy, frontend, categories, companies, schema, naming, drift]
 belongs_to: "[[data-model]]"
-related_to: ["[[table-audit-2026-09-29]]", "[[tb-0014-point-company-fields-at-companies]]", "[[route-map]]", "[[frontend]]", "[[backend]]", "[[production-nextjs]]"]
+related_to: ["[[table-audit-2026-09-29]]", "[[tb-0014-point-company-fields-at-companies]]", "[[route-map]]", "[[frontend]]", "[[backend]]", "[[frontend]]"]
 ---
 
 # "categories" IS the company list in the legacy system

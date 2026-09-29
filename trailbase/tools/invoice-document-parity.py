@@ -52,19 +52,31 @@ def scratch_copy():
 # --------------------------------------------------------------------------
 # 1. build the document table
 # --------------------------------------------------------------------------
+# U1790300500 is the migration that owns the build statement now: U1790300300 created
+# `inv_doc` and its backfill ran against a depot that had no invoices yet, so the table
+# shipped empty. U1790300500 is the one that populates it, adds the denormalised names,
+# and defines the triggers -- so it is the one whose SQL has to stay pinned to PocketBase.
 MIGRATION = os.path.join(REPO, "trailbase", "migrations", "main",
-                        "U1790300300__materialised_invoice_documents.sql")
+                        "U1790300500__invoice_document_sync.sql")
 
 
 def read_migration_sql():
-    """The backfill is read OUT OF THE MIGRATION, not restated here.
+    """The build is read OUT OF THE MIGRATION, not restated here.
 
     The money arithmetic exists in exactly one place in the repository, and the
     migration is that place. Restating it in this harness would create the second
     copy the whole design exists to avoid.
+
+    U1790300500 contains the statement three times on purpose: as a commented block a
+    reader can follow, as the text stored in `materialised_source` for the runtime
+    rebuild to execute, and as the executable statement in section 4. This takes the
+    executable one -- the statement immediately after `DELETE FROM "inv_doc";` -- because
+    the other two are the same text and only this one is what actually ran.
+    (tools/invoice-doc-check.mjs asserts all three are identical.)
     """
     src = open(MIGRATION, encoding="utf-8").read()
-    start = src.index("WITH lt AS (")
+    anchor = src.index('DELETE FROM "inv_doc";') + len('DELETE FROM "inv_doc";')
+    start = src.index("WITH lt AS (", anchor)
     end = src.index('WHERE i."deleted" = 0;', start) + len('WHERE i."deleted" = 0;')
     return src, src[start:end]
 
@@ -212,67 +224,37 @@ def diff_payments(con, pb):
 # --------------------------------------------------------------------------
 # 3. the trigger path
 #
-# The trigger is GENERATED from the migration's backfill, never hand-written.
-# Two reasons, both learned the hard way:
+# The triggers are read OUT OF THE MIGRATION, not derived here.
 #
-#   1. One definition. A hand-written trigger is a SECOND copy of the money
-#      arithmetic, and two copies drift silently.
-#   2. Scoping. The backfill aggregates the WHOLE depot, which is right for a
-#      full rebuild and catastrophic in a trigger: 23,413 transactions and 26,526
-#      payments re-aggregated on every line, 237 ms per line, 8.7 s for a 36-line
-#      invoice. Scoping it to the affected invoice is 0.89 ms. THREE separate
-#      scans need scoping, and two carry no WHERE to extend because `payments` has
-#      no deleted column -- so a substitution written for one form silently misses
-#      the other. Hence the assertions.
+# This harness used to derive a trigger of its own from the backfill, and that was right
+# when there were no triggers in the repository to read. There are now fourteen, in
+# U1790300500, and they are the thing under test -- so deriving a fifteenth here would
+# test a copy and leave the shipped one untested, which is the exact failure this whole
+# design exists to prevent.
+#
+# Deriving the scoping here also needed its own substitution table, and that table went
+# stale the moment the build statement gained a `LEFT JOIN items`: the substitutions are
+# written against specific FROM text, so a changed FROM silently stops matching. The
+# substitutions now live in exactly one place, the check tool, and this file has none.
+#
+# The scoping claim itself -- that a per-invoice trigger is a per-invoice cost and not a
+# whole-depot one -- is asserted there, not here.
 # --------------------------------------------------------------------------
-# The migration's `paid` and `pjson` CTEs share the identical FROM text, so one
-# replacement scopes both. `payments` carries no deleted column, which is why these
-# clauses have no WHERE to extend and the filter has to be added whole.
-SCOPINGS = [
-    ('FROM "transactions" t WHERE t."deleted" = 0',
-     'FROM "transactions" t WHERE t."deleted" = 0 AND t."invoice" = NEW."invoice"'),
-    ('FROM "payments" GROUP BY "invoice"',
-     'FROM "payments" WHERE "invoice" = NEW."invoice" GROUP BY "invoice"'),
-    # `sums` and the outer SELECT also walk `invoices`, and BOTH need the filter.
-    # Leaving either unscoped makes the trigger's sub-select return a row for all
-    # 8,927 invoices, and SQLite takes an arbitrary one -- which is an invoice with
-    # no lines, so the document silently becomes total 0 with 0 lines.
-    ('FROM "invoices" i LEFT JOIN lt ON lt.inv = i."id"\n  WHERE i."deleted" = 0 GROUP BY i."id"',
-     'FROM "invoices" i LEFT JOIN lt ON lt.inv = i."id"\n'
-     '  WHERE i."id" = NEW."invoice" AND i."deleted" = 0 GROUP BY i."id"'),
-    ('WHERE i."deleted" = 0;', 'WHERE i."id" = NEW."invoice" AND i."deleted" = 0;'),
-]
-SCOPED_PROBES = ('t."invoice" = NEW."invoice"', '"invoice" = NEW."invoice"',
-                 'i."id" = NEW."invoice" AND i."deleted" = 0 GROUP BY i."id"',
-                 'WHERE i."id" = NEW."invoice" AND i."deleted" = 0;')
-
-
-def build_trigger(event="INSERT"):
-    """Derive the per-invoice trigger body from the migration's own backfill.
-
-    Scoping is applied to the WHOLE statement before it is split, because the
-    filters live in both halves -- the `sums` CTE and the outer SELECT each walk
-    `invoices`, and both need the invoice filter.
-    """
-    scoped = BUILD_DOC
-    for src, dst in SCOPINGS:
-        if src not in scoped:
-            raise AssertionError(f"scoping substitution missed: {src!r}")
-        scoped = scoped.replace(src, dst)
-    for probe in SCOPED_PROBES:
-        if probe not in scoped:
-            raise AssertionError(f"trigger body is NOT scoped: missing {probe}")
-    ctes = scoped.split('INSERT INTO "inv_doc"')[0]
-    # take the json_object(...) expression only -- the backfill's SELECT also emits
-    # i."id", and a one-column SET target cannot take a two-column sub-select. The
-    # SELECT keyword has to be kept: the CTEs need one after them.
-    head = 'SELECT i."id",'
-    at = scoped.index(head) + len(head)
-    select = "SELECT\n  " + scoped[at:].strip().rstrip(";").strip()
-    return (f'CREATE TRIGGER trg_inv_doc_sync AFTER {event} ON "transactions" '
-            f'FOR EACH ROW BEGIN\n'
-            f'  UPDATE "inv_doc" SET "doc" = ({ctes}\n{select}) WHERE "id" = NEW."invoice";\n'
-            f'END;')
+def read_triggers():
+    """The trigger statements, verbatim, out of the migration."""
+    src = MIGRATION_TEXT
+    out = []
+    i = 0
+    while True:
+        i = src.find('CREATE TRIGGER "inv_doc', i)
+        if i < 0:
+            return out
+        j = src.index("\nEND;", i) + len("\nEND;")
+        stmt = src[i:j]
+        # the commented section 2 does not contain CREATE TRIGGER, so this is the real one
+        assert not stmt.lstrip().startswith("--"), stmt[:80]
+        out.append(stmt)
+        i = j
 
 
 def test_trigger(con):
@@ -348,8 +330,20 @@ def main():
     print(f"  payments (COALESCE rule): {n}   mismatches: {bad}")
 
     print("\n--- 2. the trigger path: is the document current after a write? ---")
-    con.execute(build_trigger("INSERT"))
+    triggers = read_triggers()
+    # The scratch copy came from a depot that already has the triggers, and dropping `inv_doc`
+    # does NOT drop triggers that merely reference it -- so they are still installed. Drop them
+    # first, then install the migration's own text. Testing what is already in the database
+    # would be testing a copy; the point is to test the committed file.
+    for (name,) in con.execute("SELECT name FROM sqlite_master WHERE type='trigger'"
+                               " AND name LIKE 'inv_doc%'").fetchall():
+        con.execute('DROP TRIGGER "%s"' % name)
+    for stmt in triggers:
+        con.execute(stmt)
     con.commit()
+    installed = con.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='trigger'"
+                            " AND name LIKE 'inv_doc%'").fetchone()[0]
+    print(f"  installed {installed} trigger(s) read from the migration")
     before, after, ms = test_trigger(con)
     print(f"  a line insert + trigger took {ms:.1f} ms")
     print(f"  total      {before['total']}  ->  {after['total']}")
@@ -358,7 +352,20 @@ def main():
     print(f"  sum of embedded line totals = {recomputed}")
     print(f"  document.total agrees with its own lines: "
           f"{abs(recomputed - float(after['total'])) < 0.005}")
-    con.execute('DROP TRIGGER IF EXISTS "trg_inv_doc_sync"')
+    # a rename must reach the documents that quote the old name
+    item = con.execute('SELECT "id", "name" FROM "items" LIMIT 1').fetchone()
+    worst = con.execute('SELECT "item", COUNT(DISTINCT "invoice") c FROM "transactions"'
+                        ' WHERE "deleted"=0 GROUP BY "item" ORDER BY c DESC LIMIT 1').fetchone()
+    affected = [r[0] for r in con.execute('SELECT DISTINCT "invoice" FROM "transactions"'
+                                          ' WHERE "item"=? AND "deleted"=0', (worst[0],))]
+    con.execute('UPDATE "items" SET "name"=? WHERE "id"=?', ("RENAMED", worst[0]))
+    con.commit()
+    stale = 0
+    for i in affected:
+        d = json.loads(con.execute('SELECT doc FROM "inv_doc" WHERE "id"=?', (i,)).fetchone()[0])
+        stale += sum(1 for l in d["lines"] if l["item"] == worst[0].hex() and l["item_name"] != "RENAMED")
+    print(f"  item rename across {len(affected)} documents left {stale} stale line name(s)")
+    con.execute('UPDATE "items" SET "name"=? WHERE "id"=?', (item[1], item[0]))
     con.commit()
 
     print("\n--- 3. the refresh: rebuild from scratch ---")

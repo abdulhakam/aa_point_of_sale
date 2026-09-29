@@ -6,7 +6,7 @@ created: 2026-09-29
 system: new
 tags: [benchmark, performance, browser, reports, parity, production]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[report-performance-baseline]]", "[[new-system-report-timings]]", "[[guest-vs-legacy-report-performance]]", "[[reports-parity-and-e2e-2026-09-29]]", "[[trailbase-guest-cpu-js-limits]]", "[[guest-depot-created-is-import-time]]", "[[production-nextjs]]", "[[report-logic-stays-runtime-file-based]]", "[[reports-and-ledgers]]"]
+related_to: ["[[report-performance-baseline]]", "[[new-system-report-timings]]", "[[guest-vs-legacy-report-performance]]", "[[reports-parity-and-e2e-2026-09-29]]", "[[trailbase-guest-cpu-js-limits]]", "[[guest-depot-created-is-import-time]]", "[[frontend]]", "[[report-logic-stays-runtime-file-based]]", "[[reports-and-ledgers]]"]
 ---
 
 # Browser-driven benchmark 2026-09-29 — production system vs the new system on real data
@@ -138,4 +138,4 @@ without opening them. Corrected in [[route-map]].
 
 - [[report-performance-baseline]] — the server-side baseline these numbers sit against.
 - [[new-system-report-timings]] — the earlier 2026-09-27 timings.
-- [[production-nextjs]] — the system benchmarked on `:3000`.
+- [[frontend]] — the system benchmarked on `:3000`.

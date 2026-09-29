@@ -70,7 +70,7 @@ screenshot and `.snapshot.yml` the accessibility/DOM snapshot where one was take
 
 1. Started the legacy stack: `backend\pocketbase.exe serve --dev` (`:8090`) then `npm run dev`
    in `frontend/` (`:3000`) — see [[build-and-run]].
-2. Signed in at `/auth` with the production app account ([[production-nextjs]]); the browser
+2. Signed in at `/auth` with the production app account ([[frontend]]); the browser
    session cookies then carried the captures.
 3. Walked each route with Chrome DevTools (a Playwright/DevTools browser driven over MCP),
    waited for the tables to load, and saved one screenshot per route, plus an
