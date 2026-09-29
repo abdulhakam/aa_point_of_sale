@@ -45,6 +45,7 @@ not yet the legacy look. Step 3 is not started.
 [ ] 7. Direct-shift the legacy UI onto the guest          -> [[tb-0023-direct-shift-legacy-ui-to-guest]]
 [ ] 7a. Invoice / payment / inventory screens + mobile   -> [[tb-0028-guest-transactional-screens-and-mobile]] (done 2026-09-29)
 [ ] 8. Build invoices / cash memos / printing on the guest -> [[tb-0021-invoices-cashmemos-printing]]
+[x] 8a. Invoice lifecycle, spreadsheet grid, standalone document -> [[guest-invoice-lifecycle]] (done 2026-09-29)
 [x] 9. Verify and finish the guest v1 (PocketBase) import  -> done 2026-09-29, 60,245/60,245, sums match
 [ ] 10. Decide the cutover shape                          -> [[pos-0028-decide-cutover-plan]]
 [ ] 11. Repoint or retire the legacy Next.js client       -> [[tb-0012-wire-nextjs-frontend-to-trailbase]]
@@ -221,9 +222,10 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | [[tb-0018-port-app-host-on-runtime-js]] | port the app host (reports 14/14 parity; management/invoices left) |
 | [[tb-0019-guest-jobs-queue]] | durable in-process job queue — done |
 | [[tb-0020-guest-fingerprint-refresh]] | fingerprint-based incremental data refresh — done |
-| [[tb-0021-invoices-cashmemos-printing]] | invoices / cash memos / printing — entry + payments screens done 2026-09-29; printing, cash memo and expenses not built |
+| [[tb-0021-invoices-cashmemos-printing]] | invoices / cash memos / printing — entry, payments, lifecycle and grid done 2026-09-29; printing, cash memo and expenses not built |
 | [[tb-0022-move-reports-to-sql]] | move report arithmetic into runtime SQL files — in progress |
 | [[tb-0023-direct-shift-legacy-ui-to-guest]] | make the guest UI match legacy, screen for screen |
+| [[guest-invoice-lifecycle]] | invoice lifecycle, spreadsheet grid, standalone document — done 2026-09-29 |
 | [[tb-0028-guest-transactional-screens-and-mobile]] | invoice / payment / inventory screens + mobile layout — done 2026-09-29 |
 | [[pos-0027-migrate-production-data-to-trailbase]] | the actual data migration |
 | [[pos-0028-decide-cutover-plan]] | repoint-the-client vs retire-the-client |
