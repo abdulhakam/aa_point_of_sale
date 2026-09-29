@@ -153,6 +153,30 @@
     });
   }
 
+  /**
+   * The invoice line editor: choosing an item fills the price from the item's own, and a carton
+   * size offers the "whole cartons" shortcut. Purely a convenience — the fields stay editable, so
+   * the form still works with this file absent.
+   */
+  function enhanceLineEditor() {
+    document.querySelectorAll('form select[name="item"]').forEach(function (select) {
+      var form = select.closest("form");
+      if (!form) return;
+      var price = form.querySelector('input[name="price"]');
+      var qty = form.querySelector('input[name="qty"]');
+      var apply = function () {
+        var option = select.options[select.selectedIndex];
+        if (!option || !option.dataset.price || !price) return;
+        if (!price.value || Number(price.value) === 0) price.value = option.dataset.price;
+        if (qty && option.dataset.box && (!qty.value || Number(qty.value) === 1)) {
+          qty.dataset.suggested = option.dataset.box;
+        }
+      };
+      select.addEventListener("change", apply);
+      if (qty && qty.dataset.suggested) qty.value = qty.dataset.suggested;
+    });
+  }
+
   function init() {
     tick();
     setInterval(tick, 30000);
@@ -161,6 +185,7 @@
     enhanceConfirm();
     enhanceSelects();
     enhanceTableFilter();
+    enhanceLineEditor();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

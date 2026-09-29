@@ -1,11 +1,16 @@
-{% macro simple(columns, rows) -%}
-<table class="data">
+{# A report/data table. `mobile` is "cards" (each cell renders as its own labelled row below
+   768px) or "scroll" (the grid is kept and scrolls sideways) — see the vault decision
+   `mobile-layout-is-additive-to-the-legacy-look`. Every <td> carries its column label in
+   `data-label`, which is what the card layout prints in front of the value. `lead` marks the
+   columns that are the row's identity (an item or party name) and get a full-width line. #}
+{% macro simple(columns, rows, mobile) -%}
+<table class="data"{% if mobile %} data-mobile="{{ mobile }}"{% endif %}>
 <thead><tr>
 {% for c in columns %}<th class="{{ c.cls }}">{{ c.label }}</th>{% endfor %}
 </tr></thead>
 <tbody>
 {% for r in rows -%}
-<tr class="{{ r.tone }}">{% for c in columns %}<td class="{{ c.cls }}">{{ r[c.key] }}</td>{% endfor %}</tr>
+<tr class="{{ r.tone }}">{% for c in columns %}<td class="{{ c.cls }}" data-label="{{ c.label }}"{% if c.lead %} data-lead{% endif %}>{{ r[c.key] }}</td>{% endfor %}</tr>
 {% else -%}
 <tr><td class="empty" colspan="{{ columns|length }}">No data for the selected filters.</td></tr>
 {% endfor -%}

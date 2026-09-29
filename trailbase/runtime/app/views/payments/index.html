@@ -1,0 +1,70 @@
+{% extends 'layout.html' %}
+{% block body %}
+<h1 class="page-title">Payments</h1>
+
+<div class="pagebar">
+  <a class="btn primary" href="/payments/new">+ New Payment</a>
+  <a class="btn" href="/reports/outstanding">Outstanding report</a>
+</div>
+
+<form class="filters" method="get" action="/payments">
+  <label class="field"><span>Type</span>
+    <select name="type">
+      <option value="">All</option>
+      {% for t in types %}<option value="{{ t.code }}"{% if selectedType == t.code %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field"><span>From</span><input type="date" name="from" value="{{ filters.from }}"></label>
+  <label class="field"><span>To</span><input type="date" name="to" value="{{ filters.to }}"></label>
+  <label class="field"><span>Party</span>
+    <select name="party" data-searchable>
+      <option value="">All</option>
+      {% for p in parties %}<option value="{{ p.id }}"{% if filters.party == p.id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field check"><input type="checkbox" name="standalone"{% if filters.standalone %} checked{% endif %}> <span>DA only (no invoice)</span></label>
+  <label class="field check"><input type="checkbox" name="open"{% if filters.open %} checked{% endif %}> <span>Open entries only</span></label>
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">APPLY</button>
+    <a class="btn" href="/payments">RESET</a>
+  </div>
+</form>
+
+<section class="card">
+  <div class="list-toolbar">
+    <h2>Payments ({{ rows|length }})</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-value">{{ totals.recievedText }}</div><div class="stat-label">Recieved</div></div>
+      <div class="stat"><div class="stat-value">{{ totals.sentText }}</div><div class="stat-label">Sent</div></div>
+      <div class="stat"><div class="stat-value">{{ totals.netText }}</div><div class="stat-label">Net</div></div>
+    </div>
+  </div>
+  <div class="tablewrap">
+  <table class="data" data-mobile="cards">
+    <thead><tr>
+      <th>Date</th><th>Type</th><th>Invoice</th><th>Party / Paid to</th>
+      <th>Description</th><th class="right">Amount</th><th class="right">Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td data-label="Date" data-lead>{{ r.date }}</td>
+        <td data-label="Type">{{ r.typeLabel }}</td>
+        <td data-label="Invoice">{% if r.standalone %}<span class="muted">DA</span>{% else %}<a href="/invoices/{{ r.invoice }}">{{ r.invoiceNo }}</a>{% endif %}</td>
+        <td data-label="Party">{{ r.partyName }}{% if r.paidTo %} → {{ r.paidTo }}{% endif %}</td>
+        <td data-label="Description">{{ r.description }}</td>
+        <td class="right" data-label="Amount">{{ r.amountText }}</td>
+        <td class="row-actions" data-label="">
+          <form method="post" action="/payments/{{ r.id }}/delete" data-confirm="Delete this payment?">
+            <button class="icon-del" type="submit" title="Delete">×</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="7">No payments match these filters.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

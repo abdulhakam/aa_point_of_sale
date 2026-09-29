@@ -334,6 +334,160 @@ button.job[aria-busy="true"] { cursor: progress; }
 .form-actions { flex-basis: 100%; display: flex; gap: 8px; margin-top: 4px; }
 .card.form-collapsed .entity-form { display: none; }
 
+/* ------------------------------------------------------------------ mobile */
+/* Additive only: every rule here is inside a `max-width: 768px` screen query, so above the
+   breakpoint the guest renders exactly as the legacy UI. See the vault decision
+   `mobile-layout-is-additive-to-the-legacy-look`. */
+
+@media screen and (max-width: 768px) {
+  :root { --header-h: 48px; --nav-w: 0px; }
+
+  body { font-size: 15px; }
+
+  /* The 80px icon rail becomes a bottom bar: it is the only navigation a thumb can reach, and it
+     stops competing with the browser's own top bar. */
+  .appbody { flex-direction: column; }
+  .navbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    width: auto;
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    border-right: 0;
+    border-top: 1px solid var(--gray-3);
+    box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.08);
+    padding: 2px 0 calc(2px + env(safe-area-inset-bottom, 0px));
+    background: #ffffff;
+    z-index: 30;
+  }
+  .navbar-main, .navbar-bottom { flex: 1; flex-direction: row; justify-content: space-around; align-items: center; margin-top: 0; }
+  .nav-link { width: 44px; height: 44px; }
+  .nav-link.active, .nav-link.active:hover { background: transparent; box-shadow: inset 0 -2px 0 var(--blue-6); border-radius: 0; }
+  /* Ten icons do not fit a 360px bar at 44px, so the power-user group (Pages, Plugins, the refresh
+     dot, Logout) moves into the header's right side, where a thumb does not need it. */
+  .navbar-bottom {
+    position: fixed;
+    top: 6px;
+    right: 8px;
+    flex: 0 0 auto;
+    flex-direction: row;
+    gap: 2px;
+    z-index: 40;
+  }
+  .navbar-bottom .nav-link { width: 34px; height: 34px; }
+  /* The header carries that fixed group, so it has to stay put while the page scrolls. */
+  .header { position: sticky; top: 0; z-index: 30; background: #fff; }
+  /* The clock would collide with that group on a 360px screen, and the phone's own status bar
+     already shows the time. */
+  .header-clock { display: none; }
+  .brand { font-size: 1.125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Room for the fixed bottom bar. */
+  .main { padding: 12px 12px 80px; }
+  .main-anon { padding: 12px 12px 24px; }
+  .page-title { font-size: 1.5rem; margin-bottom: 12px; }
+  .card { padding: 12px; margin-bottom: 12px; }
+
+  /* Tiles: two per row, full-bleed tap targets. */
+  .tiles { gap: 10px; }
+  .tile { width: 8em; height: 8em; font-size: 0.9em; }
+  .tile:hover { transform: none; box-shadow: none; }
+
+  /* Filters stack, one field per row, and every control is thumb-sized. */
+  .filters { flex-direction: column; align-items: stretch; gap: 10px; }
+  .filters .field { width: 100%; }
+  /* A checkbox keeps its label beside it — the column rule above would stack the two. */
+  .filters .field.check, .entity-form .field.check { flex-direction: row; align-items: center; gap: 8px; }
+  /* The full-width rule above would stretch a checkbox across the row and push its label away. */
+  .field.check input[type="checkbox"] { width: 24px; height: 24px; flex: 0 0 24px; min-height: 24px; }
+  .field input, .field select { width: 100%; min-width: 0; height: 44px; font-size: 1rem; }
+  .field > span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+  .filter-actions { margin-left: 0; width: 100%; }
+  .filter-actions .btn { flex: 1; }
+
+  /* 44px minimum touch target everywhere a control is tappable. */
+  .btn { height: 44px; font-size: 0.9rem; padding: 0 14px; }
+  .btn.small { height: 40px; }
+  .row-actions a, .row-actions button { padding: 10px; }
+  .select-filter { height: 40px; font-size: 0.9rem; }
+  .entity-form { flex-direction: column; align-items: stretch; }
+  .entity-form .field { width: 100%; }
+  .form-actions .btn { flex: 1; }
+
+  /* Tables: cards, driven by the `data-label` each cell carries. A table marked
+     `data-mobile="scroll"` keeps its grid and scrolls sideways instead — a 14-column profit
+     report reads better scrolled than as fourteen stacked cards. */
+  .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.data[data-mobile="cards"], table.data[data-mobile="cards"] tbody,
+  table.data[data-mobile="cards"] tr, table.data[data-mobile="cards"] td { display: block; width: 100%; }
+  table.data[data-mobile="cards"] thead { display: none; }
+  table.data[data-mobile="cards"] tr {
+    border: 1px solid var(--gray-3);
+    border-radius: var(--radius);
+    margin: 0 0 8px;
+    padding: 2px 0;
+    background: #fff;
+  }
+  table.data[data-mobile="cards"] td {
+    border: 0;
+    border-bottom: 1px solid var(--gray-1);
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    text-align: right;
+    font-size: 0.85rem;
+  }
+  table.data[data-mobile="cards"] tr td:last-child { border-bottom: 0; }
+  table.data[data-mobile="cards"] td::before {
+    content: attr(data-label);
+    flex: 0 0 42%;
+    text-align: left;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  table.data[data-mobile="cards"] td.empty { display: block; text-align: center; }
+  table.data[data-mobile="cards"] td.empty::before { content: none; }
+  /* A cell that already says everything (an item name) keeps full width. */
+  table.data[data-mobile="cards"] td[data-lead] { display: block; text-align: left; font-weight: 600; }
+  table.data[data-mobile="cards"] td[data-lead]::before { content: none; }
+
+  /* Report tables that stay a grid get a smaller face and are allowed to exceed the screen. A
+     card-mode table must NOT get the min-width, or its values are laid out off-screen. */
+  .report { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .report table.data[data-mobile="scroll"] { min-width: 34rem; font-size: 0.8rem; }
+  .report table.data[data-mobile="cards"] { min-width: 0; }
+  .report table.data thead th { position: static; }
+  .report-meta { gap: 8px; }
+  .totals { justify-content: stretch; }
+  .totals-table { width: 100%; min-width: 0; }
+
+  /* Entry screens: the line editor's cells stack, the page never scrolls sideways. */
+  .stack { display: block; }
+  .stack-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; }
+  .stack-row .field { flex: 1 1 8rem; }
+  .split { display: block; }
+  .sticky-actions {
+    position: sticky;
+    bottom: 72px;
+    background: #ffffff;
+    border-top: 1px solid var(--gray-3);
+    padding: 8px 0;
+    margin-top: 12px;
+    z-index: 10;
+  }
+  .sticky-actions .btn { flex: 1; }
+  .pagebar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .pagebar .btn { flex: 1 1 auto; }
+  .muted { color: var(--muted); font-size: 0.8rem; }
+  .big-number { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+}
+
 /* -------------------------------------------------------------------- print */
 
 .print-head { display: none; }

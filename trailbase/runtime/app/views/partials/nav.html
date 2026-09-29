@@ -1,10 +1,16 @@
 {# The legacy 80px icon navbar (Mantine NavbarMinimal): icon-only links with tooltips, active
-   link on a blue-0 chip. Main / Reports / Management mirror the legacy rail; Pages, Plugins,
-   the background-refresh dot and Logout sit at the bottom. #}
+   link on a blue-0 chip. Main / Invoices / Payments / Inventory / Reports / Management mirror the
+   legacy rail; Pages, Plugins, the background-refresh dot and Logout sit at the bottom.
+
+   Below 768px the same markup becomes a fixed bottom bar — see
+   `mobile-layout-is-additive-to-the-legacy-look`; the markup is identical either way. #}
 {% import 'partials/icons.html' as icons %}
 <nav class="navbar">
   <div class="navbar-main">
     <a class="nav-link{% if active == 'dashboard' %} active{% endif %}" href="/dashboard" title="Main">{{ icons.svg('dashboard', 20) }}</a>
+    <a class="nav-link{% if active == 'invoices' %} active{% endif %}" href="/invoices" title="Invoices">{{ icons.svg('file-invoice', 20) }}</a>
+    <a class="nav-link{% if active == 'payments' %} active{% endif %}" href="/payments" title="Payments">{{ icons.svg('cash', 20) }}</a>
+    <a class="nav-link{% if active == 'inventory' %} active{% endif %}" href="/inventory" title="Inventory">{{ icons.svg('trolley', 20) }}</a>
     <a class="nav-link{% if active == 'reports' %} active{% endif %}" href="/reports" title="Reports">{{ icons.svg('report', 20) }}</a>
     <a class="nav-link{% if active == 'management' %} active{% endif %}" href="/management" title="Management">{{ icons.svg('settings', 20) }}</a>
   </div>

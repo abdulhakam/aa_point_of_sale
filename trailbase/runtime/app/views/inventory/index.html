@@ -1,0 +1,70 @@
+{% extends 'layout.html' %}
+{% block body %}
+<h1 class="page-title">Inventory</h1>
+<p class="crumbs"><a href="/management/items">← Item master data</a> · <a href="/reports/stockreport">Stock report</a></p>
+
+<section class="card">
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-value">{{ summary.items }}</div><div class="stat-label">Items</div></div>
+    <div class="stat"><div class="stat-value">{{ summary.valueText }}</div><div class="stat-label">Stock value (cost)</div></div>
+    <div class="stat"><div class="stat-value">{{ summary.negative }}</div><div class="stat-label">Negative stock</div></div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="list-toolbar">
+    <label class="field"><span>Search</span><input type="search" name="q" value="{{ query }}" placeholder="name, code or barcode"></label>
+    <h2>{{ rows|length }} items</h2>
+  </div>
+  <div class="tablewrap">
+  <table class="data" data-mobile="cards" id="stock-table">
+    <thead><tr>
+      <th>Item</th><th>Company</th><th>Code</th>
+      <th class="right">CP</th><th class="right">SP</th><th class="right">Carton</th>
+      <th class="right">Stock</th><th class="right">Value</th><th class="right">Edit</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td data-label="Item" data-lead>{{ r.name }}</td>
+        <td data-label="Company">{{ r.company }}</td>
+        <td data-label="Code">{{ r.displayId }}</td>
+        <td class="right" data-label="CP">{{ r.costPriceText }}</td>
+        <td class="right" data-label="SP">{{ r.salePriceText }}</td>
+        <td class="right" data-label="Carton">{{ r.boxSizeText }}</td>
+        <td class="right" data-label="Stock">{{ r.stockText }}</td>
+        <td class="right" data-label="Value">{{ r.valueText }}</td>
+        <td class="row-actions" data-label="">
+          <a class="icon-edit" href="/inventory?edit={{ r.id }}" title="Edit">✎</a>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="9">No items match "{{ query }}".</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>{% if editRow %}Edit item{% else %}New item{% endif %}</h2>
+  <form class="entity-form" method="post" action="/inventory/save">
+    {% if editRow %}<input type="hidden" name="id" value="{{ editRow.id }}">{% endif %}
+    <label class="field"><span>Name</span><input type="text" name="name" value="{{ editRow.name if editRow else '' }}" required></label>
+    <label class="field"><span>Company</span>
+      <select name="category" data-searchable>
+        <option value="">No company</option>
+        {% for c in companies %}<option value="{{ c.id }}"{% if editRow and editRow.companyId == c.id %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field"><span>Cost price</span><input type="number" step="0.01" name="cost_price" value="{{ editRow.costPrice if editRow else '0' }}"></label>
+    <label class="field"><span>Sale price</span><input type="number" step="0.01" name="sale_price" value="{{ editRow.salePrice if editRow else '0' }}"></label>
+    <label class="field"><span>Carton size</span><input type="number" step="any" name="box_size_qty" value="{{ editRow.boxSizeQty if editRow else '0' }}"></label>
+    <label class="field"><span>Display ID</span><input type="text" name="display_id" value="{{ editRow.displayId if editRow else '' }}"></label>
+    <label class="field"><span>Barcode</span><input type="text" name="barcode" value="{{ editRow.barcode if editRow else '' }}"></label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">{% if editRow %}SAVE ITEM{% else %}CREATE ITEM{% endif %}</button>
+    </div>
+  </form>
+</section>
+{% endblock %}

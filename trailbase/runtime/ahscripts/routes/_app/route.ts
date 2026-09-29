@@ -158,6 +158,9 @@ async function app(): Promise<any> {
     plugins: await loadModule("/app/lib/plugins.js"),
     management: await loadModule("/app/lib/management.js"),
     invoicing: await loadModule("/app/lib/invoicing.js"),
+    invoices: await loadModule("/app/lib/invoices.js"),
+    payments: await loadModule("/app/lib/payments.js"),
+    inventory: await loadModule("/app/lib/inventory.js"),
     service: await loadModule("/app/lib/reports.js"),
     http: await loadModule("/app/lib/http.js"),
     reportPages: await loadModule("/app/lib/report-pages.js"),
@@ -726,6 +729,12 @@ async function dispatch(req: any): Promise<any> {
       .filter(Boolean);
     const page = A.http.page(shell(user, "reports", pageDef.title), pageDef.view || A.reportPages.DEFAULT_VIEW, {
       def: pageDef,
+      // Mobile layout is additive: a narrow report turns into labelled cards, a wide one keeps its
+      // grid and scrolls sideways. The first column is the row's identity and reads as a heading
+      // inside a card, so it is marked `lead` and drops its own label
+      // ([[mobile-layout-is-additive-to-the-legacy-look]]).
+      columns: pageDef.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
+      mobile: pageDef.columns.length <= 6 ? "cards" : "scroll",
       basePath: "/reports/" + key,
       filters,
       options,
@@ -1031,6 +1040,250 @@ async function dispatch(req: any): Promise<any> {
     return { released: await A.invoicing.releaseLock(db, A.management.base64ToHex(releaseMatch[1]), userHex) };
   }
 
+  // ---------------------------------------------------------------- invoices / payments / stock
+  //
+  // The three working surfaces (tb-0028). Every write goes through the same module the JSON API
+  // uses, so a screen and an API client cannot drift, and each one invalidates the report
+  // snapshot so a report opened straight afterwards sees it. Money is rounded at 2 dp inside
+  // those modules ([[money-is-2dp-everywhere]]).
+
+  const typeOptions = (map) => Object.keys(map).map((code) => ({ code: Number(code), label: map[code] }));
+  const invoiceTypes = typeOptions(A.invoices.INVOICE_TYPES);
+  const paymentTypes = typeOptions(A.payments.PAYMENT_TYPES);
+  const pick = (value, fallback) => (value === undefined || value === null || value === "" ? fallback : value);
+  const flag = (value) => (value === "1" || value === "on" || value === "true" ? "on" : "");
+  const editorItems = (refs) =>
+    (refs?.items ?? []).map((it) => ({
+      id: it.id,
+      name: it.name ?? "",
+      price: Number(it.sale_price) || 0,
+      costPrice: Number(it.cost_price) || 0,
+      boxSizeQty: Number(it.box_size_qty) || 0,
+    }));
+
+  if (path === "/invoices" && method === "GET") {
+    const snap = await A.service.getViews(["refs"]);
+    const filters = {
+      type: pick(query.type, ""),
+      from: pick(query.from, ""),
+      to: pick(query.to, ""),
+      party: pick(query.party, ""),
+      unpaid: flag(query.unpaid),
+    };
+    const rows = await A.invoices.listInvoices(db, filters);
+    const totals = await A.invoices.sumInvoices(db, filters);
+    return html(
+      A.http.page(shell(user, "invoices", "Invoices"), "invoices/index.html", {
+        rows,
+        filters,
+        types: invoiceTypes,
+        selectedType: Number(filters.type || -1),
+        parties: snap.views.refs?.parties ?? [],
+        totals,
+      })
+    );
+  }
+
+  if (path === "/invoices/new") {
+    const type = pick(query.type, "1") === "0" ? 0 : 1;
+    const snap = await A.service.getViews(["refs"]);
+    const refs = snap.views.refs ?? {};
+    if (method === "GET") {
+      return html(
+        A.http.page(shell(user, "invoices", "New invoice"), "invoices/entry.html", {
+          isNew: true,
+          type,
+          typeLabel: A.invoices.typeLabel(type),
+          parties: refs.parties ?? [],
+          bookers: refs.bookers ?? [],
+          items: editorItems(refs),
+        })
+      );
+    }
+    // A key from the form makes a repeated submit return the same invoice instead of a second one.
+    const created = await A.invoicing.createInvoice(db, {
+      type,
+      key: String(form.key || ""),
+      userHex,
+      device: String(form.device || ""),
+    });
+    const hex = A.management.base64ToHex(String(created.id));
+    await A.invoicing.patchHeader(db, hex, {
+      party: String(form.party || ""),
+      dated: A.format.dateOnly(new Date().toISOString()),
+    });
+    A.service.invalidate();
+    return redirect("/invoices/" + created.id);
+  }
+
+  const invoiceNewRoute = /^\/invoices\/([^\/]+)\/(header|line|complete)$/.exec(path);
+  const invoiceLineDelete = /^\/invoices\/([^\/]+)\/line\/([^\/]+)\/delete$/.exec(path);
+  if ((invoiceNewRoute || invoiceLineDelete) && method === "POST") {
+    const invoiceId = invoiceNewRoute ? invoiceNewRoute[1] : invoiceLineDelete[1];
+    const hex = A.management.base64ToHex(String(invoiceId));
+    if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
+    if (invoiceLineDelete) {
+      await A.invoicing.deleteLine(db, A.management.base64ToHex(String(invoiceLineDelete[2])));
+    } else if (invoiceNewRoute[2] === "header") {
+      await A.invoicing.patchHeader(db, hex, {
+        party: String(form.party || ""),
+        booker: String(form.booker || ""),
+        dated: String(form.dated || ""),
+        description: String(form.description || ""),
+        discount_1: String(form.discount_1 || ""),
+        discount_rs: String(form.discount_rs || ""),
+      });
+    } else if (invoiceNewRoute[2] === "line") {
+      // An empty price or cost falls back to the item's own, so the mobile form can be short.
+      const itemId = String(form.item || "");
+      const item = await db.all(
+        'SELECT "cost_price", "sale_price" FROM items WHERE "id" = unhex(?)',
+        [A.management.base64ToHex(itemId)]
+      );
+      const cost = item && item.length ? Number(item[0][0]) || 0 : 0;
+      const price = item && item.length ? Number(item[0][1]) || 0 : 0;
+      await A.invoicing.addLine(
+        db,
+        hex,
+        {
+          item: itemId,
+          qty: String(form.qty || "0"),
+          price: form.price === undefined || form.price === "" ? String(price) : String(form.price),
+          cost_price: form.cost_price === undefined || form.cost_price === "" ? String(cost) : String(form.cost_price),
+          discount_1: String(form.discount_1 || "0"),
+          discount_2: String(form.discount_2 || "0"),
+          discount_rs: String(form.discount_rs || "0"),
+          scheme: String(form.scheme || "0"),
+        },
+        String(form.opKey || "")
+      );
+    } else if (invoiceNewRoute[2] === "complete") {
+      await A.invoicing.completeInvoice(db, hex, userHex, form.complete === "1");
+    }
+    A.service.invalidate();
+    return redirect("/invoices/" + invoiceId + "?status=ok");
+  }
+
+  const invoicePage = /^\/invoices\/([^\/]+)$/.exec(path);
+  if (invoicePage && method === "GET") {
+    const snap = await A.service.getViews(["refs"]);
+    const refs = snap.views.refs ?? {};
+    const invoice = await A.invoices.readInvoice(db, decode(invoicePage[1]));
+    if (!invoice) return text("No such invoice", 404);
+    return html(
+      A.http.page(shell(user, "invoices", "Invoice #" + invoice.invoiceNo), "invoices/entry.html", {
+        invoice,
+        type: invoice.type,
+        // A sale is paid in, a purchase is paid out.
+        paymentTypeHint: invoice.type === 0 ? 0 : 1,
+        // Fresh per render, so a repeated submit of the same page is one line and a line added
+        // from the reloaded page is a new one.
+        opKey: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e9).toString(36),
+        parties: refs.parties ?? [],
+        bookers: refs.bookers ?? [],
+        items: editorItems(refs),
+        message: query.status === "ok" ? "Saved" : "",
+      })
+    );
+  }
+
+  if (path === "/payments" && method === "GET") {
+    const snap = await A.service.getViews(["refs"]);
+    const filters = {
+      type: pick(query.type, ""),
+      from: pick(query.from, ""),
+      to: pick(query.to, ""),
+      party: pick(query.party, ""),
+      standalone: flag(query.standalone),
+      open: flag(query.open),
+    };
+    const rows = await A.payments.listPayments(db, filters);
+    const totals = await A.payments.sumPayments(db, filters);
+    return html(
+      A.http.page(shell(user, "payments", "Payments"), "payments/index.html", {
+        rows,
+        filters,
+        types: paymentTypes,
+        selectedType: Number(filters.type || -1),
+        parties: snap.views.refs?.parties ?? [],
+        totals,
+      })
+    );
+  }
+
+  if (path === "/payments/new" && method === "GET") {
+    const snap = await A.service.getViews(["refs"]);
+    const refs = snap.views.refs ?? {};
+    const invoice = query.invoice ? await A.invoices.readInvoice(db, String(query.invoice)) : null;
+    const open = await A.invoices.listInvoices(db, { unpaid: "on" });
+    return html(
+      A.http.page(shell(user, "payments", "New payment"), "payments/new.html", {
+        invoice,
+        openInvoices: open.slice(0, 100),
+        types: paymentTypes,
+        selectedType: Number(pick(query.type, invoice && invoice.type === 0 ? "0" : "1")),
+        selectedParty: String(pick(query.party, invoice ? invoice.party || "" : "")),
+        selectedPaidTo: "",
+        amount: String(pick(query.amount, invoice ? invoice.balanceText : "")),
+        today: A.format.dateOnly(new Date().toISOString()),
+        parties: refs.parties ?? [],
+        bookers: refs.bookers ?? [],
+        error: "",
+      })
+    );
+  }
+
+  if (path === "/payments" && method === "POST") {
+    try {
+      await A.payments.createPayment(db, {
+        type: String(form.type || "1"),
+        amount: String(form.amount || "0"),
+        date: String(form.date || ""),
+        party: String(form.party || ""),
+        paidTo: String(form.paidTo || ""),
+        invoice: String(form.invoice || ""),
+        description: String(form.description || ""),
+        paid: "on",
+      });
+      A.service.invalidate();
+      return redirect("/payments?status=ok");
+    } catch (e: any) {
+      return text("Payment not saved: " + (e && e.message ? e.message : String(e)), 400);
+    }
+  }
+
+  const paymentDelete = /^\/payments\/([^\/]+)\/delete$/.exec(path);
+  if (paymentDelete && method === "POST") {
+    await A.payments.deletePayment(db, String(paymentDelete[1]));
+    A.service.invalidate();
+    return redirect("/payments?status=ok");
+  }
+
+  if (path === "/inventory" && method === "GET") {
+    const snap = await A.service.getViews(["itemsReport", "refs"]);
+    const rows = A.inventory.stockRows(snap.views.itemsReport ?? [], snap.views.refs ?? {}, pick(query.q, ""));
+    const editId = String(query.edit || "");
+    return html(
+      A.http.page(shell(user, "inventory", "Inventory"), "inventory/index.html", {
+        rows,
+        query: pick(query.q, ""),
+        summary: A.inventory.stockSummary(rows),
+        editRow: editId ? rows.find((r: any) => String(r.id) === editId) ?? null : null,
+        companies: (snap.views.refs?.companies ?? []).map((c: any) => ({ id: c.id, name: c.name })),
+      })
+    );
+  }
+
+  if (path === "/inventory/save" && method === "POST") {
+    if (String(form.id || "")) {
+      await A.inventory.updateItem(db, "items", String(form.id), form);
+    } else {
+      await A.management.createRow(db, A.entities.ENTITIES.items, form);
+    }
+    A.service.invalidate();
+    return redirect("/inventory?status=ok");
+  }
+
   if (path === "/p") {
     const pages = await A.pages.listPages(PAGES_DIR);
     return html(A.http.page(shell(user, "pages", "Pages"), "pages/index.html", { pages }));
@@ -1099,9 +1352,12 @@ async function handle(req: any): Promise<any> {
   try {
     return await dispatch(req);
   } catch (e: any) {
-    const detail = e && e.stack ? String(e.stack) : String(e);
-    console.error("[app] " + detail);
-    return { text: "Guest error: " + detail, status: 500 };
+    // Both halves: QuickJS often gives a bare frame with the message on a different property, and
+    // a stack without a message is useless in a log.
+    const message = e && e.message ? String(e.message) : String(e);
+    const detail = e && e.stack ? String(e.stack) : "";
+    console.error("[app] " + message + (detail && detail !== message ? "\n" + detail : ""));
+    return { text: "Guest error: " + message, status: 500 };
   }
 }
 

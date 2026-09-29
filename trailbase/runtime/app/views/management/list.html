@@ -31,7 +31,7 @@
     <h2>All {{ entity.label }} ({{ rows|length }})</h2>
   </div>
   <div class="tablewrap">
-  <table class="data" id="mgmt-table">
+  <table class="data" id="mgmt-table" data-mobile="cards">
     <thead><tr>
       {% for c in columns %}<th class="{{ c.align }}">{{ c.label }}</th>{% endfor %}
       <th class="right">Actions</th>
@@ -39,8 +39,8 @@
     <tbody>
     {% for r in rows %}
       <tr{% if editRow and editRow.id == r.id %} class="editing"{% endif %}>
-        {% for c in columns %}<td class="{{ c.align }}">{{ r.cells[c.key] }}</td>{% endfor %}
-        <td class="row-actions">
+        {% for c in columns %}<td class="{{ c.align }}" data-label="{{ c.label }}"{% if loop.first %} data-lead{% endif %}>{{ r.cells[c.key] }}</td>{% endfor %}
+        <td class="row-actions" data-label="Actions">
           <a class="icon-edit" href="/management/{{ entityKey }}?edit={{ r.id }}" title="Edit">{{ icons.svg('pencil', 16) }}</a>
           <form method="post" action="/management/{{ entityKey }}/{{ r.id }}/delete" data-confirm="Delete this record?">
             <button class="icon-del" type="submit" title="Delete">{{ icons.svg('trash', 16) }}</button>

@@ -1,0 +1,48 @@
+{% extends 'layout.html' %}
+{% block body %}
+<h1 class="page-title">New Payment</h1>
+<p class="crumbs"><a href="/payments">← Payments</a></p>
+
+{% if error %}<div class="notice" data-state="error">{{ error }}</div>{% endif %}
+
+<section class="card">
+  <form class="entity-form" method="post" action="/payments">
+    {% if invoice %}
+    <p class="muted">Against invoice #{{ invoice.invoiceNo }} — balance {{ invoice.balanceText }}</p>
+    <input type="hidden" name="invoice" value="{{ invoice.id }}">
+    {% else %}
+    <label class="field"><span>Invoice (optional)</span>
+      <select name="invoice" data-searchable>
+        <option value="">None — standalone DA entry</option>
+        {% for i in openInvoices %}<option value="{{ i.id }}"{% if invoice and invoice.id == i.id %} selected{% endif %}>#{{ i.invoiceNo }} · {{ i.partyName }} · {{ i.balanceText }}</option>{% endfor %}
+      </select>
+    </label>
+    {% endif %}
+
+    <label class="field"><span>Type</span>
+      <select name="type">
+        {% for t in types %}<option value="{{ t.code }}"{% if selectedType == t.code %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field"><span>Amount</span><input type="number" step="0.01" name="amount" value="{{ amount }}" required></label>
+    <label class="field"><span>Date</span><input type="date" name="date" value="{{ today }}" required></label>
+    <label class="field"><span>Party</span>
+      <select name="party" data-searchable>
+        <option value="">No party</option>
+        {% for p in parties %}<option value="{{ p.id }}"{% if selectedParty == p.id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field"><span>Paid to (booker)</span>
+      <select name="paidTo" data-searchable>
+        <option value="">No booker</option>
+        {% for b in bookers %}<option value="{{ b.id }}"{% if selectedPaidTo == b.id %} selected{% endif %}>{{ b.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field"><span>Description</span><input type="text" name="description" value="" autocomplete="off"></label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">SAVE PAYMENT</button>
+      <a class="btn" href="/payments">Cancel</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

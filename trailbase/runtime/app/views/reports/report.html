@@ -26,7 +26,7 @@
 </header>
 {% include 'partials/report_meta.html' %}
 {% block before_table %}{% endblock %}
-{{ tb.simple(def.columns, rows) }}
+{{ tb.simple(columns, rows, mobile) }}
 {% if rowInfo and rowInfo.truncated %}
 <p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>
 {% endif %}
