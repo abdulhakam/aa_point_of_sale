@@ -270,8 +270,22 @@ export function buildItemsReport(base, transactionView) {
 /** items_difference_report — `qty + scheme` for difference invoices only. */
 export function buildItemsDifferenceReport(base, transactionView) {
   const acc = new Map();
+  // A stock difference is an invoice to the **Difference party** (vault/decisions/returns-are-negative-quantities.md).
+  // The historical encoding was invoice type 3, and one such row exists in the imported data, so
+  // both are counted — otherwise that row would silently vanish from the report.
+  const differenceParty = (base.parties ?? []).find(
+    (p) => String(p.name ?? "").trim().toLowerCase() === "difference"
+  )?.id;
   for (const t of transactionView) {
-    if (t.type === 3) addTo(acc, t.item, num(t.qty) + num(t.scheme));
+    const legacy = t.type === 3;
+    const byParty = !!differenceParty && t.party === differenceParty;
+    if (!legacy && !byParty) continue;
+    const q = num(t.qty) + num(t.scheme);
+    // Reported as the STOCK MOVEMENT, so the number reads the same way it does on the stock report:
+    // a purchase to Difference removes stock, a sale to Difference adds it. The legacy type-3 row
+    // keeps its own original rule (+q).
+    const delta = legacy ? q : t.type === 1 ? -q : q;
+    addTo(acc, t.item, delta);
   }
   return base.items.map((it) => ({
     id: it.id,

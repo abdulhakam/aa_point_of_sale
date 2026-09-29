@@ -132,18 +132,18 @@ async function seed() {
 
   const invSale = await create("invoices", {
     type: 1, invoiceNo: 1001, party: toUuid(cust), booker: toUuid(booker), dated: "2026-09-10 10:00:00.000Z",
-    discount_1: 5, discount_2: 0, discount_rs: 10, completed: 1,
+    discount_1: 5, discount_2: 0, discount_rs: 10, completed: 1, status: "open",
   });
   await create("transactions", { invoice: toUuid(invSale), item: toUuid(itemA), cost_price: 50, price: 70, qty: 10, scheme: 1, discount_1: 10, discount_2: 0, discount_rs: 0 });
   await create("transactions", { invoice: toUuid(invSale), item: toUuid(itemB), cost_price: 20, price: 30, qty: 5, scheme: 0, discount_1: 0, discount_2: 0, discount_rs: 0 });
 
-  const invPurchase = await create("invoices", { type: 0, invoiceNo: 2001, party: toUuid(supp), dated: "2026-09-05 09:00:00.000Z" });
+  const invPurchase = await create("invoices", { type: 0, invoiceNo: 2001, party: toUuid(supp), dated: "2026-09-05 09:00:00.000Z", status: "open" });
   await create("transactions", { invoice: toUuid(invPurchase), item: toUuid(itemA), cost_price: 45, price: 50, qty: 100, scheme: 0 });
 
-  const invReturn = await create("invoices", { type: 2, invoiceNo: 3001, party: toUuid(cust), booker: toUuid(booker), dated: "2026-09-12 11:00:00.000Z" });
+  const invReturn = await create("invoices", { type: 2, invoiceNo: 3001, party: toUuid(cust), booker: toUuid(booker), dated: "2026-09-12 11:00:00.000Z", status: "open" });
   await create("transactions", { invoice: toUuid(invReturn), item: toUuid(itemA), cost_price: 50, price: 70, qty: 2, scheme: 0 });
 
-  const invDiff = await create("invoices", { type: 3, invoiceNo: 4001, dated: "2026-09-13 08:00:00.000Z", description: "stock count" });
+  const invDiff = await create("invoices", { type: 3, invoiceNo: 4001, dated: "2026-09-13 08:00:00.000Z", description: "stock count", status: "open" });
   await create("transactions", { invoice: toUuid(invDiff), item: toUuid(itemB), cost_price: 20, price: 0, qty: 3, scheme: 0 });
 
   await create("payments", { invoice: toUuid(invSale), party: toUuid(cust), type: 1, amount: 500, paid: 0, payment_date: "2026-09-11 12:00:00.000Z", description: "invoice" });

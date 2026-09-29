@@ -7,8 +7,9 @@
 //
 // Money is displayed at 2 dp everywhere ([[money-is-2dp-everywhere]]).
 
-import { dateOnly, money, round2 } from "../compute/format.js";
+import { dateOnly, money, qtyDisplay, round2 } from "../compute/format.js";
 import { base64ToHex } from "./management.js";
+import { balanceOf, invoiceTotals } from "./invoice-lifecycle.js";
 
 /** Invoice type codes — `invoice_types` in the schema. */
 export const INVOICE_TYPES = {
@@ -18,8 +19,18 @@ export const INVOICE_TYPES = {
   3: "Difference",
 };
 
-/** The types this app can enter. Return and Difference need their own screens (tb-0021). */
+/**
+ * The types the app offers as new documents.
+ *
+ * Return (2) and difference (3) are NOT offered: a return is a negative-quantity row on the same
+ * invoice and a difference is an invoice to the Difference party
+ * (vault/decisions/returns-are-negative-quantities.md). They stay in `INVOICE_TYPES` because 54
+ * returns and 1 difference are real imported rows that the list filter must still be able to show.
+ */
 export const ENTRY_TYPES = [1, 0];
+
+/** The party a stock-difference invoice is booked against. */
+export const DIFFERENCE_PARTY = "Difference";
 
 export const typeLabel = (code) => INVOICE_TYPES[Number(code)] ?? "Invoice";
 
@@ -35,7 +46,7 @@ const named = (columns) => (row) => {
 
 const LIST_COLUMNS = [
   "id", "type", "invoiceNo", "dated", "completed", "deleted", "discount_1", "discount_rs",
-  "partyName", "bookerName", "total", "paid",
+  "partyName", "bookerName", "total", "paid", "status",
 ];
 
 const HEAD_COLUMNS = [
@@ -57,7 +68,7 @@ const LIST_SQL =
   // Σ round2(line total) — the same line arithmetic `compute/views.js` uses, so this screen and
   // the reports cannot disagree — then the header's percent discounts and its rupee discount.
   'ROUND(COALESCE(t.total, 0) * (1 - COALESCE(i."discount_1", 0) / 100.0) * (1 - COALESCE(i."discount_2", 0) / 100.0) - COALESCE(i."discount_rs", 0), 2) AS total, ' +
-  'COALESCE(p.paid, 0) AS paid ' +
+  'COALESCE(p.paid, 0) AS paid, i."status" AS status ' +
   'FROM invoices i ' +
   'LEFT JOIN parties pa ON pa."id" = i."party" ' +
   'LEFT JOIN order_bookers bo ON bo."id" = i."booker" ' +
@@ -91,6 +102,10 @@ function filteredQuery(filters) {
     where.push('i."party" = ?');
     params.push(String(filters.party));
   }
+  // A draft is not a document, so it is not in the list — the same rule the reports apply. The
+  // writer finds their own drafts with `?drafts=on`; a draft in nobody's list is invisible, which
+  // is the point of the state.
+  where.push(filters.drafts === "on" ? 'i."status" = \'draft\'' : 'i."status" = \'open\'');
   // The unpaid test needs the computed total and paid, so it is applied by an outer query around
   // the same statement rather than in the inner WHERE.
   const inner = LIST_SQL + 'WHERE ' + where.join(' AND ');
@@ -113,7 +128,11 @@ export async function listInvoices(db, filters = {}) {
       typeLabel: typeLabel(r.type),
       invoiceNo: Number(r.invoiceNo),
       dated: dateOnly(r.dated),
-      completed: Number(r.completed) === 1,
+      // The lifecycle state, never `completed`: in the imported v1 data that column is 0 on 8,923
+      // of 8,935 invoices, so labelling by it would call almost every invoice a draft
+      // ([[imported-completed-flag-carries-no-information]]).
+      status: r.status,
+      completed: r.status === "open",
       partyName: r.partyName ?? "",
       bookerName: r.bookerName ?? "",
       total,
@@ -188,13 +207,16 @@ export async function readInvoice(db, publicId) {
     // The legacy line total, kept in `compute/views.js` too: the percent discounts compound and
     // the rupee discount is subtracted after them.
     const raw = (Number(r.price) || 0) * qty * (1 - d1 / 100) * (1 - d2 / 100) - drs;
+    const box = Number(r.box_size_qty) || 0;
     return {
       id: r.id,
       item: r.item,
       itemName: r.itemName ?? "",
-      boxSizeQty: Number(r.box_size_qty) || 0,
+      boxSizeQty: box,
+      // A negative quantity is a return, and qtyDisplay already renders the sign.
       qty,
       qtyText: String(round2(qty)),
+      qtyAs: box ? qtyDisplay(box, qty) : "",
       price: Number(r.price) || 0,
       priceText: money(r.price),
       costPrice: Number(r.cost_price) || 0,
@@ -208,14 +230,14 @@ export async function readInvoice(db, publicId) {
     };
   });
 
-  // Header arithmetic, identical to `buildInvoiceView` in `compute/views.js`:
+  // Header arithmetic, identical to `buildInvoiceView` in `compute/views.js` and to the grid's
+  // browser copy in `app/public/js/app.js`:
   //   s = Σ round2(line total); afterD1 = s - s·d1/100; unrounded = afterD1 - afterD1·d2/100;
   //   final = round2(unrounded - discount_rs)
   const live = lines.filter((l) => !l.deleted);
-  const lineSum = round2(live.reduce((sum, l) => sum + l.amount, 0));
-  const afterD1 = lineSum - (lineSum * (Number(h.discount_1) || 0)) / 100;
-  const unrounded = afterD1 - (afterD1 * (Number(h.discount_2) || 0)) / 100;
-  const total = round2(unrounded - (Number(h.discount_rs) || 0));
+  const totals = invoiceTotals(live, h);
+  const lineSum = totals.lineSum;
+  const total = totals.total;
 
   const payRows = await db.all(
     'SELECT p."id" AS id, p."amount" AS amount, p."paid" AS paid, p."payment_date" AS payment_date, ' +
@@ -263,9 +285,13 @@ export async function readInvoice(db, publicId) {
     totalText: money(total),
     paid,
     paidText: money(paid),
+    // A return can take an invoice below what was paid, so the balance is signed and the grid
+    // labels a negative one as credit due rather than as an unpaid invoice.
+    ...balanceOf(total, paid),
     balance: round2(total - paid),
     balanceText: money(round2(total - paid)),
     payments,
+    paidPayments: payments.filter((p) => p.paid),
   };
 }
 

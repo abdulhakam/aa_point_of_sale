@@ -97,9 +97,61 @@ export async function readTable(table) {
   return normalizeRows(table, rows);
 }
 
-/** Read every base table (or the given subset). */
+/** The invoice ids the current read admitted, so the child tables are filtered against the same set. */
+let committedInvoices = new Set();
+
+/**
+ * Whether a row belongs to a COMMITTED invoice, i.e. is in the books.
+ *
+ * A draft is not (vault/decisions/invoice-lifecycle-draft-open-append-only.md), so it must not
+ * reach a report. Filtering here — at the one place every base table is read — means all 14 report
+ * pages inherit the predicate from a single change, rather than each view builder having to
+ * remember it and a missed one silently publishing a half-entered invoice.
+ *
+ * `transactions` and `payments` are judged by their invoice, because neither carries a status. A
+ * payment with no invoice is a standalone DA voucher and is always its own fact.
+ */
+function isCommitted(table, row) {
+  if (table === "invoices") return row.status !== "draft";
+  if (table === "transactions" || table === "payments") {
+    if (row.invoice === null || row.invoice === undefined) return true;
+    return committedInvoices.has(String(row.invoice));
+  }
+  return true;
+}
+
+/**
+ * The open invoice ids, read as a two-column projection.
+ *
+ * Always read, even when the caller asked for a subset, because a `transactions` or `payments` row
+ * is only classifiable against this set. It is a projection rather than `readTable("invoices")` so
+ * the incremental refresh keeps its speed: the expensive tables (23k transactions, 26k payments)
+ * are still read only when they change, and this costs one small scan of 9k two-column rows.
+ */
+async function readCommittedInvoiceIds() {
+  const raw = await sqlite.all('SELECT "id", "status" FROM "invoices"', []);
+  const set = new Set();
+  for (const row of raw ?? []) {
+    // A row with a NULL status predates the lifecycle migration, or came through the record API
+    // without the column; `completed` is the fallback so it stays in the books rather than
+    // silently disappearing from every report.
+    const status = row[1] !== null && row[1] !== undefined ? String(row[1]) : "open";
+    if (status !== "draft") set.add(String(row[0]));
+  }
+  return set;
+}
+
+/** Read every base table (or the given subset), with drafts excluded. */
 export async function readTables(tables = TABLES) {
   const out = {};
-  for (const table of tables) out[table] = await readTable(table);
+  // `invoices` is judged by its own column and needs no set; the child tables are classified
+  // against the set, so it is only read when one of them is actually requested.
+  const needsInvoiceSet = tables.includes("transactions") || tables.includes("payments");
+  if (needsInvoiceSet) committedInvoices = await readCommittedInvoiceIds();
+  for (const table of tables) {
+    const rows = await readTable(table);
+    out[table] =
+      table === "invoices" || needsInvoiceSet ? rows.filter((row) => isCommitted(table, row)) : rows;
+  }
   return out;
 }

@@ -1,0 +1,191 @@
+{% extends 'layout.html' %}
+{% import 'partials/icons.html' as icons %}
+{% block body %}
+{# The invoice grid. `data-editable` is 0 when another device holds the lease, and the cells are
+   then disabled with the owner named — a read-only grid, not a dead form. The `data-*` attributes
+   are what app.js recalculates from; the server renders the same values so the page is correct
+   before any script runs. See vault/decisions/client-side-live-recalculation.md. #}
+<p class="crumbs">
+  <a href="/invoices">← Invoices</a>
+  <a href="/invoices/{{ invoice.id }}/view">Document</a>
+</p>
+<h1 class="page-title">{{ invoice.typeLabel }} Invoice #{{ invoice.invoiceNo }}</h1>
+
+<div class="pagebar">
+  <span class="tag {{ 'tag-draft' if invoice.status == 'draft' else 'tag-open' }}">{{ invoice.status }}</span>
+  {% if invoice.heldBy %}<span class="notice" data-state="warn">Being edited by {{ invoice.heldBy }}</span>{% endif %}
+  {% if invoice.status == 'draft' and invoice.canWrite %}
+  <form method="post" action="/invoices/{{ invoice.id }}/commit" style="display:inline">
+    <button class="btn primary" type="submit">OPEN INVOICE</button>
+  </form>
+  {% endif %}
+  <a class="btn" href="/payments/new?invoice={{ invoice.id }}&amp;type={{ invoice.paymentTypeHint }}&amp;party={{ invoice.party }}&amp;amount={{ invoice.balanceText }}">+ PAYMENT</a>
+</div>
+
+<section class="card">
+  <div class="stat-grid">
+    <div class="stat"><div class="stat-value">{{ invoice.totalText }}</div><div class="stat-label">Total</div></div>
+    <div class="stat"><div class="stat-value">{{ invoice.paidText }}</div><div class="stat-label">Paid</div></div>
+    <div class="stat">
+      <div class="stat-value">{{ invoice.balanceText }}</div>
+      <div class="stat-label">{% if invoice.creditDue %}Credit due{% else %}Balance{% endif %}</div>
+    </div>
+  </div>
+  {% if invoice.creditDue %}
+  <p class="muted">A return has taken this invoice below what was paid. The shop owes the party the
+     difference; record the refund as a payment against it.</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>Header</h2>
+  <form class="entity-form" method="post" action="/invoices/{{ invoice.id }}/header">
+    <label class="field"><span>Date</span><input type="date" name="dated" value="{{ invoice.dated }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
+    <label class="field"><span>Due date</span><input type="date" name="duedate" value="{{ invoice.duedate }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
+    <label class="field"><span>Party</span>
+      <select name="party" data-searchable{% if not invoice.canWrite %} disabled{% endif %}>
+        <option value="">No party</option>
+        {% for p in parties %}<option value="{{ p.id }}"{% if invoice.party == p.id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field"><span>Booker</span>
+      <select name="booker" data-searchable{% if not invoice.canWrite %} disabled{% endif %}>
+        <option value="">No booker</option>
+        {% for b in bookers %}<option value="{{ b.id }}"{% if invoice.booker == b.id %} selected{% endif %}>{{ b.name }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field"><span>Description</span><input type="text" name="description" value="{{ invoice.description }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
+    <label class="field"><span>Discount %</span><input type="number" step="0.01" name="discount_1" value="{{ invoice.discount1 }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
+    <label class="field"><span>Discount 2 %</span><input type="number" step="0.01" name="discount_2" value="{{ invoice.discount2 }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
+    <label class="field"><span>Discount Rs</span><input type="number" step="0.01" name="discount_rs" value="{{ invoice.discountRs }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
+    {% if invoice.canWrite %}
+    <div class="form-actions"><button class="btn primary" type="submit">Save header</button></div>
+    {% endif %}
+  </form>
+</section>
+
+<section class="card">
+  <div class="list-toolbar">
+    <h2>Lines</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-value" data-sum>{{ invoice.totalText }}</div><div class="stat-label">Invoice total</div></div>
+    </div>
+  </div>
+  {% if invoice.status == 'open' %}
+  <p class="muted">This invoice is open, so its lines are permanent. A return is a new row with a
+     negative quantity; removing a line appends a cancelling row rather than erasing the original.</p>
+  {% endif %}
+
+  <form method="post" action="/invoices/{{ invoice.id }}/lines"
+        data-grid data-path="/invoices/{{ invoice.id }}"
+        data-editable="{{ '1' if invoice.editable else '0' }}"
+        data-d1="{{ invoice.discount1 }}" data-d2="{{ invoice.discount2 }}">
+    <div class="tablewrap">
+    <table class="data grid" data-mobile="cards">
+      <thead><tr>
+        <th>Item</th><th class="right">Qty</th><th>Qty as</th><th class="right">Price</th>
+        <th class="right">D1 %</th><th class="right">D2 %</th><th class="right">Disc Rs</th>
+        <th class="right">Free</th><th class="right">Amount</th><th class="right">Actions</th>
+      </tr></thead>
+      <tbody>
+      {# A draft's committed lines are editable; an open invoice's lines are permanent, so they are
+         shown as text and the only writable row is the empty one at the bottom, which is how a
+         return is entered. #}
+      {% for l in invoice.lines %}
+        {% if invoice.lineInputs %}
+        <tr data-line="{{ l.id }}">
+          <td data-label="Item" data-lead>
+            {# The row's own id, so a save is an edit of this line rather than an append of a new
+               one. It rides inside the item cell rather than in a cell of its own, so the column
+               count still matches the header. The blank row's empty id is what makes it an append. #}
+            <input type="hidden" name="line" value="{{ l.id }}">
+            <select name="item" data-searchable>
+              <option value="">—</option>
+              {% for it in items %}<option value="{{ it.id }}" data-price="{{ it.price }}" data-cost="{{ it.costPrice }}" data-box="{{ it.boxSizeQty }}"{% if l.item == it.id %} selected{% endif %}>{{ it.name }}</option>{% endfor %}
+            </select>
+          </td>
+          <td class="right" data-label="Qty"><input type="number" step="any" name="qty" value="{{ l.qtyText }}"></td>
+          <td class="right" data-label="Qty as" data-qty-display>{{ l.qtyAs }}</td>
+          <td class="right" data-label="Price"><input type="number" step="0.01" name="price" value="{{ l.priceText }}"></td>
+          <td class="right" data-label="D1 %"><input type="number" step="0.01" name="discount_1" value="{{ l.discount1 }}"></td>
+          <td class="right" data-label="D2 %"><input type="number" step="0.01" name="discount_2" value="{{ l.discount2 }}"></td>
+          <td class="right" data-label="Disc Rs"><input type="number" step="0.01" name="discount_rs" value="{{ l.discountRs }}"></td>
+          <td class="right" data-label="Free"><input type="number" step="any" name="scheme" value="{{ l.scheme }}"></td>
+          <td class="right" data-label="Amount" data-amount>{{ l.amountText }}</td>
+          <td class="row-actions" data-label="">
+            <button class="icon-del" type="submit" name="op" value="remove:{{ l.id }}" title="Remove this line">×</button>
+          </td>
+        </tr>
+        {% else %}
+        <tr data-line="{{ l.id }}">
+          <td data-label="Item" data-lead>{{ l.itemName }}</td>
+          <td class="right" data-label="Qty">{{ l.qtyText }}</td>
+          <td class="right" data-label="Qty as">{{ l.qtyAs }}</td>
+          <td class="right" data-label="Price">{{ l.priceText }}</td>
+          <td class="right" data-label="D1 %">{{ l.discount1 }}</td>
+          <td class="right" data-label="D2 %">{{ l.discount2 }}</td>
+          <td class="right" data-label="Disc Rs">{{ l.discountRs }}</td>
+          <td class="right" data-label="Free">{{ l.scheme }}</td>
+          <td class="right" data-label="Amount" data-amount>{{ l.amountText }}</td>
+          <td class="row-actions" data-label=""></td>
+        </tr>
+        {% endif %}
+      {% else %}
+        <tr><td class="empty" colspan="10">No lines yet.</td></tr>
+      {% endfor %}
+
+      {% if invoice.canWrite %}
+      <tr data-line="">
+        <td data-label="Item" data-lead>
+          <input type="hidden" name="line" value="">
+          <select name="item" data-searchable>
+            <option value="">Choose an item…</option>
+            {% for it in items %}<option value="{{ it.id }}" data-price="{{ it.price }}" data-cost="{{ it.costPrice }}" data-box="{{ it.boxSizeQty }}">{{ it.name }}</option>{% endfor %}
+          </select>
+        </td>
+        <td class="right" data-label="Qty"><input type="number" step="any" name="qty" value="1"></td>
+        <td class="right" data-label="Qty as" data-qty-display></td>
+        <td class="right" data-label="Price"><input type="number" step="0.01" name="price" value="0"></td>
+        <td class="right" data-label="D1 %"><input type="number" step="0.01" name="discount_1" value="0"></td>
+        <td class="right" data-label="D2 %"><input type="number" step="0.01" name="discount_2" value="0"></td>
+        <td class="right" data-label="Disc Rs"><input type="number" step="0.01" name="discount_rs" value="0"></td>
+        <td class="right" data-label="Free"><input type="number" step="any" name="scheme" value="0"></td>
+        <td class="right" data-label="Amount" data-amount>0.00</td>
+        <td class="row-actions" data-label=""></td>
+      </tr>
+      {% endif %}
+      </tbody>
+    </table>
+    </div>
+
+    {% if invoice.canWrite %}
+    <div class="pagebar" style="margin-top:12px">
+      <button class="btn primary" type="submit" name="op" value="save">SAVE LINES</button>
+      <span class="muted">A negative quantity is a return. The server recomputes every amount; the
+        numbers above are a live preview of the same formula.</span>
+    </div>
+    {% endif %}
+  </form>
+</section>
+
+<section class="card">
+  <h2>Payments ({{ invoice.paidPayments|length }})</h2>
+  <div class="tablewrap">
+  <table class="data" data-mobile="cards">
+    <thead><tr><th>Date</th><th class="right">Amount</th><th>Description</th><th>Paid to</th></tr></thead>
+    <tbody>
+    {% for p in invoice.paidPayments %}
+      <tr>
+        <td data-label="Date" data-lead>{{ p.date }}</td>
+        <td class="right" data-label="Amount">{{ p.amountText }}</td>
+        <td data-label="Description">{{ p.description }}</td>
+        <td data-label="Paid to">{{ p.paidTo }}</td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="4">Nothing paid against this invoice yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

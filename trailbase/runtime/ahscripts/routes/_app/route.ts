@@ -158,6 +158,7 @@ async function app(): Promise<any> {
     plugins: await loadModule("/app/lib/plugins.js"),
     management: await loadModule("/app/lib/management.js"),
     invoicing: await loadModule("/app/lib/invoicing.js"),
+    lifecycle: await loadModule("/app/lib/invoice-lifecycle.js"),
     invoices: await loadModule("/app/lib/invoices.js"),
     payments: await loadModule("/app/lib/payments.js"),
     inventory: await loadModule("/app/lib/inventory.js"),
@@ -294,6 +295,20 @@ function userOf(req: any): any {
   const u = req.user;
   if (!u || !u.id) return null;
   return { name: u.username || u.email || "User", email: u.email || "" };
+}
+
+// The inverse of management.base64ToHex. The materialised `inv_doc` stores relation ids as hex
+// strings inside its JSON, so rendering a document needs hex -> the base64 the rest of the app uses.
+const B64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+function hexToBase64(hex: string): string {
+  const clean = String(hex ?? "").replace(/[^0-9a-fA-F]/g, "");
+  let out = "";
+  for (let i = 0; i < clean.length; i += 6) {
+    const chunk = clean.slice(i, i + 6).padEnd(6, "0");
+    const bits = parseInt(chunk, 16);
+    out += B64_ALPHABET[(bits >> 18) & 63] + B64_ALPHABET[(bits >> 12) & 63] + B64_ALPHABET[(bits >> 6) & 63] + B64_ALPHABET[bits & 63];
+  }
+  return out.replace(/=+$/, "");
 }
 
 // Business identity for the header and printed reports. The defaults are the legacy values
@@ -1069,6 +1084,7 @@ async function dispatch(req: any): Promise<any> {
       to: pick(query.to, ""),
       party: pick(query.party, ""),
       unpaid: flag(query.unpaid),
+      drafts: flag(query.drafts),
     };
     const rows = await A.invoices.listInvoices(db, filters);
     const totals = await A.invoices.sumInvoices(db, filters);
@@ -1183,6 +1199,183 @@ async function dispatch(req: any): Promise<any> {
         bookers: refs.bookers ?? [],
         items: editorItems(refs),
         message: query.status === "ok" ? "Saved" : "",
+      })
+    );
+  }
+
+  // The grid is the entry screen (tb-0029). `/invoices/{id}` above is the older form-and-list view
+  // and is kept until the grid has been exercised end to end.
+  const invoiceGrid = /^\/invoices\/([^\/]+)\/grid$/.exec(path);
+  if (invoiceGrid && method === "GET") {
+    const snap = await A.service.getViews(["refs"]);
+    const refs = snap.views.refs ?? {};
+    const hex = A.management.base64ToHex(String(decode(invoiceGrid[1])));
+    if (!hex) return text("No such invoice", 404);
+    const state = await A.lifecycle.readState(db, hex);
+    if (!state) return text("No such invoice", 404);
+    // Reading is unconditional; writing needs the lease. The grid shows who holds it rather than
+    // presenting a dead form ([[single-writer-per-invoice]]).
+    const canWrite = state.lease === null || (state.lease.user ?? "").toUpperCase() === userHex;
+    const invoice = await A.invoices.readInvoice(db, decode(invoiceGrid[1]));
+    if (!invoice) return text("No such invoice", 404);
+    return html(
+      A.http.page(shell(user, "invoices", "Invoice #" + invoice.invoiceNo), "invoices/grid.html", {
+        invoice: {
+          ...invoice,
+          status: state.status,
+          canWrite,
+          // A draft's committed lines are inputs; an open invoice's lines are permanent text.
+          lineInputs: state.status === "draft" && canWrite,
+          editable: state.status === "draft" && canWrite,
+          // Somebody else holding the lease is named, so a read-only grid says why.
+          heldBy:
+            state.lease && String(state.lease.user ?? "").toUpperCase() !== userHex
+              ? state.lease.device || "another device"
+              : "",
+          paymentTypeHint: invoice.type === 0 ? 0 : 1,
+        },
+        parties: refs.parties ?? [],
+        bookers: refs.bookers ?? [],
+        items: editorItems(refs),
+      })
+    );
+  }
+
+  // draft -> open. One UPDATE, and the lease is released with it.
+  const invoiceCommit = /^\/invoices\/([^\/]+)\/commit$/.exec(path);
+  if (invoiceCommit && method === "POST") {
+    try {
+      const hex = A.management.base64ToHex(String(invoiceCommit[1]));
+      await A.lifecycle.requireLease(db, hex, userHex, String(form.device || ""));
+      await A.lifecycle.commit(db, hex, userHex);
+      A.service.invalidate();
+      return redirect("/invoices/" + invoiceCommit[1] + "/grid?status=ok");
+    } catch (e: any) {
+      return text("Cannot open the invoice: " + (e && e.message ? e.message : String(e)), e?.status ?? 409);
+    }
+  }
+
+  // The grid's save. A `remove:` op is a single action; a `save` posts the whole sheet, which the
+  // form sends as parallel arrays, so the route zips them back into lines.
+  const invoiceLines = /^\/invoices\/([^\/]+)\/lines$/.exec(path);
+  if (invoiceLines && method === "POST") {
+    const hex = A.management.base64ToHex(String(invoiceLines[1]));
+    let step = "lease";
+    try {
+      await A.lifecycle.requireLease(db, hex, userHex, String(form.device || ""));
+      step = "op";
+      const op = String(form.op || "save");
+      if (op.startsWith("remove:")) {
+        const lineId = A.management.base64ToHex(op.slice(7));
+        await A.lifecycle.removeLine(db, hex, lineId, "rm-" + op.slice(7) + "-" + Date.now().toString(36));
+      } else {
+        const items = [].concat(form.item ?? []);
+        const qty = [].concat(form.qty ?? []);
+        const price = [].concat(form.price ?? []);
+        const d1 = [].concat(form.discount_1 ?? []);
+        const d2 = [].concat(form.discount_2 ?? []);
+        const drs = [].concat(form.discount_rs ?? []);
+        const scheme = [].concat(form.scheme ?? []);
+        const ids = [].concat(form.line ?? []);
+        for (let i = 0; i < items.length; i++) {
+          if (!items[i]) continue;
+          step = `line ${i}`;
+          const line = {
+            item: items[i],
+            qty: qty[i] ?? "0",
+            price: price[i] ?? "0",
+            cost_price: "0",
+            discount_1: d1[i] ?? "0",
+            discount_2: d2[i] ?? "0",
+            discount_rs: drs[i] ?? "0",
+            scheme: scheme[i] ?? "0",
+          };
+          // A row that carries its own id is an EDIT and only a draft may be edited; a row with an
+          // empty id is an APPEND and is how a return is entered on an open invoice. The guard
+          // lives in editLine, not here — deciding by invoice state instead turned an edit into a
+          // silent extra line.
+          const existing = ids[i] ? A.management.base64ToHex(String(ids[i])) : null;
+          if (existing) {
+            await A.lifecycle.editLine(db, hex, existing, line);
+          } else {
+            await A.lifecycle.appendLine(
+              db,
+              hex,
+              line,
+              "line-" + invoiceLines[1] + "-" + i + "-" + Date.now().toString(36)
+            );
+          }
+        }
+      }
+      step = "invalidate";
+      A.service.invalidate();
+      return redirect("/invoices/" + invoiceLines[1] + "/grid?status=ok");
+    } catch (e: any) {
+      const why = e && e.message ? e.message : typeof e === "string" ? e : Object.prototype.toString.call(e);
+      return text(`Cannot save the line [${step}]: ${why}`, e?.status ?? 409);
+    }
+  }
+
+  // The standalone document, rendered from the materialised inv_doc JSON rather than re-read from
+  // the base tables, so the screen and the printout are the same artefact.
+  const invoiceDocument = /^\/invoices\/([^\/]+)\/view$/.exec(path);
+  if (invoiceDocument && method === "GET") {
+    const doc = await A.invoiceDoc.read(String(decode(invoiceDocument[1])));
+    if (!doc) return text("No materialised document for this invoice yet", 404);
+    const snap = await A.service.getViews(["refs"]);
+    const refs = snap.views.refs ?? {};
+    const id = String(decode(invoiceDocument[1]));
+    const nameOf = (list: any[], id: any) => (id ? (list.find((r: any) => String(r.id) === String(id))?.name ?? "") : "");
+    const items = (refs.items ?? []).map((it: any) => ({ id: it.id, name: it.name ?? "", box_size_qty: Number(it.box_size_qty) || 0 }));
+    const nameOfItem = (hex: any) => {
+      const item = items.find((it: any) => String(it.id) === String(hexToBase64(String(hex ?? ""))));
+      return item?.name ?? "";
+    };
+    const lines = (doc.lines ?? []).map((l: any, i: number) => {
+      const item = items.find((it: any) => String(it.id) === String(hexToBase64(String(l.item ?? ""))));
+      const d1 = Number(l.discount_1 ?? 0);
+      const d2 = Number(l.discount_2 ?? 0);
+      const drs = Number(l.discount_rs ?? 0);
+      const amount = A.lifecycle.lineTotal(l);
+      return {
+        index: i + 1,
+        itemName: nameOfItem(l.item),
+        qtyText: String(A.format.round2(l.qty)),
+        qtyAs: item?.box_size_qty ? A.format.qtyDisplay(item.box_size_qty, l.qty) : "",
+        priceText: A.format.money(l.price),
+        discountText: drs ? A.format.money(drs) : d1 || d2 ? `${d1}% / ${d2}%` : "—",
+        amountText: A.format.money(amount),
+      };
+    });
+    const live = await A.invoices.readInvoice(db, id);
+    const totals = live ? { total: live.total, paid: live.paid, balance: live.balance } : null;
+    const bal = A.lifecycle.balanceOf(doc.final_total ?? 0, doc.paid_total ?? 0);
+    return html(
+      A.http.page(shell(user, "invoices", "Invoice " + (doc.readable_id ?? "")), "invoices/document.html", {
+        doc,
+        invoice: { id },
+        print: String(query.print ?? "") === "1",
+        business: business(),
+        typeLabel: live ? live.typeLabel : "Invoice",
+        dated: (doc.dated ?? "").slice(0, 10),
+        partyName: nameOf(refs.parties ?? [], doc.party),
+        bookerName: nameOf(refs.bookers ?? [], doc.booker),
+        lines,
+        lineSumText: A.format.money(doc.total ?? 0),
+        totalText: A.format.money(doc.final_total ?? 0),
+        paidText: A.format.money(doc.paid_total ?? 0),
+        remainingText: A.format.money(bal.remaining),
+        creditDue: bal.creditDue,
+        payments: (doc.payments ?? [])
+          .filter((p: any) => Number(p.paid) === 1)
+          .map((p: any) => ({
+            date: String(p.payment_date ?? "").slice(0, 10),
+            amountText: A.format.money(p.amount),
+            description: p.description ?? "",
+          })),
+        // A document older than the invoice is worth saying out loud: the printout would otherwise
+        // quietly disagree with the ledger.
+        stale: totals ? Math.abs(totals.total - (doc.final_total ?? 0)) > 0.005 : false,
       })
     );
   }

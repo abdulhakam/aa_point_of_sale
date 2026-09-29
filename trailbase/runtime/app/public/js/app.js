@@ -177,6 +177,156 @@
     });
   }
 
+  // ---------------------------------------------------------------- money, mirrored
+  //
+  // These four functions are the browser copy of app/lib/invoice-lifecycle.js. The grid shows a
+  // recalculated number the instant a cell changes, with no round trip, so the same formula runs in
+  // two places and they must agree to the paisa — otherwise the operator sees the number move when
+  // the row saves. See vault/decisions/client-side-live-recalculation.md: the risk is formula
+  // equivalence, not evaluation, which is why there is no spreadsheet engine here.
+  //
+  // The server's `round2` is Math.round((v + EPSILON) * 100) / 100. `PAISA` is that same round-half-up
+  // done in integers, because accumulating in binary float and rounding once at the end is exactly
+  // how a display and a ledger start to disagree.
+  var EPSILON = Number.EPSILON;
+  var PAISA = 100;
+
+  function round2(v) {
+    return Math.round((Number(v) + EPSILON) * PAISA) / PAISA;
+  }
+
+  /** The line before the invoice's own discounts. Negative qty is a return. */
+  function lineAmount(line) {
+    var qty = Number(line.qty) || 0;
+    var price = Number(line.price) || 0;
+    var d1 = Number(line.discount_1) || 0;
+    var d2 = Number(line.discount_2) || 0;
+    var drs = Number(line.discount_rs) || 0;
+    return price * qty * (1 - d1 / 100) * (1 - d2 / 100) - drs;
+  }
+
+  function lineTotal(line) {
+    return round2(lineAmount(line));
+  }
+
+  /** The line after the invoice's percent discounts: what the customer owes for the line. */
+  function lineNet(line, invD1, invD2) {
+    return round2(lineAmount(line) * (1 - (Number(invD1) || 0) / 100) * (1 - (Number(invD2) || 0) / 100));
+  }
+
+  /**
+   * The invoice header chain, identical to buildInvoiceView in app/compute/views.js:
+   *   s = Σ round2(line); afterD1 = s - s·d1/100; unrounded = afterD1 - afterD1·d2/100;
+   *   final = round2(unrounded - discount_rs)
+   */
+  function invoiceTotals(lines, header) {
+    var d1 = Number(header.discount_1) || 0;
+    var d2 = Number(header.discount_2) || 0;
+    var drs = Number(header.discount_rs) || 0;
+    var sum = 0;
+    for (var i = 0; i < lines.length; i++) sum += lineTotal(lines[i]);
+    sum = round2(sum);
+    var afterD1 = sum - (sum * d1) / 100;
+    var unrounded = afterD1 - (afterD1 * d2) / 100;
+    return { lineSum: sum, afterDiscount: round2(unrounded), total: round2(unrounded - drs) };
+  }
+
+  function money(v) {
+    return (Math.round((Number(v) + EPSILON) * PAISA) / PAISA).toFixed(2);
+  }
+
+  // ---------------------------------------------------------------- invoice grid
+  //
+  // A spreadsheet over one invoice. Cells that are calculated (amount, line total, invoice total)
+  // are read-only and always come from the formulas above; the item cell is a server-resolved
+  // select; everything else is typed. A return is a row with a negative quantity — the grid does
+  // not need a mode for it, and neither does the ledger.
+  //
+  // Read-only when another device holds the lease: the cells are disabled and the owner is named,
+  // rather than a dead form with no reason (vault/decisions/single-writer-per-invoice.md).
+  function enhanceGrid() {
+    var grid = document.querySelector("[data-grid]");
+    if (!grid) return;
+    var editable = grid.getAttribute("data-editable") === "1";
+    var basePath = grid.getAttribute("data-path") || "";
+    var rows = [].slice.call(grid.querySelectorAll("tbody tr[data-line]"));
+
+    function lineOf(row) {
+      var cell = function (name) {
+        var input = row.querySelector('[name="' + name + '"]');
+        return input ? input.value : "";
+      };
+      return {
+        id: row.getAttribute("data-line"),
+        item: cell("item"),
+        qty: cell("qty"),
+        price: cell("price"),
+        cost_price: cell("cost_price"),
+        discount_1: cell("discount_1"),
+        discount_2: cell("discount_2"),
+        discount_rs: cell("discount_rs"),
+        scheme: cell("scheme"),
+      };
+    }
+
+    /** Recalculate one row and the invoice totals. No request, no wait. */
+    function recalc() {
+      var invD1 = Number(grid.getAttribute("data-d1")) || 0;
+      var invD2 = Number(grid.getAttribute("data-d2")) || 0;
+      var lines = [];
+      rows.forEach(function (row) {
+        var line = lineOf(row);
+        var net = lineNet(line, invD1, invD2);
+        var cell = row.querySelector("[data-amount]");
+        if (cell) cell.textContent = money(net);
+        var qtyCell = row.querySelector("[data-qty-display]");
+        if (qtyCell) {
+          var select = row.querySelector('select[name="item"]');
+          var option = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+          var box = option && option.dataset.box ? Number(option.dataset.box) : 0;
+          qtyCell.textContent = box ? qtyDisplay(box, line.qty) : "";
+        }
+        lines.push(line);
+      });
+      var totals = invoiceTotals(lines, { discount_1: invD1, discount_2: invD2, discount_rs: 0 });
+      var sum = grid.querySelector("[data-sum]");
+      if (sum) sum.textContent = money(totals.total);
+    }
+
+    function qtyDisplay(boxSizeQty, qty) {
+      var box = Number(boxSizeQty) || 1;
+      var n = Number(qty) || 0;
+      var neg = n < 0 ? "-" : "";
+      var abs = Math.abs(n);
+      var ctns = Math.floor(abs / box);
+      var units = abs % box;
+      return neg + ctns + (ctns === 1 ? " ctn " : " ctns ") + units + (units === 1 ? " unit" : " units");
+    }
+
+    if (editable) {
+      // Choosing an item fills the price and the cost from the item's own, unless they were
+      // already set — the operator's number always wins.
+      rows.forEach(function (row) {
+        var select = row.querySelector('select[name="item"]');
+        var price = row.querySelector('input[name="price"]');
+        var cost = row.querySelector('input[name="cost_price"]');
+        if (!select || !price) return;
+        select.addEventListener("change", function () {
+          var option = select.options[select.selectedIndex];
+          if (option && option.dataset.price !== undefined) {
+            if (!price.value || Number(price.value) === 0) price.value = option.dataset.price;
+            if (cost && !cost.value) cost.value = option.dataset.cost || "";
+          }
+          recalc();
+        });
+        row.querySelectorAll("input").forEach(function (input) {
+          input.addEventListener("input", recalc);
+        });
+      });
+    }
+    recalc();
+  }
+
   function init() {
     tick();
     setInterval(tick, 30000);
@@ -186,6 +336,7 @@
     enhanceSelects();
     enhanceTableFilter();
     enhanceLineEditor();
+    enhanceGrid();
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

@@ -334,6 +334,17 @@ button.job[aria-busy="true"] { cursor: progress; }
 .form-actions { flex-basis: 100%; display: flex; gap: 8px; margin-top: 4px; }
 .card.form-collapsed .entity-form { display: none; }
 
+/* ---- invoice grid ---------------------------------------------------------
+   Ten columns of spreadsheet cells do not fit a phone and barely fit a laptop. The table keeps its
+   shape and scrolls, because a number in a column is more readable than a number in a stack, and
+   the cells are nowrap so "3 ctns 12 units" stays on one line. */
+table.grid { min-width: 60rem; }
+table.grid th, table.grid td { white-space: nowrap; }
+table.grid td[data-qty-display] { text-align: left; }
+table.grid input[type="number"] { width: 5.5rem; }
+table.grid select { min-width: 12rem; }
+.card > form[data-grid] > .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
 /* ------------------------------------------------------------------ mobile */
 /* Additive only: every rule here is inside a `max-width: 768px` screen query, so above the
    breakpoint the guest renders exactly as the legacy UI. See the vault decision

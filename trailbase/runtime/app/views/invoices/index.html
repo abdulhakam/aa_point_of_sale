@@ -23,6 +23,7 @@
     </select>
   </label>
   <label class="field check"><input type="checkbox" name="unpaid"{% if filters.unpaid %} checked{% endif %}> <span>Unpaid only</span></label>
+  <label class="field check"><input type="checkbox" name="drafts"{% if filters.drafts %} checked{% endif %}> <span>Show drafts instead</span></label>
   <div class="filter-actions">
     <button class="btn primary" type="submit">APPLY</button>
     <a class="btn" href="/invoices">RESET</a>

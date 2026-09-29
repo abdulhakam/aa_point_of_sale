@@ -1,0 +1,93 @@
+{% extends 'layout.html' %}
+{% block body %}
+{# The standalone invoice document, rendered from the materialised `inv_doc` JSON document.
+   The printed page and this screen are therefore the same artefact: what an operator sees here is
+   exactly what the materialised build produced, and printing is a stylesheet rather than a second
+   renderer (vault/tasks/guest-invoice-lifecycle.md). A `?print=1` request drops the navigation so
+   the page is the document and nothing else. #}
+{% if print %}<p class="crumbs no-print"><a href="/invoices">← Invoices</a> <a href="/invoices/{{ invoice.id }}/grid">Edit</a></p>{% endif %}
+<article class="invoice-doc" data-invoice-doc>
+  <header class="doc-head">
+    <div>
+      <div class="doc-business">{{ business.name }}</div>
+      <div class="doc-address">{{ business.address }}</div>
+      <div class="doc-phone">{{ business.phone }}</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-type">{{ typeLabel }}</div>
+      <div class="doc-no">#{{ doc.invoiceNo }}</div>
+      <div class="doc-dated">{{ dated }}</div>
+    </div>
+  </header>
+
+  <section class="doc-parties">
+    <div><span class="doc-label">Party</span><span class="doc-value">{{ partyName }}</span></div>
+    {% if bookerName %}<div><span class="doc-label">Booker</span><span class="doc-value">{{ bookerName }}</span></div>{% endif %}
+    {% if doc.description %}<div><span class="doc-label">Notes</span><span class="doc-value">{{ doc.description }}</span></div>{% endif %}
+  </section>
+
+  <table class="data doc-lines">
+    <thead><tr>
+      <th>#</th><th>Item</th><th class="right">Qty</th><th>Qty as</th>
+      <th class="right">Price</th><th class="right">Disc</th><th class="right">Amount</th>
+    </tr></thead>
+    <tbody>
+    {% for l in lines %}
+      <tr>
+        <td data-label="#">{{ loop.index }}</td>
+        <td data-label="Item" data-lead>{{ l.itemName }}</td>
+        <td class="right" data-label="Qty">{{ l.qtyText }}</td>
+        <td data-label="Qty as">{{ l.qtyAs }}</td>
+        <td class="right" data-label="Price">{{ l.priceText }}</td>
+        <td class="right" data-label="Disc">{{ l.discountText }}</td>
+        <td class="right" data-label="Amount">{{ l.amountText }}</td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="7">This document has no lines.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <section class="doc-totals">
+    <table class="totals-table">
+      <tr><th>Lines</th><td class="right">{{ lineSumText }}</td></tr>
+      {% if doc.d1 %}<tr><th>Discount {{ doc.d1 }}%</th><td class="right">-</td></tr>{% endif %}
+      {% if doc.drs %}<tr><th>Discount Rs</th><td class="right">-{{ doc.drs }}</td></tr>{% endif %}
+      <tr class="doc-grand"><th>Total</th><td class="right">{{ totalText }}</td></tr>
+      <tr><th>Paid</th><td class="right">{{ paidText }}</td></tr>
+      <tr class="doc-grand"><th>{% if creditDue %}Credit due{% else %}Balance{% endif %}</th><td class="right">{{ remainingText }}</td></tr>
+    </table>
+  </section>
+
+  {% if payments %}
+  <section class="doc-payments">
+    <h2>Payments</h2>
+    <table class="data" data-mobile="cards">
+      <thead><tr><th>Date</th><th class="right">Amount</th><th>Description</th></tr></thead>
+      <tbody>
+      {% for p in payments %}
+        <tr>
+          <td data-label="Date" data-lead>{{ p.date }}</td>
+          <td class="right" data-label="Amount">{{ p.amountText }}</td>
+          <td data-label="Description">{{ p.description }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {% if stale %}
+  <p class="notice no-print" data-state="warn">This document was built before the last change to
+     the invoice. Rebuild it to make the printout match, or read
+     <a href="/invoices/{{ invoice.id }}/grid">the live invoice</a>.</p>
+  {% endif %}
+</article>
+
+{% if not print %}
+<p class="pagebar no-print">
+  <a class="btn" href="/invoices/{{ invoice.id }}/grid">Edit</a>
+  <a class="btn" href="/invoice-doc/rebuild?reconcile=1">Rebuild all documents</a>
+</p>
+{% endif %}
+{% endblock %}
