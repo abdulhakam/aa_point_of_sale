@@ -1,15 +1,31 @@
 ---
 title: Manifest-driven routing and a JSON data DAG replace the route.ts dispatcher
 type: decision
-status: accepted
+status: superseded
 decided_on: 2026-09-28
 created: 2026-09-28
+superseded_on: 2026-09-30
+superseded_by: "[[file-router-conventions-not-a-data-dag]]"
 tags: [trailbase, routing, dag, manifest, architecture]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[trailbase-declarative-page-host]]", "[[runtime-js-single-host]]", "[[component-split-and-sql-materialised-tables]]", "[[guest-fingerprint-refresh]]"]
+related_to: ["[[file-router-conventions-not-a-data-dag]]", "[[trailbase-declarative-page-host]]", "[[runtime-js-single-host]]", "[[component-split-and-sql-materialised-tables]]", "[[guest-fingerprint-refresh]]"]
 ---
 
 # Manifest-driven routing and a JSON data DAG replace the route.ts dispatcher
+
+> **SUPERSEDED 2026-09-30** by [[file-router-conventions-not-a-data-dag]].
+>
+> Its *file-router* half is adopted: routes are discovered from the runtime tree, manifests are the
+> single place a route's inputs and filters are declared, and the single dispatcher is retired.
+>
+> Its **JSON data DAG is withdrawn**. Measured against the code as it now stands, the surface is ~78
+> method+path pairs of which only ~4 genuinely orchestrate; for the rest a DAG is *more* boilerplate
+> than a handler, which is the thing it was introduced to remove. The manifest a route needs turned
+> out to be a median of ~6 lines (worst case 17), so the cost the DAG avoided does not exist. A
+>
+> JSON DAG authored without a graph viewer is also strictly worse to read than files.
+>
+> Kept for the reasoning and the rejected-alternatives table below, not as current design.
 
 ## Context
 
