@@ -1,0 +1,37 @@
+# The Cargo workspace for the guest components.
+#
+# Three components, one dependency graph. Before this file each crate had its own Cargo.lock and
+# its own target/, so serde, serde_json, minijinja, trailbase-wasm, syn, quote and proc-macro2 were
+# compiled THREE times — 3.2 GB of build output for three components that share most of their
+# dependencies.
+#
+# What a workspace actually shares, because it is worth being precise about the two different
+# questions:
+#
+#   THE DOWNLOAD was already shared. Cargo's registry cache (~/.cargo/registry) is global to the
+#   machine, so serde has always been fetched once no matter how many crates depend on it. That was
+#   never the problem.
+#
+#   What was NOT shared is the COMPILE and the RESOLUTION. One Cargo.lock means one answer to "which
+#   version of serde", so the components cannot drift apart, and one target/ means each dependency is
+#   built once and linked into all three.
+#
+# The `wstd = "=0.5.6"` exact pin in each member used to be the thing that *tried* to guarantee a
+# single wstd per component. With one lockfile that is guaranteed by construction rather than by
+# convention — which is the real reason this file is worth having.
+#
+# This is a virtual manifest: it lists members and holds no package of its own, so nothing is
+# built from here. Each member still emits its own cdylib, which is what TrailBase loads.
+
+[workspace]
+resolver = "2"
+members = [
+    "tb-ah-run-js",
+    "tb-ah-render-jinja",
+    "tb-ah-query-tbdb",
+]
+
+# Dependencies are shared by version AND by feature set. Cargo unions the features the members ask
+# for, so a member can only ever get MORE of a dependency, never less — worth remembering if the
+# members' feature requests ever diverge. Today they are nearly identical, which is exactly the
+# case a workspace is good at.

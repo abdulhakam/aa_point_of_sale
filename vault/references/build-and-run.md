@@ -2,3 +2,5 @@
 The guest components are named 	b-ah-run-js, 	b-ah-query-tbdb and
 	-ah-render-jinja — see [[components-are-named-tb-ah]] for the mapping from the
 older working names and why the URL spaces were left alone.
+The three components are members of one cargo workspace, so they share a
+`Cargo.lock` and one `target/` — see [[components-share-one-cargo-workspace]].

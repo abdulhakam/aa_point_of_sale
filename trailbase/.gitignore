@@ -23,9 +23,7 @@ traildepot/*.log.*
 # the pattern, so an indented `component/target/` matches no path at all. That silently happened
 # here — `host/target/` sat indented for the whole life of this file, so the build output was
 # never ignored and only stayed out of commits because nobody ran `git add trailbase/host`.
-tb-ah-run-js/target/
-tb-ah-query-tbdb/target/
-tb-ah-render-jinja/target/
+target/
 
 # Throw-away depot the tools create when they run.
 .tbdemo-guest/

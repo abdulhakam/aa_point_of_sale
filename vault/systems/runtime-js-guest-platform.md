@@ -3,3 +3,5 @@
 
 The three components are 	b-ah-run-js, 	b-ah-query-tbdb and 	b-ah-render-jinja. See
 [[components-are-named-tb-ah]].
+The three components are members of one cargo workspace, so they share a
+`Cargo.lock` and one `target/` — see [[components-share-one-cargo-workspace]].

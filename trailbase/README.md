@@ -20,6 +20,7 @@ trailbase/
   migrations/main/
     U1790208000__create_base_tables.sql
   runtime/                   # the editable application (ahscripts/ + app/), served via --runtime-root-fs
+  Cargo.toml             # the cargo WORKSPACE: one Cargo.lock and one target\ for all three components
   tb-ah-run-js/               # the app host (trailbase-wasm + rquickjs + SQLite + jobs)
   tb-ah-render-jinja/         # minijinja, its own component behind the aa_render envelope
   tb-ah-query-tbdb/           # data acquisition (experimental, exists to be measured)
@@ -30,7 +31,9 @@ trailbase/
     data/ backups/ secrets/ uploads/                           # runtime state
 ```
 
-`tb-ah-run-js/` is the compiled engine (Rust -> WASM, needs `build.bat` after any change); `runtime/` is the
+The three `tb-ah-*` directories are the compiled engine (Rust -> WASM, one cargo workspace: a single
+Cargo.lock and a single `target/`, so a shared dependency is compiled once for all three; needs
+`build.bat` after any change). `runtime/` is the
 editable application (JS, Jinja templates, SQL) and is read at request time, so it needs no rebuild.
 Edit `runtime/`, never `traildepot/runtime/`, which is a generated copy.
 
