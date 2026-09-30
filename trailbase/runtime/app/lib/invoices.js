@@ -7,9 +7,10 @@
 //
 // Money is displayed at 2 dp everywhere ([[money-is-2dp-everywhere]]).
 
-import { dateOnly, money, qtyDisplay, round2 } from "../compute/format.js";
+import { dateOnly, money, round2 } from "../compute/format.js";
 import { base64ToHex } from "./management.js";
 import { balanceOf, invoiceTotals } from "./invoice-lifecycle.js";
+import { qtyAsText } from "./format-qty.js";
 
 /** Invoice type codes — `invoice_types` in the schema. */
 export const INVOICE_TYPES = {
@@ -216,7 +217,7 @@ export async function readInvoice(db, publicId) {
       // A negative quantity is a return, and qtyDisplay already renders the sign.
       qty,
       qtyText: String(round2(qty)),
-      qtyAs: box ? qtyDisplay(box, qty) : "",
+      qtyAs: box ? qtyAsText(box, qty) : "",
       price: Number(r.price) || 0,
       priceText: money(r.price),
       costPrice: Number(r.cost_price) || 0,

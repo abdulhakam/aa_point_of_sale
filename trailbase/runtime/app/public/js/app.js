@@ -284,7 +284,7 @@
           var select = row.querySelector('select[name="item"]');
           var option = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
           var box = option && option.dataset.box ? Number(option.dataset.box) : 0;
-          qtyCell.textContent = box ? qtyDisplay(box, line.qty) : "";
+          qtyCell.textContent = box ? qtyAsText(box, line.qty) : "";
         }
         lines.push(line);
       });
@@ -293,14 +293,18 @@
       if (sum) sum.textContent = money(totals.total);
     }
 
-    function qtyDisplay(boxSizeQty, qty) {
-      var box = Number(boxSizeQty) || 1;
+    function qtyAsText(box, qty) {
+      var b = Number(box) || 0;
       var n = Number(qty) || 0;
-      var neg = n < 0 ? "-" : "";
+      if (!b) return String(n);
       var abs = Math.abs(n);
-      var ctns = Math.floor(abs / box);
-      var units = abs % box;
-      return neg + ctns + (ctns === 1 ? " ctn " : " ctns ") + units + (units === 1 ? " unit" : " units");
+      var sign = n < 0 ? "-" : "";
+      var ctns = Math.floor(abs / b);
+      var units = abs % b;
+      var parts = [];
+      if (ctns) parts.push(ctns + (ctns === 1 ? " ctn" : " ctns"));
+      if (units || !ctns) parts.push(units + (units === 1 ? " unit" : " units"));
+      return sign + parts.join(" ");
     }
 
     if (editable) {

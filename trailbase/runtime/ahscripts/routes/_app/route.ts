@@ -160,6 +160,7 @@ async function app(): Promise<any> {
     invoicing: await loadModule("/app/lib/invoicing.js"),
     lifecycle: await loadModule("/app/lib/invoice-lifecycle.js"),
     invoices: await loadModule("/app/lib/invoices.js"),
+    qtyAsText: (await loadModule("/app/lib/format-qty.js")).qtyAsText,
     payments: await loadModule("/app/lib/payments.js"),
     inventory: await loadModule("/app/lib/inventory.js"),
     service: await loadModule("/app/lib/reports.js"),
@@ -299,14 +300,23 @@ function userOf(req: any): any {
 
 // The inverse of management.base64ToHex. The materialised `inv_doc` stores relation ids as hex
 // strings inside its JSON, so rendering a document needs hex -> the base64 the rest of the app uses.
+//
+// Base64 is 3 bytes -> 4 sextets, and the final partial group is PADDED, not filled: a 16-byte id
+// is 22 characters plus "==". Filling the tail with data instead produced a 24-character id that
+// silently matched nothing, which is why the document's item names rendered empty.
+// Verified against the known id: 01A0EBFD3E2176D294C5C5797E90A6E5 -> AaDr_T4hdtKUxcV5fpCm5Q
 const B64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 function hexToBase64(hex: string): string {
   const clean = String(hex ?? "").replace(/[^0-9a-fA-F]/g, "");
   let out = "";
   for (let i = 0; i < clean.length; i += 6) {
-    const chunk = clean.slice(i, i + 6).padEnd(6, "0");
-    const bits = parseInt(chunk, 16);
-    out += B64_ALPHABET[(bits >> 18) & 63] + B64_ALPHABET[(bits >> 12) & 63] + B64_ALPHABET[(bits >> 6) & 63] + B64_ALPHABET[bits & 63];
+    const group = clean.slice(i, i + 6);
+    const n = Math.floor(group.length / 2);
+    const b = [0, 1, 2].map((k) => (k < n ? parseInt(group.slice(k * 2, k * 2 + 2), 16) : 0));
+    out += B64_ALPHABET[b[0] >> 2];
+    out += B64_ALPHABET[((b[0] & 3) << 4) | (b[1] >> 4)];
+    out += n > 1 ? B64_ALPHABET[((b[1] & 15) << 2) | (b[2] >> 6)] : "=";
+    out += n > 2 ? B64_ALPHABET[b[2] & 63] : "=";
   }
   return out.replace(/=+$/, "");
 }
@@ -1318,6 +1328,11 @@ async function dispatch(req: any): Promise<any> {
 
   // The standalone document, rendered from the materialised inv_doc JSON rather than re-read from
   // the base tables, so the screen and the printout are the same artefact.
+  //
+  // The document is SELF-CONTAINED: each line already carries `item_name` and its own `d1`/`d2`/
+  // `drs` and a precomputed `total`. Nothing here is resolved against `items` or `parties` again —
+  // that is the whole point of materialising it, and re-deriving it is how the first version of
+  // this route rendered empty item names.
   const invoiceDocument = /^\/invoices\/([^\/]+)\/view$/.exec(path);
   if (invoiceDocument && method === "GET") {
     const doc = await A.invoiceDoc.read(String(decode(invoiceDocument[1])));
@@ -1325,31 +1340,33 @@ async function dispatch(req: any): Promise<any> {
     const snap = await A.service.getViews(["refs"]);
     const refs = snap.views.refs ?? {};
     const id = String(decode(invoiceDocument[1]));
-    const nameOf = (list: any[], id: any) => (id ? (list.find((r: any) => String(r.id) === String(id))?.name ?? "") : "");
-    const items = (refs.items ?? []).map((it: any) => ({ id: it.id, name: it.name ?? "", box_size_qty: Number(it.box_size_qty) || 0 }));
-    const nameOfItem = (hex: any) => {
-      const item = items.find((it: any) => String(it.id) === String(hexToBase64(String(hex ?? ""))));
-      return item?.name ?? "";
-    };
+    // The document stores ids as hex; the app's convention is base64. `boxByHex` is the one thing
+    // the document does not carry, so it is resolved once from the refs snapshot.
+    const boxByHex: Record<string, number> = {};
+    for (const it of refs.items ?? []) {
+      boxByHex[A.management.base64ToHex(String(it.id))] = Number(it.box_size_qty) || 0;
+    }
     const lines = (doc.lines ?? []).map((l: any, i: number) => {
-      const item = items.find((it: any) => String(it.id) === String(hexToBase64(String(l.item ?? ""))));
-      const d1 = Number(l.discount_1 ?? 0);
-      const d2 = Number(l.discount_2 ?? 0);
-      const drs = Number(l.discount_rs ?? 0);
-      const amount = A.lifecycle.lineTotal(l);
+      const d1 = Number(l.d1 ?? 0);
+      const d2 = Number(l.d2 ?? 0);
+      const drs = Number(l.drs ?? 0);
+      const box = boxByHex[String(l.item)] ?? 0;
       return {
         index: i + 1,
-        itemName: nameOfItem(l.item),
+        itemName: l.item_name ?? "",
         qtyText: String(A.format.round2(l.qty)),
-        qtyAs: item?.box_size_qty ? A.format.qtyDisplay(item.box_size_qty, l.qty) : "",
+        qtyAs: box ? A.qtyAsText(box, l.qty) : "",
         priceText: A.format.money(l.price),
         discountText: drs ? A.format.money(drs) : d1 || d2 ? `${d1}% / ${d2}%` : "—",
-        amountText: A.format.money(amount),
+        amountText: String(l.total ?? A.format.money(l.total_raw ?? 0)),
       };
     });
     const live = await A.invoices.readInvoice(db, id);
     const totals = live ? { total: live.total, paid: live.paid, balance: live.balance } : null;
     const bal = A.lifecycle.balanceOf(doc.final_total ?? 0, doc.paid_total ?? 0);
+    // Party and booker are the only names the document does not carry, so they are resolved from
+    // the refs snapshot using the hex ids the document stores.
+    const byHex = (list: any[], hex: any) => (hex ? (list.find((r: any) => String(r.id) === hexToBase64(String(hex)))?.name ?? "") : "");
     return html(
       A.http.page(shell(user, "invoices", "Invoice " + (doc.readable_id ?? "")), "invoices/document.html", {
         doc,
@@ -1358,8 +1375,8 @@ async function dispatch(req: any): Promise<any> {
         business: business(),
         typeLabel: live ? live.typeLabel : "Invoice",
         dated: (doc.dated ?? "").slice(0, 10),
-        partyName: nameOf(refs.parties ?? [], doc.party),
-        bookerName: nameOf(refs.bookers ?? [], doc.booker),
+        partyName: byHex(refs.parties ?? [], doc.party),
+        bookerName: byHex(refs.bookers ?? [], doc.booker),
         lines,
         lineSumText: A.format.money(doc.total ?? 0),
         totalText: A.format.money(doc.final_total ?? 0),
