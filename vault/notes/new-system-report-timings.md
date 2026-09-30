@@ -18,7 +18,7 @@ is the whole cost the user waits for).
 
 1. **Rebuild** with the new scripts: `trailbase/clear_db.bat` (wiped the depot and re-copied
    `src/` → `traildepot/`) then `trailbase/build.bat` (`cargo build --target wasm32-wasip2
-   --release`, **1.06 s** incremental; component copied to `traildepot/wasm/runtime_js.wasm`).
+   --release`, **1.06 s** incremental; component copied to `traildepot/wasm/tb-ah-run-js.wasm`).
 2. **Fresh depot + admin**: `trail --depot=traildepot user change-password admin@localhost …`,
    then `trail … run --runtime-root-fs=traildepot/runtime` on `127.0.0.1:4000`.
 3. **Migrate** through the `import-from-v1` plugin (`:8090` → `:4000`):

@@ -45,7 +45,7 @@ template engine fixes that.
 - **The default stays `inproc`.** 7 ms of fixed overhead on every page buys nothing a shop can see,
   and the component is a second thing to build and deploy. It is one config value away:
   `app/config/renderer.json` → `{"renderer": "component"}`. Every page then renders through
-  `renderer.wasm` with **byte-identical output**, verified across the dashboard, invoices,
+  `tb-ah-render-jinja.wasm` with **byte-identical output**, verified across the dashboard, invoices,
   payments, cash memo and the invoice document.
 - The `address` form is enabled by config and is the right shape for a large document: it is the
   only arm whose cost does not grow with the payload.
@@ -61,7 +61,7 @@ template engine fixes that.
 ## Evidence
 
 - `/bench/render?rounds=9` — the three-way comparison, and `rendererStatus` alongside it.
-- `trailbase/host-renderer/` — the component; 2.25 MB against the app host's 7.61 MB.
+- `trailbase/tb-ah-render-jinja/` — the component; 2.25 MB against the app host's 7.61 MB.
 - The byte-identical check: the same pages rendered by each arm returned the same lengths
   (dashboard 11,062; invoices 204,391; payments 264,729; cash memo 10,054).
 

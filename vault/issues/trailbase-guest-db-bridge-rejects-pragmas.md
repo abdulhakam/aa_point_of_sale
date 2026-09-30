@@ -37,7 +37,7 @@ PRAGMA table_info("t")                  -- rejected
 ```
 
 `app/lib/data.js columnsOf()` already uses this form, which is why the app's own column lookup works
-while a naive `PRAGMA` does not. `sql.wasm` initially used a DDL parse of `sqlite_master.sql`
+while a naive `PRAGMA` does not. `tb-ah-query-tbdb.wasm` initially used a DDL parse of `sqlite_master.sql`
 (because `PRAGMA` failed) and was switched to `pragma_table_info(?)` once this was understood.
 
 ## The correction: a silent no-op that produced published numbers
@@ -68,7 +68,7 @@ assumed, and the cold implementation was removed rather than left in place looki
 ## Evidence
 
 - `GET /bench/pragma` on the running depot — the four errors above.
-- `trailbase/host-sql/src/lib.rs` — the `cold_flush` tombstone and the reason the `PRAGMA` version
+- `trailbase/tb-ah-query-tbdb/src/lib.rs` — the `cold_flush` tombstone and the reason the `PRAGMA` version
   was removed.
 - `trailbase/runtime/app/lib/data.js` — `columnsOf` using the working `pragma_table_info(?)` form.
 

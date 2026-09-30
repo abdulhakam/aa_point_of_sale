@@ -14,7 +14,7 @@ related_to: ["[[trailbase-guest-wasm-runtime-defaults]]", "[[trail-runtime-js-re
 
 ## The finding
 
-`trailbase/host/src/lib.rs:109-115`, the upstream host's script-listing handler:
+`trailbase/tb-ah-run-js/src/lib.rs:109-115`, the upstream host's script-listing handler:
 
 ```rust
 // We look in /jscripts.
@@ -54,10 +54,10 @@ Tracked in [[tb-0025-host-endpoint-hygiene]].
 
 ## Evidence
 
-- `trailbase/host/src/lib.rs:109-115` — the path and the stale `/jscripts` comment; read
+- `trailbase/tb-ah-run-js/src/lib.rs:109-115` — the path and the stale `/jscripts` comment; read
   2026-09-28.
 - `trailbase/RUN.BAT:45` — `--runtime-root-fs=%DEPOT%\runtime`.
-- `trailbase/host/src/lib.rs:191-216` — the dispatcher using `/ahscripts`.
+- `trailbase/tb-ah-run-js/src/lib.rs:191-216` — the dispatcher using `/ahscripts`.
 - `trailbase/clear_db.bat:31` — copies `runtime/` to `traildepot/runtime`, so the sandbox root
   contains `ahscripts/` and `app/` and nothing else.
 

@@ -10,7 +10,7 @@ related_to: ["[[runtime-js-guest-platform]]", "[[invoice-document-write-through-
 
 # Init scripts: the host always reports an error, and they run on every WASM runtime
 
-Two separate facts about `/ahscripts/init/**.js` in `trailbase/host/src/init.rs`, both found the
+Two separate facts about `/ahscripts/init/**.js` in `trailbase/tb-ah-run-js/src/init.rs`, both found the
 hard way while adding the materialised invoice documents on 2026-09-29.
 
 ## 1. Every init script always logs an error, and there is nothing a script can do about it

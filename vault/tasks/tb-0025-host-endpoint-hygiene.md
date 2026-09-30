@@ -12,7 +12,7 @@ related_to: ["[[trailbase-host-count-endpoint-sql-injection]]", "[[trailbase-hos
 
 # TB-0025 Remove or gate the guest's leftover upstream debug endpoints
 
-A 2026-09-28 sweep of `trailbase/host/src/` for gaps the vault does not record found four routes and
+A 2026-09-28 sweep of `trailbase/tb-ah-run-js/src/` for gaps the vault does not record found four routes and
 two modules that came in with the upstream `runtime-js` crate
 ([[trail-runtime-js-reference]]) and were never reconciled with what this app actually needs. Three
 of them are actively misleading; one is a security hole.
@@ -51,7 +51,7 @@ Item 1 should not wait for the others — it is the only one reachable by an una
 - [ ] Refresh [[guest-parity-differential-not-reproducible]]'s status if item 2's removal changes
       any harness result
 
-## Note on `trailbase/host/README.md`
+## Note on `trailbase/tb-ah-run-js/README.md`
 
 The same sweep falsified three of that file's six "Not done yet" bullets (real `fetch`, the
 HTML/static response shape, the handler cache) and the `db.execute` alias claim. Correct the README

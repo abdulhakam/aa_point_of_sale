@@ -13,7 +13,7 @@ related_to: ["[[tb-0018-port-app-host-on-runtime-js]]", "[[guest-app-host-port]]
 
 ## The finding
 
-`trailbase/host/src/api/fs.rs` exposes `readFile`, `writeFile`, `exists` and `readdir` to scripts, and
+`trailbase/tb-ah-run-js/src/api/fs.rs` exposes `readFile`, `writeFile`, `exists` and `readdir` to scripts, and
 they are not consistent with each other:
 
 - **`readFile` with `encoding: "binary"` silently returns a UTF-8 string.**
@@ -50,10 +50,10 @@ they are not consistent with each other:
 
 ## Evidence
 
-- `trailbase/host/src/api/fs.rs:14-30` — `exists` / `readdir` on `std::fs`.
-- `trailbase/host/src/api/fs.rs:51` — the binary-encoding comment.
-- `trailbase/host/src/api/fs.rs:68` — the blocking `std::fs::write`.
-- `trailbase/host/src/lib.rs:13,115` — `trailbase_wasm::fs::read_file` is what `readFile` uses, in
+- `trailbase/tb-ah-run-js/src/api/fs.rs:14-30` — `exists` / `readdir` on `std::fs`.
+- `trailbase/tb-ah-run-js/src/api/fs.rs:51` — the binary-encoding comment.
+- `trailbase/tb-ah-run-js/src/api/fs.rs:68` — the blocking `std::fs::write`.
+- `trailbase/tb-ah-run-js/src/lib.rs:13,115` — `trailbase_wasm::fs::read_file` is what `readFile` uses, in
   contrast.
 - `vault/tasks/tb-0018-port-app-host-on-runtime-js.md:46` — the open "binary static assets" item.
 

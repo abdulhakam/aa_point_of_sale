@@ -5,7 +5,7 @@
  * the rows over by name (KV key) instead of rendering straight from the SQL result?
  *
  *   arm=inline     main component runs the query, builds rows in QuickJS, renders minijinja
- *   arm=component  main component GETs /rpc/payload on the separate `sql.wasm` component, which
+ *   arm=component  main component GETs /rpc/payload on the separate `tb-ah-query-tbdb.wasm` component, which
  *                  runs the query and stores the rows in the shared KV store, then the main
  *                  component reads them back by key and renders the same template
  *
@@ -226,7 +226,7 @@ for (const limit of LIMITS) {
   );
   if (inner.componentQ.length) {
     console.log(
-      `   inside sql.wasm: query ${String(median(inner.componentQ)).padStart(4)}ms + ` +
+      `   inside tb-ah-query-tbdb.wasm: query ${String(median(inner.componentQ)).padStart(4)}ms + ` +
         `serialise+store ${String(median(inner.componentW)).padStart(4)}ms` +
         `  =>  the HTTP hop + KV read is what costs, not the query`
     );

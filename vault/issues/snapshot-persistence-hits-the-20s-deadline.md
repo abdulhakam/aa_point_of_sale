@@ -15,7 +15,7 @@ related_to: ["[[new-system-report-timings]]", "[[guest-report-performance-option
 
 A generic **materialised-snapshot** capability, implemented entirely in runtime files (no host
 rebuild), to work around the host's `thread_local` QuickJS state
-(`trailbase/host/src/runtime.rs`), where each of the 4 runtime threads has its own snapshot and
+(`trailbase/tb-ah-run-js/src/runtime.rs`), where each of the 4 runtime threads has its own snapshot and
 therefore rebuilt every view inside the request:
 
 - `app/lib/reports.js` — the built views are persisted to `mview(name, data)` (one JSON blob per

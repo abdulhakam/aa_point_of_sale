@@ -97,7 +97,7 @@ cache, so cache state scales both and cancels in the ratio.
 |---|---|
 | `inline` | the app's own `readTable` — column lookup, select, **and per-row normalisation** |
 | `raw` | the same rows with **no normalisation** — the identical work the component does, **the fair comparison** |
-| `component` | rows acquired by `sql.wasm`, handed over by KV key, read back |
+| `component` | rows acquired by `tb-ah-query-tbdb.wasm`, handed over by KV key, read back |
 
 At real report volumes (33,601–60,186 rows, 7–15 tables) the result is unambiguous and stable across
 repeats: **fair median +71.0%, component slower in 14/14 reports** (range +37% .. +99%), while the

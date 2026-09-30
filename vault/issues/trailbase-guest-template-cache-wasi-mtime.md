@@ -51,7 +51,7 @@ Verified: prime → clean; edit → marker appears; revert → clean, all withou
 
 ## Evidence
 
-- `trailbase/host/src/render.rs` — uncached `Loader`, `clear_templates()` per render.
+- `trailbase/tb-ah-run-js/src/render.rs` — uncached `Loader`, `clear_templates()` per render.
 - Observed before the fix: `/__render` returned the pre-edit HTML indefinitely; only a process
   restart picked up the change.
 - Observed after: marker present immediately after edit, absent immediately after revert.

@@ -1,5 +1,5 @@
 ---
-title: trail_runtime_js — a Rust guest that runs dynamic TS/JS in TrailBase
+title: tb_ah_run_js — a Rust guest that runs dynamic TS/JS in TrailBase
 type: note
 status: active
 created: 2026-09-26
@@ -7,16 +7,16 @@ tags: [trailbase, wasm, guests, rquickjs, quickjs, reference, runtime]
 related_to: ["[[trailbase-guest-wasm-spike-results]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[trailbase-migration]]"]
 ---
 
-# trail_runtime_js — a Rust guest that runs dynamic TS/JS in TrailBase
+# tb_ah_run_js — a Rust guest that runs dynamic TS/JS in TrailBase
 
-An existing project (`github.com/abdulhakam/trail_runtime_js`, the user's only Rust project)
+An existing project (`github.com/abdulhakam/tb_ah_run_js`, the user's only Rust project)
 already implements the plan's D2/D4 premise with a different engine, and is the obvious basis for
 the runtime-JS part of the guest platform. This note records what it is and how it maps onto
 [[trailbase-guest-wasm-runtime-defaults]], so a future session does not re-derive it.
 
 ## What it is
 
-A **Rust guest component** (`trail_runtime_js`, cdylib → `wasm32-wasip2`) that embeds
+A **Rust guest component** (`tb_ah_run_js`, cdylib → `wasm32-wasip2`) that embeds
 **QuickJS** via `rquickjs` and executes `.ts`/`.js` files **at runtime, with no rebuild**:
 
 ```text
@@ -104,16 +104,16 @@ Parameter binding is text-only: JS params are mapped to `Value::Text`.
 
 ```powershell
 cargo build --target wasm32-wasip2 --release
-# deploy trail_runtime_js/target/wasm32-wasip2/release/trail_runtime_js.wasm -> traildepot/wasm/
+# deploy tb_ah_run_js/target/wasm32-wasip2/release/tb_ah_run_js.wasm -> traildepot/wasm/
 trail run --dev --runtime-root-fs traildepot --demo --stderr-logging --public-dir traildepot/public
 ```
 
 ## Status here
 
-**Adopted into this repo at `trailbase/host/`** (Rust crate, `trailbase-wasm 0.6.1`, README +
+**Adopted into this repo at `trailbase/tb-ah-run-js/`** (Rust crate, `trailbase-wasm 0.6.1`, README +
 `.gitignore` added, upstream attribution noted). It was first taken in at `trailbase/src/host/` and
 moved up a level by [[trailbase-flat-source-layout]] on 2026-09-28. It builds clean there
-(`trailbase/host/target/wasm32-wasip2/release/trail_runtime_js.wasm`).
+(`trailbase/tb-ah-run-js/target/wasm32-wasip2/release/tb_ah_run_js.wasm`).
 
 **Component size, stated once, with its history.** The upstream build is **5,875,367 B (5.88 MB)**;
 this repo's component is **7,187,264 B (7.17 MB)** after minijinja and the render bridge were added
@@ -185,7 +185,7 @@ raw execution speed. Both engines must avoid long synchronous handlers.
 ## Rendering (D3) added here
 
 `minijinja` was folded into the `runtime-js` host as a native bridge (Rust side:
-`trailbase/host/src/render.rs`), exposed to scripts as `render.html(name, ctxJson)` /
+`trailbase/tb-ah-run-js/src/render.rs`), exposed to scripts as `render.html(name, ctxJson)` /
 `render.string(source, ctxJson)`. Templates come from `/app/views` (falling back to `/app/pages`),
 names resolve views-root-relative exactly as the former Node frontend's render module
 (`frontend-ssr/src/lib/render.js`, removed 2026-09-27) did, and the ten custom filters are ported

@@ -19,7 +19,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const trailbaseRoot = path.resolve(here, "..");            // trailbase/
 const repo = path.resolve(trailbaseRoot, "..");             // repo root
 const site = path.join(trailbaseRoot, "runtime");          // the app tree (--runtime-root-fs)
-const wasm = path.join(trailbaseRoot, "traildepot", "wasm", "runtime_js.wasm"); // from build.bat
+const wasm = path.join(trailbaseRoot, "traildepot", "wasm", "tb-ah-run-js.wasm"); // from build.bat
 
 const work = path.join(trailbaseRoot, ".tbdemo-guest");
 const depot = path.join(work, "depot");
@@ -77,7 +77,7 @@ async function startTrail() {
   fs.copyFileSync(path.join(trailbaseRoot, "config.textproto"), path.join(depot, "config.textproto"));
   fs.copyFileSync(path.join(trailbaseRoot, "metadata.textproto"), path.join(depot, "metadata.textproto"));
   fs.cpSync(path.join(trailbaseRoot, "migrations"), path.join(depot, "migrations"), { recursive: true });
-  fs.copyFileSync(wasm, path.join(depot, "wasm", "runtime_js.wasm"));
+  fs.copyFileSync(wasm, path.join(depot, "wasm", "tb-ah-run-js.wasm"));
 
   const child = spawn("trail", [`--depot=${depot}`, "run", `--address=127.0.0.1:${TB_PORT}`, `--runtime-root-fs=${site}`], { cwd: depot });
   child.stdout.on("data", (d) => (trailLog += d));

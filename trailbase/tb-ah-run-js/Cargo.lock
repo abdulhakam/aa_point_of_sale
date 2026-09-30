@@ -1677,6 +1677,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
+name = "tb_ah_run_js"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "base64 0.22.1",
+ "futures",
+ "minijinja",
+ "rquickjs",
+ "serde",
+ "serde_json",
+ "swc_core",
+ "trailbase-wasm",
+ "wstd",
+]
+
+[[package]]
 name = "termcolor"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1774,22 +1790,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db97caf9d906fbde555dd62fa95ddba9eecfd14cb388e4f491a66d74cd5fb79a"
 dependencies = [
  "once_cell",
-]
-
-[[package]]
-name = "trail_runtime_js"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "base64 0.22.1",
- "futures",
- "minijinja",
- "rquickjs",
- "serde",
- "serde_json",
- "swc_core",
- "trailbase-wasm",
- "wstd",
 ]
 
 [[package]]

@@ -92,9 +92,9 @@ Concretely:
 
 ## Evidence
 
-- `trailbase/host/src/render.rs` — minijinja + the ten ported filters, exercised as a generic
+- `trailbase/tb-ah-run-js/src/render.rs` — minijinja + the ten ported filters, exercised as a generic
   `render.html/render.string` capability.
-- `trailbase/host/src/api.rs`, `trailbase/host/src/lib.rs` — the generic bridges (render,
+- `trailbase/tb-ah-run-js/src/api.rs`, `trailbase/tb-ah-run-js/src/lib.rs` — the generic bridges (render,
   SQL, response shaping); the host is described as "architecture only" in
   [[runtime-js-single-host]].
 - `trailbase/runtime/ahscripts/routes/_app/route.ts` — the generic runtime file router; all app

@@ -13,7 +13,7 @@ related_to: ["[[api-contract-trailbase]]", "[[guest-app-host-port]]", "[[tb-0025
 
 ## The finding
 
-`trailbase/host/src/lib.rs:321-329`, after the dispatcher has found no route file:
+`trailbase/tb-ah-run-js/src/lib.rs:321-329`, after the dispatcher has found no route file:
 
 ```rust
 // Fallback for API mock or just 404
@@ -50,8 +50,8 @@ Tracked in [[tb-0025-host-endpoint-hygiene]].
 
 ## Evidence
 
-- `trailbase/host/src/lib.rs:321-337` — the mock and the 404 it shadows; read 2026-09-28.
-- `trailbase/host/src/lib.rs:207-216` — the dispatcher fallback that means almost every path
+- `trailbase/tb-ah-run-js/src/lib.rs:321-337` — the mock and the 404 it shadows; read 2026-09-28.
+- `trailbase/tb-ah-run-js/src/lib.rs:207-216` — the dispatcher fallback that means almost every path
   resolves anyway, so the mock only fires for `/api/...` typos.
 
 ## Related

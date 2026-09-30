@@ -43,7 +43,7 @@ difference is material:
 - `[[component-split-and-sql-materialised-tables]]` plans to split the host into three separately
   distributed components. Splitting makes distribution more likely, so the licence question moves
   from theoretical to blocking.
-- `trailbase/host/Cargo.toml` itself has **no `LICENSE` file**, so this repo's own licensing posture
+- `trailbase/tb-ah-run-js/Cargo.toml` itself has **no `LICENSE` file**, so this repo's own licensing posture
   is also unstated.
 
 ## What is unresolved

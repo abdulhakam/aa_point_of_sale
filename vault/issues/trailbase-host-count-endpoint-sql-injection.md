@@ -13,7 +13,7 @@ related_to: ["[[api-contract-trailbase]]", "[[trailbase-auth-status-doc-mismatch
 
 ## The finding
 
-`trailbase/host/src/lib.rs:46-60` registers a route straight from the upstream host's self-test
+`trailbase/tb-ah-run-js/src/lib.rs:46-60` registers a route straight from the upstream host's self-test
 surface, ahead of the wildcard:
 
 ```rust
@@ -61,8 +61,8 @@ Tracked in [[tb-0025-host-endpoint-hygiene]].
 
 ## Evidence
 
-- `trailbase/host/src/lib.rs:46-60` — the route, read 2026-09-28.
-- `trailbase/host/src/lib.rs:40-44` — the wildcard registration it precedes.
+- `trailbase/tb-ah-run-js/src/lib.rs:46-60` — the route, read 2026-09-28.
+- `trailbase/tb-ah-run-js/src/lib.rs:40-44` — the wildcard registration it precedes.
 - `trailbase/config.textproto`, the `record_apis` comment block — the "401 for unauthenticated"
   claim this contradicts.
 - Grep of `vault/` for `/count/`: one unrelated hit in a captured `trailbase.js` listing, so this

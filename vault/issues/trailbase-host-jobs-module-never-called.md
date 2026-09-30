@@ -17,8 +17,8 @@ related_to: ["[[trailbase-runtime-js-scheduler-not-running-jobs]]", "[[jobs-in-p
 discovered but never executed, and calls the problem *mitigated* because the poller was rewritten to
 bypass it. It blames file **discovery**. The larger fact is that the module is not called at all:
 
-- `trailbase/host/src/jobs.rs:24` defines `check_and_run_due_jobs`, the only entry point.
-- `trailbase/host/src/lib.rs:64-89` `job_handlers()` returns **one** job,
+- `trailbase/tb-ah-run-js/src/jobs.rs:24` defines `check_and_run_due_jobs`, the only entry point.
+- `trailbase/tb-ah-run-js/src/lib.rs:64-89` `job_handlers()` returns **one** job,
   `Job::minutely("queue_poller", …)`, whose body calls
   `crate::runtime::run_route("/ahscripts/routes/_app/route.ts", "POST", …)`.
 - Nothing in the crate calls `check_and_run_due_jobs`. Grep across `host/src` returns the
@@ -38,7 +38,7 @@ The recorded mitigation is sound and `jobs-check.mjs` passes, so the durable que
 ([[jobs-in-process-durable-queue]]) is fine. What is lost is:
 
 - **A documented capability that does not exist.** `runtime-js-guest-platform.md` and
-  `trailbase/host/README.md:20` both advertise `ahscripts/jobs/*.ts` as a place to put scheduled
+  `trailbase/tb-ah-run-js/README.md:20` both advertise `ahscripts/jobs/*.ts` as a place to put scheduled
   work. It cannot work, for a different reason than the note gives.
 - **Init is first-request, not start-up.** Anything that assumes "init already ran" (a migration
   step, a seed, a KV warm) has a window where it has not, and a cold server has no such window at
@@ -61,11 +61,11 @@ as an open question.
 
 ## Evidence
 
-- `trailbase/host/src/jobs.rs:24,29` — the definition and its internal call to
+- `trailbase/tb-ah-run-js/src/jobs.rs:24,29` — the definition and its internal call to
   `ensure_global_init`.
-- `trailbase/host/src/lib.rs:64-89` — the only registered job, and it does not go through
+- `trailbase/tb-ah-run-js/src/lib.rs:64-89` — the only registered job, and it does not go through
   `jobs.rs`.
-- `trailbase/host/src/init.rs:24,50` — `ensure_global_init` and its warning.
+- `trailbase/tb-ah-run-js/src/init.rs:24,50` — `ensure_global_init` and its warning.
 - Grep of `host/src` for `check_and_run_due_jobs` / `ensure_global_init`, 2026-09-28: 4 hits, all
   in `init.rs` and `jobs.rs`, none in `lib.rs`.
 

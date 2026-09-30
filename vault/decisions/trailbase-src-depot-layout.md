@@ -41,7 +41,7 @@ trailbase/
   and the source copies, then re-copies `src/{config.textproto, metadata.textproto, migrations,
   runtime}` into `traildepot/`.
 - `build.bat` runs `cargo build --target wasm32-wasip2 --release` in `src/host/` and copies the
-  component to `traildepot/wasm/runtime_js.wasm` (plus the TrailBase auth-UI component when present).
+  component to `traildepot/wasm/tb-ah-run-js.wasm` (plus the TrailBase auth-UI component when present).
 - The server is started by `RUN.BAT` with **`--runtime-root-fs=traildepot/runtime`**.
 
 The former top-level `runtime-js/` directory is retired: its host, frontend and tools moved into
@@ -82,7 +82,7 @@ The former top-level `runtime-js/` directory is retired: its host, frontend and 
 
 - `trailbase/clear_db.bat`, `trailbase/build.bat`, `trailbase/RUN.BAT` (2026-09-27).
 - `clear_db.bat` assembled `traildepot/` (config + metadata + migrations + runtime) from `src/`, and
-  `build.bat` finished in 1m12s and copied `runtime_js.wasm` into `traildepot/wasm/`.
+  `build.bat` finished in 1m12s and copied `tb-ah-run-js.wasm` into `traildepot/wasm/`.
 - `node trailbase/tools/guest-smoke.mjs` — **71/71**.
 
 ## Related

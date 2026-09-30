@@ -1,5 +1,5 @@
 ---
-title: TB-0017 Evaluate and adopt trail_runtime_js as the runtime-JS engine
+title: TB-0017 Evaluate and adopt tb_ah_run_js as the runtime-JS engine
 type: task
 status: doing
 priority: high
@@ -9,9 +9,9 @@ belongs_to: "[[trailbase-migration]]"
 related_to: ["[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[tb-0016-guest-wasm-phase0-spikes]]"]
 ---
 
-# TB-0017 Evaluate and adopt trail_runtime_js as the runtime-JS engine
+# TB-0017 Evaluate and adopt tb_ah_run_js as the runtime-JS engine
 
-`github.com/abdulhakam/trail_runtime_js` already runs dynamic TypeScript inside a TrailBase guest
+`github.com/abdulhakam/tb_ah_run_js` already runs dynamic TypeScript inside a TrailBase guest
 using a Rust host + QuickJS (`rquickjs`) + `swc`, with file routing, init scripts and a `minutely`
 job scheduler — the plan's D2/D4 premise, on a faster engine than the `jco`/StarlingMonkey guest
 that Phase 0 measured. Fold it into this repo as the platform's runtime-JS host.
@@ -29,7 +29,7 @@ See [[trail-runtime-js-reference]] for the full assessment.
 
 - [x] Confirm the reference builds here (`cargo build --target wasm32-wasip2 --release`)
 - [x] Bring the crate into this repo as `trailbase/src/` (attribution + README added); builds clean
-      there (`target/wasm32-wasip2/release/trail_runtime_js.wasm`, 5,875,367 B)
+      there (`target/wasm32-wasip2/release/tb_ah_run_js.wasm`, 5,875,367 B)
 - [x] Run it in a scratch depot and exercise a `.ts` route end-to-end (self-test 6/6)
 - [ ] Fix `init`/`jobs` to accept `.ts` and run `init` at startup (upstream filters `.js` only
       and runs init from the minutely job — see [[trail-runtime-js-reference]] § Gaps)

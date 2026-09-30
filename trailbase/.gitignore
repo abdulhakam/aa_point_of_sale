@@ -1,6 +1,7 @@
-# `host/`, `app/`, `migrations/`, `tools/` and the two textproto files are the source of
-# truth. `traildepot/` is a build artefact assembled from them by clear_db.bat + build.bat,
-# so everything in it is generated and git-ignored.
+# The component sources are the source of truth: `tb-ah-run-js/`, `tb-ah-render-jinja/`,
+# `tb-ah-query-tbdb/`, `runtime/`, `migrations/`, `tools/` and the two textproto files.
+# `traildepot/` is a build artefact assembled from them by clear_db.bat + build.bat, so everything
+# in it is generated and git-ignored.
 traildepot/config.textproto
 traildepot/metadata.textproto
 traildepot/migrations/
@@ -16,10 +17,15 @@ traildepot/wasm/
 # The bench orchestrator redirects the server's streams to `*.log.err`, which `*.log` misses.
 traildepot/*.log.*
 
-  # Rust build output for the guest components.
-  host/target/
-  host-sql/target/
-  host-renderer/target/
+# Rust build output for the guest components.
+#
+# These rules must NOT be indented: git treats leading whitespace in a .gitignore line as part of
+# the pattern, so an indented `component/target/` matches no path at all. That silently happened
+# here — `host/target/` sat indented for the whole life of this file, so the build output was
+# never ignored and only stayed out of commits because nobody ran `git add trailbase/host`.
+tb-ah-run-js/target/
+tb-ah-query-tbdb/target/
+tb-ah-render-jinja/target/
 
 # Throw-away depot the tools create when they run.
 .tbdemo-guest/

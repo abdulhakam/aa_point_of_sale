@@ -44,7 +44,7 @@ The load-bearing distinction is now the first segment of the path, not a nested 
 
 | Path | Change cadence |
 |---|---|
-| `trailbase/host/` | Rust -> WASM; needs `build.bat` |
+| `trailbase/tb-ah-run-js/` | Rust -> WASM; needs `build.bat` |
 | `trailbase/runtime/` | JS / Jinja / SQL; read per request, no rebuild |
 | `trailbase/tools/` | Node harnesses, run with `node` |
 
@@ -74,7 +74,7 @@ and matches the generated `traildepot/runtime/`.
 |---|---|
 | Leave `src/` in place | The confusion that prompted the request. `src/` grouped things by nothing in particular and separated the engine from the app. |
 | `trailbase/app/` for the editable tree | `app/app/…` stutter, and it breaks the vocabulary the host README and `--runtime-root-fs` already use. |
-| `trailbase/host/`, `trailbase/site/`, `trailbase/tools/` | `site/` says nothing about what the directory is (it is a WASI runtime root read by a QuickJS host). |
+| `trailbase/tb-ah-run-js/`, `trailbase/site/`, `trailbase/tools/` | `site/` says nothing about what the directory is (it is a WASI runtime root read by a QuickJS host). |
 | Keep `guests/` as a runnable reference | Nothing loaded it; the two remaining references were already broken paths. The spike's value is its findings, which are in [[trailbase-guest-wasm-spike-results]], [[trailbase-guest-aot-startup-cost]] and [[trailbase-guest-cpu-js-limits]]. |
 | Keep the auth-UI component copy step in `build.bat` | It looked for `guests/spikes/depot/wasm/…`, which does not exist, so the step never ran. TrailBase falls back to its built-in auth UI. |
 
@@ -96,7 +96,7 @@ and matches the generated `traildepot/runtime/`.
 
 ## Evidence
 
-- `cmd /c trailbase\build.bat` — built and copied `traildepot/wasm/runtime_js.wasm` after the move.
+- `cmd /c trailbase\build.bat` — built and copied `traildepot/wasm/tb-ah-run-js.wasm` after the move.
 - `cmd /c trailbase\clear_db.bat` — exit 0, `traildepot/` re-assembled from the flattened sources.
 - `node trailbase/tools/guest-smoke.mjs` — **71/71** from the new layout.
 - `node trailbase/tools/view-equivalence.mjs` — `transactionView` 23,413 identical,

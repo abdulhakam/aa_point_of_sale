@@ -1,4 +1,4 @@
-//! `renderer.wasm` — the renderer as its own TrailBase guest component.
+//! `tb-ah-render-jinja.wasm` — the renderer as its own TrailBase guest component.
 //!
 //! # Why this is a separate component
 //!

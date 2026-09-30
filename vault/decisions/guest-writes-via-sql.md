@@ -21,7 +21,7 @@ as **text**.
 
 ## Decision
 
-1. **Expose a real write path.** `trailbase/host/src/api.rs` and `api/sqlite.rs` now register
+1. **Expose a real write path.** `trailbase/tb-ah-run-js/src/api.rs` and `api/sqlite.rs` now register
    `db.execute` / `sqlite.execute` / `sqlite.run` on `trailbase_wasm::db::execute` (rows affected),
    instead of aliasing them to the read-only `query`.
 2. **BLOB columns are bound as hex and wrapped in `unhex(?)`.** With SQLite ≥ 3.41 (the depot runs
@@ -60,7 +60,7 @@ correct. A write calls `invalidate()` on the guest report service so the next re
 
 ## Evidence
 
-- `trailbase/host/src/api.rs`, `trailbase/host/src/api/sqlite.rs` — the `execute` bridge.
+- `trailbase/tb-ah-run-js/src/api.rs`, `trailbase/tb-ah-run-js/src/api/sqlite.rs` — the `execute` bridge.
 - `trailbase/runtime/app/lib/management.js` — `base64ToHex`, `createRow`/`updateRow`/`deleteRow`,
   `syncLinks`.
 - `trailbase/tools/management-check.mjs` — create → list → update → verify → delete → verify for

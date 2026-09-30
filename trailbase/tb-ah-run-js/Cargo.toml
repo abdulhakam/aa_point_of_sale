@@ -1,5 +1,5 @@
 [package]
-name = "trail_runtime_js"
+name = "tb_ah_run_js"
 version = "0.0.0"
 authors = ["abdulhakam"]
 edition = "2024"

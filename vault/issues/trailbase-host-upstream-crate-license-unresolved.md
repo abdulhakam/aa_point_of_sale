@@ -13,8 +13,8 @@ related_to: ["[[trail-runtime-js-reference]]", "[[trailbase-flat-source-layout]]
 
 ## The finding
 
-`trailbase/host/` is adapted from `github.com/abdulhakam/trail_runtime_js`. Its own README says so
-and adds the caveat verbatim (`trailbase/host/README.md:88-89`):
+`trailbase/tb-ah-run-js/` is adapted from `github.com/abdulhakam/tb_ah_run_js`. Its own README says so
+and adds the caveat verbatim (`trailbase/tb-ah-run-js/README.md:88-89`):
 
 > The upstream repository publishes no `LICENSE` file; confirm licensing before any redistribution.
 
@@ -25,7 +25,7 @@ been carried in a code comment for the life of the crate.
 ## Why it matters here specifically
 
 The host is **not** an internal-only artefact. It ships as a compiled WASM component
-(`trailbase/traildepot/wasm/runtime_js.wasm`, ~7 MB) and the plan is to keep the compiled artifacts
+(`trailbase/traildepot/wasm/tb-ah-run-js.wasm`, ~7 MB) and the plan is to keep the compiled artifacts
 generic and shareable ([[compiled-artifacts-are-generic-capabilities]]). Redistributing a build of
 a crate whose upstream terms are unknown is exactly the case the README warns about.
 
@@ -42,15 +42,15 @@ Two facts that make this smaller than it looks, and should be stated in the reso
 
 1. Add a LICENSE to the upstream repository (or an explicit statement in its README that it is
    public-domain / unlicensed-but-owned-by-the-author).
-2. Record the outcome in [[trail-runtime-js-reference]] and in `trailbase/host/README.md`, replacing
+2. Record the outcome in [[trail-runtime-js-reference]] and in `trailbase/tb-ah-run-js/README.md`, replacing
    "confirm before any redistribution" with the actual answer and its date.
 3. Until then, treat the built component as not-for-redistribution.
 
 ## Evidence
 
-- `trailbase/host/README.md:88-89` — the caveat, verbatim.
-- `trailbase/host/README.md:8` — the base repository.
-- `trailbase/host/README.md:5-6` — the two vault notes that cite this README as the provenance
+- `trailbase/tb-ah-run-js/README.md:88-89` — the caveat, verbatim.
+- `trailbase/tb-ah-run-js/README.md:8` — the base repository.
+- `trailbase/tb-ah-run-js/README.md:5-6` — the two vault notes that cite this README as the provenance
   record.
 - Grep of `vault/**/*.md` for `license|LICENSE|redistribut`, 2026-09-28: no note covers this.
 - `trailbase/tasks/tb-0017-adopt-trail-runtime-js.md:31` — the adoption line, which records

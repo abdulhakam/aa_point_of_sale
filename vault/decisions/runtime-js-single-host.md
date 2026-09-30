@@ -16,7 +16,7 @@ related_to: ["[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-d
 Phase 0 proved the guest platform's premises ([[trailbase-guest-wasm-spike-results]]) and the
 plan's component map proposed separate `app-host`, `render`, `compute`, `data`, `jobs` and
 `worker` components ([[trailbase-guest-wasm-runtime-defaults]]). The existing
-`abdulhakam/trail_runtime_js` project already implements the D2/D4 premise as **one** Rust guest
+`abdulhakam/tb_ah_run_js` project already implements the D2/D4 premise as **one** Rust guest
 embedding QuickJS with file routing and an API bridge ([[trail-runtime-js-reference]]), and it
 builds and serves on our `trail v0.33.22` after a `trailbase-wasm 0.6.1` bump.
 
@@ -27,7 +27,7 @@ The plan's D3 wanted a separate Rust `minijinja` guest reached over HTTP.
 **`runtime-js` is the single app host for the first cut**, and rendering is **folded into it**
 rather than being a separate component:
 
-- A Rust `minijinja` module (`trailbase/host/src/render.rs`) is exposed to scripts as native
+- A Rust `minijinja` module (`trailbase/tb-ah-run-js/src/render.rs`) is exposed to scripts as native
   `render.html(name, ctxJson)` / `render.string(source, ctxJson)`. Templates load from
   `/app/views` (falling back to `/app/pages`); names resolve views-root-relative; the ten filters
   from the earlier Node frontend are ported; templates cache by mtime.
@@ -67,8 +67,8 @@ later option if isolation or the per-call deadline demands it.
 
 ## Evidence
 
-- `trailbase/host/src/render.rs` — the ported renderer and filters.
-- `trailbase/host/src/api.rs` — the `render` bridge; `trailbase/host/src/lib.rs` — the `{ html }` response.
+- `trailbase/tb-ah-run-js/src/render.rs` — the ported renderer and filters.
+- `trailbase/tb-ah-run-js/src/api.rs` — the `render` bridge; `trailbase/tb-ah-run-js/src/lib.rs` — the `{ html }` response.
 - Verified: `GET /page` → `200`, `content-type: text/html`, `{% extends "layout.html" %}` resolved,
   filters produced `1234.50`, `1 ctn 1 unit`, `24-Sep-2026`, `PROFIT REPORT`, `Yes`.
 - [[trail-runtime-js-reference]] — the adopted host and its measurements.

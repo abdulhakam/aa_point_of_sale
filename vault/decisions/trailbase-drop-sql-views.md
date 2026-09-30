@@ -85,7 +85,7 @@ output can be compared for the same rows.
 ## Superseded in part
 
 This decision is **reversed for the report path** by [[component-split-and-sql-materialised-tables]]
-(2026-09-28): the old SQL came back as runtime `.sql` files plus a separate `sql.wasm` component,
+(2026-09-28): the old SQL came back as runtime `.sql` files plus a separate `tb-ah-query-tbdb.wasm` component,
 because the in-process QuickJS path is what pushes the four heavy reports past the 20 s deadline.
 
 Its **reasoning about typeability still holds** — TrailBase still has no *exposed* views, and the

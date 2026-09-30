@@ -1,5 +1,5 @@
 [package]
-name = "trail_sql_service"
+name = "tb_ah_query_tbdb"
 version = "0.0.0"
 authors = ["abdulhakam"]
 edition = "2024"

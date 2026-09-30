@@ -1,4 +1,5 @@
-//! `sql.wasm` — a standalone TrailBase guest component that serves *data acquisition only*.
+//! `tb-ah-query-tbdb.wasm` — a standalone TrailBase guest component that serves *data acquisition
+//! only*.
 //!
 //! Purpose: measure what it actually costs to run SQL in a **separate wasm component** instead of
 //! in the main app host. It owns a disjoint URL space (`/rpc/*`) because TrailBase merges every

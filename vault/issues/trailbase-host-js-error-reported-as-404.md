@@ -13,7 +13,7 @@ related_to: ["[[trailbase-guest-error-string-opaque]]", "[[tb-0025-host-endpoint
 
 ## The finding
 
-`trailbase/host/src/lib.rs:313-317`:
+`trailbase/tb-ah-run-js/src/lib.rs:313-317`:
 
 ```rust
 Err(e) => {
@@ -52,8 +52,8 @@ Tracked in [[tb-0025-host-endpoint-hygiene]].
 
 ## Evidence
 
-- `trailbase/host/src/lib.rs:313-317` — the mapping and its admission; read 2026-09-28.
-- `trailbase/host/src/lib.rs:218-220` — the guard that already distinguishes "file not found" for
+- `trailbase/tb-ah-run-js/src/lib.rs:313-317` — the mapping and its admission; read 2026-09-28.
+- `trailbase/tb-ah-run-js/src/lib.rs:218-220` — the guard that already distinguishes "file not found" for
   the 404 case.
 - [[trailbase-guest-error-string-opaque]] — the same failure, one layer down.
 

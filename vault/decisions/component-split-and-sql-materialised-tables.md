@@ -160,7 +160,7 @@ sweep therefore runs **three** arms, because two of them answer different questi
 |---|---|
 | `inline` | the app's own `readTable` — column lookup, select, **and per-row normalisation** (relation ids to url-safe base64, booleans to 0/1) |
 | `raw` | the same columns and the same rows with **no normalisation** — i.e. the identical work the component does, **the fair comparison** |
-| `component` | rows acquired by `sql.wasm` and handed over by KV key, then read back |
+| `component` | rows acquired by `tb-ah-query-tbdb.wasm` and handed over by KV key, then read back |
 
 | report | rows | tables | inline | raw | component | **fair** | e2e |
 |---|---|---|---|---|---|---|---|
@@ -248,7 +248,7 @@ cancels in the ratio.
   render.
 - `notes/trailbase-guest-cpu-js-limits.md` — the ~1e6 iterations/s engine rate and the ~20 s
   deadline.
-- `trailbase/host/Cargo.toml` — one crate, 7.17 MB build.
+- `trailbase/tb-ah-run-js/Cargo.toml` — one crate, 7.17 MB build.
 - `trailbase/migrations/main/U1790208000__create_base_tables.sql` — the `REAL` money columns and the
   fractional `qty`.
 

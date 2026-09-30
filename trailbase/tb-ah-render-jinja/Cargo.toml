@@ -1,5 +1,5 @@
 [package]
-name = "trail_renderer"
+name = "tb_ah_render_jinja"
 version = "0.0.0"
 authors = ["abdulhakam"]
 edition = "2024"

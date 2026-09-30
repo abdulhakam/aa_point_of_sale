@@ -17,8 +17,8 @@ related_to: ["[[component-split-and-sql-materialised-tables]]", "[[compiled-arti
 instantiated once for the main runtime and once per runtime thread:
 
 ```text
-Loaded component "traildepot\\wasm\\runtime_js.wasm" in: 220.4252ms.
-Loaded component "traildepot\\wasm\\sql.wasm"       in:  24.7846ms.
+Loaded component "traildepot\\wasm\\tb-ah-run-js.wasm" in: 220.4252ms.
+Loaded component "traildepot\\wasm\\tb-ah-query-tbdb.wasm"       in:  24.7846ms.
 ```
 
 `trail run` exposes no per-component flag (`--runtime-root-fs` and `--runtime-threads` are the only
@@ -61,14 +61,14 @@ Both fail in ways that surface only as TrailBase's generic
 
 ## Resolution
 
-Both constraints are worked around in `trailbase/host-sql/` (a counter-based spool key, KV
+Both constraints are worked around in `trailbase/tb-ah-query-tbdb/` (a counter-based spool key, KV
 handoff). The finding itself is **resolved** — the approach is proven, and measured in
 [[component-split-and-sql-materialised-tables]].
 
 ## Evidence
 
-- `trailbase/host-sql/` — the second component; 0.78 MB build.
-- `trailbase/host-sql/src/lib.rs:20-24` — the URL space kept disjoint, with the reason.
+- `trailbase/tb-ah-query-tbdb/` — the second component; 0.78 MB build.
+- `trailbase/tb-ah-query-tbdb/src/lib.rs:20-24` — the URL space kept disjoint, with the reason.
 - Server log: both components compiled and loaded; `Error calling WASM component 'sql'` naming the
   failing component.
 - `trailbase/tools/split-bench.mjs` — the harness that drives both components.

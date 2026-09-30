@@ -19,7 +19,7 @@ existed).
 
 ## How it is put together
 
-- **Host change:** `trailbase/host/src/lib.rs` gained a dispatcher fallback — a request that matches
+- **Host change:** `trailbase/tb-ah-run-js/src/lib.rs` gained a dispatcher fallback — a request that matches
   no `ahscripts/routes/<path>/route.*` is routed to `ahscripts/routes/_app/route.ts`. It also
   passes the resolved `user` (`req.user()`), `query`, and more headers into the JS request, and
   understands `{ html }`, `{ redirect, status?, headers? }`, `{ text, status?, headers? }` and

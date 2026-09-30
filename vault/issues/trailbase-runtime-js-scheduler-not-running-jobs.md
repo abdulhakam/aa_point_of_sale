@@ -53,7 +53,7 @@ general mechanism.
   75 s wait with no app requests (before the workaround).
 - After the workaround: the log shows `queue: reconciled 1 step(s)` with no intervening request,
   and `jobs-check.mjs` `POLLER_TEST=1` passes.
-- `trailbase/host/src/jobs.rs` — the broken discovery; `trailbase/host/src/lib.rs` — the workaround.
+- `trailbase/tb-ah-run-js/src/jobs.rs` — the broken discovery; `trailbase/tb-ah-run-js/src/lib.rs` — the workaround.
 
 ## Related
 

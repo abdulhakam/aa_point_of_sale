@@ -20,7 +20,7 @@ directory was sitting next to the live system. Rationale and the alternatives re
 
 ## Move
 
-- [x] `trailbase/src/host/` -> `trailbase/host/` (the compiled Rust guest crate)
+- [x] `trailbase/src/host/` -> `trailbase/tb-ah-run-js/` (the compiled Rust guest crate)
 - [x] `trailbase/src/runtime/` -> `trailbase/runtime/` (the editable app: `ahscripts/` + `app/`)
 - [x] `trailbase/src/tools/` -> `trailbase/tools/` (the Node verification harnesses)
 - [x] `trailbase/src/migrations/` -> `trailbase/migrations/`
@@ -31,7 +31,7 @@ directory was sitting next to the live system. Rationale and the alternatives re
 ## Delete
 
 - [x] `guests/` — the Phase-0 TypeScript spike ([[trailbase-guest-wasm-spike-results]]), superseded
-      by the Rust `trail_runtime_js` host. Nothing loaded it.
+      by the Rust `tb_ah_run_js` host. Nothing loaded it.
 - [x] The dead `trailbase_auth_ui_component.wasm` copy step in `build.bat` and the matching lookup
       in `tools/guest-smoke.mjs` — both pointed at `guests/spikes/depot/wasm/`, a path that no longer
       existed, so neither ever ran. TrailBase falls back to its built-in auth UI.
@@ -43,7 +43,7 @@ directory was sitting next to the live system. Rationale and the alternatives re
 - [x] `RUN.BAT` — comment only
 - [x] `tools/*.mjs` — `../runtime/app/…` imports, `resolve(here, "../..")` repo roots,
       `trailbaseRoot`-relative `config.textproto` / `metadata.textproto` / `migrations`
-- [x] `trailbase/README.md`, `trailbase/host/README.md`, `host/src/render.rs` comment
+- [x] `trailbase/README.md`, `trailbase/tb-ah-run-js/README.md`, `host/src/render.rs` comment
 - [x] `AGENTS.md` — the two paths it named as the new system
 
 ## Vault
@@ -65,7 +65,7 @@ measurement is not.
 ## What the flatten missed
 
 An audit run immediately afterwards found one thing the path-based verification could not reach:
-`trailbase/host/src/lib.rs:115` hard-codes the WASI path `/traildepot/ahscripts` in the upstream
+`trailbase/tb-ah-run-js/src/lib.rs:115` hard-codes the WASI path `/traildepot/ahscripts` in the upstream
 `/getscripts` handler, which no `.bat` file controls and which has never existed under the current
 `--runtime-root-fs=traildepot/runtime` wiring — the route always returns an empty list. Recorded as
 [[trailbase-host-getscripts-reads-wrong-root]] and scheduled for removal in
@@ -74,7 +74,7 @@ paths does not audit a Rust/WASM component**, whose paths are string literals in
 
 ## Verify
 
-- [x] `cmd /c trailbase\build.bat` — component built, copied to `traildepot/wasm/runtime_js.wasm`
+- [x] `cmd /c trailbase\build.bat` — component built, copied to `traildepot/wasm/tb-ah-run-js.wasm`
 - [x] `cmd /c trailbase\clear_db.bat` — exit 0
 - [x] `node trailbase/tools/guest-smoke.mjs` — **71/71**
 - [x] `node trailbase/tools/view-equivalence.mjs` — resolves its imports and runs;

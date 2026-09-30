@@ -13,7 +13,7 @@ related_to: ["[[trailbase-guest-cpu-js-limits]]", "[[snapshot-persistence-hits-t
 
 ## The finding
 
-`trailbase/host/src/api/time.rs:14,21-22`:
+`trailbase/tb-ah-run-js/src/api/time.rs:14,21-22`:
 
 ```rust
 // But for scripts, we can just map them to sleep for now or warn.
@@ -39,7 +39,7 @@ thread-local context has no obvious safe home.
   ("I'll chunk this loop") leads straight into the deadline that
   [[snapshot-persistence-hits-the-20s-deadline]] and [[report-performance-baseline]] are already
   fighting.
-- `trailbase/host/README.md:23-25` advertises `time.sleep` and `setTimeout` in the same list with
+- `trailbase/tb-ah-run-js/README.md:23-25` advertises `time.sleep` and `setTimeout` in the same list with
   no distinction, which reads as "both are available and cheap".
 - The `use trailbase_wasm::time::{Duration, Timer}` import at `lib.rs:11` is commented out, so the
   SDK's real timer is not wired either.
@@ -48,7 +48,7 @@ thread-local context has no obvious safe home.
 
 Document it first, decide second:
 
-- `trailbase/host/README.md` and [[runtime-js-guest-platform]] should say plainly: `setTimeout`
+- `trailbase/tb-ah-run-js/README.md` and [[runtime-js-guest-platform]] should say plainly: `setTimeout`
   sleeps, `setInterval` is absent, neither is usable inside a request, and the work-splitting tools
   are the job queue (`/jobs/reconcile`, [[jobs-in-process-durable-queue]]) or the report worker
   pool.
@@ -57,10 +57,10 @@ Document it first, decide second:
 
 ## Evidence
 
-- `trailbase/host/src/api/time.rs:14,21-22` — the sleep mapping and the `setInterval` comment; read
+- `trailbase/tb-ah-run-js/src/api/time.rs:14,21-22` — the sleep mapping and the `setInterval` comment; read
   2026-09-28.
-- `trailbase/host/src/lib.rs:11` — the commented-out SDK timer import.
-- `trailbase/host/src/runtime.rs` — the `thread_local` QuickJS context.
+- `trailbase/tb-ah-run-js/src/lib.rs:11` — the commented-out SDK timer import.
+- `trailbase/tb-ah-run-js/src/runtime.rs` — the `thread_local` QuickJS context.
 - [[trailbase-guest-cpu-js-limits]] — the ~20 s call deadline.
 
 ## Related
