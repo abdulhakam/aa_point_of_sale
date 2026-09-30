@@ -6,7 +6,7 @@ decided_on: 2026-09-26
 created: 2026-09-26
 tags: [trailbase, wasm, rquickjs, architecture, rendering, minijinja]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[trailbase-guest-wasm-spike-results]]", "[[compiled-artifacts-are-generic-capabilities]]"]
+related_to: ["[[trail-runtime-js-reference]]", "[[trailbase-guest-wasm-runtime-defaults]]", "[[trailbase-guest-wasm-spike-results]]", "[[compiled-artifacts-are-generic-capabilities]]", "[[rendering-is-a-component-behind-an-envelope]]", "[[component-split-and-sql-materialised-tables]]", "[[manifest-driven-routing-and-data-dag]]", "[[client-side-live-recalculation]]", "[[report-render-row-cap]]", "[[trailbase-loads-multiple-components-flat-router]]"]
 ---
 
 # Use runtime-js as the single app host (rendering folded in)
