@@ -16,9 +16,10 @@ traildepot/wasm/
 # The bench orchestrator redirects the server's streams to `*.log.err`, which `*.log` misses.
 traildepot/*.log.*
 
-# Rust build output for the guest component.
-host/target/
-host-sql/target/
+  # Rust build output for the guest components.
+  host/target/
+  host-sql/target/
+  host-renderer/target/
 
 # Throw-away depot the tools create when they run.
 .tbdemo-guest/

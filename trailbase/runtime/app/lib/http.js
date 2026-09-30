@@ -1,7 +1,13 @@
 // Guest HTTP/template helpers — `page`/`qs`/`qsb`,
 // rendering through the host's Rust minijinja bridge (`render.html`).
+//
+// `page` is ASYNC because the renderer may not be this component. It routes through
+// `render-client`, so whether a page is rendered in-process or by the separate `renderer.wasm`
+// component is `/app/config/renderer.json` rather than a change to any call site — 25 of them
+// (vault/decisions/rendering-is-a-component-behind-an-envelope.md).
+import { renderTemplate } from "./render-client.js";
 
-export function page(shell, name, data) {
+export async function page(req, shell, name, data) {
   const ctx = {
     appName: shell.appName,
     // Printed reports carry the legacy business header (PrintHead parity).

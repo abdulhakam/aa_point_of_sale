@@ -6,7 +6,7 @@ decided_on: 2026-09-30
 created: 2026-09-30
 tags: [render, components, envelope, pipeline, minijinja, wasm, guest]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[runtime-js-single-host]]", "[[client-side-live-recalculation]]", "[[component-split-and-sql-materialised-tables]]", "[[manifest-driven-routing-and-data-dag]]", "[[trailbase-loads-multiple-components-flat-router]]", "[[guest-db-bridge-text-params-only]]", "[[report-render-row-cap]]"]
+related_to: ["[[runtime-js-single-host]]", "[[client-side-live-recalculation]]", "[[component-split-and-sql-materialised-tables]]", "[[manifest-driven-routing-and-data-dag]]", "[[trailbase-loads-multiple-components-flat-router]]", "[[guest-db-bridge-text-params-only]]", "[[report-render-row-cap]]", "[[render-split-measured]]", "[[document-store-and-streaming-render]]"]
 ---
 
 # Rendering is a component behind a versioned envelope — a name, not a value

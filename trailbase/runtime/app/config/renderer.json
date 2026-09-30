@@ -1,0 +1,5 @@
+{
+  "renderer": "inproc",
+  "path": "/render",
+  "address": true
+}

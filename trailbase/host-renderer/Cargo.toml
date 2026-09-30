@@ -1,0 +1,19 @@
+[package]
+name = "trail_renderer"
+version = "0.0.0"
+authors = ["abdulhakam"]
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+serde = { version = "^1.0.203", features = ["derive"] }
+serde_json = "^1.0.149"
+trailbase-wasm = "0.6.1"
+# Pinned to the exact version the SDK uses, so there is one wstd in the component — the same pin
+# the app host carries. The default feature set is what provides `{% extends %}` and
+# `{% include %}`; trimming it compiles but the templates then fail with "unknown statement".
+minijinja = "2"
+wstd = "=0.5.6"

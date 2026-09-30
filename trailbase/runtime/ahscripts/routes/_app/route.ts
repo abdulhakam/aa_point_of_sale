@@ -166,6 +166,7 @@ async function app(): Promise<any> {
     inventory: await loadModule("/app/lib/inventory.js"),
     service: await loadModule("/app/lib/reports.js"),
     http: await loadModule("/app/lib/http.js"),
+    renderClient: await loadModule("/app/lib/render-client.js"),
     reportPages: await loadModule("/app/lib/report-pages.js"),
   };
   // The queue engine is a plain script so the scheduler's fresh runtime can load it too.
@@ -584,7 +585,7 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/login" && method === "GET") {
     return html(
-      A.http.page(shell(user, "", "Log in"), "auth/login.html", {
+      await A.http.page(req, shell(user, "", "Log in"), "auth/login.html", {
         next: query.next || "",
         expired: query.expired || "",
         error: "",
@@ -608,7 +609,7 @@ async function dispatch(req: any): Promise<any> {
     }
     if (!tokens || !tokens.auth_token) {
       return {
-        html: A.http.page(shell(null, "", "Log in"), "auth/login.html", {
+        html: await A.http.page(req, shell(null, "", "Log in"), "auth/login.html", {
           next,
           expired: "",
           error: "Invalid email or password",
@@ -671,7 +672,7 @@ async function dispatch(req: any): Promise<any> {
       { label: "Sending Payments", value: c.sending_payments },
     ];
     return html(
-      A.http.page(shell(user, "dashboard", "Dashboard"), "dashboard/index.html", {
+      await A.http.page(req, shell(user, "dashboard", "Dashboard"), "dashboard/index.html", {
         tiles,
         shortcuts: [
           { title: "Reports", target: "reports", tone: "pink" },
@@ -683,7 +684,7 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/reports") {
     return html(
-      A.http.page(shell(user, "reports", "Reports"), "reports/index.html", {
+      await A.http.page(req, shell(user, "reports", "Reports"), "reports/index.html", {
         tiles: A.reportPages.REPORT_INDEX,
         ledgerTiles: A.reportPages.LEDGER_INDEX,
       })
@@ -701,7 +702,7 @@ async function dispatch(req: any): Promise<any> {
     return redirect(back || "/dashboard");
   }
   if (path === "/reports/ledgers") {
-    return html(A.http.page(shell(user, "reports", "Ledgers"), "reports/ledgers/index.html", { tiles: A.reportPages.LEDGER_INDEX }));
+    return html(await A.http.page(req, shell(user, "reports", "Ledgers"), "reports/ledgers/index.html", { tiles: A.reportPages.LEDGER_INDEX }));
   }
 
   const reportMatch = /^\/reports\/(.+)$/.exec(path);
@@ -753,7 +754,7 @@ async function dispatch(req: any): Promise<any> {
         return { label: field.label, value: raw };
       })
       .filter(Boolean);
-    const page = A.http.page({ ...shell(user, "reports", pageDef.title), paper: "a4" }, pageDef.view || A.reportPages.DEFAULT_VIEW, {
+    const page = await A.http.page(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, pageDef.view || A.reportPages.DEFAULT_VIEW, {
       def: pageDef,
       // Mobile layout is additive: a narrow report turns into labelled cards, a wide one keeps its
       // grid and scrolls sideways. The first column is the row's identity and reads as a heading
@@ -781,7 +782,7 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/management") {
     const entities = A.entities.ENTITY_ORDER.map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
-    return html(A.http.page(shell(user, "management", "Management"), "management/index.html", { entities }));
+    return html(await A.http.page(req, shell(user, "management", "Management"), "management/index.html", { entities }));
   }
   const mgmtMatch = /^\/management\/([^/]+)$/.exec(path);
   if (mgmtMatch && method === "GET") {
@@ -796,7 +797,7 @@ async function dispatch(req: any): Promise<any> {
     const editId = String(query.edit || "");
     const editRow = editId ? all.find((r: any) => r.id === editId) ?? null : null;
     return html(
-      A.http.page(shell(user, "management", entity.label), "management/list.html", {
+      await A.http.page(req, shell(user, "management", entity.label), "management/list.html", {
         entity,
         entityKey,
         columns: entity.columns,
@@ -835,7 +836,7 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/plugins") {
     const plugins = await A.plugins.loadPlugins(PLUGINS_DIR);
-    return html(A.http.page(shell(user, "plugins", "Plugins"), "plugins/index.html", { plugins }));
+    return html(await A.http.page(req, shell(user, "plugins", "Plugins"), "plugins/index.html", { plugins }));
   }
 
   // Jobs: durable queue API.
@@ -1115,7 +1116,7 @@ async function dispatch(req: any): Promise<any> {
     const expenses = await A.expenses.sumExpenses(db, range);
     const inHand = round2to(recieved.recieved - sent.sent - expenses.total);
     return html(
-      A.http.page(shell(user, "cashmemo", "Cash memo"), "cashmemo/index.html", {
+      await A.http.page(req, shell(user, "cashmemo", "Cash memo"), "cashmemo/index.html", {
         filters: range,
         query,
         totals: {
@@ -1136,7 +1137,7 @@ async function dispatch(req: any): Promise<any> {
       A.payments.sumPayments(db, filters),
     ]);
     return html(
-      A.http.page(shell(user, "cashmemo", "Vouchers"), "cashmemo/vouchers.html", {
+      await A.http.page(req, shell(user, "cashmemo", "Vouchers"), "cashmemo/vouchers.html", {
         rows,
         filters,
         query,
@@ -1154,7 +1155,7 @@ async function dispatch(req: any): Promise<any> {
       A.payments.sumPayments(db, filters),
     ]);
     return html(
-      A.http.page(shell(user, "cashmemo", "DA entry"), "cashmemo/da.html", {
+      await A.http.page(req, shell(user, "cashmemo", "DA entry"), "cashmemo/da.html", {
         rows,
         filters,
         query,
@@ -1171,7 +1172,7 @@ async function dispatch(req: any): Promise<any> {
     ]);
     const editId = String(query.edit || "");
     return html(
-      A.http.page(shell(user, "cashmemo", "Expenses"), "cashmemo/expenses.html", {
+      await A.http.page(req, shell(user, "cashmemo", "Expenses"), "cashmemo/expenses.html", {
         rows,
         filters,
         query,
@@ -1208,7 +1209,7 @@ async function dispatch(req: any): Promise<any> {
     const found = await A.payments.readPayment(db, String(voucherPrint[1]));
     if (!found) return text("No such voucher", 404);
     return html(
-      A.http.page({ ...shell(user, "cashmemo", "Voucher"), paper: print ? String(query.paper ?? "a5") : "" }, "cashmemo/voucher.html", {
+      await A.http.page(req, { ...shell(user, "cashmemo", "Voucher"), paper: print ? String(query.paper ?? "a5") : "" }, "cashmemo/voucher.html", {
         voucher: found,
         print,
         selectedType: found.type,
@@ -1219,6 +1220,22 @@ async function dispatch(req: any): Promise<any> {
     );
   }
 
+  // What renderer answered the last page, and the render A/B. `?arm=component` is the measurement
+  // the envelope decision names as the deliverable: the +71% on record is for ACQUISITION with
+  // rows crossing the hop as a value, and this is a render with a context that does not have to.
+  if (path === "/bench/render" && method === "GET") {
+    const snap = await A.service.getViews(["refs"]);
+    const refs = snap.views.refs ?? {};
+    const rows = (refs.parties ?? []).slice(0, 200).map((p: any, i: number) => ({
+      id: p.id,
+      name: p.name,
+      company: (refs.companies ?? [])[i % Math.max(1, (refs.companies ?? []).length)]?.name ?? "",
+      amount: i * 13.37,
+    }));
+    const result = await A.renderClient.benchRender(req, "bench/payload.html", { rows }, Number(query.rounds ?? 5));
+    return { ...(result || {}), renderer: await A.renderClient.rendererStatus(req) };
+  }
+
   if (path === "/print" && method === "GET") {
     const recent = await db.all(
       'SELECT hex("id") hx, "name", "input", "state", "created" FROM "job" ' +
@@ -1226,7 +1243,7 @@ async function dispatch(req: any): Promise<any> {
       ["print.run"]
     );
     return html(
-      A.http.page(shell(user, "print", "Print queue"), "print/index.html", {
+      await A.http.page(req, shell(user, "print", "Print queue"), "print/index.html", {
         recent: recent.map((r) => {
           // `input` is the job's JSON payload; the count is what the table wants, so it is parsed
           // here rather than in the template. The id is read as hex and shown in the base64 form
@@ -1278,7 +1295,7 @@ async function dispatch(req: any): Promise<any> {
     const rows = await A.invoices.listInvoices(db, filters);
     const totals = await A.invoices.sumInvoices(db, filters);
     return html(
-      A.http.page(shell(user, "invoices", "Invoices"), "invoices/index.html", {
+      await A.http.page(req, shell(user, "invoices", "Invoices"), "invoices/index.html", {
         rows,
         filters,
         types: invoiceTypes,
@@ -1295,7 +1312,7 @@ async function dispatch(req: any): Promise<any> {
     const refs = snap.views.refs ?? {};
     if (method === "GET") {
       return html(
-        A.http.page(shell(user, "invoices", "New invoice"), "invoices/entry.html", {
+        await A.http.page(req, shell(user, "invoices", "New invoice"), "invoices/entry.html", {
           isNew: true,
           type,
           typeLabel: A.invoices.typeLabel(type),
@@ -1376,7 +1393,7 @@ async function dispatch(req: any): Promise<any> {
     const invoice = await A.invoices.readInvoice(db, decode(invoicePage[1]));
     if (!invoice) return text("No such invoice", 404);
     return html(
-      A.http.page(shell(user, "invoices", "Invoice #" + invoice.invoiceNo), "invoices/entry.html", {
+      await A.http.page(req, shell(user, "invoices", "Invoice #" + invoice.invoiceNo), "invoices/entry.html", {
         invoice,
         type: invoice.type,
         // A sale is paid in, a purchase is paid out.
@@ -1408,7 +1425,7 @@ async function dispatch(req: any): Promise<any> {
     const invoice = await A.invoices.readInvoice(db, decode(invoiceGrid[1]));
     if (!invoice) return text("No such invoice", 404);
     return html(
-      A.http.page(shell(user, "invoices", "Invoice #" + invoice.invoiceNo), "invoices/grid.html", {
+      await A.http.page(req, shell(user, "invoices", "Invoice #" + invoice.invoiceNo), "invoices/grid.html", {
         invoice: {
           ...invoice,
           status: state.status,
@@ -1555,7 +1572,7 @@ async function dispatch(req: any): Promise<any> {
     // the refs snapshot using the hex ids the document stores.
     const byHex = (list: any[], hex: any) => (hex ? (list.find((r: any) => String(r.id) === hexToBase64(String(hex)))?.name ?? "") : "");
     return html(
-      A.http.page({ ...shell(user, "invoices", "Invoice " + (doc.readable_id ?? "")), paper: print ? paper : "" }, "invoices/document.html", {
+      await A.http.page(req, { ...shell(user, "invoices", "Invoice " + (doc.readable_id ?? "")), paper: print ? paper : "" }, "invoices/document.html", {
         doc,
         invoice: { id },
         print,
@@ -1599,7 +1616,7 @@ async function dispatch(req: any): Promise<any> {
     const rows = await A.payments.listPayments(db, filters);
     const totals = await A.payments.sumPayments(db, filters);
     return html(
-      A.http.page(shell(user, "payments", "Payments"), "payments/index.html", {
+      await A.http.page(req, shell(user, "payments", "Payments"), "payments/index.html", {
         rows,
         filters,
         types: paymentTypes,
@@ -1616,7 +1633,7 @@ async function dispatch(req: any): Promise<any> {
     const invoice = query.invoice ? await A.invoices.readInvoice(db, String(query.invoice)) : null;
     const open = await A.invoices.listInvoices(db, { unpaid: "on" });
     return html(
-      A.http.page(shell(user, "payments", "New payment"), "payments/new.html", {
+      await A.http.page(req, shell(user, "payments", "New payment"), "payments/new.html", {
         invoice,
         openInvoices: open.slice(0, 100),
         types: paymentTypes,
@@ -1663,7 +1680,7 @@ async function dispatch(req: any): Promise<any> {
     const rows = A.inventory.stockRows(snap.views.itemsReport ?? [], snap.views.refs ?? {}, pick(query.q, ""));
     const editId = String(query.edit || "");
     return html(
-      A.http.page(shell(user, "inventory", "Inventory"), "inventory/index.html", {
+      await A.http.page(req, shell(user, "inventory", "Inventory"), "inventory/index.html", {
         rows,
         query: pick(query.q, ""),
         summary: A.inventory.stockSummary(rows),
@@ -1685,7 +1702,7 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/p") {
     const pages = await A.pages.listPages(PAGES_DIR);
-    return html(A.http.page(shell(user, "pages", "Pages"), "pages/index.html", { pages }));
+    return html(await A.http.page(req, shell(user, "pages", "Pages"), "pages/index.html", { pages }));
   }
 
   const dataMatch = /^\/p\/(.+)\/data$/.exec(path);
@@ -1727,7 +1744,7 @@ async function dispatch(req: any): Promise<any> {
     if (!def) return text("No such page", 404);
     const payload = { ...def, dataUrl: `/p/${def.slug}/data` };
     const metaJson = JSON.stringify(payload).replace(/</g, "\\u003c");
-    return html(A.http.page(shell(user, "pages", def.title), `${def.slug}/${def.template}`, { meta: def, metaJson }));
+    return html(await A.http.page(req, shell(user, "pages", def.title), `${def.slug}/${def.template}`, { meta: def, metaJson }));
   }
 
   return text("Not found", 404);
