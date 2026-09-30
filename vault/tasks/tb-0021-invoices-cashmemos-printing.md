@@ -1,13 +1,13 @@
 ---
 title: TB-0021 Invoices, cash memos and printing on the guest platform
 type: task
-status: todo
+status: done
 priority: high
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-09-30
 tags: [invoices, cashmemo, printing, realtime, concurrency, pos]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[invoice-entry-freshness-and-writes]]", "[[legacy-invoice-numbering-is-racy]]", "[[guest-frontend-feature-parity-gaps]]", "[[jobs-in-process-durable-queue]]", "[[tb-0028-guest-transactional-screens-and-mobile]]"]
+related_to: ["[[invoice-entry-freshness-and-writes]]", "[[legacy-invoice-numbering-is-racy]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0028-guest-transactional-screens-and-mobile]]", "[[guest-invoice-lifecycle]]", "[[jobs-in-process-durable-queue]]", "[[heavy-report-blocks-runtime-threads]]", "[[base64-id-decoder-accepted-one-alphabet]]", "[[invoice-lifecycle-draft-open-append-only]]", "[[returns-are-negative-quantities]]", "[[single-writer-per-invoice]]", "[[client-side-live-recalculation]]", "[[verified-negative-quantity-stock-and-money]]", "[[imported-completed-flag-carries-no-information]]", "[[esm-shim-rewrites-text-inside-comments]]", "[[heavy-report-blocks-runtime-threads]]"]
 ---
 
 # TB-0021 Invoices, cash memos and printing on the guest platform
@@ -51,41 +51,76 @@ The write API and its lease/idempotency are implemented on the guest and verifie
       integration: reports were stale after a write)
 - [x] `GET /invoice/<id>` for read-back (header + lines), used by the check tool
 
+### Printing — done (2026-09-30)
+
+Printing is the browser's dialog over a **server-rendered** page; there is no printer driver, and
+nothing here prints without the operator confirming the dialog.
+
+- [x] **Paper is chosen by the page, not guessed.** `layout.html` emits `<body data-paper="a5">`
+      or `a4`, `app.css` sizes `@page` from it. A5 portrait for an invoice or a voucher, A4
+      landscape for a report — a till slip and a filed copy are different artefacts.
+- [x] **One renderer for screen and paper.** `/invoices/{id}/view?print=1` is the *same*
+      materialised document the screen shows, so a printout cannot diverge from what was on screen.
+      `&paper=a4` gives the other size.
+- [x] **A PRINT button that actually prints** — opens the `?print=1` page (so it is bookmarkable and
+      reloadable) and then the dialog, falling back to a plain navigation if a popup blocker refuses.
+- [x] **A4 for reports**, carrying the filters that are on screen, with the table header repeated on
+      every page and rows kept off page breaks.
+- [x] **`print.run`, a durable print job** — one leased step per slip, so a batch of 200 is 200
+      steps rather than one that fails as a unit. A reprint is the same job with one id. Verified:
+      200 requested, 200 printed, 0 skipped.
+- [x] **`/print`** — queue a range, see recent runs, follow a job.
+
+### Cash memo — done (2026-09-30)
+
+The legacy app had five screens here. The data for all of them is `payments` (a voucher or a DA
+entry is a payment with or without an invoice behind it) plus `expenses`, so this is one index over
+four working screens rather than five near-duplicates.
+
+- [x] **Payment vouchers** `/cashmemo/vouchers?type=0` — money out, no invoice behind it, printable
+      on A5.
+- [x] **Receive vouchers** `/cashmemo/vouchers?type=1` — money in.
+- [x] **DA entry** `/cashmemo/da` — standalone entries, with the add form.
+- [x] **Expenses** `/cashmemo/expenses` — list, search, date range, add, edit, delete, over the
+      `expenses` table the v1 import created and the guest had never written to.
+- [x] **Cash in hand** on the hub: recieving − sending − expenses. It counts **every** settled
+      payment, not only the standalone ones — money received against an invoice is cash the shop has.
+      Read as 0.00 before that was fixed, because all 26,526 payments in the depot are
+      invoice-linked.
+- [x] **Printable voucher** `/cashmemo/vouchers/{id}?print=1`, on A5.
+
 ### Remaining
 
+- [ ] Nothing outstanding for printing or the cash memo. The one thing deliberately left is a
+      **printer-driver integration**: `/print` records a run and confirms each slip exists as a
+      document, but a real printer would read those same records.
+
+
 Re-measured 2026-09-29 after [[tb-0028-guest-transactional-screens-and-mobile]] landed the first
-browser screens. What follows is the true remainder, not the original list.
+browser screens. The lifecycle, the grid, the standalone document, printing and the cash memo all
+landed after this list was first written — see [[guest-invoice-lifecycle]] for the first two and
+the sections above for the rest. What is actually left:
 
-**Screens built** (sale + purchase only): `/invoices` list with type/date/party/unpaid filters and
-whole-set totals, `/invoices/{id}` entry screen (header, lines, add + delete line, complete/reopen,
-payments on the invoice), `/payments` list + new + delete, `/inventory` with live stock.
-
-- [ ] **Return and difference invoices** — the entry screen offers sale and purchase only. Return
-      needs `invoices_return_reference` (a return points at the original invoice); difference is how
-      stock is adjusted, so `/inventory` currently has no way to change a quantity.
-- [ ] **Orders** — `/app/invoices/orders` has no guest equivalent at all.
-- [ ] **Fields the schema has and the screen does not expose**: `duedate`; the header's
-      `discount_2`; per-line `discount_1`, `discount_2`, `scheme` ("Free") and a `cost_price`
-      override (the route defaults cost from the item). The route already accepts all of them — only
-      the form is missing.
-- [ ] **Line edit** — a line can be added and deleted, never modified. The JSON API has no line
-      `PATCH` either, so this is missing at both layers.
-- [ ] **Void / cancel** — there is no `status`, no void, and no way to delete an invoice. An
-      abandoned draft keeps its human number forever (F1).
-- [ ] **Stock guard** — nothing prevents selling below zero.
-- [ ] **Surface `lockHolder`** — the lease is enforced (409 for another device) but the screen never
-      says who holds it (F2).
-- [ ] Cash memos: payment vouchers, receive vouchers, DA entry, expenses, payments. Only the
-      payment *rows* exist (`/payments`), including a standalone DA entry; the five legacy screens
-      do not.
-- [ ] **Printing**: server-rendered pages; **A5 receipts, A4 reports**; browser `window.print()`;
-      a `print_job` queue (durable-queue job) for batch/reprint. The materialised invoice documents
-      ([[tb-0027-materialised-invoice-documents]]) are the input, and there is no template.
-- [ ] Lease **contention across two real users** in the check tool (needs a second user)
-- [ ] Resolve the F-items in [[invoice-entry-freshness-and-writes]]: F1 status/void, F2 lock
-      lifecycle and stranding, F4 totals recompute, F5 invalidation storms. F3 is partly closed —
-      create and line-add carry an idempotency key and the header PATCH is full-state — but line
-      **delete** is not idempotent, and it is a hard delete, so a retry can remove a different line.
+- [x] ~~**Return and difference invoices**~~ — **decided against**: a return is a negative-quantity
+      row on the same invoice and a difference is an invoice to the Difference party
+      ([[returns-are-negative-quantities]]). No new types, and the arithmetic needed no change.
+- [x] ~~**Orders**~~ — **dropped as not needed** (owner, 2026-09-29).
+- [x] ~~**Void / cancel**~~ — a `status` column now exists with `draft`/`open` and a trigger, a
+      draft is not in the books, and an open invoice is append-only rather than mutable
+      ([[invoice-lifecycle-draft-open-append-only]]). There is deliberately **no void state**: a
+      mistake is corrected by appending.
+- [x] ~~**Line edit**~~ — a draft's lines are editable in the grid (`editLine`); an open invoice's
+      are immutable by design, and a "remove" appends a reversal.
+- [x] ~~**Surface `lockHolder`**~~ — the grid names the device that holds the lease and is read-only
+      for anyone else ([[single-writer-per-invoice]]).
+- [x] ~~**Fields the schema has and the screen does not expose**~~ — `duedate`, `discount_2` and the
+      per-line `discount_1` / `discount_2` / `scheme` are on the grid and the header form.
+- [ ] **Stock guard** — nothing prevents selling below zero. Still unbuilt.
+- [ ] Lease **contention across two real users** in the check tool (needs a second user). The only
+      genuinely untested claim in the concurrency design.
+- [ ] Resolve the remaining F-items in [[invoice-entry-freshness-and-writes]]: F4 (totals recompute)
+      and F5 (invalidation storms). F1, F2 and F3 are closed by the lifecycle work; F6–F9 were never
+      built.
 
 ### Integration observations (to investigate)
 

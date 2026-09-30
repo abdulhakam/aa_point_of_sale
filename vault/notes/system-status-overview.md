@@ -35,8 +35,8 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 | Invoice entry (4 types + orders) | ✅ | 🟡 sale + purchase only, screens live |
 | Payments (invoice-linked + standalone DA) | ✅ | 🟡 invoice-linked + DA, no vouchers/returns |
 | Inventory (live stock, item edit) | ✅ | ✅ |
-| Invoice printing + queue | ✅ | ❌ |
-| Cash memo (vouchers, DA entry, expenses) | ✅ | ❌ |
+| Invoice printing + queue | ✅ | 🟡 A5 receipt + A4 copy, print-job queue; no printer driver |
+| Cash memo (vouchers, DA entry, expenses) | ✅ | ✅ |
 | Storybook | ✅ | — |
 | Server-rendered, works without JS | ❌ | ✅ |
 | Usable on a phone (≤768px) | ❌ | ✅ |
@@ -65,8 +65,7 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 | TrailBase subscriptions return 403 | No realtime push exists, so every "latest data" requirement is met by ETag polling, not a stream | [[trailbase-subscribe-endpoint-forbidden]] |
 | The guest's `/count/{table}` is unauthenticated | Row counts of every table are reachable without login, and a non-integer result panics the guest | [[trailbase-host-count-endpoint-sql-injection]] |
 | Cutover shape undecided | Determines whether the legacy Next.js UI is repointed or retired; blocks two other tasks | [[pos-0028-decide-cutover-plan]] |
-| Invoicing/printing have no new-side equivalent | Invoice entry and payments are on the guest; **printing, the cash memo and expenses are still unbuilt**, so the new pair still cannot replace the whole product | [[guest-frontend-feature-parity-gaps]], [[tb-0021-invoices-cashmemos-printing]] |
-| The guest UI is not yet the legacy look | Parity is visual as well as behavioural; the guest must be restyled to match | [[guest-ui-is-a-direct-shift-of-legacy]], [[tb-0023-direct-shift-legacy-ui-to-guest]] |
+| The money screens are now all present, but the product is not finished | Invoice entry, payments, the lifecycle, printing and the cash memo are on the guest. **The four slow reports still 500**, and the guest UI is still not the legacy look | [[heavy-report-blocks-runtime-threads]], [[tb-0023-direct-shift-legacy-ui-to-guest]] |
 | Four reports still fail the 20 s deadline, and a heavy one starves the other requests | `profit`, `itemsales`, `paymentsbycompany` and `ledgers/general` fail cold; while one runs, unrelated requests fail in ~200 ms | [[heavy-report-blocks-runtime-threads]] |
 | The production depot could not be started | The generated depot was missing its config and one migration; all six applied migrations now mismatch their checksums and are silently skipped | [[production-depot-could-not-be-started]] |
 | Dropped views break legacy screens | `pocketbase-types.ts` and several report screens depend on view endpoints that do not exist on TrailBase | [[tb-0013-rework-report-screens-without-views]] |
