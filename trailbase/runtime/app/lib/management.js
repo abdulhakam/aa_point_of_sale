@@ -132,6 +132,15 @@ export async function loadLinks(entity) {
 // --------------------------------------------------------------- SQL writes
 
 // The base64url alphabet, which is what the DB bridge emits for a BLOB id.
+//
+// The implementation below is now the FALLBACK only. The real one is Rust
+// (`tb-ah-run-js/src/api/ids.rs`), reached through `ids.b64ToHex`; this module keeps its own copy so
+// a guest running an older component still works. `tools/id-codec-check.mjs --compare` runs both
+// against the same vectors, so the two cannot drift unnoticed.
+//
+// There were once three copies of this function — here, in `route.ts`, and in `route-kit.js`. A
+// base64 decoder has no loud failure mode: a short alphabet yields plausible ids that match no row,
+// which is how a materialised invoice document once rendered with empty item names.
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 // Standard base64 and base64url differ only in the last two symbols — `+/` versus `-_` — and they
@@ -146,6 +155,8 @@ const B64_STANDARD = { "+": 62, "/": 63 };
 
 /** Base64 (url-safe as the bridge emits it, standard accepted) -> uppercase hex, for `unhex(?)`. */
 export function base64ToHex(value) {
+  const bridge = (globalThis).ids;
+  if (bridge && typeof bridge.b64ToHex === "function") return bridge.b64ToHex(String(value ?? ""));
   let bits = 0;
   let acc = 0;
   let hex = "";

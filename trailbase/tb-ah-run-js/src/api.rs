@@ -4,6 +4,7 @@ use trailbase_wasm::db::{Value, query};
 
 mod fetch;
 mod fs;
+mod ids;
 mod kv;
 mod sqlite;
 mod time;
@@ -88,6 +89,8 @@ pub fn init_api(ctx: &Ctx<'_>) -> Result<()> {
         }),
     )?;
     globals.set("render", render)?;
+
+    ids::init(ctx)?;
 
     Ok(())
 }

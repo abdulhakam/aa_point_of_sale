@@ -168,6 +168,9 @@ async function app(): Promise<any> {
     http: await loadModule("/app/lib/http.js"),
     renderClient: await loadModule("/app/lib/render-client.js"),
     reportPages: await loadModule("/app/lib/report-pages.js"),
+    // The idioms every handler repeated: invalidate-on-commit, the refs snapshot, the page shell,
+    // and the hex<->base64 pair. See app/lib/route-kit.js for why each exists.
+    routeKit: await loadModule("/app/lib/route-kit.js"),
   };
   // The queue engine is a plain script so the scheduler's fresh runtime can load it too.
   if (!g.__AA_QUEUE__) {
@@ -300,28 +303,11 @@ function userOf(req: any): any {
   return { name: u.username || u.email || "User", email: u.email || "" };
 }
 
-// The inverse of management.base64ToHex. The materialised `inv_doc` stores relation ids as hex
-// strings inside its JSON, so rendering a document needs hex -> the base64 the rest of the app uses.
-//
-// Base64 is 3 bytes -> 4 sextets, and the final partial group is PADDED, not filled: a 16-byte id
-// is 22 characters plus "==". Filling the tail with data instead produced a 24-character id that
-// silently matched nothing, which is why the document's item names rendered empty.
-// Verified against the known id: 01A0EBFD3E2176D294C5C5797E90A6E5 -> AaDr_T4hdtKUxcV5fpCm5Q
-const B64_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-function hexToBase64(hex: string): string {
-  const clean = String(hex ?? "").replace(/[^0-9a-fA-F]/g, "");
-  let out = "";
-  for (let i = 0; i < clean.length; i += 6) {
-    const group = clean.slice(i, i + 6);
-    const n = Math.floor(group.length / 2);
-    const b = [0, 1, 2].map((k) => (k < n ? parseInt(group.slice(k * 2, k * 2 + 2), 16) : 0));
-    out += B64_ALPHABET[b[0] >> 2];
-    out += B64_ALPHABET[((b[0] & 3) << 4) | (b[1] >> 4)];
-    out += n > 1 ? B64_ALPHABET[((b[1] & 15) << 2) | (b[2] >> 6)] : "=";
-    out += n > 2 ? B64_ALPHABET[b[2] & 63] : "=";
-  }
-  return out.replace(/=+$/, "");
-}
+// The hex <-> base64 id codec is not here. It is `routeKit.b64ToHex` / `routeKit.hexToB64`, which
+// prefer the Rust implementation in `tb-ah-run-js/src/api/ids.rs` and fall back to JS. It used to be
+// two copies in this file's neighbourhood — `management.base64ToHex` and a local `hexToBase64` —
+// which is exactly the arrangement that let a wrong base64 alphabet go unnoticed (see
+// `tools/id-codec-check.mjs`).
 
 // Business identity for the header and printed reports. The defaults are the legacy values
 // (frontend/.env.local: NEXT_PUBLIC_NAME/ADDRESS/PHONE) so a direct shift matches what staff know;
@@ -369,47 +355,10 @@ async function dispatch(req: any): Promise<any> {
   const contentType = String((req.headers && req.headers["content-type"]) || "");
   const form = contentType.includes("application/x-www-form-urlencoded") ? parsePairs(String(req.body || "")) : {};
 
-  // Public surfaces.
+// Public surfaces.
   if (path === "/healthz") return { ok: true, workers: A.service.status() };
 
-  // Capability probes for the component-split work. Each isolates one bridge so a failure names
-  // the bridge rather than the route. Kept until the A/B is finished.
-  if (path === "/bench/ping") return { ok: true };
-  if (path === "/bench/t1") {
-    const raw = await db.all('SELECT "amount" FROM payments ORDER BY "id" DESC LIMIT 3', []);
-    return { t1: "ok", n: (raw ?? []).length, first: (raw ?? [])[0] };
-  }
-  if (path === "/bench/t2") {
-    const raw = await fs.readFile("/app/views/bench/payload.html");
-    return { t2: "ok", len: String(raw).length };
-  }
-  if (path === "/bench/t3") {
-    const out: string = (globalThis as any).render.html("bench/payload.html", { rows: [] });
-    return { t3: "ok", len: String(out).length };
-  }
-  if (path === "/bench/t4") {
-    const origin = (String(req.url || "").match(/^https?:\/\/[^/]+/) || [""])[0];
-    const res: any = await (globalThis as any).http.request({ method: "GET", url: origin + "/rpc/payload?limit=3" });
-    return { t4: "ok", status: res && res.status, body: String((res && res.body) || "").slice(0, 200) };
-  }
-
-  // Whether the DB bridge accepts PRAGMAs at all. The cold-mode flush depends on this, and both
-  // call sites swallow the error, so without this probe a silent no-op would look like a working
-  // feature. It also reports which PRAGMAs read back, since a rejected *set* is invisible.
-  if (path === "/bench/pragma") {
-    const out: any = {};
-    const probe = async (label: string, fn: () => Promise<any>) => {
-      try { out[label] = "ok: " + JSON.stringify(await fn()); }
-      catch (e) { out[label] = "ERR: " + (e && e.message ? e.message : String(e)); }
-    };
-    await probe("execute shrink_memory", () => db.execute("PRAGMA shrink_memory", []));
-    await probe("execute cache_size=1", () => db.execute("PRAGMA cache_size = 1", []));
-    await probe("query cache_size", () => db.all("PRAGMA cache_size", []));
-    await probe("query page_count", () => db.all("PRAGMA page_count", []));
-    return out;
-  }
-
-  // The report keys the sweep should cover, taken from the app's own registry so the bench cannot
+// The report keys the sweep should cover, taken from the app's own registry so the bench cannot
   // drift from the reports that actually exist.
   if (path === "/bench/reportkeys" && method === "GET") {
     return { keys: Object.keys(A.reportsCompute.REPORTS).slice().sort() };
@@ -583,14 +532,12 @@ async function dispatch(req: any): Promise<any> {
   }
   if (path === "/favicon.svg") return readStatic(PUBLIC_DIR + "/favicon.svg");
 
-  if (path === "/login" && method === "GET") {
-    return html(
-      await A.http.page(req, shell(user, "", "Log in"), "auth/login.html", {
-        next: query.next || "",
-        expired: query.expired || "",
-        error: "",
-      })
-    );
+if (path === "/login" && method === "GET") {
+    return A.routeKit.renderRoute(req, { user, active: "", title: "Log in", template: "auth/login.html" }, {
+      next: query.next || "",
+      expired: query.expired || "",
+      error: "",
+    });
   }
   if (path === "/login" && method === "POST") {
     // The app's own login: exchange the credentials for tokens via TrailBase's JSON login, then
@@ -789,8 +736,8 @@ async function dispatch(req: any): Promise<any> {
     const entityKey = mgmtMatch[1];
     const entity = A.entities.ENTITIES[entityKey];
     if (!entity) return text("Unknown entity", 404);
-    const snap = await A.service.getViews(["refs"]);
-    const options = A.management.optionLists(snap.views.refs);
+    const refs = await A.routeKit.refs();
+    const options = A.management.optionLists(refs);
     const all = A.management.sortRows(await A.data.readTable(entity.api), entity.sort);
     const visible = all.filter((row: any) => !entity.softDelete || !row.deleted);
     const links = await A.management.loadLinks(entity);
@@ -801,7 +748,7 @@ async function dispatch(req: any): Promise<any> {
         entity,
         entityKey,
         columns: entity.columns,
-        rows: A.management.displayRows(entity, visible, snap.views.refs, links),
+        rows: A.management.displayRows(entity, visible, refs, links),
         fields: A.management.formFields(entity, editRow, options, links),
         editRow,
         status: query.status || "",
@@ -817,18 +764,19 @@ async function dispatch(req: any): Promise<any> {
     const entity = A.entities.ENTITIES[entityKey];
     if (!entity) return text("Unknown entity", 404);
     const action = writeMatch[2];
-    const idHex = writeMatch[3] ? A.management.base64ToHex(writeMatch[3]) : null;
-    if (action === "create") {
-      const newHex = await A.management.createRow(db, entity, form);
-      await A.management.syncLinks(db, entity, newHex, form);
-    } else if (action.endsWith("update")) {
-      await A.management.updateRow(db, entity, form, idHex);
-      await A.management.syncLinks(db, entity, idHex, form);
-    } else if (action.endsWith("delete")) {
-      if (entity.softDelete) await A.management.softDeleteRow(db, entity, idHex);
-      else await A.management.hardDeleteRow(db, entity, idHex);
-    }
-    A.service.invalidate();
+    const idHex = writeMatch[3] ? A.routeKit.b64ToHex(writeMatch[3]) : null;
+    await A.routeKit.write(async () => {
+      if (action === "create") {
+        const newHex = await A.management.createRow(db, entity, form);
+        await A.management.syncLinks(db, entity, newHex, form);
+      } else if (action.endsWith("update")) {
+        await A.management.updateRow(db, entity, form, idHex);
+        await A.management.syncLinks(db, entity, idHex, form);
+      } else if (action.endsWith("delete")) {
+        if (entity.softDelete) await A.management.softDeleteRow(db, entity, idHex);
+        else await A.management.hardDeleteRow(db, entity, idHex);
+      }
+    });
     const message = action === "create" ? "Created" : action.endsWith("update") ? "Updated" : "Deleted";
     return redirect(`/management/${entityKey}?status=ok&message=${message}`);
   }
@@ -869,25 +817,25 @@ async function dispatch(req: any): Promise<any> {
   const jobResultMatch = /^\/jobs\/([^/]+)\/result$/.exec(path);
   if (jobResultMatch && method === "GET") {
     if (query.reconcile !== "0") await A.jobs.reconcile(db);
-    const view = await A.jobs.jobView(db, A.management.base64ToHex(jobResultMatch[1]));
+    const view = await A.jobs.jobView(db, A.routeKit.b64ToHex(jobResultMatch[1]));
     if (!view) return text("No such job", 404);
     return { state: view.state, result: view.result, artifacts: view.artifacts };
   }
   const jobCancelMatch = /^\/jobs\/([^/]+)\/cancel$/.exec(path);
   if (jobCancelMatch && method === "POST") {
-    await A.jobs.cancelJob(db, A.management.base64ToHex(jobCancelMatch[1]));
+    await A.jobs.cancelJob(db, A.routeKit.b64ToHex(jobCancelMatch[1]));
     return { ok: true };
   }
   const jobRecoverMatch = /^\/jobs\/([^/]+)\/steps\/([0-9]+)\/recover$/.exec(path);
   if (jobRecoverMatch && method === "POST") {
-    await A.jobs.recoverStep(db, A.management.base64ToHex(jobRecoverMatch[1]), Number(jobRecoverMatch[2]));
+    await A.jobs.recoverStep(db, A.routeKit.b64ToHex(jobRecoverMatch[1]), Number(jobRecoverMatch[2]));
     return { ok: true };
   }
   const jobMatch = /^\/jobs\/([^/]+)$/.exec(path);
   if (jobMatch && method === "GET") {
     // `?reconcile=0` inspects without running due work (used by the poller test).
     if (query.reconcile !== "0") await A.jobs.reconcile(db);
-    const view = await A.jobs.jobView(db, A.management.base64ToHex(jobMatch[1]));
+    const view = await A.jobs.jobView(db, A.routeKit.b64ToHex(jobMatch[1]));
     if (!view) return text("No such job", 404);
     return view;
   }
@@ -966,7 +914,7 @@ async function dispatch(req: any): Promise<any> {
     const id = String(req.user?.id ?? "");
     return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)
       ? id.replace(/-/g, "").toUpperCase()
-      : A.management.base64ToHex(id);
+      : A.routeKit.b64ToHex(id);
   })();
   const locked = () =>
     ({ body: JSON.stringify({ error: "locked", holder: "another device" }), contentType: "application/json; charset=utf-8", status: 409 });
@@ -1008,16 +956,15 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/invoice" && method === "POST") {
     const body = jsonBody(req);
-    const created = await A.invoicing.createInvoice(db, {
-      type: body.type, key: body.key, userHex, device: body.device,
-    });
-    A.service.invalidate(); // the report snapshot must see the new invoice
+    const created = await A.routeKit.write(() =>
+      A.invoicing.createInvoice(db, { type: body.type, key: body.key, userHex, device: body.device })
+    );
     return created;
   }
 
   const invoiceMatch = /^\/invoice\/([^/]+)$/.exec(path);
   if (invoiceMatch && method === "GET") {
-    const hex = A.management.base64ToHex(invoiceMatch[1]);
+    const hex = A.routeKit.b64ToHex(invoiceMatch[1]);
     const head = rowsToObjects(
       ["id", "type", "invoiceNo", "party", "booker", "dated", "discount_1", "discount_2", "discount_rs", "description", "completed"],
       await db.all('SELECT "id","type","invoiceNo","party","booker","dated","discount_1","discount_2","discount_rs","description","completed" FROM "invoices" WHERE "id" = unhex(?)', [hex])
@@ -1033,41 +980,37 @@ async function dispatch(req: any): Promise<any> {
   }
   if (invoiceMatch && method === "PATCH") {
     const body = jsonBody(req);
-    const hex = A.management.base64ToHex(invoiceMatch[1]);
+    const hex = A.routeKit.b64ToHex(invoiceMatch[1]);
     if (!(await A.invoicing.takeLock(db, hex, userHex, String(body.device || "")))) return locked();
-    const updated = await A.invoicing.patchHeader(db, hex, body);
-    A.service.invalidate();
+    const updated = await A.routeKit.write(() => A.invoicing.patchHeader(db, hex, body));
     return { updated };
   }
 
   const lineMatch = /^\/invoice\/([^/]+)\/line$/.exec(path);
   if (lineMatch && method === "POST") {
     const body = jsonBody(req);
-    const hex = A.management.base64ToHex(lineMatch[1]);
+    const hex = A.routeKit.b64ToHex(lineMatch[1]);
     if (!(await A.invoicing.takeLock(db, hex, userHex, String(body.device || "")))) return locked();
-    const line = await A.invoicing.addLine(db, hex, body, body.opKey);
-    A.service.invalidate();
+    const line = await A.routeKit.write(() => A.invoicing.addLine(db, hex, body, body.opKey));
     return { line };
   }
   const lineIdMatch = /^\/invoice\/([^/]+)\/line\/([^/]+)$/.exec(path);
   if (lineIdMatch && method === "DELETE") {
-    const hex = A.management.base64ToHex(lineIdMatch[1]);
+    const hex = A.routeKit.b64ToHex(lineIdMatch[1]);
     if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
-    const deleted = await A.invoicing.deleteLine(db, A.management.base64ToHex(lineIdMatch[2]));
-    A.service.invalidate();
+    const deleted = await A.routeKit.write(() => A.invoicing.deleteLine(db, A.routeKit.b64ToHex(lineIdMatch[2])));
     return { deleted };
   }
   const completeMatch = /^\/invoice\/([^/]+)\/complete$/.exec(path);
   if (completeMatch && method === "POST") {
-    const hex = A.management.base64ToHex(completeMatch[1]);
+    const hex = A.routeKit.b64ToHex(completeMatch[1]);
     if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
-    const completed = await A.invoicing.completeInvoice(db, hex, userHex, true);
-    A.service.invalidate();
+    const completed = await A.routeKit.write(() => A.invoicing.completeInvoice(db, hex, userHex, true));
     return { completed };
   }
   const releaseMatch = /^\/invoice\/([^/]+)\/release$/.exec(path);
   if (releaseMatch && method === "POST") {
-    return { released: await A.invoicing.releaseLock(db, A.management.base64ToHex(releaseMatch[1]), userHex) };
+    return { released: await A.invoicing.releaseLock(db, A.routeKit.b64ToHex(releaseMatch[1]), userHex) };
   }
 
   // ---------------------------------------------------------------- invoices / payments / stock
@@ -1185,9 +1128,9 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/cashmemo/expenses/save" && method === "POST") {
     try {
-      if (String(form.id || "")) await A.expenses.updateExpense(db, String(form.id), form);
-      else await A.expenses.createExpense(db, form);
-      A.service.invalidate();
+      await A.routeKit.write(() =>
+        String(form.id || "") ? A.expenses.updateExpense(db, String(form.id), form) : A.expenses.createExpense(db, form)
+      );
       return redirect("/cashmemo/expenses?status=ok");
     } catch (e: any) {
       return text("Expense not saved: " + (e && e.message ? e.message : String(e)), 400);
@@ -1196,8 +1139,7 @@ async function dispatch(req: any): Promise<any> {
 
   const expenseDelete = /^\/cashmemo\/expenses\/([^\/]+)\/delete$/.exec(path);
   if (expenseDelete && method === "POST") {
-    await A.expenses.deleteExpense(db, String(expenseDelete[1]));
-    A.service.invalidate();
+    await A.routeKit.write(() => A.expenses.deleteExpense(db, String(expenseDelete[1])));
     return redirect("/cashmemo/expenses?status=ok");
   }
 
@@ -1224,8 +1166,7 @@ async function dispatch(req: any): Promise<any> {
   // the envelope decision names as the deliverable: the +71% on record is for ACQUISITION with
   // rows crossing the hop as a value, and this is a render with a context that does not have to.
   if (path === "/bench/render" && method === "GET") {
-    const snap = await A.service.getViews(["refs"]);
-    const refs = snap.views.refs ?? {};
+    const refs = await A.routeKit.refs();
     const rows = (refs.parties ?? []).slice(0, 200).map((p: any, i: number) => ({
       id: p.id,
       name: p.name,
@@ -1254,7 +1195,7 @@ async function dispatch(req: any): Promise<any> {
           } catch {
             count = 0;
           }
-          return { id: hexToBase64(String(r[0] ?? "")), state: r[3], created: String(r[4] ?? "").slice(0, 19), count };
+          return { id: A.routeKit.hexToB64(String(r[0] ?? "")), state: r[3], created: String(r[4] ?? "").slice(0, 19), count };
         }),
         query,
         today: A.format.dateOnly(new Date().toISOString()),
@@ -1267,7 +1208,7 @@ async function dispatch(req: any): Promise<any> {
     // because a BLOB column is matched with unhex(?) rather than against a base64 text parameter.
     const ids: string[] = [];
     if (form.invoice) {
-      ids.push(A.management.base64ToHex(String(form.invoice)));
+      ids.push(A.routeKit.b64ToHex(String(form.invoice)));
     } else {
       const rows = await db.all(
         'SELECT hex("id") hx FROM invoices WHERE "status" = \'open\' AND "deleted" = 0 ' +
@@ -1279,11 +1220,11 @@ async function dispatch(req: any): Promise<any> {
     if (!ids.length) return text("No invoices in that range to print", 400);
     // enqueue answers with the job's hex id, which the job links want in base64.
     const jobHex = await A.jobs.enqueue(db, "print.run", { invoices: ids, reason: String(form.reason || "batch") });
-    return redirect("/print?status=queued&job=" + hexToBase64(String(jobHex)));
+    return redirect("/print?status=queued&job=" + A.routeKit.hexToB64(String(jobHex)));
   }
 
   if (path === "/invoices" && method === "GET") {
-    const snap = await A.service.getViews(["refs"]);
+    const refs = await A.routeKit.refs();
     const filters = {
       type: pick(query.type, ""),
       from: pick(query.from, ""),
@@ -1300,7 +1241,7 @@ async function dispatch(req: any): Promise<any> {
         filters,
         types: invoiceTypes,
         selectedType: Number(filters.type || -1),
-        parties: snap.views.refs?.parties ?? [],
+        parties: refs.parties ?? [],
         totals,
       })
     );
@@ -1308,8 +1249,7 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/invoices/new") {
     const type = pick(query.type, "1") === "0" ? 0 : 1;
-    const snap = await A.service.getViews(["refs"]);
-    const refs = snap.views.refs ?? {};
+    const refs = await A.routeKit.refs();
     if (method === "GET") {
       return html(
         await A.http.page(req, shell(user, "invoices", "New invoice"), "invoices/entry.html", {
@@ -1323,18 +1263,20 @@ async function dispatch(req: any): Promise<any> {
       );
     }
     // A key from the form makes a repeated submit return the same invoice instead of a second one.
-    const created = await A.invoicing.createInvoice(db, {
-      type,
-      key: String(form.key || ""),
-      userHex,
-      device: String(form.device || ""),
+    const created = await A.routeKit.write(async () => {
+      const invoice = await A.invoicing.createInvoice(db, {
+        type,
+        key: String(form.key || ""),
+        userHex,
+        device: String(form.device || ""),
+      });
+      const createdHex = A.routeKit.b64ToHex(String(invoice.id));
+      await A.invoicing.patchHeader(db, createdHex, {
+        party: String(form.party || ""),
+        dated: A.format.dateOnly(new Date().toISOString()),
+      });
+      return invoice;
     });
-    const hex = A.management.base64ToHex(String(created.id));
-    await A.invoicing.patchHeader(db, hex, {
-      party: String(form.party || ""),
-      dated: A.format.dateOnly(new Date().toISOString()),
-    });
-    A.service.invalidate();
     return redirect("/invoices/" + created.id);
   }
 
@@ -1342,54 +1284,54 @@ async function dispatch(req: any): Promise<any> {
   const invoiceLineDelete = /^\/invoices\/([^\/]+)\/line\/([^\/]+)\/delete$/.exec(path);
   if ((invoiceNewRoute || invoiceLineDelete) && method === "POST") {
     const invoiceId = invoiceNewRoute ? invoiceNewRoute[1] : invoiceLineDelete[1];
-    const hex = A.management.base64ToHex(String(invoiceId));
+    const hex = A.routeKit.b64ToHex(String(invoiceId));
     if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
-    if (invoiceLineDelete) {
-      await A.invoicing.deleteLine(db, A.management.base64ToHex(String(invoiceLineDelete[2])));
-    } else if (invoiceNewRoute[2] === "header") {
-      await A.invoicing.patchHeader(db, hex, {
-        party: String(form.party || ""),
-        booker: String(form.booker || ""),
-        dated: String(form.dated || ""),
-        description: String(form.description || ""),
-        discount_1: String(form.discount_1 || ""),
-        discount_rs: String(form.discount_rs || ""),
-      });
-    } else if (invoiceNewRoute[2] === "line") {
-      // An empty price or cost falls back to the item's own, so the mobile form can be short.
-      const itemId = String(form.item || "");
-      const item = await db.all(
-        'SELECT "cost_price", "sale_price" FROM items WHERE "id" = unhex(?)',
-        [A.management.base64ToHex(itemId)]
-      );
-      const cost = item && item.length ? Number(item[0][0]) || 0 : 0;
-      const price = item && item.length ? Number(item[0][1]) || 0 : 0;
-      await A.invoicing.addLine(
-        db,
-        hex,
-        {
-          item: itemId,
-          qty: String(form.qty || "0"),
-          price: form.price === undefined || form.price === "" ? String(price) : String(form.price),
-          cost_price: form.cost_price === undefined || form.cost_price === "" ? String(cost) : String(form.cost_price),
-          discount_1: String(form.discount_1 || "0"),
-          discount_2: String(form.discount_2 || "0"),
-          discount_rs: String(form.discount_rs || "0"),
-          scheme: String(form.scheme || "0"),
-        },
-        String(form.opKey || "")
-      );
-    } else if (invoiceNewRoute[2] === "complete") {
-      await A.invoicing.completeInvoice(db, hex, userHex, form.complete === "1");
-    }
-    A.service.invalidate();
+    await A.routeKit.write(async () => {
+      if (invoiceLineDelete) {
+        await A.invoicing.deleteLine(db, A.routeKit.b64ToHex(String(invoiceLineDelete[2])));
+      } else if (invoiceNewRoute[2] === "header") {
+        await A.invoicing.patchHeader(db, hex, {
+          party: String(form.party || ""),
+          booker: String(form.booker || ""),
+          dated: String(form.dated || ""),
+          description: String(form.description || ""),
+          discount_1: String(form.discount_1 || ""),
+          discount_rs: String(form.discount_rs || ""),
+        });
+      } else if (invoiceNewRoute[2] === "line") {
+        // An empty price or cost falls back to the item's own, so the mobile form can be short.
+        const itemId = String(form.item || "");
+        const item = await db.all(
+          'SELECT "cost_price", "sale_price" FROM items WHERE "id" = unhex(?)',
+          [A.routeKit.b64ToHex(itemId)]
+        );
+        const cost = item && item.length ? Number(item[0][0]) || 0 : 0;
+        const price = item && item.length ? Number(item[0][1]) || 0 : 0;
+        await A.invoicing.addLine(
+          db,
+          hex,
+          {
+            item: itemId,
+            qty: String(form.qty || "0"),
+            price: form.price === undefined || form.price === "" ? String(price) : String(form.price),
+            cost_price: form.cost_price === undefined || form.cost_price === "" ? String(cost) : String(form.cost_price),
+            discount_1: String(form.discount_1 || "0"),
+            discount_2: String(form.discount_2 || "0"),
+            discount_rs: String(form.discount_rs || "0"),
+            scheme: String(form.scheme || "0"),
+          },
+          String(form.opKey || "")
+        );
+      } else if (invoiceNewRoute[2] === "complete") {
+        await A.invoicing.completeInvoice(db, hex, userHex, form.complete === "1");
+      }
+    });
     return redirect("/invoices/" + invoiceId + "?status=ok");
   }
 
   const invoicePage = /^\/invoices\/([^\/]+)$/.exec(path);
   if (invoicePage && method === "GET") {
-    const snap = await A.service.getViews(["refs"]);
-    const refs = snap.views.refs ?? {};
+    const refs = await A.routeKit.refs();
     const invoice = await A.invoices.readInvoice(db, decode(invoicePage[1]));
     if (!invoice) return text("No such invoice", 404);
     return html(
@@ -1413,9 +1355,8 @@ async function dispatch(req: any): Promise<any> {
   // and is kept until the grid has been exercised end to end.
   const invoiceGrid = /^\/invoices\/([^\/]+)\/grid$/.exec(path);
   if (invoiceGrid && method === "GET") {
-    const snap = await A.service.getViews(["refs"]);
-    const refs = snap.views.refs ?? {};
-    const hex = A.management.base64ToHex(String(decode(invoiceGrid[1])));
+    const refs = await A.routeKit.refs();
+    const hex = A.routeKit.b64ToHex(String(decode(invoiceGrid[1])));
     if (!hex) return text("No such invoice", 404);
     const state = await A.lifecycle.readState(db, hex);
     if (!state) return text("No such invoice", 404);
@@ -1451,10 +1392,9 @@ async function dispatch(req: any): Promise<any> {
   const invoiceCommit = /^\/invoices\/([^\/]+)\/commit$/.exec(path);
   if (invoiceCommit && method === "POST") {
     try {
-      const hex = A.management.base64ToHex(String(invoiceCommit[1]));
+      const hex = A.routeKit.b64ToHex(String(invoiceCommit[1]));
       await A.lifecycle.requireLease(db, hex, userHex, String(form.device || ""));
-      await A.lifecycle.commit(db, hex, userHex);
-      A.service.invalidate();
+      await A.routeKit.write(() => A.lifecycle.commit(db, hex, userHex));
       return redirect("/invoices/" + invoiceCommit[1] + "/grid?status=ok");
     } catch (e: any) {
       return text("Cannot open the invoice: " + (e && e.message ? e.message : String(e)), e?.status ?? 409);
@@ -1465,56 +1405,56 @@ async function dispatch(req: any): Promise<any> {
   // form sends as parallel arrays, so the route zips them back into lines.
   const invoiceLines = /^\/invoices\/([^\/]+)\/lines$/.exec(path);
   if (invoiceLines && method === "POST") {
-    const hex = A.management.base64ToHex(String(invoiceLines[1]));
+    const hex = A.routeKit.b64ToHex(String(invoiceLines[1]));
     let step = "lease";
     try {
       await A.lifecycle.requireLease(db, hex, userHex, String(form.device || ""));
-      step = "op";
-      const op = String(form.op || "save");
-      if (op.startsWith("remove:")) {
-        const lineId = A.management.base64ToHex(op.slice(7));
-        await A.lifecycle.removeLine(db, hex, lineId, "rm-" + op.slice(7) + "-" + Date.now().toString(36));
-      } else {
+      await A.routeKit.write(async () => {
+        step = "op";
+        const op = String(form.op || "save");
+        if (op.startsWith("remove:")) {
+          const lineId = A.routeKit.b64ToHex(op.slice(7));
+          await A.lifecycle.removeLine(db, hex, lineId, "rm-" + op.slice(7) + "-" + Date.now().toString(36));
+        } else {
         const items = [].concat(form.item ?? []);
-        const qty = [].concat(form.qty ?? []);
-        const price = [].concat(form.price ?? []);
-        const d1 = [].concat(form.discount_1 ?? []);
-        const d2 = [].concat(form.discount_2 ?? []);
-        const drs = [].concat(form.discount_rs ?? []);
-        const scheme = [].concat(form.scheme ?? []);
-        const ids = [].concat(form.line ?? []);
-        for (let i = 0; i < items.length; i++) {
-          if (!items[i]) continue;
-          step = `line ${i}`;
-          const line = {
-            item: items[i],
-            qty: qty[i] ?? "0",
-            price: price[i] ?? "0",
-            cost_price: "0",
-            discount_1: d1[i] ?? "0",
-            discount_2: d2[i] ?? "0",
-            discount_rs: drs[i] ?? "0",
-            scheme: scheme[i] ?? "0",
-          };
-          // A row that carries its own id is an EDIT and only a draft may be edited; a row with an
-          // empty id is an APPEND and is how a return is entered on an open invoice. The guard
-          // lives in editLine, not here — deciding by invoice state instead turned an edit into a
-          // silent extra line.
-          const existing = ids[i] ? A.management.base64ToHex(String(ids[i])) : null;
-          if (existing) {
-            await A.lifecycle.editLine(db, hex, existing, line);
-          } else {
-            await A.lifecycle.appendLine(
-              db,
-              hex,
-              line,
-              "line-" + invoiceLines[1] + "-" + i + "-" + Date.now().toString(36)
-            );
+          const qty = [].concat(form.qty ?? []);
+          const price = [].concat(form.price ?? []);
+          const d1 = [].concat(form.discount_1 ?? []);
+          const d2 = [].concat(form.discount_2 ?? []);
+          const drs = [].concat(form.discount_rs ?? []);
+          const scheme = [].concat(form.scheme ?? []);
+          const ids = [].concat(form.line ?? []);
+          for (let i = 0; i < items.length; i++) {
+            if (!items[i]) continue;
+            step = `line ${i}`;
+            const line = {
+              item: items[i],
+              qty: qty[i] ?? "0",
+              price: price[i] ?? "0",
+              cost_price: "0",
+              discount_1: d1[i] ?? "0",
+              discount_2: d2[i] ?? "0",
+              discount_rs: drs[i] ?? "0",
+              scheme: scheme[i] ?? "0",
+            };
+            // A row that carries its own id is an EDIT and only a draft may be edited; a row with an
+            // empty id is an APPEND and is how a return is entered on an open invoice. The guard
+            // lives in editLine, not here — deciding by invoice state instead turned an edit into a
+            // silent extra line.
+            const existing = ids[i] ? A.routeKit.b64ToHex(String(ids[i])) : null;
+            if (existing) {
+              await A.lifecycle.editLine(db, hex, existing, line);
+            } else {
+              await A.lifecycle.appendLine(
+                db,
+                hex,
+                line,
+                "line-" + invoiceLines[1] + "-" + i + "-" + Date.now().toString(36)
+              );
+            }
           }
         }
-      }
-      step = "invalidate";
-      A.service.invalidate();
+      });
       return redirect("/invoices/" + invoiceLines[1] + "/grid?status=ok");
     } catch (e: any) {
       const why = e && e.message ? e.message : typeof e === "string" ? e : Object.prototype.toString.call(e);
@@ -1541,14 +1481,13 @@ async function dispatch(req: any): Promise<any> {
     const paper = String(query.paper ?? "") || "a5";
     const doc = await A.invoiceDoc.read(String(decode(invoiceDocument[1])));
     if (!doc) return text("No materialised document for this invoice yet", 404);
-    const snap = await A.service.getViews(["refs"]);
-    const refs = snap.views.refs ?? {};
+    const refs = await A.routeKit.refs();
     const id = String(decode(invoiceDocument[1]));
     // The document stores ids as hex; the app's convention is base64. `boxByHex` is the one thing
     // the document does not carry, so it is resolved once from the refs snapshot.
     const boxByHex: Record<string, number> = {};
     for (const it of refs.items ?? []) {
-      boxByHex[A.management.base64ToHex(String(it.id))] = Number(it.box_size_qty) || 0;
+      boxByHex[A.routeKit.b64ToHex(String(it.id))] = Number(it.box_size_qty) || 0;
     }
     const lines = (doc.lines ?? []).map((l: any, i: number) => {
       const d1 = Number(l.d1 ?? 0);
@@ -1570,7 +1509,7 @@ async function dispatch(req: any): Promise<any> {
     const bal = A.lifecycle.balanceOf(doc.final_total ?? 0, doc.paid_total ?? 0);
     // Party and booker are the only names the document does not carry, so they are resolved from
     // the refs snapshot using the hex ids the document stores.
-    const byHex = (list: any[], hex: any) => (hex ? (list.find((r: any) => String(r.id) === hexToBase64(String(hex)))?.name ?? "") : "");
+    const byHex = (list: any[], hex: any) => (hex ? (list.find((r: any) => String(r.id) === A.routeKit.hexToB64(String(hex)))?.name ?? "") : "");
     return html(
       await A.http.page(req, { ...shell(user, "invoices", "Invoice " + (doc.readable_id ?? "")), paper: print ? paper : "" }, "invoices/document.html", {
         doc,
@@ -1604,7 +1543,7 @@ async function dispatch(req: any): Promise<any> {
   }
 
   if (path === "/payments" && method === "GET") {
-    const snap = await A.service.getViews(["refs"]);
+    const refs = await A.routeKit.refs();
     const filters = {
       type: pick(query.type, ""),
       from: pick(query.from, ""),
@@ -1621,15 +1560,14 @@ async function dispatch(req: any): Promise<any> {
         filters,
         types: paymentTypes,
         selectedType: Number(filters.type || -1),
-        parties: snap.views.refs?.parties ?? [],
+        parties: refs.parties ?? [],
         totals,
       })
     );
   }
 
   if (path === "/payments/new" && method === "GET") {
-    const snap = await A.service.getViews(["refs"]);
-    const refs = snap.views.refs ?? {};
+    const refs = await A.routeKit.refs();
     const invoice = query.invoice ? await A.invoices.readInvoice(db, String(query.invoice)) : null;
     const open = await A.invoices.listInvoices(db, { unpaid: "on" });
     return html(
@@ -1651,7 +1589,7 @@ async function dispatch(req: any): Promise<any> {
 
   if (path === "/payments" && method === "POST") {
     try {
-      await A.payments.createPayment(db, {
+      await A.routeKit.write(() => A.payments.createPayment(db, {
         type: String(form.type || "1"),
         amount: String(form.amount || "0"),
         date: String(form.date || ""),
@@ -1660,8 +1598,7 @@ async function dispatch(req: any): Promise<any> {
         invoice: String(form.invoice || ""),
         description: String(form.description || ""),
         paid: "on",
-      });
-      A.service.invalidate();
+      }));
       return redirect("/payments?status=ok");
     } catch (e: any) {
       return text("Payment not saved: " + (e && e.message ? e.message : String(e)), 400);
@@ -1670,14 +1607,14 @@ async function dispatch(req: any): Promise<any> {
 
   const paymentDelete = /^\/payments\/([^\/]+)\/delete$/.exec(path);
   if (paymentDelete && method === "POST") {
-    await A.payments.deletePayment(db, String(paymentDelete[1]));
-    A.service.invalidate();
+    await A.routeKit.write(() => A.payments.deletePayment(db, String(paymentDelete[1])));
     return redirect("/payments?status=ok");
   }
 
   if (path === "/inventory" && method === "GET") {
     const snap = await A.service.getViews(["itemsReport", "refs"]);
-    const rows = A.inventory.stockRows(snap.views.itemsReport ?? [], snap.views.refs ?? {}, pick(query.q, ""));
+    const refs = await A.routeKit.refs();
+    const rows = A.inventory.stockRows(snap.views.itemsReport ?? [], refs, pick(query.q, ""));
     const editId = String(query.edit || "");
     return html(
       await A.http.page(req, shell(user, "inventory", "Inventory"), "inventory/index.html", {
@@ -1685,18 +1622,17 @@ async function dispatch(req: any): Promise<any> {
         query: pick(query.q, ""),
         summary: A.inventory.stockSummary(rows),
         editRow: editId ? rows.find((r: any) => String(r.id) === editId) ?? null : null,
-        companies: (snap.views.refs?.companies ?? []).map((c: any) => ({ id: c.id, name: c.name })),
+        companies: (refs.companies ?? []).map((c: any) => ({ id: c.id, name: c.name })),
       })
     );
   }
 
   if (path === "/inventory/save" && method === "POST") {
-    if (String(form.id || "")) {
-      await A.inventory.updateItem(db, "items", String(form.id), form);
-    } else {
-      await A.management.createRow(db, A.entities.ENTITIES.items, form);
-    }
-    A.service.invalidate();
+    await A.routeKit.write(() =>
+        String(form.id || "")
+          ? A.inventory.updateItem(db, "items", String(form.id), form)
+          : A.management.createRow(db, A.entities.ENTITIES.items, form)
+      );
     return redirect("/inventory?status=ok");
   }
 
