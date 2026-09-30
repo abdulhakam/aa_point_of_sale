@@ -1,0 +1,48 @@
+{% extends 'layout.html' %}
+{% block body %}
+{# The print queue. Printing itself is the browser's dialog over a server-rendered page; what this
+   screen owns is the server-side run — a set of slips that must exist as materialised documents
+   before they can be printed, and a record of what was printed. A single reprint is the same form
+   with one invoice named. #}
+<h1 class="page-title">Print queue</h1>
+<p class="crumbs"><a href="/invoices">← Invoices</a></p>
+
+{% if query.status == 'queued' %}
+<div class="notice" data-state="ok">Queued. The poller runs it within a minute; watch
+  <a href="/jobs/{{ query.job }}">the job</a>.</div>
+{% endif %}
+
+<section class="card">
+  <h2>Print a range of invoices</h2>
+  <form class="entity-form" method="post" action="/print">
+    <label class="field"><span>From</span><input type="date" name="from" value="{{ today }}"></label>
+    <label class="field"><span>To</span><input type="date" name="to" value="{{ today }}"></label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit" name="reason" value="batch">QUEUE PRINT RUN</button>
+    </div>
+  </form>
+  <p class="muted">Open invoices dated in the range, newest first, up to 200 slips. A run of more
+     than that is a job for the night, not a form post.</p>
+</section>
+
+<section class="card">
+  <h2>Recent runs</h2>
+  <div class="tablewrap">
+  <table class="data" data-mobile="cards">
+    <thead><tr><th>Queued</th><th>State</th><th class="right">Requested</th><th class="right">Job</th></tr></thead>
+    <tbody>
+    {% for r in recent %}
+      <tr>
+        <td data-label="Queued" data-lead>{{ r.created }}</td>
+        <td data-label="State">{{ r.state }}</td>
+        <td class="right" data-label="Requested">{{ r.count }}</td>
+        <td class="right" data-label="Job"><a href="/jobs/{{ r.id }}">open</a></td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="4">Nothing has been queued yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

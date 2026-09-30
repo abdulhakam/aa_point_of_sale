@@ -5,6 +5,12 @@
 <svg class="ti" width="{{ size|default(24) }}" height="{{ size|default(24) }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
 {%- if name == 'dashboard' -%}
 <path d="M12 13m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M13.45 11.55l2.05 -2.05" /><path d="M6.4 20a9 9 0 1 1 11.2 0z" />
+{%- elif name == 'wallet' -%}
+<path d="M19 7v4a1 1 0 0 1 -1 1h-14a2 2 0 0 1 -2 -2v-3a2 2 0 0 1 2 -2h15a1 1 0 0 1 1 -1v4" /><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1 -1v-4" /><path d="M18 12h.01" /><path d="M14 8h-4a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4h-4" />
+{%- elif name == 'printer' -%}
+<path d="M6 9v-3h12v3" /><path d="M6 18h-4a2 2 0 0 1 -2 -2v-5a2 2 0 0 1 2 -2h16a2 2 0 0 1 2 2v5a2 2 0 0 1 -2 2h-4" /><path d="M6 14h12v8h-12z" />
+{%- elif name == 'receipt' -%}
+<path d="M5 4h14v16l-2.5 -1.5 -2.5 1.5 -2.5 -1.5 -2.5 1.5 -2.5 -1.5 -2.5 1.5 v-16" /><path d="M9 8h6" /><path d="M9 12h6" />
 {%- elif name == 'file-invoice' -%}
 <path d="M15 3v5h5" /><path d="M19 21h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h10l4 4v12a2 2 0 0 1 -2 2z" /><path d="M9 8h1" /><path d="M9 12h6" /><path d="M9 16h4" />
 {%- elif name == 'cash' -%}

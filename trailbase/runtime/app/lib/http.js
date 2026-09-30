@@ -13,6 +13,10 @@ export function page(shell, name, data) {
     title: shell.title ?? shell.appName,
     flash: shell.flash ?? null,
     nav: shell.nav ?? {},
+    // Which paper this page prints on. A5 for an invoice or a voucher, A4 landscape for a report,
+    // and blank for everything else so the print media query does not apply a size to, say, the
+    // dashboard. The stylesheet keys off this attribute rather than guessing from the route.
+    paper: shell.paper ?? "",
     ...(data || {}),
   };
   // NOTE: a direct JS→serde bridge exists (`render.html(name, ctx)` with an object is accepted and

@@ -499,14 +499,41 @@ table.grid select { min-width: 12rem; }
   .big-number { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 }
 
-/* -------------------------------------------------------------------- print */
+/* -------------------------------------------------------------------- print
+   Two paper sizes, because a till receipt and a report are not the same artefact:
+     A5  — the invoice itself, portrait, one document per sheet
+     A4  — a report, landscape, repeated table header on every page
+   The page is chosen by the `data-paper` attribute on <body>, which the print route sets, rather
+   than by a media query, so one stylesheet serves both and neither is a guess. */
 
 .print-head { display: none; }
 .print-head-title { font-size: 1.25rem; font-weight: 700; text-align: center; }
 .print-head-line { font-size: 0.75rem; text-align: center; }
 
+/* The invoice document, laid out for paper rather than for a screen. */
+.invoice-doc { max-width: none; }
+.doc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+.doc-business { font-size: 1.25rem; font-weight: 700; }
+.doc-address, .doc-phone { font-size: 0.8rem; color: #333; }
+.doc-meta { text-align: right; }
+.doc-type { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+.doc-no { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.doc-dated { font-size: 0.8rem; }
+.doc-parties { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.9rem; }
+.doc-parties > div { display: flex; gap: 6px; }
+.doc-label { color: #555; min-width: 4.5em; }
+.doc-value { font-weight: 600; }
+.doc-lines { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+.doc-lines th, .doc-lines td { border: 1px solid #999; padding: 3px 6px; text-align: left; }
+.doc-lines th { background: #eee; }
+.doc-lines td.right, .doc-lines th.right { text-align: right; }
+.doc-totals { margin-top: 10px; margin-left: auto; width: 45%; }
+.doc-grand th, .doc-grand td { font-weight: 700; border-top: 2px solid #000; }
+.doc-payments { margin-top: 14px; }
+.no-print { display: revert; }
+
 @media print {
-  .header, .navbar, .filters, .crumbs, .btn, .notice, .flash, .job, .hub-title { display: none !important; }
+  .header, .navbar, .filters, .crumbs, .btn, .notice, .flash, .job, .hub-title, .no-print, .pagebar, .stat-grid, .list-toolbar { display: none !important; }
   body { background: #fff; }
   .appshell, .appbody, .main { display: block; padding: 0; margin: 0; }
   .card { border: 0; padding: 0; margin: 0; background: #fff; }
@@ -515,5 +542,29 @@ table.grid select { min-width: 12rem; }
   .report { margin: 0; }
   table.data { font-size: 9pt; }
   .report table.data thead th { position: static; }
-  @page { size: A4; margin: 8mm; }
+  /* A grid is a screen affordance: on paper the ten input columns of the invoice editor would be
+     meaningless, so the printed invoice is the standalone document, never the grid. */
+  table.grid { display: none !important; }
+
+  /* Repeated header on every page of a long report. */
+  .report table.data thead { display: table-header-group; }
+  .report table.data tr { break-inside: avoid; }
 }
+
+/* An A5 receipt: one invoice per sheet, narrow, no wasted furniture. */
+@media print {
+  body[data-paper="a5"] { font-size: 9.5pt; }
+  body[data-paper="a5"] .doc-lines th, body[data-paper="a5"] .doc-lines td { padding: 2px 3px; }
+  body[data-paper="a5"] .doc-business { font-size: 1rem; }
+  body[data-paper="a5"] .doc-no { font-size: 1.2rem; }
+  body[data-paper="a5"] .doc-totals { width: 62%; }
+  body[data-paper="a5"] .doc-parties { gap: 10px; font-size: 0.8rem; }
+  @page { size: A5 portrait; margin: 6mm; }
+}
+
+/* A4 landscape for a report, which is wider than it is tall in practice. */
+@media print {
+  body[data-paper="a4"] .report table.data { min-width: 0; font-size: 8.5pt; }
+  @page { size: A4 landscape; margin: 10mm; }
+}
+

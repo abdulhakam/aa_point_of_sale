@@ -20,10 +20,40 @@
       now.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
   }
 
+  /**
+   * Printing. A print link points at a real `?print=1` page, so a printout can be opened,
+   * bookmarked or reloaded; the click also opens the browser's print dialog, because that is what
+   * an operator expects from a button labelled PRINT. Without this the link would still work — it
+   * would just not print by itself. A link with no href is the plain "print this page" case.
+   */
   function enhancePrint() {
     document.querySelectorAll("[data-print]").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        window.print();
+      btn.addEventListener("click", function (event) {
+        var href = btn.getAttribute("href");
+        if (!href || href.charAt(0) === "#") {
+          event.preventDefault();
+          window.print();
+          return;
+        }
+        event.preventDefault();
+        var win = window.open(href, "_blank");
+        if (!win) {
+          // A popup blocker refused the new tab. The same URL is still a printable document, so
+          // navigate to it rather than doing nothing.
+          window.location.href = href;
+          return;
+        }
+        var go = function () {
+          try {
+            win.focus();
+            win.print();
+          } catch (e) {
+            /* the operator can print from the page that did open */
+          }
+        };
+        // Print once the opened page's own layout has settled, or the dialog races the load.
+        if (win.document && win.document.readyState === "complete") setTimeout(go, 150);
+        else win.addEventListener("load", function () { setTimeout(go, 150); });
       });
     });
   }

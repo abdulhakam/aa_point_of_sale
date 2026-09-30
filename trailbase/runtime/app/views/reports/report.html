@@ -30,6 +30,14 @@
 {% if rowInfo and rowInfo.truncated %}
 <p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>
 {% endif %}
+{# Printing a report: A4 landscape (the page sets `paper`), carrying the filters that are on
+   screen, so the sheet is the report the operator was looking at. The button is hidden by the
+   print stylesheet, so it cannot appear on the paper. #}
+{% if not print %}
+<p class="pagebar no-print">
+  <a class="btn" href="{{ basePath }}?{{ rawQuery }}{{ '&amp;' if rawQuery else '' }}print=1" data-print>PRINT REPORT</a>
+</p>
+{% endif %}
 {% block after_table %}{% endblock %}
 {% include 'partials/totals.html' %}
 </div>

@@ -7,7 +7,8 @@
 <link rel="icon" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
-<body>
+{# `paper` selects the print sheet: a5 for an invoice or a voucher, a4 for a report. See app.css. #}
+<body{% if paper %} data-paper="{{ paper }}"{% endif %}>
 <div class="appshell">
 {% if user %}
 {% include 'partials/topbar.html' %}

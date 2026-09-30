@@ -9,9 +9,9 @@
 <article class="invoice-doc" data-invoice-doc>
   <header class="doc-head">
     <div>
-      <div class="doc-business">{{ business.name }}</div>
-      <div class="doc-address">{{ business.address }}</div>
-      <div class="doc-phone">{{ business.phone }}</div>
+      <div class="doc-business">{{ businessName }}</div>
+      <div class="doc-address">{{ businessAddress }}</div>
+      <div class="doc-phone">{{ businessPhone }}</div>
     </div>
     <div class="doc-meta">
       <div class="doc-type">{{ typeLabel }}</div>
@@ -87,6 +87,10 @@
 {% if not print %}
 <p class="pagebar no-print">
   <a class="btn" href="/invoices/{{ invoice.id }}/grid">Edit</a>
+  {# Two sheets, because a till slip and a filed copy are not the same size. Both print the SAME
+     document; only the paper differs. #}
+  <a class="btn primary" href="/invoices/{{ invoice.id }}/view?print=1" data-print="a5">PRINT A5 RECEIPT</a>
+  <a class="btn" href="/invoices/{{ invoice.id }}/view?print=1&amp;paper=a4" data-print="a4">PRINT A4 COPY</a>
   <a class="btn" href="/invoice-doc/rebuild?reconcile=1">Rebuild all documents</a>
 </p>
 {% endif %}

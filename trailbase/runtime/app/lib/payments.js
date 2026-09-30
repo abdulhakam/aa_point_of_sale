@@ -96,35 +96,52 @@ export async function sumPayments(db, filters = {}) {
   };
 }
 
+/** One raw row in the shape every caller sees — a list row, a totals row or a printed voucher. */
+function shapeRow(r) {
+  const amount = round2(r.amount);
+  const row = {
+    id: r.id,
+    type: r.type === null ? null : Number(r.type),
+    typeLabel: typeLabel(r.type),
+    amount,
+    amountText: money(amount),
+    paid: Number(r.paid) === 1,
+    date: dateOnly(r.payment_date),
+    description: r.description ?? "",
+    invoice: r.invoice ?? null,
+    invoiceNo: r.invoiceNo === null || r.invoiceNo === undefined ? null : Number(r.invoiceNo),
+    partyName: r.partyName ?? "",
+    paidTo: r.paidTo ?? "",
+    standalone: r.invoice === null || r.invoice === undefined,
+  };
+  if (!row.standalone) {
+    row.invoiceTotal = round2(r.invoiceTotal);
+    row.invoiceTotalText = money(row.invoiceTotal);
+    row.invoicePaid = round2(r.invoicePaid);
+    row.balanceText = money(round2(row.invoiceTotal - row.invoicePaid));
+  }
+  return row;
+}
+
 export async function listPayments(db, filters = {}) {
   const { sql, params } = filteredQuery(filters);
   const rows = await db.all(sql + ' ORDER BY p."payment_date" DESC, p."id" DESC LIMIT 300', params);
 
-  return rows.map(named(LIST_COLUMNS)).map((r) => {
-    const amount = round2(r.amount);
-    const row = {
-      id: r.id,
-      type: r.type === null ? null : Number(r.type),
-      typeLabel: typeLabel(r.type),
-      amount,
-      amountText: money(amount),
-      paid: Number(r.paid) === 1,
-      date: dateOnly(r.payment_date),
-      description: r.description ?? "",
-      invoice: r.invoice ?? null,
-      invoiceNo: r.invoiceNo === null || r.invoiceNo === undefined ? null : Number(r.invoiceNo),
-      partyName: r.partyName ?? "",
-      paidTo: r.paidTo ?? "",
-      standalone: r.invoice === null || r.invoice === undefined,
-    };
-    if (!row.standalone) {
-      row.invoiceTotal = round2(r.invoiceTotal);
-      row.invoiceTotalText = money(row.invoiceTotal);
-      row.invoicePaid = round2(r.invoicePaid);
-      row.balanceText = money(round2(row.invoiceTotal - row.invoicePaid));
-    }
-    return row;
-  });
+  return rows.map(named(LIST_COLUMNS)).map(shapeRow);
+}
+
+/**
+ * One payment, in the same shape `listPayments` returns, so a voucher on paper and a row on a
+ * list cannot be formatted differently. A filtered list would work, but it reads up to 300 rows
+ * to find one — which is a strange thing to do on the print path.
+ */
+export async function readPayment(db, publicId) {
+  const hex = base64ToHex(String(publicId || ""));
+  if (!hex) return null;
+  const { sql, params } = filteredQuery({});
+  const rows = await db.all(sql + ' AND p."id" = unhex(?)', [...params, hex]);
+  const mapped = rows.map(named(LIST_COLUMNS)).map(shapeRow);
+  return mapped[0] ?? null;
 }
 
 /**

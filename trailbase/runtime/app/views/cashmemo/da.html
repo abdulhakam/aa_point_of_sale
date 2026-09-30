@@ -1,0 +1,60 @@
+{% extends 'layout.html' %}
+{% block body %}
+{# DA entry: money that moves with no document behind it. In the legacy app this was its own
+   screen; here it is a payment with no invoice, which is exactly what `payments.invoice IS NULL`
+   already means, so this is a filtered view and a form rather than a new table. #}
+<h1 class="page-title">DA entry</h1>
+<p class="crumbs"><a href="/cashmemo">← Cash memo</a></p>
+
+<div class="pagebar">
+  <a class="btn primary" href="/payments/new">+ NEW DA ENTRY</a>
+  <a class="btn" href="/cashmemo/vouchers?type=0">Payment vouchers</a>
+  <a class="btn" href="/cashmemo/vouchers?type=1">Receive vouchers</a>
+</div>
+
+<form class="filters" method="get" action="/cashmemo/da">
+  <label class="field"><span>From</span><input type="date" name="from" value="{{ filters.from }}"></label>
+  <label class="field"><span>To</span><input type="date" name="to" value="{{ filters.to }}"></label>
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">APPLY</button>
+    <a class="btn" href="/cashmemo/da">RESET</a>
+  </div>
+</form>
+
+<section class="card">
+  <div class="list-toolbar">
+    <h2>Standalone entries ({{ rows|length }})</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-value">{{ totals.recievedText }}</div><div class="stat-label">Recieved</div></div>
+      <div class="stat"><div class="stat-value">{{ totals.sentText }}</div><div class="stat-label">Sent</div></div>
+    </div>
+  </div>
+  <div class="tablewrap">
+  <table class="data" data-mobile="cards">
+    <thead><tr>
+      <th>Date</th><th>Type</th><th>Party</th><th>Paid to</th><th>Description</th>
+      <th class="right">Amount</th><th class="right">Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td data-label="Date" data-lead>{{ r.date }}</td>
+        <td data-label="Type">{{ r.typeLabel }}</td>
+        <td data-label="Party">{{ r.partyName }}</td>
+        <td data-label="Paid to">{{ r.paidTo }}</td>
+        <td data-label="Description">{{ r.description }}</td>
+        <td class="right" data-label="Amount">{{ r.amountText }}</td>
+        <td class="row-actions" data-label="">
+          <form method="post" action="/payments/{{ r.id }}/delete" data-confirm="Delete this entry?">
+            <button class="icon-del" type="submit" title="Delete">×</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="7">Nothing recorded in this range.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

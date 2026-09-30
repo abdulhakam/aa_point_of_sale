@@ -160,6 +160,7 @@ async function app(): Promise<any> {
     invoicing: await loadModule("/app/lib/invoicing.js"),
     lifecycle: await loadModule("/app/lib/invoice-lifecycle.js"),
     invoices: await loadModule("/app/lib/invoices.js"),
+    expenses: await loadModule("/app/lib/expenses.js"),
     qtyAsText: (await loadModule("/app/lib/format-qty.js")).qtyAsText,
     payments: await loadModule("/app/lib/payments.js"),
     inventory: await loadModule("/app/lib/inventory.js"),
@@ -752,7 +753,7 @@ async function dispatch(req: any): Promise<any> {
         return { label: field.label, value: raw };
       })
       .filter(Boolean);
-    const page = A.http.page(shell(user, "reports", pageDef.title), pageDef.view || A.reportPages.DEFAULT_VIEW, {
+    const page = A.http.page({ ...shell(user, "reports", pageDef.title), paper: "a4" }, pageDef.view || A.reportPages.DEFAULT_VIEW, {
       def: pageDef,
       // Mobile layout is additive: a narrow report turns into labelled cards, a wide one keeps its
       // grid and scrolls sideways. The first column is the row's identity and reads as a heading
@@ -761,6 +762,9 @@ async function dispatch(req: any): Promise<any> {
       columns: pageDef.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
       mobile: pageDef.columns.length <= 6 ? "cards" : "scroll",
       basePath: "/reports/" + key,
+      // The print link carries the filters that are on screen, so a sheet is the report the
+      // operator was looking at rather than an unfiltered default.
+      rawQuery,
       filters,
       options,
       appliedLabels,
@@ -1075,6 +1079,7 @@ async function dispatch(req: any): Promise<any> {
   const typeOptions = (map) => Object.keys(map).map((code) => ({ code: Number(code), label: map[code] }));
   const invoiceTypes = typeOptions(A.invoices.INVOICE_TYPES);
   const paymentTypes = typeOptions(A.payments.PAYMENT_TYPES);
+  const round2to = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
   const pick = (value, fallback) => (value === undefined || value === null || value === "" ? fallback : value);
   const flag = (value) => (value === "1" || value === "on" || value === "true" ? "on" : "");
   const editorItems = (refs) =>
@@ -1085,6 +1090,180 @@ async function dispatch(req: any): Promise<any> {
       costPrice: Number(it.cost_price) || 0,
       boxSizeQty: Number(it.box_size_qty) || 0,
     }));
+
+  // ------------------------------------------------------------------ print queue
+  //
+  // Printing is a browser dialog over a server-rendered page; there is no printer driver. What the
+  // queue adds is the part that is genuinely server-side: a run of slips that must exist as
+  // documents before they can be printed, and a record of what was run. A single reprint is the
+  // same job with one id.
+  // ---------------------------------------------------------------- cash memo
+  //
+  // The legacy app had five screens here. The data for all of them is `payments` (a voucher or a
+  // DA entry is a payment with or without an invoice behind it) plus `expenses`, so this is one
+  // index over four working screens rather than five near-duplicates. Payments that settle an
+  // invoice live on that invoice and are not repeated here.
+
+  if (path === "/cashmemo" && method === "GET") {
+    const range = { from: pick(query.from, ""), to: pick(query.to, "") };
+    // Every settled payment counts, not only the standalone ones: money received against an invoice
+    // is cash the shop has. The DA and voucher screens below are the *standalone* views, which is
+    // where the `standalone` filter belongs. (With it here, this depot reads 0.00 / 0.00, because
+    // all 26,526 of its payments are invoice-linked — cash in hand would be wrong by 48 million.)
+    const recieved = await A.payments.sumPayments(db, { ...range, type: "1" });
+    const sent = await A.payments.sumPayments(db, { ...range, type: "0" });
+    const expenses = await A.expenses.sumExpenses(db, range);
+    const inHand = round2to(recieved.recieved - sent.sent - expenses.total);
+    return html(
+      A.http.page(shell(user, "cashmemo", "Cash memo"), "cashmemo/index.html", {
+        filters: range,
+        query,
+        totals: {
+          recievedText: recieved.recievedText,
+          sentText: sent.sentText,
+          expenseText: expenses.totalText,
+          netText: A.format.money(inHand),
+        },
+      })
+    );
+  }
+
+  if (path === "/cashmemo/vouchers" && method === "GET") {
+    const type = pick(query.type, "0") === "1" ? "1" : pick(query.type, "0") === "2" ? "2" : "0";
+    const filters = { type, from: pick(query.from, ""), to: pick(query.to, ""), standalone: "on" };
+    const [rows, totals] = await Promise.all([
+      A.payments.listPayments(db, filters),
+      A.payments.sumPayments(db, filters),
+    ]);
+    return html(
+      A.http.page(shell(user, "cashmemo", "Vouchers"), "cashmemo/vouchers.html", {
+        rows,
+        filters,
+        query,
+        selectedType: Number(type),
+        typeLabel: type === "1" ? "Receive" : type === "2" ? "Return" : "Payment",
+        totals: { totalText: totals.netText },
+      })
+    );
+  }
+
+  if (path === "/cashmemo/da" && method === "GET") {
+    const filters = { from: pick(query.from, ""), to: pick(query.to, ""), standalone: "on" };
+    const [rows, totals] = await Promise.all([
+      A.payments.listPayments(db, filters),
+      A.payments.sumPayments(db, filters),
+    ]);
+    return html(
+      A.http.page(shell(user, "cashmemo", "DA entry"), "cashmemo/da.html", {
+        rows,
+        filters,
+        query,
+        totals: { recievedText: totals.recievedText, sentText: totals.sentText },
+      })
+    );
+  }
+
+  if (path === "/cashmemo/expenses" && method === "GET") {
+    const filters = { from: pick(query.from, ""), to: pick(query.to, ""), q: pick(query.q, "") };
+    const [rows, totals] = await Promise.all([
+      A.expenses.listExpenses(db, filters),
+      A.expenses.sumExpenses(db, filters),
+    ]);
+    const editId = String(query.edit || "");
+    return html(
+      A.http.page(shell(user, "cashmemo", "Expenses"), "cashmemo/expenses.html", {
+        rows,
+        filters,
+        query,
+        totals,
+        editRow: editId ? rows.find((r: any) => String(r.id) === editId) ?? null : null,
+        today: A.format.dateOnly(new Date().toISOString()),
+      })
+    );
+  }
+
+  if (path === "/cashmemo/expenses/save" && method === "POST") {
+    try {
+      if (String(form.id || "")) await A.expenses.updateExpense(db, String(form.id), form);
+      else await A.expenses.createExpense(db, form);
+      A.service.invalidate();
+      return redirect("/cashmemo/expenses?status=ok");
+    } catch (e: any) {
+      return text("Expense not saved: " + (e && e.message ? e.message : String(e)), 400);
+    }
+  }
+
+  const expenseDelete = /^\/cashmemo\/expenses\/([^\/]+)\/delete$/.exec(path);
+  if (expenseDelete && method === "POST") {
+    await A.expenses.deleteExpense(db, String(expenseDelete[1]));
+    A.service.invalidate();
+    return redirect("/cashmemo/expenses?status=ok");
+  }
+
+  // One voucher on paper. A voucher is a payment, so this reads `payments` rather than a
+  // materialised document: there is no invoice behind it by definition.
+  const voucherPrint = /^\/cashmemo\/vouchers\/([^\/]+)$/.exec(path);
+  if (voucherPrint && method === "GET") {
+    const print = String(query.print ?? "") === "1";
+    const found = await A.payments.readPayment(db, String(voucherPrint[1]));
+    if (!found) return text("No such voucher", 404);
+    return html(
+      A.http.page({ ...shell(user, "cashmemo", "Voucher"), paper: print ? String(query.paper ?? "a5") : "" }, "cashmemo/voucher.html", {
+        voucher: found,
+        print,
+        selectedType: found.type,
+        // A sending voucher pays out, a recieving one pays in. The words matter on paper: an
+        // operator reading "recieving 5,000" on a payment slip is being misinformed.
+        directionText: found.type === 1 ? "Recieved" : found.type === 0 ? "Paid out" : "Returned",
+      })
+    );
+  }
+
+  if (path === "/print" && method === "GET") {
+    const recent = await db.all(
+      'SELECT hex("id") hx, "name", "input", "state", "created" FROM "job" ' +
+        'WHERE "name" = ? ORDER BY "created" DESC LIMIT 20',
+      ["print.run"]
+    );
+    return html(
+      A.http.page(shell(user, "print", "Print queue"), "print/index.html", {
+        recent: recent.map((r) => {
+          // `input` is the job's JSON payload; the count is what the table wants, so it is parsed
+          // here rather than in the template. The id is read as hex and shown in the base64 form
+          // every other link in the app uses.
+          let count = 0;
+          try {
+            count = (JSON.parse(String(r[2] ?? "{}")).invoices ?? []).length;
+          } catch {
+            count = 0;
+          }
+          return { id: hexToBase64(String(r[0] ?? "")), state: r[3], created: String(r[4] ?? "").slice(0, 19), count };
+        }),
+        query,
+        today: A.format.dateOnly(new Date().toISOString()),
+      })
+    );
+  }
+
+  if (path === "/print" && method === "POST") {
+    // A batch: every open invoice in the date range, or the one named. Ids are carried as hex,
+    // because a BLOB column is matched with unhex(?) rather than against a base64 text parameter.
+    const ids: string[] = [];
+    if (form.invoice) {
+      ids.push(A.management.base64ToHex(String(form.invoice)));
+    } else {
+      const rows = await db.all(
+        'SELECT hex("id") hx FROM invoices WHERE "status" = \'open\' AND "deleted" = 0 ' +
+          'AND date("dated") >= date(?) AND date("dated") <= date(?) ORDER BY "dated" DESC LIMIT 200',
+        [String(form.from || "1970-01-01"), String(form.to || "2999-12-31")]
+      );
+      for (const r of rows) ids.push(String(r[0]));
+    }
+    if (!ids.length) return text("No invoices in that range to print", 400);
+    // enqueue answers with the job's hex id, which the job links want in base64.
+    const jobHex = await A.jobs.enqueue(db, "print.run", { invoices: ids, reason: String(form.reason || "batch") });
+    return redirect("/print?status=queued&job=" + hexToBase64(String(jobHex)));
+  }
 
   if (path === "/invoices" && method === "GET") {
     const snap = await A.service.getViews(["refs"]);
@@ -1333,8 +1512,16 @@ async function dispatch(req: any): Promise<any> {
   // `drs` and a precomputed `total`. Nothing here is resolved against `items` or `parties` again —
   // that is the whole point of materialising it, and re-deriving it is how the first version of
   // this route rendered empty item names.
+  //
+  // `?print=1` is the print mode: the same document, with the navigation dropped and A5 selected, so
+  // the printed sheet and the on-screen document cannot diverge. A5, because a till slip is a
+  // receipt; a report is A4 and is a different route.
   const invoiceDocument = /^\/invoices\/([^\/]+)\/view$/.exec(path);
   if (invoiceDocument && method === "GET") {
+    const print = String(query.print ?? "") === "1";
+    // A5 unless the caller names another sheet, so a till slip and a filed A4 copy are both one
+    // link away and neither needs its own renderer.
+    const paper = String(query.paper ?? "") || "a5";
     const doc = await A.invoiceDoc.read(String(decode(invoiceDocument[1])));
     if (!doc) return text("No materialised document for this invoice yet", 404);
     const snap = await A.service.getViews(["refs"]);
@@ -1368,11 +1555,13 @@ async function dispatch(req: any): Promise<any> {
     // the refs snapshot using the hex ids the document stores.
     const byHex = (list: any[], hex: any) => (hex ? (list.find((r: any) => String(r.id) === hexToBase64(String(hex)))?.name ?? "") : "");
     return html(
-      A.http.page(shell(user, "invoices", "Invoice " + (doc.readable_id ?? "")), "invoices/document.html", {
+      A.http.page({ ...shell(user, "invoices", "Invoice " + (doc.readable_id ?? "")), paper: print ? paper : "" }, "invoices/document.html", {
         doc,
         invoice: { id },
-        print: String(query.print ?? "") === "1",
-        business: business(),
+        print,
+        // The business identity comes from the layout's flat fields (businessName / businessAddress
+        // / businessPhone), which every page already carries, so a document template cannot fail
+        // on a `business` object that was never passed.
         typeLabel: live ? live.typeLabel : "Invoice",
         dated: (doc.dated ?? "").slice(0, 10),
         partyName: byHex(refs.parties ?? [], doc.party),

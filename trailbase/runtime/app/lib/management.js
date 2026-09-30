@@ -131,18 +131,29 @@ export async function loadLinks(entity) {
 
 // --------------------------------------------------------------- SQL writes
 
+// The base64url alphabet, which is what the DB bridge emits for a BLOB id.
 const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-/** Base64 (url-safe, as the bridge emits ids/relations) -> uppercase hex, for `unhex(?)`. */
+// Standard base64 and base64url differ only in the last two symbols — `+/` versus `-_` — and they
+// differ for **99.9%** of real 16-byte ids, because over 22 characters the difference is not rare.
+// The bridge emits base64url, so its ids decode correctly as they are; but a `+` or `/` would fall
+// through the `idx < 0` guard and leave a SHORT hex that then matches no row — a silent miss, not
+// an error. The standard symbols are accepted as synonyms of `-` and `_` so an id that arrived from
+// a record-API client (which uses standard base64) decodes to the same bytes. These are a lookup
+// table rather than extra characters in B64, because a character's INDEX is its 6-bit value:
+// appending `+/` would give them 64 and 65.
+const B64_STANDARD = { "+": 62, "/": 63 };
+
+/** Base64 (url-safe as the bridge emits it, standard accepted) -> uppercase hex, for `unhex(?)`. */
 export function base64ToHex(value) {
-  const clean = String(value ?? "").replace(/[^A-Za-z0-9\-_=]/g, "");
   let bits = 0;
   let acc = 0;
   let hex = "";
-  for (const ch of clean) {
+  for (const ch of String(value ?? "")) {
     if (ch === "=") break;
-    const idx = B64.indexOf(ch);
-    if (idx < 0) continue;
+    const inUrlSafe = B64.indexOf(ch);
+    const idx = inUrlSafe >= 0 ? inUrlSafe : B64_STANDARD[ch];
+    if (idx === undefined || idx < 0) continue;
     acc = ((acc << 6) | idx) >>> 0;
     bits += 6;
     if (bits >= 8) {
