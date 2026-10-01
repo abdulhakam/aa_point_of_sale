@@ -9,6 +9,23 @@ tags: [reports, payments, bug, parity, guest]
 related_to: ["[[reports-and-ledgers]]", "[[guest-vs-legacy-report-performance]]", "[[new-system-report-timings]]", "[[money-is-2dp-everywhere]]", "[[frontend]]"]
 ---
 
+
+## STALE FILE REFERENCES, 2026-10-01
+
+This note's evidence cites `trailbase/runtime/app/compute/reports.js` for `reportPayments` and
+`reportSalesPayments`. **That file is deleted** — the app is SQL-only now, by decision
+([[one-manifest-is-the-page-definition]]). The finding itself is untested and still open, but it must
+be re-established against the SQL:
+
+- the statements are `app/reports/sql/reports/payments.sql` and `salesreport.sql`
+- the totals that could be derived from display rows are declared in the page manifests as
+  `totals` / `totalsGroups`, and `tools/verify-spool-reports.mjs` already checks each one is EXACT,
+  SOUND or CORROBORATED
+
+So the question is now narrower than the note makes it sound: not "are the JS totals taken from
+displayed values" but "is every totals key in a manifest computed from the raw statement rather than
+from a formatted column". The self-consistency gate is the place to answer that.
+
 # Payments and Sales report totals were computed from display rows, not raw rows
 
 ## Finding (2026-09-28)

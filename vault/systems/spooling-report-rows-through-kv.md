@@ -50,7 +50,7 @@ request-handler logs are thread-local and only drained for init scripts. See
 | `app/reports/sql/views/*.sql` | **preserved legacy, NOT on this path** |
 | `app/lib/spoolreports.js` | the registry: report → `.sql` + column manifest + totals spec |
 | `app/lib/http.js` | `pageSpooled(req, shell, name, data, spools)` — the page shell, with rows spliced by the host |
-| `app/lib/report-pages.js` | `useJsFor(pageDef)`, `openingRow(filters)` — the only two things a spooled report page still needs from JS |
+| `app/lib/report-pages.js` | `filterOptions`, `openingRow(filters)` — the only two things a spooled report page still needs from JS |
 
 `lib/spoolreports.js` composes `prelude + report` and the report file opens with `, name AS (` when it
 adds CTEs, or is a bare `SELECT` when it does not. A file contributing only a `SELECT` must **not** be
@@ -69,10 +69,8 @@ Each also runs one **totals statement** — see
 [[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]] — which returns a single row of
 formatted strings.
 
-`useJs: true` on a report page definition, or `compute.useJs: true` on a declarative page, re-enables
-`compute/reports.js` for that page alone. `lib/pages.js` normalises it to a strict boolean so a stray
-non-empty value cannot switch a money report's execution path.
-
+SUPERSEDED 2026-10-01: there is no longer any escape hatch. `compute/reports.js` and `useJs` are both
+deleted, so a report is the SQL and nothing else — see [[one-manifest-is-the-page-definition]].
 The page cache key is unchanged, and `/reports/refresh?full=1` now also drops the **composed-SQL cache**
 (`spoolreports.invalidate()`), or an edited `.sql` file would keep serving the text composed when the
 process first read it.
@@ -157,7 +155,7 @@ behaves identically to `printf` here.
 
 ```powershell
 node trailbase/tools/verify-prelude.mjs          # the shared chain vs compute/views.js, 14 checks
-node trailbase/tools/verify-spool-reports.mjs   # all 14 reports vs compute/reports.js
+node trailbase/tools/verify-spool-reports.mjs   # all 14 reports, self-consistency (no JS comparison)
 node trailbase/tools/check-money-text.mjs        # every money TEXT keeps 2dp (trailing zeroes)
 node trailbase/tools/check-money-text-in-guest.mjs   # the same, evaluated IN the guest
 node trailbase/tools/regen-round2.mjs           # regenerate every round2 from the verified template

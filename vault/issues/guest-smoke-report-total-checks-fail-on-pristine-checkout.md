@@ -9,6 +9,19 @@ belongs_to: "[[trailbase-migration]]"
 related_to: ["[[payments-report-totals-computed-from-display-rows]]", "[[report-parity-flakes-on-float-arithmetic]]", "[[spooling-report-rows-through-kv]]", "[[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]]", "[[report-routes-ignore-date-defaults]]"]
 ---
 
+
+## STILL ACCURATE, 2026-10-01
+
+Re-read after the SQL-only change. The note says the failing checks "are the JS reference path
+(`compute/reports.js`), unmodified". That reference is now **deleted**, which does not make the
+failures stale — it makes them the *whole* remaining job:
+
+- the seven failures (profit margin, item-sale totals, payment receivable/payable totals) are now
+  failures of the SQL against the expected figures, with no second implementation to appeal to
+- `tools/guest-smoke.mjs` is at 70/77, the count having risen from 67/76 when two dead cache checks
+  were replaced by three live ones
+- this belongs to the money pass, deferred to the end of the migration by decision
+
 # guest-smoke report-total checks fail on a pristine checkout (pre-existing)
 
 `node trailbase/tools/guest-smoke.mjs` reports **68/76**, not 76/76. Eight checks fail, and they are
