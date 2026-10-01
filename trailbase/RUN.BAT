@@ -21,7 +21,7 @@ if not defined DEPOT set "DEPOT=traildepot"
 rem IPv4 loopback explicitly. TrailBase defaults to [::1]:4000 (IPv6 only), which a
 rem browser at 127.0.0.1 - and the frontend, whose TRAILBASE_URL is
 rem http://127.0.0.1:4000 - cannot reach.
-if not defined ADDRESS set "ADDRESS=127.0.0.1:4000"
+if not defined ADDRESS set "ADDRESS=0.0.0.0:4000"
 set "ADMIN_USER=admin@localhost"
 set "ADMIN_PASSWORD=administrator-0ne"
 
