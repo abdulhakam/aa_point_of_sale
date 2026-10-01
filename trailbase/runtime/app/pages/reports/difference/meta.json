@@ -1,14 +1,49 @@
 {
   "title": "Difference Report",
   "template": "page.html",
-  "needs": { "views": ["itemsDifferenceReport", "refs"] },
-  "compute": { "report": "difference" },
-  "filters": [{ "name": "company", "label": "Company", "type": "select", "source": "categories" }],
-  "columns": [
-    { "key": "company", "label": "Company" },
-    { "key": "name", "label": "Name" },
-    { "key": "box_size_qty", "label": "Carton Size", "right": true },
-    { "key": "qtyText", "label": "Qty", "right": true }
+  "hub": {
+    "title": "Difference Report",
+    "target": "difference",
+    "tone": "yellow",
+    "icon": "report-search",
+    "hub": "reports",
+    "order": 7
+  },
+  "needs": {
+    "views": [
+      "itemsDifferenceReport",
+      "refs"
+    ]
+  },
+  "compute": {
+    "report": "difference"
+  },
+  "filters": [
+    {
+      "name": "company",
+      "label": "Company",
+      "type": "select",
+      "source": "companies"
+    }
   ],
-  "totals": []
+  "columns": [
+    {
+      "key": "company",
+      "label": "Company"
+    },
+    {
+      "key": "name",
+      "label": "Name"
+    },
+    {
+      "key": "box_size_qty",
+      "label": "Carton Size",
+      "right": true
+    },
+    {
+      "key": "qtyText",
+      "label": "Qty",
+      "right": true
+    }
+  ]
 }

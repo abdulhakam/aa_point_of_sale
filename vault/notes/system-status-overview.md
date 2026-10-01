@@ -55,6 +55,7 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 - A first **invoice-entry slice** runs on the guest and passes `trailbase/tools/invoice-check.mjs`: context endpoint with ETag/304, server-side invoice numbering, an edit lease, idempotent create and line add, and complete ([[tb-0021-invoices-cashmemos-printing]]).
 - The guest is now **operable end to end on a phone**: `/invoices` (sale + purchase entry), `/payments` (invoice-linked and standalone DA) and `/inventory` (live stock, item edit), with every page given a `≤768px` layout. Totals on the new screens were checked against the legacy formula on the production depot — an invoice of 180 900.00 over 36 lines, and recieving 25 907 041.11 / sending 22 657 296.66, which are the figures the import recorded ([[tb-0028-guest-transactional-screens-and-mobile]], [[mobile-layout-is-additive-to-the-legacy-look]]).
 - Money is **2 dp everywhere** — report data, guest writes, and a backfill migration ([[money-is-2dp-everywhere]]).
+- Every guest page and filter was driven in a real browser on 2026-10-01: all 58 routes render, no dead nav links, and every declared filter on every report narrows the result correctly. The sweep also found that the Payment Type select never comes back `selected` ([[payment-type-select-never-comes-back-selected]]) and that a name handed to an id filter returns 500 ([[id-filter-given-a-name-returns-500]]). Full matrix and method in [[browser-page-and-filter-sweep-2026-10-01]].
 
 ## Open risks
 

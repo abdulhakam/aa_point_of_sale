@@ -3,6 +3,12 @@
 //
 // A page is any folder under `pages/` with a `meta.json`; the folder path is the slug.
 // `needs.tables` is derived from `needs.views` so a page cannot under-declare its data.
+//
+// THE MANIFEST IS THE ONE PAGE DEFINITION. It serves both `/p/<slug>` (the JSON data endpoint the
+// browser fetches) and `/reports/<key>` (the server-rendered page), so a report cannot be defined
+// twice and drift — which it did: the two copies disagreed on the payments "Payable Amount" and on
+// the company filter's source table. See
+// vault/issues/report-page-definitions-duplicated-and-already-divergent.md.
 
 import * as format from "../compute/format.js";
 import { viewClosure } from "../compute/views.js";
@@ -37,12 +43,72 @@ function normalizeFilter(filter) {
   };
 }
 
+/** One column: the JS carried a `cls` string, the manifest carries boolean `right`/`wrap`. */
+function normalizeColumn(column) {
+  const key = String(column?.key ?? "");
+  const cls = typeof column?.cls === "string" ? column.cls : "";
+  return {
+    key,
+    label: String(column?.label ?? key),
+    cls: cls || (column?.right ? "right" : column?.wrap ? "wrap" : ""),
+  };
+}
+
+/**
+ * A totals entry: either `key` (one figure from the totals object) or `join` (a composed value).
+ *
+ * The join form exists for one case: the outstanding ledger prints `invoice / paid / balance` in a
+ * single row, which the old JS expressed as a template literal. The manifest spells the same thing
+ * as an array of keys and literal text, so it stays inert data.
+ */
+function normalizeTotal(row) {
+  const label = String(row?.label ?? "");
+  if (Array.isArray(row?.join) && row.join.length) {
+    return { label, join: row.join.map((part) => String(part)) };
+  }
+  return { label, key: String(row?.key ?? "") };
+}
+
+/**
+ * The totals, normalised to the shape the server-rendered report page wants: a list of GROUPS, each
+ * a list of `{label, value}`. A manifest may declare a flat `totals` (one group) or
+ * `totals.groups` (several, for the payments and sales totals tables).
+ */
+export function totalsGroups(meta) {
+  const declared = Array.isArray(meta?.totalsGroups) && meta.totalsGroups.length
+    ? meta.totalsGroups
+    : Array.isArray(meta?.totals) && meta.totals.length
+      ? [meta.totals]
+      : [];
+  return declared
+    .map((group) => (Array.isArray(group) ? group : []).map(normalizeTotal))
+    .filter((group) => group.length);
+}
+
+/** Bind a totals group to the values a report actually produced. */
+export function bindTotalsGroups(groups, totals) {
+  return groups.map((group) => ({
+    rows: group.map((row) => ({
+      label: row.label,
+      value: row.join
+        ? row.join.map((part) => (/^[A-Za-z_][A-Za-z0-9_]*$/.test(part) ? String(totals?.[part] ?? "") : part)).join("")
+        : String(totals?.[row.key] ?? ""),
+    })),
+  }));
+}
+
 export function normalizeMeta(meta) {
   const filters = (Array.isArray(meta?.filters) ? meta.filters : []).map(normalizeFilter).filter((f) => f.name);
   const sources = filters.map((f) => f.source).filter(Boolean);
   return {
     title: typeof meta?.title === "string" && meta.title ? meta.title : "Page",
     template: typeof meta?.template === "string" && meta.template ? meta.template : "page.html",
+    // A server-rendered report may override the shared report template (the general ledger does).
+    view: typeof meta?.view === "string" && meta.view ? meta.view : null,
+    // The general ledger's three opening-balance inputs are filter echoes, not query results.
+    openings: meta?.openings === true,
+    // The hub tile: title/tone/icon, and which index lists it.
+    hub: meta?.hub && typeof meta.hub === "object" ? meta.hub : null,
     needs: {
       views: viewClosure(toArray(meta?.needs?.views)),
       tables: [...new Set([...toArray(meta?.needs?.tables), ...sources])],
@@ -56,8 +122,11 @@ export function normalizeMeta(meta) {
       : null,
     requires: toArray(meta?.requires),
     filters,
-    columns: Array.isArray(meta?.columns) ? meta.columns : [],
-    totals: Array.isArray(meta?.totals) ? meta.totals : [],
+    // `fields` is the server-rendered report template's name for the same list; both are exposed so
+    // neither template has to know which host is asking.
+    fields: filters,
+    columns: (Array.isArray(meta?.columns) ? meta.columns : []).map(normalizeColumn).filter((c) => c.key),
+    totals: totalsGroups(meta),
   };
 }
 
@@ -103,4 +172,48 @@ export async function readPage(pagesDir, slug) {
   if (dir !== root && !dir.startsWith(root + "/")) return null;
   const meta = await readMeta(dir);
   return meta ? { slug: clean, ...meta } : null;
+}
+
+/* ------------------------------------------------------------------ the report registry */
+
+// A page is a report when it names one in `compute.report`. That is the same field the /p data
+// endpoint reads, so there is no second declaration of "which reports exist" — the spool registry
+// decides what a report *is*, and the manifest says which page presents it.
+function isReport(meta) {
+  return !!(meta && meta.compute && typeof meta.compute.report === "string" && meta.compute.report);
+}
+
+/** Every report page, keyed by its report key (which is the `/reports/<key>` path). */
+export async function reportPages(pagesDir) {
+  const pages = await listPages(pagesDir);
+  const out = {};
+  for (const page of pages) {
+    if (isReport(page)) out[page.compute.report] = page;
+  }
+  return out;
+}
+
+/**
+ * The reports and ledgers index tiles, read from each manifest's `hub` block.
+ *
+ * `order` is the position in the hub, so the index keeps the deliberate legacy ordering without a
+ * second list to maintain. A manifest with no `hub` block is simply not listed.
+ */
+export async function hubIndex(pagesDir) {
+  const reports = [];
+  const ledgers = [];
+  for (const page of Object.values(await reportPages(pagesDir))) {
+    const hub = page.hub;
+    if (!hub) continue;
+    const tile = {
+      title: String(hub.title || page.title),
+      target: String(hub.target || page.compute.report),
+      tone: String(hub.tone || "gray"),
+      icon: String(hub.icon || "report-money"),
+      order: Number(hub.order ?? 0),
+    };
+    (hub.hub === "ledgers" ? ledgers : reports).push(tile);
+  }
+  const byOrder = (a, b) => a.order - b.order;
+  return { reports: reports.sort(byOrder), ledgers: ledgers.sort(byOrder) };
 }

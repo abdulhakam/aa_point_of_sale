@@ -1,24 +1,87 @@
 {
   "title": "Booker Sales Ledger",
   "template": "page.html",
-  "needs": { "views": ["ledgerBooker", "invoiceView", "refs"] },
-  "compute": { "report": "ledgers/booker" },
-  "requires": ["booker"],
+  "hub": {
+    "title": "Booker",
+    "target": "ledgers/booker",
+    "tone": "green",
+    "icon": "user-dollar",
+    "hub": "ledgers",
+    "order": 1
+  },
+  "needs": {
+    "views": [
+      "ledgerBooker",
+      "invoiceView",
+      "refs"
+    ]
+  },
+  "compute": {
+    "report": "ledgers/booker"
+  },
   "filters": [
-    { "name": "from", "label": "Date From", "type": "date", "default": { "fn": "monthStart" } },
-    { "name": "to", "label": "Date To", "type": "date", "default": { "fn": "today" } },
-    { "name": "booker", "label": "Booker", "type": "select", "source": "order_bookers" }
+    {
+      "name": "from",
+      "label": "Date From",
+      "type": "date",
+      "default": {
+        "fn": "monthStart"
+      }
+    },
+    {
+      "name": "to",
+      "label": "Date To",
+      "type": "date",
+      "default": {
+        "fn": "today"
+      }
+    },
+    {
+      "name": "booker",
+      "label": "Booker",
+      "type": "select",
+      "source": "order_bookers"
+    }
   ],
   "columns": [
-    { "key": "date", "label": "Date" },
-    { "key": "invoice", "label": "Inv #" },
-    { "key": "entry", "label": "Entry" },
-    { "key": "creditText", "label": "Credit", "right": true },
-    { "key": "debitText", "label": "Debit", "right": true }
+    {
+      "key": "date",
+      "label": "Date"
+    },
+    {
+      "key": "invoice",
+      "label": "Inv #"
+    },
+    {
+      "key": "entry",
+      "label": "Entry"
+    },
+    {
+      "key": "creditText",
+      "label": "Credit",
+      "right": true
+    },
+    {
+      "key": "debitText",
+      "label": "Debit",
+      "right": true
+    }
+  ],
+  "requires": [
+    "booker"
   ],
   "totals": [
-    { "label": "Total Credit", "key": "credit" },
-    { "label": "Total Debit", "key": "debit" },
-    { "label": "Final Balance", "key": "balance" }
+    {
+      "label": "Total Credit",
+      "key": "credit"
+    },
+    {
+      "label": "Total Debit",
+      "key": "debit"
+    },
+    {
+      "label": "Final Balance",
+      "key": "balance"
+    }
   ]
 }

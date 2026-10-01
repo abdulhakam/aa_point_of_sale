@@ -347,6 +347,10 @@ function shell(user: any, active: string, title: string): any {
 // Totals are always computed over every row — only the table body is capped.
 const RENDER_MAX_ROWS = 1000;
 
+// The shared server-rendered report template. A manifest may override it with `view` (the general
+// ledger does), which is how a report gets a bespoke layout without its own route.
+const DEFAULT_REPORT_VIEW = "reports/report.html";
+
 async function dispatch(req: any): Promise<any> {
   const A = await app();
   const db: any = (globalThis as any).sqlite;
@@ -830,10 +834,18 @@ if (path === "/login" && method === "GET") {
   }
 
   if (path === "/reports") {
+    const hub = await A.pages.hubIndex(PAGES_DIR);
+    // The `ledgers` tile is a link to the ledger hub rather than a report, so it is inserted at the
+    // position its legacy index held, between "Payments By Company" and "Stock Report".
+    const tiles = hub.reports.slice();
+    const ledgersAt = tiles.findIndex((t: any) => t.target === "stockreport");
+    if (ledgersAt >= 0) {
+      tiles.splice(ledgersAt, 0, { title: "Ledgers", target: "ledgers", tone: "grape", icon: "chart-line" });
+    }
     return html(
       await A.http.page(req, shell(user, "reports", "Reports"), "reports/index.html", {
-        tiles: A.reportPages.REPORT_INDEX,
-        ledgerTiles: A.reportPages.LEDGER_INDEX,
+        tiles,
+        ledgerTiles: hub.ledgers,
       })
     );
   }
@@ -854,17 +866,26 @@ if (path === "/login" && method === "GET") {
     return redirect(back || "/dashboard");
   }
   if (path === "/reports/ledgers") {
-    return html(await A.http.page(req, shell(user, "reports", "Ledgers"), "reports/ledgers/index.html", { tiles: A.reportPages.LEDGER_INDEX }));
+    const hub = await A.pages.hubIndex(PAGES_DIR);
+    return html(await A.http.page(req, shell(user, "reports", "Ledgers"), "reports/ledgers/index.html", { tiles: hub.ledgers }));
   }
 
   const reportMatch = /^\/reports\/(.+)$/.exec(path);
   if (reportMatch && method === "GET") {
     const key = reportMatch[1];
-    const pageDef = A.reportPages.REPORT_PAGES[key];
+    // The manifest is the ONE page definition: `/reports/<key>` and `/p/<slug>` both read it, so a
+    // report cannot be defined twice and drift. `REPORT_PAGES` in app/lib/report-pages.js used to be
+    // the second copy, and it had already diverged — see
+    // vault/issues/report-page-definitions-duplicated-and-already-divergent.md.
+    const pageDef = (await A.pages.reportPages(PAGES_DIR))[key];
     // The spool registry, not `compute/reports.js`, decides what exists: the SQL is what a report
     // IS now, and the JS registry is only the fallback.
     if (!pageDef || !A.spooled.names().includes(key)) return text("Not found", 404);
-    const filters = A.reportPages.parseFilters(pageDef, query);
+    // `filtersFor` honours the manifest's declared defaults when the query does not carry the
+    // field, which is what the report page always wants. (The old `parseFilters` overwrote every
+    // default from the query, so a bare GET computed all-time figures —
+    // vault/issues/report-routes-ignore-date-defaults.md.)
+    const filters = filtersFor(pageDef, query);
 
     const showAll = String(query.all || "") === "1";
     const requestedMax = Number(query.maxRows || 0);
@@ -918,11 +939,11 @@ if (path === "/login" && method === "GET") {
       appliedLabels,
       missing,
     };
-    const view = pageDef.view || A.reportPages.DEFAULT_VIEW;
+    const view = pageDef.view || DEFAULT_REPORT_VIEW;
 
-    if (A.reportPages.useJsFor(pageDef)) {
-      // The escape hatch: `useJs: true` on the page definition runs `compute/reports.js` for this
-      // page only ([[spooling-report-rows-through-kv]]).
+    if (pageDef.compute && pageDef.compute.useJs === true) {
+      // The escape hatch: `useJs: true` on the manifest runs `compute/reports.js` for this page only
+      // ([[spooling-report-rows-through-kv]]).
       const result = missing.length ? { rows: [], totals: {}, meta: {} } : await A.service.run(key, filters);
       const allRows: any[] = result.rows || [];
       const truncated = allRows.length > maxRows;
@@ -931,7 +952,7 @@ if (path === "/login" && method === "GET") {
         ...frame,
         rows,
         rowInfo: { shown: rows.length, total: allRows.length, truncated, allHref },
-        totalsGroups: pageDef.totals ? pageDef.totals(result.totals || {}) : [],
+        totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], result.totals || {}),
         opening: result.opening || null,
         meta: result.meta || {},
       });
@@ -949,7 +970,7 @@ if (path === "/login" && method === "GET") {
     const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
       ...frame,
       rowInfo: { shown, total, truncated: shown < total, allHref },
-      totalsGroups: pageDef.totals ? pageDef.totals(totals) : [],
+      totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], totals),
       // The general ledger's opening row is an echo of three filter inputs, not a query result, so
       // there is nothing for SQL to add and `compute/reports.js` is not involved here.
       opening: pageDef.openings ? A.reportPages.openingRow(filters) : null,

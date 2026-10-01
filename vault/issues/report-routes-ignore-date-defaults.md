@@ -1,14 +1,42 @@
 ---
 title: The /reports/* routes ignore their declared date defaults, so they disagree with /p/*
 type: issue
-status: open
+status: resolved
 severity: medium
 created: 2026-09-26
+updated: 2026-10-01
+resolved: 2026-10-01
 tags: [runtime-js, reports, defaults, parity, page-host]
-related_to: ["[[runtime-js-guest-platform]]", "[[trailbase-declarative-page-host]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[trailbase-declarative-page-host]]", "[[one-manifest-is-the-page-definition]]", "[[report-page-definitions-duplicated-and-already-divergent]]"]
 ---
 
 # The /reports/* routes ignore their declared date defaults, so they disagree with /p/*
+
+## RESOLVED 2026-10-01
+
+Closed by [[one-manifest-is-the-page-definition]]. There is now **one** page definition and **one**
+filter parser, so the two hosts cannot disagree about the default window.
+
+The cause was a duplication, not a parser bug: `REPORT_PAGES` in `app/lib/report-pages.js` had its own
+`defaults` and its own `parseFilters` (which overwrote them from the query), while the manifest at
+`app/pages/**/meta.json` had `filters[].default` and `filtersFor` (which honoured them). Both declared
+the same default and applied it differently.
+
+`REPORT_PAGES` and `parseFilters` are deleted. The manifest's `{"fn": "monthStart"}` default is
+resolved per request, and `filtersFor` is the only parser. Measured on the production depot after the
+change:
+
+```text
+/reports/payments      bare GET:  10 rows   (was 26,099 all-time)
+/reports/itemsales     bare GET:   5 rows   (was 21,823 all-time)
+/reports/dailysale     bare GET:   3 rows   (was  8,204 all-time)
+/reports/profit        bare GET:   3 rows   (was 21,823 all-time)
+```
+
+The original diagnosis below is kept because it explains the shape of the bug and the two
+documentation-naming mistakes recorded in it.
+
+---
 
 ⚠️ **Naming note:** despite the original title, this is about the `/reports/*` routes **inside the
 guest frontend** ([[runtime-js-guest-platform]]) — the hand-written report routes in

@@ -1,33 +1,133 @@
 {
   "title": "Payments By Company",
   "template": "page.html",
-  "needs": { "views": ["paymentsInvoicesReport", "invoiceView", "refs"] },
-  "compute": { "report": "paymentsbycompany" },
+  "hub": {
+    "title": "Payments By Company",
+    "target": "paymentsbycompany",
+    "tone": "red",
+    "icon": "chart-area",
+    "hub": "reports",
+    "order": 3
+  },
+  "needs": {
+    "views": [
+      "paymentsInvoicesReport",
+      "invoiceView",
+      "refs"
+    ]
+  },
+  "compute": {
+    "report": "paymentsbycompany"
+  },
   "filters": [
-    { "name": "from", "label": "Date From", "type": "date", "default": { "fn": "monthStart" } },
-    { "name": "to", "label": "Date To", "type": "date", "default": { "fn": "today" } },
-    { "name": "applyDate", "label": "Apply Date Filter", "type": "check", "default": "on" },
-    { "name": "company", "label": "Company", "type": "select", "source": "categories" },
-    { "name": "party", "label": "Party", "type": "select", "source": "parties" },
-    { "name": "area", "label": "Area", "type": "select", "source": "areas" },
-    { "name": "section", "label": "Section", "type": "select", "source": "sections" },
-    { "name": "booker", "label": "Booker", "type": "select", "source": "order_bookers" }
+    {
+      "name": "from",
+      "label": "Date From",
+      "type": "date",
+      "default": {
+        "fn": "monthStart"
+      }
+    },
+    {
+      "name": "to",
+      "label": "Date To",
+      "type": "date",
+      "default": {
+        "fn": "today"
+      }
+    },
+    {
+      "name": "applyDate",
+      "label": "Apply Date Filter",
+      "type": "check",
+      "default": true
+    },
+    {
+      "name": "company",
+      "label": "Company",
+      "type": "select",
+      "source": "companies"
+    },
+    {
+      "name": "party",
+      "label": "Party",
+      "type": "select",
+      "source": "parties"
+    },
+    {
+      "name": "area",
+      "label": "Area",
+      "type": "select",
+      "source": "areas"
+    },
+    {
+      "name": "section",
+      "label": "Section",
+      "type": "select",
+      "source": "sections"
+    },
+    {
+      "name": "booker",
+      "label": "Booker",
+      "type": "select",
+      "source": "order_bookers"
+    }
   ],
   "columns": [
-    { "key": "date", "label": "Date" },
-    { "key": "type", "label": "Type" },
-    { "key": "invoice", "label": "Inv #" },
-    { "key": "area", "label": "Area" },
-    { "key": "section", "label": "Section" },
-    { "key": "company", "label": "Company" },
-    { "key": "party", "label": "Party" },
-    { "key": "booker", "label": "Booker" },
-    { "key": "amountText", "label": "Amount", "right": true }
+    {
+      "key": "date",
+      "label": "Date"
+    },
+    {
+      "key": "type",
+      "label": "Type"
+    },
+    {
+      "key": "invoice",
+      "label": "Inv #"
+    },
+    {
+      "key": "area",
+      "label": "Area"
+    },
+    {
+      "key": "section",
+      "label": "Section"
+    },
+    {
+      "key": "company",
+      "label": "Company"
+    },
+    {
+      "key": "party",
+      "label": "Party"
+    },
+    {
+      "key": "booker",
+      "label": "Booker"
+    },
+    {
+      "key": "amountText",
+      "label": "Amount",
+      "right": true
+    }
   ],
   "totals": [
-    { "label": "Invoice Total", "key": "invoiceTotal" },
-    { "label": "Returns", "key": "recievingReturns" },
-    { "label": "Total Paid", "key": "totalPaid" },
-    { "label": "Total", "key": "total" }
+    {
+      "label": "Invoice Total",
+      "key": "invoiceTotal"
+    },
+    {
+      "label": "Returns",
+      "key": "recievingReturns"
+    },
+    {
+      "label": "Total Paid",
+      "key": "totalPaid"
+    },
+    {
+      "label": "Total",
+      "key": "total"
+    }
   ]
 }

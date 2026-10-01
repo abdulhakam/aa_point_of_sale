@@ -15,7 +15,7 @@
 // Usage: node trailbase/tools/verify-spool-reports.mjs [--filter <substr>] [--verbose]
 
 import { DatabaseSync } from "node:sqlite";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -167,17 +167,46 @@ for (const key of Object.keys(REGISTRY)) {
  */
 async function verifyPageColumns() {
   const issues = [];
-  const { REPORT_PAGES } = await import("../runtime/app/lib/report-pages.js");
-  for (const [name, def] of Object.entries(REPORT_PAGES)) {
+  // The page definitions are the manifests under `app/pages/**/meta.json`, which is what both
+  // `/reports/<key>` and `/p/<slug>` read. They used to be a second copy in `report-pages.js`
+  // (`REPORT_PAGES`), and the two had already drifted.
+  //
+  // Read with `node:fs` rather than through `app/lib/pages.js`: that module walks the tree with the
+  // GUEST's async `fs` global, which does not exist in Node. Only the raw manifest shape is needed
+  // here, and the guest's own normalisation is exercised by the page sweep instead.
+  const PAGES_DIR = "runtime/app/pages";
+  const manifests = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === "meta.json") {
+        const meta = JSON.parse(readFileSync(full, "utf8"));
+        if (meta.compute && meta.compute.report) manifests.push([meta.compute.report, meta]);
+      }
+    }
+  };
+  walk(PAGES_DIR);
+
+  for (const [name, def] of manifests) {
     const spec = REGISTRY[name];
     if (!spec) {
       issues.push(`${name}: a report page exists with no spooled statement`);
       continue;
     }
-    const missing = def.columns.map((c) => c.key).filter((k) => !spec.cols.includes(k));
+    const columns = Array.isArray(def.columns) ? def.columns : [];
+    const missing = columns.map((c) => c.key).filter((k) => !spec.cols.includes(k));
     if (missing.length) issues.push(`${name}: page columns absent from the projection: ${missing.join(", ")}`);
-    // A totals label reads `t.<key>` off the totals row, so an unmatched key prints "undefined".
-    const totalsKeys = (def.totals.toString().match(/t\.([A-Za-z_]\w*)/g) || []).map((s) => s.slice(2));
+    // Each totals entry names a key on the totals row (or a composed `join` of them), so an
+    // unmatched key prints "undefined".
+    const groups = Array.isArray(def.totalsGroups) && def.totalsGroups.length
+      ? def.totalsGroups
+      : Array.isArray(def.totals) && def.totals.length
+        ? [def.totals]
+        : [];
+    const totalsKeys = groups
+      .flat()
+      .flatMap((row) => (row.key ? [row.key] : (row.join || []).filter((p) => /^[A-Za-z_]\w*$/.test(p))));
     const totalsSpec = totalsKeys.length ? await spool.totalsParts(name, {}) : null;
     for (const k of totalsKeys) {
       if (totalsSpec && !totalsSpec.cols.includes(k)) {

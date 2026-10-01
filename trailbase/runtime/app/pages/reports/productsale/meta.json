@@ -1,19 +1,79 @@
 {
   "title": "Product Sale Report",
   "template": "page.html",
-  "needs": { "views": ["transactionView", "refs"] },
-  "compute": { "report": "productsale" },
+  "hub": {
+    "title": "Product Sale Report",
+    "target": "productsale",
+    "tone": "teal",
+    "icon": "trolley",
+    "hub": "reports",
+    "order": 9
+  },
+  "needs": {
+    "views": [
+      "transactionView",
+      "refs"
+    ]
+  },
+  "compute": {
+    "report": "productsale"
+  },
   "filters": [
-    { "name": "from", "label": "Date From", "type": "date", "default": { "fn": "today" } },
-    { "name": "to", "label": "Date To", "type": "date", "default": { "fn": "today" } },
-    { "name": "booker", "label": "Booker", "type": "select", "source": "order_bookers" },
-    { "name": "area", "label": "Area", "type": "select", "source": "areas" },
-    { "name": "section", "label": "Section", "type": "select", "source": "sections" }
+    {
+      "name": "from",
+      "label": "Date From",
+      "type": "date",
+      "default": {
+        "fn": "today"
+      }
+    },
+    {
+      "name": "to",
+      "label": "Date To",
+      "type": "date",
+      "default": {
+        "fn": "today"
+      }
+    },
+    {
+      "name": "booker",
+      "label": "Booker",
+      "type": "select",
+      "source": "order_bookers"
+    },
+    {
+      "name": "area",
+      "label": "Area",
+      "type": "select",
+      "source": "areas"
+    },
+    {
+      "name": "section",
+      "label": "Section",
+      "type": "select",
+      "source": "sections"
+    }
   ],
   "columns": [
-    { "key": "name", "label": "Product Name" },
-    { "key": "qtyText", "label": "Quantity (Ctn:Unit)", "right": true },
-    { "key": "amountText", "label": "Amount", "right": true }
+    {
+      "key": "name",
+      "label": "Product Name"
+    },
+    {
+      "key": "qtyText",
+      "label": "Quantity (Ctn:Unit)",
+      "right": true
+    },
+    {
+      "key": "amountText",
+      "label": "Amount",
+      "right": true
+    }
   ],
-  "totals": [{ "label": "Total", "key": "amount" }]
+  "totals": [
+    {
+      "label": "Total",
+      "key": "amount"
+    }
+  ]
 }
