@@ -71,30 +71,63 @@ So the rule is still the owner's to make, but it is not the mechanical change th
 it should not be executed as a blind backfill. See [[tb-0015-integer-cents-for-money]] for the
 re-scoping and the recommendation.
 
+## Where the rule applies, and where it does not (owner, 2026-10-01)
+
+The rule is a rule about **amounts**: a number that is summed, transported or displayed must be exactly
+2 dp, and it now is — verified at the read boundary, and exact integer paisas at the report totals
+([[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]]).
+
+A **unit price or cost is a rate, not an amount**, and stays `REAL` with more precision than a paisa.
+Its precision is real — a cost of `36.875` is three decimals because it is a cost per unit — and it is
+consumed by a multiplication, so the rounding boundary is the multiplication, which is what the
+prelude's `line_totals` already does per line.
+
+That was decided against a measurement, not a preference. Rounding the per-unit columns moves 9,247
+rows and 13 of 14 report totals, including **+1,031,224.20** on `outstanding.invoice`, **−537.35** on
+reported profit, and it **adds 7 parties** to `outstanding` — that report selects parties whose
+balance rounds to at least 1, so a per-unit price rounding changes which parties are in the report.
+The numbers are in [[tb-0015-integer-cents-for-money]].
+
+Percentages (`discount_1`, `discount_2`) and quantities (`qty`, `scheme`, `box_size_qty`) are also
+rates and are likewise left `REAL`. One `discount_1` is `1.75555` and two `qty` are `16.735` and
+`0.075`; fractional cartons are real.
+
+## What was missing, and is now fixed: the WRITE path
+
+Point 1 of the decision says writes round every money field to 2 dp before insert. That was not true,
+and why is worth recording.
+
+`U1790300100__round_money_to_2dp.sql` implements the rule as a scaffold backfill. It ran when the
+tables were **empty**, so it rounded nothing. The v1 importer then wrote money through `Number(v)` with
+no rounding at all and reintroduced the residue — 9,247 rows, sitting behind a read boundary that hid
+them. A rule enforced only at the read boundary is not enforced; it is hidden.
+
+- The importer's write path is fixed: `app/plugins/import-from-v1/index.html` has a `money()` coercer
+  on the amount fields only.
+- `U1790402000__round_amount_columns_to_whole_paisas.sql` cleans up the amounts that import left
+  behind — 2 `payments.amount` rows, `1551.375` and `3987.696`. `payments.amount` now audits clean.
+
+That moved four report totals by exactly one paisa each, and it cut the divergence from the old JS
+reference from **nine totals to one**. The eight that now agree are the ones whose float accumulation
+had been fed residue. The one remaining is `productsale.amount`, where the exact paisa total is
+`29988457.51` and the float sum of 205 rows is `29988457.52`.
+
+`invoices.invoiceNo` stays `REAL`. It is an identifier, every value is already integral, so there is no
+drift to fix, and a `REAL`→`INTEGER` change means rebuilding a record-API table on live data for no
+accuracy gain.
+
 ## Evidence
 
+- `trailbase/tools/audit-money-columns.mjs` — how much of each numeric column is already whole paisas,
+  and by how much the rest is not. Re-runnable against any depot.
 - The Node-vs-guest differential harness (`trailbase/tools/guest-parity.mjs`, removed with the
   Node app) recorded `3987.6899999999996 vs 3987.69` on `reports/paymentsbycompany`
   ([[guest-app-host-port]]).
 - `trailbase/runtime/app/compute/format.js` — `round2`, `money`.
-- [[tb-0015-integer-cents-for-money]] — the storage-level form of the same goal.
-- `trailbase/tools/audit-money-columns.mjs` — measures how much of each numeric column is already
-  whole paisas, and by how much the rest is not. Re-runnable against any depot.
-
-## What is and is not implemented today
-
-The read boundary complies and has been verified: every report money value, every payload money value
-and every rendered figure is 2 dp, and the report totals are integer paisas
-([[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]]).
-
-**The write boundary and the backfill do not.** 9,247 stored rows still carry more than 2 dp, and two
-`payments.amount` values are not whole paisas at all (`1551.375`, `3987.696`), as is one
-`invoices.discount_1` (`1.75555`) and two `transactions.qty` (`16.735`, `0.075`). So point 1 of the
-decision — "writes round every money field to 2 dp before insert/update" — is not yet true, and point
-4 — the backfill — has not been run.
+- [[tb-0015-integer-cents-for-money]] — the measurement, and why integer cents were not adopted.
 
 ## Related
 
 - [[report-parity-flakes-on-float-arithmetic]] — the flake this removes.
-- [[tb-0015-integer-cents-for-money]] — cents-as-integers is a valid implementation of this rule.
+- [[tb-0015-integer-cents-for-money]] — re-scoped; the storage-level form, and why not this one.
 - [[tb-0022-move-reports-to-sql]] — unblocked by it.

@@ -168,14 +168,14 @@
       links: [{ api: "order_booker_companies", self: "order_booker", field: "company", other: "company", target: "companies" }] },
     { collection: "items", api: "items",
       fields: { name: text, category: { rel: "companies" }, barcode: text, display_id: text, cost_price: num, sale_price: num, box_size_qty: num } },
-    { collection: "expenses", api: "expenses", fields: { name: text, description: text, amount: num, date: text } },
+    { collection: "expenses", api: "expenses", fields: { name: text, description: text, amount: money, date: text } },
     { collection: "invoices", api: "invoices",
-      fields: { type: { enum: "invoice_types" }, invoiceNo: num, party: { rel: "parties" }, booker: { rel: "order_bookers" }, dated: text, duedate: text, description: text, discount_1: num, discount_2: num, discount_rs: num, completed: flag, deleted: flag } },
+      fields: { type: { enum: "invoice_types" }, invoiceNo: num, party: { rel: "parties" }, booker: { rel: "order_bookers" }, dated: text, duedate: text, description: text, discount_1: num, discount_2: num, discount_rs: money, completed: flag, deleted: flag } },
     { collection: "invoices_return_reference", api: "invoices_return_reference", fields: { original_invoices: { rel: "invoices" } } },
     { collection: "transactions", api: "transactions",
-      fields: { invoice: { rel: "invoices", required: true }, item: { rel: "items", required: true }, cost_price: num, price: num, qty: num, scheme: num, discount_1: num, discount_2: num, discount_rs: num, deleted: flag } },
+      fields: { invoice: { rel: "invoices", required: true }, item: { rel: "items", required: true }, cost_price: num, price: num, qty: num, scheme: num, discount_1: num, discount_2: num, discount_rs: money, deleted: flag } },
     { collection: "payments", api: "payments",
-      fields: { invoice: { rel: "invoices" }, party: { rel: "parties" }, paid_to: { rel: "order_bookers" }, type: { enum: "payment_types" }, amount: num, paid: flag, payment_date: text, description: text } }
+      fields: { invoice: { rel: "invoices" }, party: { rel: "parties" }, paid_to: { rel: "order_bookers" }, type: { enum: "payment_types" }, amount: money, paid: flag, payment_date: text, description: text } }
   ];
 
   var WIPE_ORDER = ["payments", "transactions", "invoices_return_reference", "invoices", "party_companies", "order_booker_companies", "items", "order_bookers", "parties", "expenses", "areas", "companies", "categories", "sections"];
@@ -185,6 +185,23 @@
   function text(v) { return v === undefined || v === null ? "" : String(v); }
   function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
   function flag(v) { return v === true || v === 1 || v === "1" || v === "true" ? 1 : 0; }
+
+  // An AMOUNT, rounded to whole paisas on the way in — the owner's rule
+  // (vault/decisions/money-is-2dp-everywhere.md, point 1: "writes round every money field to 2 dp
+  // before insert/update").
+  //
+  // This is the write path the rule was missing. `U1790300100__round_money_to_2dp.sql` implements
+  // the rule as a scaffold backfill, and it ran when the tables were EMPTY, so it rounded nothing;
+  // this importer then wrote v1's values through `num()` verbatim and reintroduced the residue. Two
+  // `payments.amount` rows landed as 1551.375 and 3987.696 and sat there until
+  // `tools/audit-money-columns.mjs` found them.
+  //
+  // Applied to AMOUNTS only. Unit prices and costs deliberately keep sub-paisa precision
+  // (owner, 2026-10-01: a unit price is a rate, not an amount — its precision is real and is consumed
+  // by the multiplication, which the prelude rounds per line). Rounding them here moved the
+  // outstanding invoice total by 1,031,224.20 and added 7 parties to that report. Discount percentages
+  // are rates too, and are left alone.
+  function money(v) { var n = num(v); return Math.round((n + Number.EPSILON) * 100) / 100; }
 
   function trimSlash(u) { return String(u || "").trim().replace(/\/+$/, ""); }
   function withScheme(u) { u = String(u || "").trim(); return u && !/^https?:\/\//i.test(u) ? "http://" + u : u; }

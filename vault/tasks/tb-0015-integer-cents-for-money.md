@@ -1,7 +1,7 @@
 ---
 title: TB-0015 Money storage — re-scoped: the drift is in unit prices, and cents would be wrong there
 type: task
-status: blocked
+status: done
 priority: high
 created: 2026-09-26
 updated: 2026-10-01
@@ -12,9 +12,9 @@ related_to: ["[[trailbase-pocketbase-data-compatibility]]", "[[data-model]]", "[
 
 # TB-0015 Money storage — re-scoped
 
-**Status: blocked on an owner decision.** The task as written should not proceed: its premise does not
-survive measurement, and executing it would move reported money by material amounts. What follows is
-the measurement and the recommendation.
+**CLOSED as re-scoped.** Integer cents were declined by the owner on 2026-10-01 after measurement: the drift is
+in the per-unit columns, where cents would be wrong. What was actually missing was the WRITE path, and that
+is now fixed. The measurement, the decision and what remains are below.
 
 ## What the task assumed
 
@@ -75,56 +75,71 @@ Two things make this a decision rather than a migration:
   a per-unit price rounding changes *which parties are in the report*. A storage-encoding choice is
   altering the contents of a financial report, not just its formatting.
 
-## Recommendation: split the rule by what the number IS
+## The decision (owner, 2026-10-01): leave prices REAL, round at the multiplication
 
-The rule's real requirement is that **no amount which is summed, transported or displayed carries
-residue** — and that is already guaranteed, verified, at the read boundary, and now exact at the
-totals ([[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]]).
+A unit price is a **rate**, not an amount. Its precision is real — a cost of `36.875` is three
+decimals because it is a cost per unit — and it is consumed by a multiplication, so the rounding
+boundary is the multiplication, which the prelude's `line_totals` already does per line.
 
-A unit price is a **rate**, not an amount. Its precision is real and it is consumed by a
-multiplication, so the right place to round it is the multiplication — which is exactly what
-`line_totals` already does, per line, in the prelude, and what the smoke suite pins.
+**Integer cents are not adopted.** So the task's original mechanism is closed as declined, and what
+remains is the write path, which is where the rule was actually not being enforced.
 
-So:
+## The real gap: the rule was only ever enforced at the READ boundary
 
-- **Amounts** (`payments.amount`, `expenses.amount`, `invoices.discount_rs`) → whole paisas. 3 stray
-  rows to fix, then round on write. Cheap, and it makes the stored value independent of a rounding
-  rule.
-- **Unit prices and costs** (`items.*`, `transactions.price`, `transactions.cost_price`) → **leave
-  `REAL`**, and record explicitly that they are deliberately finer than a paisa. Converting them
-  costs over a million in one report and is wrong.
-- **Percentages and quantities** (`discount_1`, `discount_2`, `scheme`, `qty`) → not money. One
-  `discount_1` of `1.75555` and two fractional `qty` values need a precision decision, not a
-  conversion.
-- **`invoices.invoiceNo`** → `INTEGER`. It is an identifier (1 … 20,240,501), every value is already
-  integral, and `REAL` there is pure PocketBase residue.
+`U1790300100__round_money_to_2dp.sql` implements the owner's rule as a scaffold backfill. It ran when
+the tables were **empty**, so it rounded nothing. The v1 importer then wrote money through
+`Number(v)` with no rounding at all and reintroduced the residue — 9,247 rows, hidden behind a read
+boundary that rounds per line. A rule enforced only where you read is not enforced; it is concealed.
 
-## Subtasks
+The 9,247 sub-paisa rows are therefore **not** a defect under the decision: they are unit prices and
+rates, which stay REAL on purpose. The two genuine strays were `payments.amount` at `1551.375` and
+`3987.696`, which are amounts.
 
-- [x] Measure which columns actually carry sub-paisa values, and what enforcing 2 dp would cost
-- [ ] **Owner decision** on the four-way split above, and on whether `outstanding` gaining 7 parties
-      is acceptable — it changes a report's contents, not just its numbers
-- [ ] Fix the three amount rows (`payments.amount` 1551.375, 3987.696; `invoices.discount_1` 1.75555)
-- [ ] Round money on write, so point 1 of [[money-is-2dp-everywhere]] becomes true
-- [ ] `invoices.invoiceNo` → `INTEGER`
-- [ ] Precision decision for `qty` / `scheme` (fractional cartons are real: 0.075, 16.735)
-- [ ] Document the unit convention in [[data-model]]: amounts are paisas, unit prices are rates finer
-      than a paisa, and the rounding boundary is the multiplication
-- [ ] If the owner still wants integer cents, write it as a migration over live data with a
-      reconciliation, and expect the shifts above — not as a scaffold-era edit
+## Done
 
-## Risk if skipped
+- [x] Measure which columns carry sub-paisa values, and what enforcing 2 dp would cost
+- [x] **Owner decision**: leave unit prices REAL; round amounts; percentages and quantities are rates
+- [x] Fix the write path — `app/plugins/import-from-v1/index.html` has a `money()` coercer on the
+      amount fields (`payments.amount`, `expenses.amount`, `invoices.discount_rs`,
+      `transactions.discount_rs`), so the import cannot reintroduce what the backfill cleaned
+- [x] `U1790402000__round_amount_columns_to_whole_paisas.sql` — idempotent backfill for the amounts the
+      import left behind. `payments.amount` now audits clean; 2 rows changed
+- [x] Record the unit convention in [[money-is-2dp-everywhere]]: amounts are whole paisas, per-unit
+      prices and percentages and quantities are REAL rates rounded at the multiplication
+- [x] Correct [[money-is-2dp-everywhere]]'s caveat, which said a total built from a `6.375` cost
+      "shifts by a cent" — measured, it is +1,031,224.20 on one report
+- [x] Keep `tools/audit-money-columns.mjs` as the standing check
 
-Lower than this note originally claimed, and worth restating honestly: the *storage* is not where a
-paisa is lost. Amounts are already whole paisas; per-unit precision is real and intended; and the
-read boundary rounds per line and the totals are integer paisas. The residual risk is a **code** risk
-— new arithmetic that forgets a `round2`, or a `SUM` written outside the totals statement — and the
-mitigation for that is the gate, which now proves every report total is the exact paisa sum of its
+## Consequence worth keeping
+
+The amount backfill moved four report totals by exactly one paisa each, and cut the divergence from
+the retired JS reference from **nine totals to one**. The eight that now agree are the ones whose
+float accumulation had been fed residue — so a two-row data fix removed eight of the nine "known
+paisa differences" that were previously written off as inherent to the float reference. The one
+remaining is `productsale.amount`, where the exact paisa total is `29988457.51` against a float sum of
+`29988457.52`.
+
+## Not done, and why
+
+- **`invoiceNo` → `INTEGER`** — declined. It is an identifier, every value is already integral, so
+  there is no drift to fix, and changing a column type means rebuilding a record-API table on live data
+  with the checksum hazard attached ([[trailbase-stale-depot-skips-migration]]) for no accuracy gain.
+- **`qty` / `scheme` precision** — not needed. They are quantities; `16.735` and `0.075` are fractional
+  cartons and REAL is the right type. Recorded rather than converted.
+- **`discount_1` of `1.75555`** — a percentage, i.e. a rate, and left REAL with the rest of them.
+
+## Residual risk, restated honestly
+
+The *storage* is not where a paisa is lost. Amounts are whole paisas, per-unit precision is real and
+intended, the read boundary rounds per line, and the report totals are integer paisas
+([[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]]). The remaining risk is a
+**code** risk — new arithmetic that forgets a `round2`, or a `SUM` written outside the totals statement
+— and the mitigation is the gate, which now proves every report total is the exact paisa sum of its
 rows.
 
 ## Related
 
-- [[money-is-2dp-everywhere]] — the accepted rule, and the corrected magnitude of its caveat.
+- [[money-is-2dp-everywhere]] — the accepted rule, its corrected caveat, and the write-path fix.
 - [[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]] — the totals that are already
   exact.
 - [[trailbase-pocketbase-data-compatibility]] — why `REAL` in the first place.
