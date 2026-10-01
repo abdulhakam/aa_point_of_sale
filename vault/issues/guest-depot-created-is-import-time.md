@@ -2,11 +2,38 @@
 title: The production-data depot has created overwritten with the import timestamp
 type: issue
 status: verified
-severity: high
+severity: medium
 created: 2026-09-27
 tags: [migration, import, data-integrity, reports, dates, depot]
 related_to: ["[[data-model]]", "[[reports-and-ledgers]]", "[[pos-0027-migrate-production-data-to-trailbase]]", "[[pos-0029-rebuild-v1-import-on-guest]]", "[[guest-vs-legacy-report-performance]]"]
 ---
+
+
+## RE-MEASURED 2026-10-01: true, but the impact is narrower than "high" suggests
+
+The data confirms it, and it is worth being precise about what it does and does not affect.
+
+```text
+invoices.created  min=2026-09-29 07:07  max=2026-09-29 14:50  distinct=369 of 8,935
+invoices.updated  min=2026-09-29 19:40  max=2026-09-29 19:42  distinct=2
+invoices.dated    distinct=8,909                                  (the BUSINESS date, and it varies)
+```
+
+**Reports are not affected.** They filter on `dated`, the invoice's own business date, which has
+8,909 distinct values. `created` is carried through the views but no report filters or orders by it.
+
+**Where it does bite:** `invoiceView.dated` falls back to `created` (`inv.dated || inv.created`), so
+the invoices with an empty `dated` - about 26 of 8,935 - are dated at the import moment. That is the
+real exposure, and it is small.
+
+**A sharper consequence, found while checking.** The incremental-rebuild fingerprint probes
+`COUNT(*)` and `MAX("updated")` per table (`app/lib/reports.js:176`), and `invoices.updated` has only
+**two** distinct values. A create and a delete that cancel out in count, between two probes, with
+neither touching `updated`, would leave the fingerprint unchanged and the views stale. That is a
+narrow race, but it is a real one and it belongs with this note rather than in a new one.
+
+Severity is **medium**, not high: the business dates are sound, and the exposure is the fallback plus
+the fingerprint race.
 
 # The production-data depot has `created` overwritten with the import timestamp
 

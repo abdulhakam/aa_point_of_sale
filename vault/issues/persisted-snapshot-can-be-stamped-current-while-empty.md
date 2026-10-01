@@ -10,6 +10,42 @@ belongs_to: "[[trailbase-migration]]"
 related_to: ["[[snapshot-persistence-hits-the-20s-deadline]]", "[[guest-fingerprint-refresh]]", "[[trailbase-incremental-report-refresh]]", "[[guest-report-result-cache]]"]
 ---
 
+
+## REPRODUCED LIVE 2026-10-01 - still true, and `?full=1` still does not recover it
+
+The condition does not exist in the current depot: all 14 persisted views are populated (the largest,
+`paymentsInvoicesReport`, is 33,129 rows). But the **mechanism is still in the code and still
+unrecoverable**, and it was reproduced deliberately.
+
+`persistViews` writes whatever `state.views` holds and then stamps the fingerprint, with **no guard**
+on an empty view. So an empty build is persisted as current, and the recovery path does not work:
+
+1. seven views were set to `[]` with the fingerprint left current - the reported state;
+2. `POST /reports/refresh?full=1` - which calls `invalidate()` and is supposed to rebuild everything;
+3. the views were **still `[]` afterwards**, and `/reports/status` reported
+   `lastRefresh: { hydrated: true, rebuilt: [] }`.
+
+`invalidate()` clears the in-memory state, but `refresh` then **hydrates from the still-empty
+persisted snapshot**, the fingerprint matches, so it decides it is current and rebuilds nothing. The
+only recovery is to delete the `mview` rows. That is the exact failure the note described, and it is
+a live defect in the recovery path, not a stale observation.
+
+### The blast radius is now much smaller than it was
+
+This is the part that has changed, and it matters. When the note was written, every report read the
+materialised views. Reports are now **SQL over the base tables** ([[one-manifest-is-the-page-definition]]),
+so with seven views poisoned:
+
+- `/reports/payments` still returned 26,099 rows and a correct `Payable Amount` of 6,950,631.20;
+- every reference-driven filter still populated - 944 parties, 60 areas, 9 sections, 5 bookers.
+
+So the snapshot is now largely **vestigial for reads**, and the condition is a latent trap rather
+than an active wrong-answer generator. It still deserves fixing: a guard on `persistViews` that
+refuses to stamp a fingerprint over an empty view, and a `full` refresh that rebuilds instead of
+hydrating.
+
+The depot was restored from a backup afterwards and re-verified healthy.
+
 # The persisted snapshot can be stamped current while holding empty views, and `?full=1` cannot recover
 
 ## Finding

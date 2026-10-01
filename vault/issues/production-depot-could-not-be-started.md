@@ -1,7 +1,7 @@
 ---
 title: "The production depot could not be started — three defects, all in the generated copy"
 type: issue
-status: open
+status: resolved
 severity: high
 created: 2026-09-29
 updated: 2026-09-29
@@ -9,6 +9,21 @@ tags: [trailbase, depot, migrations, deploy, windows, line-endings]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[trailbase-stale-depot-skips-migration]]", "[[build-and-run]]", "[[tb-0028-guest-transactional-screens-and-mobile]]", "[[snapshot-persistence-hits-the-20s-deadline]]"]
 ---
+
+
+## RE-VERIFIED 2026-10-01: resolved, and not fragile
+
+Checked against the running depot rather than taken on trust. All three defects are gone:
+
+- `traildepot/config.textproto` and `metadata.textproto` are both present, and the server starts.
+- `U1790208000__create_base_tables.sql` is present in the depot's migrations.
+- The checksum mismatch is the known CRLF/LF artefact, and it is **benign**: the source migrations and
+  the depot copies are BOTH CRLF, so a `clear_db.bat` re-copy is byte-identical and cannot flip a
+  recorded checksum.
+
+The migration ledger is **`_schema_history`**, not `_sqlx_migrations` - an earlier note in this
+session looked for the wrong table and wrongly suspected migrations were being skipped. Reconciled
+properly: 12 declared, all 12 recorded, plus 9 of TrailBase's own. Nothing is missing.
 
 # The production depot could not be started — three defects, all in the generated copy
 

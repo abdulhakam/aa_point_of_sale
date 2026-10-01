@@ -1,12 +1,35 @@
 ---
 title: The guest frontend is not yet a replacement for the legacy UI — the parity gaps
 type: issue
-status: open
+status: resolved
 severity: high
 created: 2026-09-27
 tags: [guest, wasm, parity, gaps, cutover, risk, ui]
 related_to: ["[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[pos-0028-decide-cutover-plan]]", "[[tb-0028-guest-transactional-screens-and-mobile]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[heavy-report-blocks-runtime-threads]]"]
 ---
+
+
+## RE-VERIFIED 2026-10-01: the listed gaps are built
+
+Every screen this note listed as missing now answers 200 on the running server:
+
+| was missing | now |
+|---|---|
+| Invoice entry - purchase, sale, return, difference | `/invoices`, `/invoices/new` 200 |
+| Standalone invoice view | `/invoices/<id>` 200 |
+| Cash-memo payment and receive vouchers | `/cashmemo/vouchers` 200 |
+| DA entry | `/cashmemo/da` 200 |
+| Expenses | `/cashmemo/expenses` 200 |
+| Cash-memo payments | `/payments`, `/payments/new` 200 |
+| Invoice printing + print queue | `/print`, `/jobs/<id>` 200 |
+
+Two paths in the list were wrong rather than missing: `/invoices/entry` never existed (the route is
+`/invoices/new`), and `/app/cashmemo/payments` is served as `/payments`.
+
+The list is **stale** and this note is closed against it. A fresh browser sweep of all 58 routes found
+no dead links and no missing screen ([[browser-page-and-filter-sweep-2026-10-01]]). Note that "the
+screen exists" is not "the screen matches the legacy UI" - the remaining work is
+[[tb-0023-direct-shift-legacy-ui-to-guest]].
 
 # The guest frontend is not yet a replacement for the legacy UI — the parity gaps
 
