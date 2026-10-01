@@ -1,0 +1,74 @@
+{# /*
+  Render target for the spooled-report bench.
+
+  Deliberately generic: it prints whatever scalar columns a report produces, with no arithmetic and
+  no per-report template. That is what makes one bench valid for all 14 reports — the point being
+  measured is the ACQUISITION AND HANDOFF of the rows, not any template's formatting. A per-report
+  template would make each row's rendering cost different and the numbers incomparable.
+
+  WHY NUMBERS GO THROUGH `f`.
+  The two arms obtain the SAME column differently, and the engine's own typing leaks into the render:
+  a whole-number REAL arrives as `0.0` from `sqlite.all` (the rows-through-QuickJS arm) and as `0`
+  from the spool, because the spool's JSONL round-trip keeps SQLite's INTEGER affinity. That is a
+  representation difference, not a data one, but it made the byte-identity check fail for three
+  reports and would have been reported as "the spool renders different data".
+
+  So every numeric field is formatted here, to a fixed shape, and the check compares like with like.
+  It also means the check would still CATCH a real numeric difference — `0` and `0.5` still differ —
+  which is the property that matters.
+*/ #}
+{%- macro f(v) -%}{{ "%d" if (v is number and v == v | int) else v }}{%- endmacro -%}
+<table class="bench">
+  <thead><tr><th>field</th><th>value</th></tr></thead>
+  <tbody>
+  {%- for row in rows %}
+    {%- if row.date is defined %}<tr><td>date</td><td>{{ row.date }}</td></tr>{% endif %}
+    {%- if row.type is defined %}<tr><td>type</td><td>{{ row.type }}</td></tr>{% endif %}
+    {%- if row.entry is defined %}<tr><td>entry</td><td>{{ row.entry }}</td></tr>{% endif %}
+    {%- if row.party is defined %}<tr><td>party</td><td>{{ row.party }}</td></tr>{% endif %}
+    {%- if row.party_name is defined %}<tr><td>party</td><td>{{ row.party_name }}</td></tr>{% endif %}
+    {%- if row.name is defined %}<tr><td>name</td><td>{{ row.name }}</td></tr>{% endif %}
+    {%- if row.company is defined %}<tr><td>company</td><td>{{ row.company }}</td></tr>{% endif %}
+    {%- if row.booker is defined %}<tr><td>booker</td><td>{{ row.booker }}</td></tr>{% endif %}
+    {%- if row.area is defined %}<tr><td>area</td><td>{{ row.area }}</td></tr>{% endif %}
+    {%- if row.section is defined %}<tr><td>section</td><td>{{ row.section }}</td></tr>{% endif %}
+    {%- if row.item is defined %}<tr><td>item</td><td>{{ row.item }}</td></tr>{% endif %}
+    {%- if row.invoice is defined %}<tr><td>invoice</td><td>{{ row.invoice }}</td></tr>{% endif %}
+    {%- if row.invoiceNo is defined %}<tr><td>invoiceNo</td><td>{{ row.invoiceNo }}</td></tr>{% endif %}
+    {%- if row.invoice_nos is defined %}<tr><td>invoice_nos</td><td>{{ row.invoice_nos }}</td></tr>{% endif %}
+    {%- if row.description is defined %}<tr><td>description</td><td>{{ row.description }}</td></tr>{% endif %}
+    {%- if row.qty is defined %}<tr><td>qty</td><td>{{ f(row.qty) }}</td></tr>{% endif %}
+    {%- if row.units is defined %}<tr><td>units</td><td>{{ f(row.units) }}</td></tr>{% endif %}
+    {%- if row.qtyText is defined %}<tr><td>qtyText</td><td>{{ row.qtyText }}</td></tr>{% endif %}
+    {%- if row.amount is defined %}<tr><td>amount</td><td>{{ f(row.amount) }}</td></tr>{% endif %}
+    {%- if row.amountText is defined %}<tr><td>amountText</td><td>{{ row.amountText }}</td></tr>{% endif %}
+    {%- if row.credit is defined %}<tr><td>credit</td><td>{{ f(row.credit) }}</td></tr>{% endif %}
+    {%- if row.creditText is defined %}<tr><td>creditText</td><td>{{ row.creditText }}</td></tr>{% endif %}
+    {%- if row.debit is defined %}<tr><td>debit</td><td>{{ f(row.debit) }}</td></tr>{% endif %}
+    {%- if row.debitText is defined %}<tr><td>debitText</td><td>{{ row.debitText }}</td></tr>{% endif %}
+    {%- if row.balance is defined %}<tr><td>balance</td><td>{{ f(row.balance) }}</td></tr>{% endif %}
+    {%- if row.balanceText is defined %}<tr><td>balanceText</td><td>{{ row.balanceText }}</td></tr>{% endif %}
+    {%- if row.profit is defined %}<tr><td>profit</td><td>{{ f(row.profit) }}</td></tr>{% endif %}
+    {%- if row.net_amount is defined %}<tr><td>net_amount</td><td>{{ f(row.net_amount) }}</td></tr>{% endif %}
+    {%- if row.final_amount is defined %}<tr><td>final_amount</td><td>{{ f(row.final_amount) }}</td></tr>{% endif %}
+    {%- if row.stock_amount is defined %}<tr><td>stock_amount</td><td>{{ f(row.stock_amount) }}</td></tr>{% endif %}
+    {%- if row.cash is defined %}<tr><td>cash</td><td>{{ f(row.cash) }}</td></tr>{% endif %}
+    {%- if row.recievable is defined %}<tr><td>recievable</td><td>{{ f(row.recievable) }}</td></tr>{% endif %}
+    {%- if row.payable is defined %}<tr><td>payable</td><td>{{ f(row.payable) }}</td></tr>{% endif %}
+    {%- if row.cost_price is defined %}<tr><td>cost_price</td><td>{{ f(row.cost_price) }}</td></tr>{% endif %}
+    {%- if row.price is defined %}<tr><td>price</td><td>{{ f(row.price) }}</td></tr>{% endif %}
+    {%- if row.invoice_total is defined %}<tr><td>invoice_total</td><td>{{ f(row.invoice_total) }}</td></tr>{% endif %}
+    {%- if row.paid_total is defined %}<tr><td>paid_total</td><td>{{ f(row.paid_total) }}</td></tr>{% endif %}
+    {%- if row.total is defined %}<tr><td>total</td><td>{{ f(row.total) }}</td></tr>{% endif %}
+    {%- if row.tone is defined %}<tr><td>tone</td><td>{{ row.tone }}</td></tr>{% endif %}
+    {%- if row.id is defined %}<tr><td>id</td><td>{{ row.id }}</td></tr>{% endif %}
+    {#
+      Deliberately NOT rendered: the `*_raw` columns (credit_raw, debit_raw, invoice_raw, paid_raw,
+      return_raw). They exist so the gate can tell an exact-half-paisa FLOAT-ORDER difference from a
+      real one — the rounded outputs (2774.49 vs 2774.50) carry no fraction of their own, so the
+      boundary is only visible in the raw sums behind them. Rendering them would break byte-identity
+      for the three reports that carry them, and they are not display data.
+    #}
+  {%- endfor %}
+  </tbody>
+</table>

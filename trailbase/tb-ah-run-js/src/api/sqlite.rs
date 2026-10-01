@@ -10,8 +10,32 @@ pub fn init(ctx: &Ctx<'_>) -> Result<()> {
     sqlite.set("get", Function::new(ctx.clone(), Async(get_wrapper)))?; // Returns first row
     sqlite.set("all", Function::new(ctx.clone(), Async(query_wrapper)))?; 
 
+    // `spool(sql, cols, params)` -> `{ key, rows, bytes, queryMs, writeMs }`. Same query as
+    // `all`, but the rows are serialised in Rust and written to the KV store, so they never enter
+    // QuickJS. Pair it with `render.spooled`, which reads them back by key.
+    sqlite.set("spool", Function::new(ctx.clone(), Async(spool_wrapper)))?;
+
     globals.set("sqlite", sqlite)?;
     Ok(())
+}
+
+async fn spool_wrapper(
+    ctx: Ctx<'_>,
+    name: String,
+    sql: String,
+    cols: Vec<String>,
+    params: Opt<Vec<String>>,
+) -> Result<rquickjs::Value<'_>> {
+    let handle = crate::spool::run(&name, &sql, &cols, params.0.unwrap_or_default())
+        .await
+        .map_err(|e| { eprintln!("spool error: {e}"); rquickjs::Error::Unknown })?;
+
+    // The handle is small and fixed, so the JSON round-trip that `all` pays per row costs nothing
+    // here.
+    let json_str = serde_json::to_string(&handle)
+        .map_err(|e| { eprintln!("bridge error: {e}"); rquickjs::Error::Unknown })?;
+    let val: rquickjs::Value = ctx.json_parse(json_str)?;
+    Ok(val)
 }
 
 /// Write path: rows affected.

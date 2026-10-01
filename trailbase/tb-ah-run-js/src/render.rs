@@ -221,6 +221,49 @@ impl Renderer {
     }
 }
 
+/// A spool key spliced into the render context under `field`.
+///
+/// This is the whole handoff: JS holds a string key, and the rows are read back out of the KV store
+/// and turned into minijinja values **here in Rust**. Nothing about a 60k-row result is ever
+/// materialised in QuickJS, and no JSON string is built for it.
+#[derive(serde::Deserialize)]
+pub struct SpoolRef {
+  /// The context field the rows land on, e.g. `rows` -> `{{ rows }}` in the template.
+  pub field: String,
+  /// The KV key returned by `spool.run`.
+  pub key: String,
+}
+
+/// Render with `ctx` plus any number of spooled row sets, then release the spools.
+///
+/// `release` runs even when rendering fails, so an error page cannot leak 60k rows into the KV
+/// store. The rows live only for the duration of one render.
+pub fn render_spooled(name: &str, ctx: serde_json::Value, spools: Vec<SpoolRef>) -> Result<String, String> {
+  let mut ctx = match ctx {
+    serde_json::Value::Object(map) => map,
+    // A non-object context (null, a bare array) has nowhere to put `field`, so treat it as empty
+    // rather than silently rendering a template that sees `undefined` for every row.
+    _ => serde_json::Map::new(),
+  };
+
+  let mut loaded = Vec::with_capacity(spools.len());
+  for spool in &spools {
+    // Load before any mutation, so a bad key fails the whole call instead of leaving the context
+    // half-populated with rows from an earlier key.
+    let rows = crate::spool::load(&spool.key)?;
+    ctx.insert(spool.field.clone(), rows);
+    loaded.push(spool.key.clone());
+  }
+
+  let result = with(|r| r.render_value(name, serde_json::Value::Object(ctx)));
+
+  for key in &loaded {
+    crate::spool::release(key);
+  }
+
+  return result.map_err(|e| format!("{e}"));
+}
+
 /// Process-wide renderer. Views live at `/app/views`, page templates at `/app/pages`,
 /// matching the plan's `app/` directory contract under the runtime FS root.
 pub fn global() -> &'static Mutex<Renderer> {

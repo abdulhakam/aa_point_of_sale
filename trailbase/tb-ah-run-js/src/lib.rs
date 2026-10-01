@@ -19,6 +19,7 @@ mod ts_transform;
 mod init;
 mod jobs;
 mod render;
+mod spool;
 
 // Implement the function exported in this world (see above).
 struct Endpoints;

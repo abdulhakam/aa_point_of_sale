@@ -88,6 +88,32 @@ pub fn init_api(ctx: &Ctx<'_>) -> Result<()> {
                 })
         }),
     )?;
+
+    // `render.spooled(name, ctx, [{field, key}])` — the rows behind each `key` were spooled by
+    // `sqlite.spool` and are read back here in Rust, so they never pass through QuickJS. `ctx`
+    // carries only what is genuinely scalar (totals, meta, the filter echo). Spools are released
+    // once the render finishes, error or not.
+    render.set(
+        "spooled",
+        Function::new(ctx.clone(), |name: String, ctx_val: JsValue, spools_val: JsValue| -> Result<String> {
+            let json = ctx_json_value(Some(&ctx_val));
+
+            // `spools` arrives as a JS array of `{field, key}`. It is deserialised through serde
+            // rather than typed as `Vec<SpoolRef>` directly, because rquickjs converts JS values
+            // via the `FromJs` trait and this type is only `Deserialize`.
+            let spools_json = js_to_json(&spools_val);
+            let spools: Vec<crate::render::SpoolRef> =
+                serde_json::from_value(spools_json).map_err(|e| {
+                    eprintln!("render.spooled bad spools arg: {e}");
+                    rquickjs::Error::Unknown
+                })?;
+
+            crate::render::render_spooled(&name, json, spools).map_err(|e| {
+                eprintln!("render.spooled error: {e}");
+                rquickjs::Error::Unknown
+            })
+        }),
+    )?;
     globals.set("render", render)?;
 
     ids::init(ctx)?;
@@ -198,7 +224,7 @@ async fn execute_js(sql: String, params: Opt<Vec<String>>) -> Result<i64> {
     Ok(affected as i64)
 }
 
-fn value_to_json(v: Value) -> serde_json::Value {    match v {
+pub fn value_to_json(v: Value) -> serde_json::Value {    match v {
         Value::Null => serde_json::Value::Null,
         Value::Integer(i) => serde_json::Value::Number(i.into()),
         // Handle Real carefully as f64 might be NaN/Inf

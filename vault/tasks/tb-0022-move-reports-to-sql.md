@@ -71,9 +71,27 @@ switched.
       `outstanding_summary` matches the JS on **602/602 parties**, 601 balances identical and 1
       differing by 0.01 from float accumulation order. `payments_view` matches to the cent
       (108,057,580.14).
-- [ ] **Remaining before `USE_SQL_VIEWS` can be enabled:** a full per-column diff of all 15 views
-      against `compute/`. Row counts agreeing is necessary, not sufficient, and only 3 of 15 views
-      are actually compared against PocketBase today.
+- [x] **2026-09-30 — DONE. All 14 reports ported, 14/14 verified, 14/14 byte-identical in the guest.**
+      The plan above (reuse the preserved `sql/views/` SQL, then enable `USE_SQL_VIEWS`) was
+      **superseded** — those files are known to differ from the JS, so every statement was ported
+      from `compute/` directly and gated against it. Rows now reach the renderer by KV handle and
+      never enter QuickJS.
+      - `node trailbase/tools/verify-spool-reports.mjs` → **14/14 equivalent** to `compute/reports.js`
+      - `pwsh -File trailbase/tools/run-spool-sweep.ps1` → **14/14 byte-identical HTML**, 13.1 % faster
+        overall (55,391 → 48,145 ms summed medians)
+      - `node trailbase/tools/guest-smoke.mjs` → **76/76**
+      - See [[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]] and
+        [[spooling-report-rows-through-kv]].
+- [ ] **Wire the spooled path into the live report pages**, per report. `/bench/spool` exercises it
+      today; the page routes still call `A.service.run`. Start with the 26k-row reports where the
+      gain is measured (payments, ledgers/party, ledgers/booker, ledgers/general), and leave the small
+      ones (`stockreport`, `difference`, `productsale`, `outstanding`) on the JS path, where the spool
+      is at or below noise and two are measurably slower.
+- [ ] **Decide the five tolerated float-boundary differences.** One party in 872 lands on an exact
+      half-paisa, and JS's accumulation order and SQLite's `SUM` order round it to opposite sides.
+      Forcing SQLite's order was measured and is worse (664 credits / 754 balances changed vs 1).
+      Options: accept and document, move the totals into SQL so one engine computes them, or store
+      money as integer cents ([[money-is-2dp-everywhere]], `tb-0015`).
 
 ## Reconciliation status (2026-09-27)
 
@@ -136,11 +154,19 @@ payload still dominate**, which is what option 3 (render in Rust) targets.
 
 ## Next
 
-- [ ] Option 3: speed up the *render*, not the transport. Measured: shipping rows columnar and
-      expanding them in Rust gave **no gain** (warm profit 4.00 → 4.32 s), so the cost is
-      `minijinja` rendering ~21.8k rows (and the `/p` payload itself), not the JS↔Rust JSON. The
-      lever is rendering **fewer rows** (pagination/limits, or client-side rendering of large
-      reports) — a **product decision**, left open.
+- [x] ~~Option 3: speed up the render, not the transport.~~ **Partly answered 2026-09-30.** The
+      earlier finding was that shipping rows columnar and expanding them in Rust gave **no gain**
+      (warm profit 4.00 → 4.32 s), so the JS↔Rust JSON was not the cost. That remains true *for a
+      report that renders its rows*, and the spool result says the same thing from the other side:
+      the 26.7 % it saved was on acquisition, and the shared `minijinja` cost dominated both arms.
+      What is now established is that the transport **can** be removed entirely
+      ([[report-rows-are-spooled-not-parsed]]); what is still open is the `minijinja` cost itself,
+      which needs either fewer rendered rows (pagination/limits, or client-side rendering — a
+      **product decision**) or a faster renderer.
+- [ ] Remove the JSON serialising on the paths the spool now covers, once the ports are done. The
+      handle exists and is proven; what remains is deleting `sqlite.all`'s round-trip for report
+      reads, which cannot happen until no report depends on it. **`sqlite.all` must stay** for base
+      table reads and for any view another view builds on.
 - [x] ~~`sql+js` for `paymentsView`~~ — **tried and reverted**: SQL rows + a JS `company` array gave
       **9–12/14, flaky**. The legacy `payments_view` differs from the JS in more than `company`, as
       the equivalence gate warned. `paymentsView` stays JS; only gate-proven views convert.
@@ -150,6 +176,8 @@ payload still dominate**, which is what option 3 (render in Rust) targets.
 
 ## Related
 
+- [[report-rows-are-spooled-not-parsed]] — **the decision this task now turns on.**
+- [[spooling-report-rows-through-kv]] — the mechanism and how to verify it.
 - [[report-logic-stays-runtime-file-based]] — the design.
 - [[legacy-report-sql-uses-company-columns]] — the verbatim-port blocker found.
 - [[guest-report-performance-options]] — why this is worth doing.

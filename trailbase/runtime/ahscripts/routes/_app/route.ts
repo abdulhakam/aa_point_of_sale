@@ -516,6 +516,202 @@ async function dispatch(req: any): Promise<any> {
     return { html: out, status: 200 };
   }
 
+  // Baseline for the whole-report sweep: run a report through the LIVE JS path, timing it.
+  //
+  // This is the "before" arm for every report, and it is deliberately the shipping code path
+  // (`reports.run` -> refresh -> `compute/reports.js`), not a restatement of it, so the number is
+  // the one a user actually waits for.
+  // `/bench/runreport`, NOT `/bench/report`: that path is already the per-report *acquisition* A/B
+  // above (it takes ?key= and ?arm=), and a dispatcher matches the first branch, so reusing the path
+  // silently shadowed this one -- the request answered with the acquisition arm and `report` came
+  // back empty, which reads as "the probe is broken" rather than "two routes share a path".
+  if (path === "/bench/runreport" && method === "GET") {
+    const name = String(query.report || "");
+    const t0 = Date.now();
+    const tRefresh = Date.now();
+    await A.service.refresh(db);
+    const refreshMs = Date.now() - tRefresh;
+
+    const tRun = Date.now();
+    let result: any = null;
+    let error: string | null = null;
+    try {
+      result = await A.service.run(name, {
+        from: query.from || "",
+        to: query.to || "",
+        booker: query.booker || "",
+        party: query.party || "",
+        type: query.type || "",
+        area: query.area || "",
+        section: query.section || "",
+        item: query.item || "",
+      });
+    } catch (e: any) {
+      error = String(e && e.message ? e.message : e);
+    }
+    const runMs = Date.now() - tRun;
+
+    return {
+      report: name,
+      rows: result && Array.isArray(result.rows) ? result.rows.length : 0,
+      totals: result ? result.totals : null,
+      refreshMs,
+      runMs,
+      totalMs: Date.now() - t0,
+      error,
+    };
+  }
+
+  // Which SQL functions does the GUEST's SQLite actually have?
+  //
+  // The depot DB is read through TrailBase's own bundled SQLite, which is NOT the same build as
+  // node:sqlite's. `floor` is present in one and ABSENT in the other, and every `round2` site in the
+  // prelude depends on it — so the port was verified green against the WRONG engine. This probe
+  // reports what the guest can really evaluate, which is the only version that matters.
+  if (path === "/bench/sqlfn" && method === "GET") {
+    const names = ["floor", "ceil", "trunc", "round", "abs", "sign", "printf", "iif", "mod", "nullif", "cast"];
+    const out: any = {};
+    for (const fn of names) {
+      try {
+        await db.all(`SELECT ${fn}(1)`);
+        out[fn] = "ok";
+      } catch (e: any) {
+        out[fn] = "MISSING: " + String(e && e.message ? e.message : e).slice(0, 80);
+      }
+    }
+    // Evaluate a candidate round2 over a fixed set of values, INCLUDING the exact negative halves
+    // that the JS `Math.round` semantics turn on.
+    const expr = String(query.expr || "");
+    let sample: any = null;
+    if (expr) {
+      try {
+        const values = ["2.5", "-2.5", "-50.625", "-2.675", "-0.01", "1.115", "-1.5", "18731.385"];
+        sample = [];
+        for (const v of values) {
+          const row = await db.all(`SELECT (${expr.replaceAll("$v", v)}) AS r`);
+          // `db.all` yields rows as objects keyed by column name; `?.[0]?.r` is right but the host
+          // may hand back the array positionally in some paths, so read both.
+          const got = row && row.length
+            ? (row[0].r !== undefined ? row[0].r : (Array.isArray(row[0]) ? row[0][0] : undefined))
+            : undefined;
+          sample.push({ v: Number(v), got });
+        }
+      } catch (e: any) {
+        sample = { error: String(e && e.message ? e.message : e).slice(0, 200) };
+      }
+    }
+
+    // STRING/NUMBER FORMATTING, which is a separate question from round2: does `printf('%.2f')` keep
+    // TRAILING ZEROES? That is the property the ledger text columns depend on, and it is NOT
+    // guaranteed to agree with node:sqlite — so it is checked here, in the guest, against the exact
+    // string JS `toFixed(2)` produces.
+    //
+    // `want` is JS `toFixed(2)` of the literal. `printf('%!.2f', …)` is deliberately included: it is
+    // the NO-trailing-zeroes variant, and it is the easy mistake to make here.
+    let fmt: any = null;
+    if (String(query.fmt || "") !== "") {
+      const cases: [string, string, string][] = [
+        ["printf('%.2f', 3.5)", "3.50", "printf %.2f on a half"],
+        ["printf('%.2f', 3.0)", "3.00", "printf %.2f on a WHOLE number"],
+        ["printf('%.2f', 0.0)", "0.00", "printf %.2f on zero"],
+        ["printf('%.2f', 540.0)", "540.00", "printf %.2f on 540"],
+        ["printf('%.2f', 47531.0)", "47531.00", "printf %.2f on 47531"],
+        ["printf('%.2f', -2.5)", "-2.50", "printf %.2f on a negative half"],
+        ["printf('%.2f', -3.0)", "-3.00", "printf %.2f on a negative whole"],
+        ["printf('%.2f', 0.25)", "0.25", "printf %.2f on 0.25"],
+        ["printf('%!.2f', 3.5)", "3.5", "printf %!.2f (NO trailing zeroes)"],
+        ["format('%.2f', 47531.0)", "47531.00", "format %.2f on 47531"],
+        ["format('%d', 5)", "5", "format %d"],
+        ["json_group_array(1)", "[1]", "JSON1 json_group_array"],
+        ["json_extract('{\"a\":1}', '$.a')", "1", "JSON1 json_extract"],
+      ];
+      fmt = [];
+      for (const [q, want, label] of cases) {
+        try {
+          const row = await db.all(`SELECT ${q} AS r`);
+          const got = row && row.length
+            ? (row[0].r !== undefined ? row[0].r : (Array.isArray(row[0]) ? row[0][0] : undefined))
+            : undefined;
+          fmt.push({ label, want, got, match: String(got) === want });
+        } catch (e: any) {
+          fmt.push({ label, want, got: undefined, match: false, err: String(e && e.message ? e.message : e).slice(0, 70) });
+        }
+      }
+    }
+
+    return { functions: out, sample, fmt };
+  }
+
+  // Spool probe: the ledger/booker report run entirely in SQLite, with the rows handed to the
+  // renderer by KV key instead of being materialised in QuickJS.
+  //
+  // `?arm=spooled` is the new path: sqlite.spool -> KV handle -> render.spooled. `?arm=rows` is
+  // the old shape, kept so the two are measurable against each other on the same data. Both render
+  // the same template from the same SQL, so a timing difference is transport, not output.
+  if (path === "/bench/spool" && method === "GET") {
+    const t0 = Date.now();
+    const arm = String(query.arm || "spooled");
+    const reportName = String(query.report || "ledgers/booker");
+    const spooled = await loadModule("/app/lib/spoolreports.js");
+    const filters = {
+      booker: query.booker || "",
+      party: query.party || "",
+      from: query.from || "",
+      to: query.to || "",
+    };
+    const timing: any = {};
+    // `?format=html` returns the rendered document itself, so a bench run can assert the two arms
+    // are BYTE-IDENTICAL. A timing comparison between arms that render different bytes is
+    // worthless, so equality has to be checkable from outside the guest.
+    const asHtml = String(query.format || "") === "html";
+
+    // Unknown report names must fail loudly. A silently-defaulted name would benchmark one report
+    // under another's label, which is how a bench table ends up quietly wrong.
+    const known = spooled.names();
+    if (!known.includes(reportName)) {
+      return { error: `unknown report: ${reportName}`, known } as any;
+    }
+
+    if (arm === "rows") {
+      // The old shape, on the same SQL and the same template: bring every row into QuickJS, zip
+      // the columns in JS, then render. This is the cost the spool exists to remove, so it is the
+      // baseline the other arm has to beat — same data, same output, different transport.
+      const { sql, cols, binds } = await spooled.parts(reportName, filters);
+      const tRows = Date.now();
+      const raw = await db.all(sql, binds);
+      const mapped = (raw ?? []).map((values: any[]) => {
+        const obj: any = {};
+        for (let i = 0; i < cols.length; i++) obj[cols[i]] = values[i];
+        return obj;
+      });
+      const acquireMs = Date.now() - tRows;
+      const html: string = (globalThis as any).render.html("bench/spooled.html", { rows: mapped });
+      if (asHtml) return { html, status: 200 };
+      return { report: reportName, arm, rows: mapped.length, acquireMs, totalMs: Date.now() - t0, htmlBytes: html.length };
+    }
+
+    const html: string = await spooled.renderReport(
+      reportName,
+      "bench/spooled.html",
+      {},
+      filters,
+      (h: any) => {
+        timing.handle = h;
+      }
+    );
+    if (asHtml) return { html, status: 200 };
+    return {
+      report: reportName,
+      arm,
+      rows: timing.handle ? timing.handle.rows : 0,
+      bytes: timing.handle ? timing.handle.bytes : 0,
+      queryMs: timing.handle ? timing.handle.queryMs : 0,
+      writeMs: timing.handle ? timing.handle.writeMs : 0,
+      totalMs: Date.now() - t0,
+      htmlBytes: html.length,
+    };
+  }
+
   // Worker endpoint for the optional fan-out. Internal: it executes one already-claimed step by
   // id, and re-running a step is idempotent, so it is reachable without a session (the fan-out
   // call is server-to-self and carries no cookie). It cannot create work.
