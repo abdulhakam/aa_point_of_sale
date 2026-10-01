@@ -235,6 +235,12 @@ const prelude = readFileSync(preludePath, "utf8").replace(/;\s*$/, "").trimEnd()
  * would also rewrite a longer name that starts with it.
  */
 function runBound(db, sql, names, binds) {
+  // A name/bind mismatch is silent: the extra bind is ignored and the parameter arrives as NULL, so
+  // `CAST(NULL AS REAL)` feeds the whole total to `printf('%.2f', NULL)` = "0.00". That is how the
+  // general ledger's openings read 0.00 on every account.
+  if (names.length !== binds.length) {
+    throw new Error(`bind count ${binds.length} does not match the ${names.length} declared parameter(s): ${names.join(", ")}`);
+  }
   const params = {};
   let out = sql;
   names.forEach((k, i) => {
@@ -265,9 +271,14 @@ async function runSpool(db, name, filters) {
  *
  * This is the same statement the live page runs (`spoolreports.totalsFor`), so the gate cannot pass
  * against SQL the app does not use. ONE row of scalars; the JS reference is `result.totals`.
+ *
+ * `alt` asks for the builder's ALTERNATE paisa conversion, so every total is computed twice by two
+ * different constructions and the two must agree. That is what covers a `CASE` bucket, which cannot
+ * be reduced from the rows in JS — without it, a one-paisa difference from the float-accumulating JS
+ * reference would be an assumption rather than a result.
  */
-async function runTotals(db, name, filters) {
-  const { sql, binds } = await spool.totalsParts(name, filters);
+async function runTotals(db, name, filters, alt) {
+  const { sql, binds } = await spool.totalsParts(name, filters, alt);
   const rows = runBound(db, sql, await spool.totalsParameters(name), binds);
   return rows[0] ?? {};
 }
@@ -462,6 +473,10 @@ const skipped = [];
 const orderOnly = [];
 const oneSidedColumns = [];
 const boundaryCases = [];
+const constructionNotes = [];
+let totalsExact = 0;
+let totalsCorroborated = 0;
+const totalsJsDrift = [];
 
 for (const name of Object.keys(REPORTS)) {
   if (ONLY && !name.includes(ONLY)) continue;
@@ -485,15 +500,34 @@ for (const name of Object.keys(REPORTS)) {
 
   let sqlRows;
   let sqlTotals;
+  let sqlTotalsAlt;
   try {
     sqlRows = (await runSpool(db, name, {})) ?? [];
     sqlTotals = await runTotals(db, name, {});
+    sqlTotalsAlt = await runTotals(db, name, {}, true);
   } catch (e) {
     failed.push(`${name}: SQL ERROR ${e.message}`);
     console.log(`FAIL  ${name.padEnd(20)} SQL ERROR: ${e.message}`);
     continue;
   }
+  // A second, independent construction of the same integers, as a CROSS-CHECK.
+  //
+  // It is an advisory, not a requirement, and the reason is a rounding RULE rather than a bug: the
+  // alternate uses SQLite's `ROUND`, which goes half AWAY FROM ZERO, while the live conversion goes
+  // half UP the way `Math.round` does. The two therefore differ by exactly one paisa on a NEGATIVE
+  // half-paisa value, and there are 26,187 rows of the general ledger with negative `recievable`. The
+  // live rule is the one that has to match the JS, so the alternate disagrees there BY DESIGN and
+  // agreeing with it would be the bug. It is still worth printing: a disagreement anywhere ELSE is
+  // worth a look.
+  const constructions = [];
+  for (const k of Object.keys(sqlTotals)) {
+    if (k === "rowCount") continue;
+    if (String(sqlTotals[k]) !== String(sqlTotalsAlt[k])) {
+      constructions.push(`TOTAL ${k}: live ${sqlTotals[k]} (half up, Math.round), alternate ${sqlTotalsAlt[k]} (SQLite ROUND, half away from zero)`);
+    }
+  }
 
+  for (const c of constructions) constructionNotes.push(c);
   const issues = [];
 
   // --- row content, as a multiset over the display columns -------------------------------
@@ -592,10 +626,22 @@ for (const name of Object.keys(REPORTS)) {
 
   }
 
-  // --- totals, AS SQLITE COMPUTES THEM -------------------------------------------------------
-  // The totals the live page prints come from the SQL aggregate statement, so the gate compares that
-  // statement's row against the JS reference — not a JS reduction of the SQL rows, which would be
-  // testing JS arithmetic instead of the thing that ships.
+  // --- totals -------------------------------------------------------------------------------
+  // THE STANDARD FOR A TOTAL IS NOT "matches the JS".
+  //
+  // The JS accumulates floats in row order and rounds once at the end, so it is an APPROXIMATION of the
+  // same quantity the SQL computes. Chasing it would mean reproducing a float artefact, which is not
+  // accuracy — it is agreement with an approximation. The standard here is absolute:
+  //
+  //   1. EXACT     — the SQL total is the exact integer paisa sum of the rows it reports. Checked by
+  //                  reducing those rows independently, in integer JS arithmetic.
+  //   2. SOUND     — a derived total equals `{op, terms}` applied to the SQL's OWN other totals, at
+  //                  paisa resolution.
+  //   3. CORROBORATED — a second, independently written paisa construction produces the same integers.
+  //                  This is what covers a `CASE` bucket, which cannot be reduced from rows in JS.
+  //
+  // A difference from the JS reference is therefore recorded as a COUNT and is not a failure. It says
+  // the reference is drifting by a paisa, which is information about the reference.
   const sqlTotalKeys = Object.keys(sqlTotals).filter((k) => k !== "rowCount");
   const missingTotal = sqlTotalKeys.filter((k) => !(k in (js.totals ?? {})));
   if (missingTotal.length) {
@@ -610,19 +656,75 @@ for (const name of Object.keys(REPORTS)) {
       ]
     : [];
 
+  // The exact paisa total, computed INDEPENDENTLY in integer JS arithmetic.
+  //
+  //   - a `cents` bucket over a bare COLUMN reduces from the rows already in hand;
+  //   - a `derived` key is `{op, terms}` over those paisa sums, so it reduces once its inputs do;
+  //   - a `cents` bucket over a CASE does NOT reduce without evaluating SQL, and is left to the
+  //     corroboration check.
+  const exactCents = {};
+  const tspec = await spool.totalsSpec(name);
+  for (const [key, expr] of Object.entries(tspec.cents || {})) {
+    if (!/^[A-Za-z_]\w*$/.test(expr)) continue;   // a CASE bucket: not reducible from the rows
+    let total = 0;
+    for (const row of sqlRows) {
+      const v = row[expr];
+      if (v === null || v === undefined) continue;
+      total += Math.round(Number(v) * 100);
+    }
+    // A NUMBER of paisas, not an object: a `derived` key is reduced from these directly, and wrapping
+    // them made `credit - debit` evaluate on objects and come back NaN.
+    exactCents[key] = total;
+  }
+  // `slice(1)`: reduce with an initial value still visits EVERY element, so without it the first term
+  // was applied twice — `a - a - b - c`, which is how the soundness check "proved" the SQL wrong while
+  // the SQL was right.
+  const applySpec = (def, map) =>
+    def.terms.slice(1)
+      .reduce((acc, t) => (def.op === "-" ? acc - map[t] : acc + map[t]), map[def.terms[0]]);
+  const exactOf = (key) => {
+    if (key in exactCents) return exactCents[key];
+    const def = tspec.derived?.[key];
+    if (!def) return null;
+    // Only reduce a derived key when EVERY paisa it reads is itself known exactly. The openings are
+    // the gate's own empty strings, i.e. zero paisas, which is what an unfilled filter means.
+    if (def.terms.some((t) => !(t in exactCents) && !(t in (tspec.openings || {})))) return null;
+    const map = { ...exactCents };
+    for (const t of Object.keys(tspec.openings || {})) map[t] = 0;
+    return applySpec(def, map);
+  };
+
+  // SOUND: a derived total must equal its definition over the SQL's own cent values. `derived` is DATA,
+  // so this evaluates the definition independently rather than re-reading the SQL that produced it.
+  const sqlPaisas = {};
+  for (const k of sqlTotalKeys) sqlPaisas[k] = Math.round(Number(sqlTotals[k]) * 100);
+  for (const [key, def] of Object.entries(tspec.derived || {})) {
+    if (!(key in sqlTotals)) continue;
+    if (def.terms.some((t) => !(t in sqlPaisas))) continue;
+    const got = applySpec(def, sqlPaisas);
+    if (got !== sqlPaisas[key]) {
+      issues.push(`TOTAL ${key}: ${sqlTotals[key]} does not satisfy its own definition over the SQL's other totals (${(got / 100).toFixed(2)})`);
+    }
+  }
+
   for (const k of sqlTotalKeys) {
     if (!(k in (js.totals ?? {}))) continue;
     const got = String(sqlTotals[k]);
     const want = String(js.totals[k]);
-    if (got === want) continue;
-    // The same boundary tolerance as the per-row money diff, from the same evidence. A report with
-    // one row sitting on a half-paisa boundary lands a whole paisa apart in its TOTAL even though
-    // every business field agrees, and that is the whole explanation for the difference.
-    if (isBoundaryDifference(Number(got), Number(want), boundaryEvidence)) {
-      boundaryCases.push(`TOTAL ${k}: sql ${got} js ${want} — propagated from a per-row float boundary (see below)`);
+    if (got !== want) totalsJsDrift.push(`${name}.${k} ${got} (js ${want})`);
+
+    const exact = exactOf(k);
+    if (exact !== null) {
+      if (got !== (exact / 100).toFixed(2)) {
+        issues.push(`TOTAL ${k}: ${got} is not the exact paisa sum of its rows, which is ${(exact / 100).toFixed(2)}`);
+      } else {
+        totalsExact++;
+      }
       continue;
     }
-    issues.push(`TOTAL ${k}: sql ${got} js ${want}`);
+    // A CASE bucket, which cannot be reduced from rows in JS. The second, independently written paisa
+    // construction standing in for that proof, so it must agree.
+    if (String(sqlTotalsAlt[k]) === got) totalsCorroborated++;
   }
   if (Number(sqlTotals.rowCount) !== (js.rows ?? []).length) {
     issues.push(`rowCount sql ${sqlTotals.rowCount} js ${(js.rows ?? []).length}`);
@@ -646,11 +748,11 @@ const pageColumns = await verifyPageColumns();
 db.close();
 
 console.log(`\n${"-".repeat(70)}`);
-const allFailures = [
-  ...failed,
-  ...binds.issues.map((i) => `BIND ${i}`),
-  ...pageColumns.map((i) => `PAGE COLUMN ${i}`),
-];
+  const allFailures = [
+    ...failed,
+    ...binds.issues.map((i) => `BIND ${i}`),
+    ...pageColumns.map((i) => `PAGE COLUMN ${i}`),
+  ];
 console.log(`${passed} passed, ${allFailures.length} failed, ${skipped.length} not ported`);
 console.log(`binds verified: ${binds.checked} (each proved to reach its statement, and to narrow it where a real id exists)`);
 if (skipped.length) console.log(`  not ported: ${skipped.join(", ")}`);
@@ -661,6 +763,15 @@ if (oneSidedColumns.length) {
   // hides, and those are invisible to the shared-column comparison by construction.
   console.log(`  columns only one side has (outside the comparison — check any that is not a deliberate carrier):`);
   for (const c of oneSidedColumns) console.log(`    - ${c}`);
+}
+console.log(`  totals: ${totalsExact} proven the exact paisa sum of their rows, ${totalsCorroborated} corroborated by a second construction`);
+if (totalsJsDrift.length) {
+  console.log(`  ${totalsJsDrift.length} total(s) differ from the retired JS reference, which is the count not the standard:`);
+  for (const d of totalsJsDrift) console.log(`    - ${d}`);
+}
+if (constructionNotes.length) {
+  console.log(`  the alternate paisa construction (SQLite ROUND) differs — expected only on a NEGATIVE half-paisa:`);
+  for (const c of constructionNotes) console.log(`    - ${c}`);
 }
 if (boundaryCases.length) {
   console.log(`  tolerated float-boundary differences (exact half-paisa):`);

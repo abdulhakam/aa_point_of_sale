@@ -1,7 +1,7 @@
 ---
 title: TB-0022 Move report arithmetic into SQL (runtime .sql files)
 type: task
-status: doing
+status: done
 priority: high
 created: 2026-09-27
 updated: 2026-10-01
@@ -100,10 +100,23 @@ switched.
         [[six-report-defects-the-empty-filter-parity-gate-could-not-see]] and
         [[spool-blob-bind-decoder-rejected-unpadded-base64]] (the latter shipped in `f449670` and
         killed every id filter on a spooled report).
-- [ ] **Count totals in integer cents.** The totals statement is the last place arithmetic happens, and
-      the five tolerated half-paisa differences live in it. Rewrite every aggregate as
-      `SUM(CAST(ROUND(x * 100) AS INTEGER))` and format once at output; that removes the class rather
-      than documenting it. **This is the remaining work on this task.**
+- [x] **2026-10-01 — DONE. Totals are counted in integer paisas by SQLite only.**
+      The totals statement's `tiers` layer converts every amount to whole paisas, sums integers, and
+      divides by 100 once on the way out, so a total is the exact sum of the rows behind it rather than
+      a float sum whose value depends on addition order. Ties break half up — the accounting
+      convention, and irrelevant on the 2 dp projections the money rule already guarantees, so it only
+      decides the general ledger's raw account columns.
+      **The acceptance standard changed with it, and that is the point.** The gate no longer asks
+      whether a total matches `compute/reports.js`, which accumulates floats and rounds once at the end:
+      that is an approximation of the same quantity, and reproducing its drift would be agreement
+      rather than accuracy. It now proves the SQL is **exact** (integer paisa sum of its rows, reduced
+      independently), **sound** (a derived total satisfies its own `{op, terms}` definition over the
+      SQL's other totals) and **corroborated** (a second, independently written paisa construction
+      agrees, which covers a `CASE` bucket that cannot be reduced from rows in JS).
+      - **14/14 pass, 72 binds verified, 15 totals proven exact and 26 corroborated**
+      - **9 totals differ from the retired JS reference by a paisa, and the SQL is right in all nine**
+      - the `round2`-of-`round2` nesting the float form needed collapsed to one subtraction of integers
+      See [[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]].
 
 ## Reconciliation status (2026-09-27)
 

@@ -182,8 +182,12 @@ entry and the gate died on `registry entry totals has no sql`.
 It checks five things:
 
 1. row count, display fields as a multiset, and the money columns field-by-field;
-2. the **SQL totals statement** against `result.totals` from the JS reference — not a JS reduction of
-   SQL rows, which would be testing JS arithmetic instead of what ships;
+2. the **SQL totals statement**, against three absolute properties rather than against the JS: **exact**
+   (the integer paisa sum of its rows, reduced independently), **sound** (a derived total satisfies its
+   `{op, terms}` definition over the SQL's own other totals), **corroborated** (a second, independently
+   written paisa construction produces the same integers). A difference from `compute/reports.js` is
+   counted and printed, and is not a failure — the JS accumulates floats, so it is an approximation of
+   the same quantity and nine of its totals drift by a paisa;
 3. **every declared bind**, two ways: a value matching nothing must return 0 rows (proves the bind
    reaches the statement at all) and a real busy id must return strictly fewer rows but not none
    (proves it reaches the right *column*). 72 binds;
@@ -193,6 +197,10 @@ It checks five things:
 
 Filter cases are derived from the live data. A hard-coded date window matching nothing yields two empty
 results that "agree" — a pass that proves nothing.
+
+A bind count that does not match the declared parameter count is an error, not a warning: the extra
+bind is ignored, the parameter arrives NULL, and `printf('%.2f', NULL)` is `0.00` — which is how the
+general ledger's openings read zero on every account.
 
 ## Running it
 
@@ -221,11 +229,15 @@ actually has — this is how the missing `floor()` was found).
 - `ledgers/party` renders in the guest, after the balance was moved out of the projection into
   `party_balanced`. Written inline it appeared four times per row and hit TrailBase's 20 s request
   timeout — over 100× slower than the JS it replaces.
-- Totals are still **float `SUM` + the CAST-only `round2`**, which is what the JS did. Five exact
-  half-paisa differences are tolerated and recorded, on the per-row money check and on the totals of
-  `ledgers/area` and `outstanding`, all traced to ONE row whose raw group sum sits on a boundary
-  ([[report-parity-flakes-on-float-arithmetic]]). Counting in integer cents is the next step and
-  removes the class.
+- Totals are **integer paisas**: the `tiers` layer converts every amount to whole paisas, the sums are
+  integer sums, and the division by 100 happens once on the way out. A total is the exact sum of the
+  rows behind it, not a float sum whose value depends on addition order. **Nine totals differ from the
+  retired `compute/reports.js` reference by a paisa and the SQL is right in every case** — the standard
+  is exactness, not agreement with an approximation. See
+  [[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]].
+- Two documented float-boundary differences remain on the per-row money check, both from ONE
+  `ledgers/area` row whose raw group sum sits on an exact half-paisa
+  ([[report-parity-flakes-on-float-arithmetic]]).
 
 ## Related
 

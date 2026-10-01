@@ -23,18 +23,50 @@ const PRELUDE = "/app/reports/sql/prelude.sql";
 /* ------------------------------------------------------------------ the money rule */
 
 /**
- * `round2` rebuilt from CAST, exactly as `prelude.sql` and `compute/format.js` define it.
+ * `v` as an exact integer number of **paisas**. This is the whole of the money arithmetic here.
  *
- * Guest SQLite has no `floor`, so this is `floor(((v + EPSILON) * 100) + 0.5) / 100` written as
- * `CAST(z AS INTEGER) - (CASE WHEN z < 0 AND z <> CAST(z AS INTEGER) THEN 1 ELSE 0 END)`. It is the
- * same template `tools/regen-round2.mjs` writes into the SQL files — one rule, one spelling.
+ * Every total is accumulated in these integers and divided by 100 exactly once, on the way out, so no
+ * sum is ever a float sum of two-decimal amounts. That is the accuracy that matters: a float `SUM` of
+ * 26,099 amounts accumulates representation error whose size depends on the order SQLite happens to add
+ * in, which is not a property of the data. On this depot exactly one party in 872 has a group sum
+ * sitting on a half-paisa, and the float form put the area-ledger credit total a paisa away from the
+ * true figure — reproducibly, and for no reason a bookkeeper could name
+ * ([[report-parity-flakes-on-float-arithmetic]]).
+ *
+ * The tie rule is **half up** — the accounting convention, and the same one the prelude's `round2`
+ * already applies per row. It is chosen on merit, not to agree with anything.
+ *
+ * The correction below is not optional. A bare `CAST(z AS INTEGER)` truncates TOWARD ZERO, so for
+ * `z = v + 0.5 < 0` it rounds up where half-up rounds down: `-0.6 + 0.5 = -0.1` truncates to `0`, and
+ * half-up of `-0.6` is `-1`. Subtracting one when `z` is negative and non-integral restores `floor`,
+ * and `floor(v + 0.5)` IS half-up for every `v`. This is the same template as the prelude's `round2`
+ * and `tools/regen-round2.mjs`, minus the `/100.0` — one money rule, one spelling.
+ *
+ * On the values the money rule already guarantees — the 2 dp projections — the tie cannot occur at
+ * all, so this only decides genuinely sub-paisa inputs such as the general ledger's raw account
+ * columns. The general ledger is the one report where it changes a total, and it changes it by a
+ * paisa against a rule that rounds the other way.
+ *
+ * `v` appears twice, once for the value and once for its sign, which is why a bucket is written as a
+ * bare column expression and the conversion wraps it.
  */
-const EPS = "2.220446049250313e-16";
-const round2 = (e) => {
-  // z = ((v + EPSILON) * 100) + 0.5 — the value floor() would have received.
-  const z = `(((${e}) + ${EPS}) * 100) + 0.5`;
-  return `(CAST(${z} AS INTEGER) - (CASE WHEN ${z} < 0 AND ${z} <> CAST(${z} AS INTEGER) THEN 1 ELSE 0 END)) / 100.0`;
+const toCents = (e) => {
+  const z = `((${e}) * 100) + 0.5`;
+  return `(CAST(${z} AS INTEGER) - (CASE WHEN (${z}) < 0 AND (${z}) <> CAST(${z} AS INTEGER) THEN 1 ELSE 0 END))`;
 };
+
+/**
+ * The ALTERNATE paisa conversion, for the parity gate only. Never used by the app.
+ *
+ * `CAST(ROUND(x * 100) AS INTEGER)` is a different construction for the same integer, which is what
+ * lets the gate corroborate a bucket it cannot reduce from rows in JS — a `CASE` bucket like
+ * `SUM(CASE WHEN paid = 1 THEN amount ELSE 0 END)`. The gate requires the two constructions to agree
+ * before it accepts a total, so a one-paisa disagreement with the float-accumulating JS reference is
+ * attributable rather than assumed.
+ *
+ * `ROUND` is available in node:sqlite and NOT in the guest, which is why this cannot be the live form.
+ */
+const toCentsAlt = (e) => `CAST(ROUND((${e}) * 100) AS INTEGER)`;
 
 /** `num(v).toFixed(2)` in SQL: printf with an explicit width, so trailing zeroes survive. */
 const money = (e) => `printf('%.2f', ${e})`;
@@ -48,31 +80,31 @@ const money = (e) => `printf('%.2f', ${e})`;
  * `payments.sql` carries `paid`, `type_code` and `party_type` alongside the display columns.
  */
 const PAY = {
-  recieving:        "SUM((CASE WHEN type_code = 1 AND paid = 0 THEN amount ELSE 0 END))",
-  recieved:         "SUM((CASE WHEN type_code = 1 AND paid = 1 THEN amount ELSE 0 END))",
-  sending:          "SUM((CASE WHEN type_code = 0 AND paid = 0 THEN amount ELSE 0 END))",
-  sent:             "SUM((CASE WHEN type_code = 0 AND paid = 1 THEN amount ELSE 0 END))",
-  recievingReturns: "SUM((CASE WHEN type_code = 2 THEN (CASE WHEN party_type = 0 THEN amount ELSE 0 END) ELSE 0 END))",
-  sendingReturns:   "SUM((CASE WHEN type_code = 2 THEN (CASE WHEN party_type = 0 THEN 0 ELSE amount END) ELSE 0 END))",
-  invoiceTotal:     "SUM((CASE WHEN paid = 1 THEN 0 ELSE amount END))",
-  totalPaid:        "SUM((CASE WHEN paid = 1 THEN amount ELSE 0 END))",
+  recieving:        "CASE WHEN type_code = 1 AND paid = 0 THEN amount ELSE 0 END",
+  recieved:         "CASE WHEN type_code = 1 AND paid = 1 THEN amount ELSE 0 END",
+  sending:          "CASE WHEN type_code = 0 AND paid = 0 THEN amount ELSE 0 END",
+  sent:             "CASE WHEN type_code = 0 AND paid = 1 THEN amount ELSE 0 END",
+  recievingReturns: "CASE WHEN type_code = 2 THEN (CASE WHEN party_type = 0 THEN amount ELSE 0 END) ELSE 0 END",
+  sendingReturns:   "CASE WHEN type_code = 2 THEN (CASE WHEN party_type = 0 THEN 0 ELSE amount END) ELSE 0 END",
+  invoiceTotal:     "CASE WHEN paid = 1 THEN 0 ELSE amount END",
+  totalPaid:        "CASE WHEN paid = 1 THEN amount ELSE 0 END",
 };
 /** `salesTotals` (reports.js:86-89) does NOT gate returns on the party type — a different rule. */
 const SALES = {
-  recieving:        "SUM((CASE WHEN type_code = 1 AND paid = 0 THEN amount ELSE 0 END))",
-  recieved:         "SUM((CASE WHEN type_code = 1 AND paid = 1 THEN amount ELSE 0 END))",
-  recievingReturns: "SUM((CASE WHEN type_code = 2 THEN amount ELSE 0 END))",
+  recieving:        "CASE WHEN type_code = 1 AND paid = 0 THEN amount ELSE 0 END",
+  recieved:         "CASE WHEN type_code = 1 AND paid = 1 THEN amount ELSE 0 END",
+  recievingReturns: "CASE WHEN type_code = 2 THEN amount ELSE 0 END",
 };
 /** `reportPaymentsByCompany` (reports.js:185-188) buckets on the LABEL, i.e. `type_code = 2`. */
 const BYCOMPANY = {
-  invoiceTotal:     "SUM((CASE WHEN paid = 1 OR type_code = 2 THEN 0 ELSE amount END))",
-  totalPaid:        "SUM((CASE WHEN paid = 1 THEN amount ELSE 0 END))",
-  recievingReturns: "SUM((CASE WHEN type_code = 2 THEN amount ELSE 0 END))",
+  invoiceTotal:     "CASE WHEN paid = 1 OR type_code = 2 THEN 0 ELSE amount END",
+  totalPaid:        "CASE WHEN paid = 1 THEN amount ELSE 0 END",
+  recievingReturns: "CASE WHEN type_code = 2 THEN amount ELSE 0 END",
 };
 /** `reportItemSales` (reports.js:267-268): the label is "sale" for exactly `type_code = 1`. */
 const ITEMSALES = {
-  sale:    "SUM((CASE WHEN type_code = 1 THEN final_amount ELSE 0 END))",
-  returns: "SUM((CASE WHEN type_code = 1 THEN 0 ELSE final_amount END))",
+  sale:    "CASE WHEN type_code = 1 THEN final_amount ELSE 0 END",
+  returns: "CASE WHEN type_code = 1 THEN 0 ELSE final_amount END",
 };
 
 /**
@@ -83,22 +115,31 @@ const ITEMSALES = {
  * fragile than stating the order once. The host rejects a width mismatch, so a forgotten column
  * fails loudly instead of silently shifting every value.
  *
- * `totals` is the per-report AGGREGATE over the statement's own output — see `totalsSql`. It is
+ * `totals` is the per-report aggregate over the statement's own output — see `totalsSql`. It is
  * expressed as a spec rather than a second SQL file so the totals cannot drift from the rows they
- * summarise: they are computed over the very same statement, wrapped in parentheses.
+ * summarise: they are computed over the very same statement.
+ *
+ * A totals spec has two shapes:
+ *
+ *   `cents` + `derived` — the normal one. `cents` is a map of per-row expressions, each producing a
+ *     **2 dp amount**; the builder sums them as integer **paisas** and never as floats. `derived` is a
+ *     map of functions over those paisa sums, which is how `total` is defined without repeating
+ *     `invoiceTotal - totalPaid` and without a nested rounding of a nested rounding. A `consts` entry
+ *     is a literal paisa amount.
+ *
+ *   `order` + `pick` — for the one report whose total is a ROW rather than a sum. See `ledgers/party`.
  */
 const REPORTS = {
   "ledgers/booker": {
     sql: "ledger_booker.sql",
     cols: ["id", "date", "entry", "credit", "creditText", "debit", "debitText", "party", "booker", "invoice", "invoiceId"],
     totals: {
-      sums: {
-        // reportLedgerBooker (reports.js:361-363): credit and debit are each round2'd, and the
-        // balance is round2 OF THOSE ROUNDED VALUES — not of the raw sums.
-        credit:  round2("SUM(credit)"),
-        debit:   round2("SUM(debit)"),
-        balance: round2(`${round2("SUM(credit)")} - ${round2("SUM(debit)")}`),
-      },
+      // reportLedgerBooker (reports.js:361-363): credit and debit are each round2'd, and the balance is
+      // round2 OF THOSE ROUNDED VALUES. In paisas that is just `credit - debit` — the two roundings
+      // were correcting a float sum, and there is no float sum left to correct. The nesting the float
+      // form needed (`round2(round2(a) - round2(b))`) collapses to one subtraction of integers.
+      cents: { credit: "credit", debit: "debit" },
+      derived: { balance: { op: "-", terms: ["credit", "debit"] } },
     },
   },
   // profit and itemsales consume the SAME rows (`transactionsRows`, reports.js:247) and differ only
@@ -109,8 +150,9 @@ const REPORTS = {
     cols: ["id", "date", "type", "booker", "invoiceNo", "invoiceId", "party", "company", "area",
       "section", "item", "itemId", "price", "qty", "qtyText", "scheme", "net_amount",
       "net_amountText", "final_amount", "final_amountText", "profit", "profitText", "type_code"],
-    // reportProfit (reports.js:259-261): `type === "sale" ? profit : -profit`, then round2.
-    totals: { sums: { profit: round2("SUM((CASE WHEN type_code = 1 THEN profit ELSE -profit END))") } },
+    // reportProfit (reports.js:259-261): `type === "sale" ? profit : -profit`. `toCents` rounds half
+    // the half-up rule like any other value.
+    totals: { cents: { profit: "CASE WHEN type_code = 1 THEN profit ELSE -profit END" } },
   },
   itemsales: {
     sql: "transactions.sql",
@@ -118,12 +160,10 @@ const REPORTS = {
       "section", "item", "itemId", "price", "qty", "qtyText", "scheme", "net_amount",
       "net_amountText", "final_amount", "final_amountText", "profit", "profitText", "type_code"],
     totals: {
-      sums: {
-        sale:    round2(ITEMSALES.sale),
-        returns: round2(ITEMSALES.returns),
-        // `round2(sale - returns)` over the two ROUNDED sub-totals (reports.js:271).
-        total:   round2(`${round2(ITEMSALES.sale)} - ${round2(ITEMSALES.returns)}`),
-      },
+      cents: { sale: ITEMSALES.sale, returns: ITEMSALES.returns },
+      // `round2(sale - returns)` over the two ROUNDED sub-totals (reports.js:271) — one subtraction
+      // of paisa sums.
+      derived: { total: { op: "-", terms: ["sale", "returns"] } },
     },
   },
   // payments and salesreport share one statement; `:salesOnly` selects the sales restriction
@@ -133,20 +173,13 @@ const REPORTS = {
     cols: ["id", "date", "type", "invoice", "invoiceId", "area", "section", "party", "booker",
       "amount", "amountText", "description", "paid", "type_code", "party_type"],
     totals: {
-      sums: {
-        recieving:        PAY.recieving,
-        recieved:         PAY.recieved,
-        sending:          PAY.sending,
-        sent:             PAY.sent,
-        recievingReturns: PAY.recievingReturns,
-        sendingReturns:   PAY.sendingReturns,
-        invoiceTotal:     PAY.invoiceTotal,
-        totalPaid:        PAY.totalPaid,
-        // The three NET figures are `num(a - b - c).toFixed(2)` in the JS (reports.js:77-79) —
-        // no explicit round2, so no round2 here either.
-        totalRecieving: `${PAY.recieving} - ${PAY.recieved} - ${PAY.recievingReturns}`,
-        totalSending:   `${PAY.sending} - ${PAY.sent} - ${PAY.sendingReturns}`,
-        total:          `${PAY.invoiceTotal} - ${PAY.totalPaid}`,
+      cents: { ...PAY },
+      // The three NET figures are `num(a - b - c).toFixed(2)` in the JS (reports.js:77-79). Over paisa
+      // sums that is plain integer subtraction, with no rounding left to do.
+      derived: {
+        totalRecieving: { op: "-", terms: ["recieving", "recieved", "recievingReturns"] },
+        totalSending:   { op: "-", terms: ["sending", "sent", "sendingReturns"] },
+        total:          { op: "-", terms: ["invoiceTotal", "totalPaid"] },
       },
     },
   },
@@ -159,12 +192,10 @@ const REPORTS = {
     cols: ["id", "date", "type", "invoice", "invoiceId", "area", "section", "party", "booker",
       "amount", "amountText", "description", "paid", "type_code", "party_type"],
     totals: {
-      sums: {
-        recieving:        SALES.recieving,
-        recieved:         SALES.recieved,
-        recievingReturns: SALES.recievingReturns,
-        totalRecieving:   `${SALES.recieving} - ${SALES.recieved} - ${SALES.recievingReturns}`,
-        total:            `${SALES.recieving} - ${SALES.recieved} - ${SALES.recievingReturns}`,
+      cents: { ...SALES },
+      derived: {
+        totalRecieving: { op: "-", terms: ["recieving", "recieved", "recievingReturns"] },
+        total:          { op: "-", terms: ["recieving", "recieved", "recievingReturns"] },
       },
     },
   },
@@ -174,7 +205,7 @@ const REPORTS = {
     cols: ["id", "company", "name", "cost_price", "sale_price", "qty", "box_size_qty", "qtyText", "costText", "stock_amount", "stockAmountText", "tone"],
     // Which quantity aggregate the shared `items.sql` reads: the signed stock movement.
     agg: "stock",
-    totals: { sums: { stockAmount: round2("SUM(stock_amount)") } },
+    totals: { cents: { stockAmount: "stock_amount" } },
   },
   difference: {
     sql: "items.sql",
@@ -182,7 +213,7 @@ const REPORTS = {
     agg: "difference",
     cols: ["id", "company", "name", "cost_price", "sale_price", "qty", "box_size_qty", "qtyText", "costText", "stock_amount", "stockAmountText", "tone"],
     // `totals: () => []` in the page metadata: the report has NO totals, only the row count.
-    totals: { sums: {} },
+    totals: {},
   },
   "ledgers/party": {
     sql: "ledger_party.sql",
@@ -198,6 +229,10 @@ const REPORTS = {
       // correct. `id ASC` is what pairs with `payment_date DESC`: the report's order is
       // `payment_date ASC, id DESC`, so its last row is the greatest payment date and, among those,
       // the SMALLEST id.
+      //
+      // This is the ONE total that is a row rather than a sum, so it is read straight from the row's
+      // own `balance` column — already 2 dp by the money rule, so there is nothing to accumulate and
+      // nothing to convert.
       order: "date DESC, paymentDate DESC, id ASC",
       pick: { balance: "balance" },
     },
@@ -205,35 +240,24 @@ const REPORTS = {
   "ledgers/area": {
     sql: "ledger_area.sql",
     cols: ["id", "party", "credit", "debit", "balance", "creditText", "debitText", "balanceText", "credit_raw", "debit_raw"],
-    // reportLedgerArea (reports.js:395-399) sums the ROUNDED per-row values, in row order.
-    totals: {
-      sums: {
-        credit:  round2("SUM(credit)"),
-        debit:   round2("SUM(debit)"),
-        balance: round2("SUM(balance)"),
-      },
-    },
+    // reportLedgerArea (reports.js:395-399) sums the ROUNDED per-row values, in row order. Summing
+    // the ROUNDED values is exactly summing their paisas.
+    totals: { cents: { credit: "credit", debit: "debit", balance: "balance" } },
   },
   productsale: {
     sql: "productsale.sql",
     cols: ["id", "name", "units", "amount", "box_size_qty", "box", "amountText", "qtyText"],
-    totals: { sums: { amount: round2("SUM(amount)") } },
+    totals: { cents: { amount: "amount" } },
   },
   outstanding: {
     sql: "outstanding.sql",
     cols: ["id", "party_name", "invoice_nos", "invoice_total", "paid_total", "balance", "invoice_totalText", "paid_totalText", "balanceText", "booker_id", "area_id", "section_id", "invoice_raw", "paid_raw", "return_raw"],
-    totals: {
-      sums: {
-        invoice: round2("SUM(invoice_total)"),
-        paid:    round2("SUM(paid_total)"),
-        balance: round2("SUM(balance)"),
-      },
-    },
+    totals: { cents: { invoice: "invoice_total", paid: "paid_total", balance: "balance" } },
   },
   dailysale: {
     sql: "dailysale.sql",
     cols: ["id", "invoiceNo", "party", "area", "booker", "total", "totalText", "party_id", "area_id", "booker_id"],
-    totals: { sums: { total: round2("SUM(total)") } },
+    totals: { cents: { total: "total" } },
   },
   "ledgers/general": {
     sql: "ledger_general.sql",
@@ -242,16 +266,24 @@ const REPORTS = {
       "stock", "stockText", "tone"],
     totals: {
       // The opening figures are the FILTER's, not the data's (reports.js:404-407), so they are
-      // CAST from the bound text and added to each total exactly as `round2(open + sum)` does.
-      opening: true,
-      sums: {
-        recievable: round2("SUM(recievable) + CAST(:openingRecievables AS REAL)"),
-        payable:    round2("SUM(payable) + CAST(:openingPayables AS REAL)"),
-        cash:       round2("SUM(cash) + CAST(:openingCash AS REAL)"),
+      // converted from the bound text into paisas and added to the sum in the SAME unit.
+      //
+      // Their bind POSITION is load-bearing. A bound parameter's index is the order it appears in the
+      // SQL TEXT, so they must sit in a clause that comes AFTER the report's own parameters — which
+      // is why the builder puts them in a second SELECT layer over the materialised report rows, not
+      // in the outer SELECT list. Written in the outer list they would take the low indices and shift
+      // every filter bind by three, and nothing would say so.
+      openings: { openR: ":openingRecievables", openP: ":openingPayables", openC: ":openingCash" },
+      cents: { recievable: "recievable", payable: "payable", cash: "cash" },
+      derived: {
+        recievable: { op: "+", terms: ["recievable", "openR"] },
+        payable:    { op: "+", terms: ["payable", "openP"] },
+        cash:       { op: "+", terms: ["cash", "openC"] },
       },
       // reports.js:458: the journal's `stock` column is structurally always zero (prelude.sql), so
-      // this total is a CONSTANT in the JS and stays one here.
-      consts: { stock: "'0.00'" },
+      // this total is a CONSTANT in the JS and stays one here. Zero PAISAS, not zero rupees: the
+      // builder divides by 100 on the way out.
+      consts: { stock: "0" },
     },
   },
   paymentsbycompany: {
@@ -259,15 +291,194 @@ const REPORTS = {
     cols: ["id", "date", "type", "invoice", "originalInvoice", "area", "section", "company",
       "party", "booker", "amount", "amountText", "paid", "description", "type_code"],
     totals: {
-      sums: {
-        invoiceTotal:     BYCOMPANY.invoiceTotal,
-        recievingReturns: BYCOMPANY.recievingReturns,
-        totalPaid:        BYCOMPANY.totalPaid,
-        total:            round2(`${round2(BYCOMPANY.invoiceTotal)} - ${round2(BYCOMPANY.totalPaid)} - ${round2(BYCOMPANY.recievingReturns)}`),
+      cents: { ...BYCOMPANY },
+      // `round2(invoiceTotal - totalPaid - recievingReturns)` (reports.js:188) over three ROUNDED
+      // sub-totals. Three paisa sums, subtracted.
+      derived: {
+        total: { op: "-", terms: ["invoiceTotal", "totalPaid", "recievingReturns"] },
       },
     },
   },
 };
+
+
+/* ----------------------------------------------------------------------- totals */
+
+/**
+ * The totals manifest, in the order `totalsSql` emits the columns.
+ *
+ * A `derived` key SHADOWS a `cents` key of the same name rather than adding to it — that is how the
+ * general ledger reports `recievable` as the opening plus the sum, not as two columns. The order is
+ * otherwise not cosmetic: a derived key reads the paisa sums its dependencies produced, so those
+ * must already be named.
+ */
+function totalsCols(spec) {
+  const t = spec.totals || {};
+  const derived = Object.keys(t.derived || {});
+  return [
+    "rowCount",
+    ...Object.keys(t.cents || {}).filter((k) => !derived.includes(k)),
+    ...derived,
+    ...Object.keys(t.consts || {}),
+    ...Object.keys(t.pick || {}),
+  ];
+}
+
+/** The one alias a paisa quantity gets inside the statement, e.g. `recieving` -> `recieving_c`. */
+const cent = (name) => `${name}_c`;
+
+/**
+ * The report's own statement, materialised ONCE as `totals_src`.
+ *
+ * The wrap is what makes a total trustworthy: it is computed over the very statement the page renders,
+ * so a total can never describe a different row set — the failure a copied-out second file invites,
+ * and one that is invisible in the row data.
+ *
+ * Cost, measured on this depot over all 14 reports: the aggregate pass is within noise of a bare
+ * `COUNT(*)` over the same statement (5,401 ms against 5,320 ms for the whole set), because it reads
+ * the same CTEs and never materialises a row. Two passes is not two times the cost.
+ *
+ * It is `SELECT * FROM ( … )`, NOT a bare nested `WITH … AS ( <report> )`. The report body carries the
+ * whole prelude, and SQLite re-evaluated that inner `WITH` per reference instead of materialising it:
+ * 8.5 s against 0.2 s, same answer.
+ */
+const source = (sql) => `WITH totals_src AS (SELECT * FROM ( ${sql.replace(/;\s*$/, "")} ) AS t)`;
+
+/** The `pick` shape: one row, chosen by `order`, with the count over the whole set. */
+function pickSql(t, sql) {
+  const values = Object.entries(t.pick)
+    .map(([key, col]) => {
+      // `COALESCE` covers a party whose window matched nothing, which is where the JS default "0.00"
+      // (reports.js:350) comes from.
+      const row = `(SELECT ${col} FROM totals_src ORDER BY ${t.order} LIMIT 1)`;
+      return `${money(`COALESCE(${row}, 0)`)} AS ${key}`;
+    });
+  return `${source(sql)}\nSELECT\n  COUNT(*) AS rowCount,\n  ${values.join(",\n  ")}\nFROM totals_src`;
+}
+
+/**
+ * The aggregate shape, in TWO layers.
+ *
+ *   WITH totals_src AS ( <the report statement> ),
+ *        tiers     AS (SELECT SUM(<paisas>) AS recieving_c, … , <openings> FROM totals_src)
+ *   SELECT COUNT(*) AS rowCount,
+ *          printf('%.2f', s.totalRecieving_c / 100.0) AS totalRecieving, …
+ *   FROM (SELECT recieving_c - recieved_c - recievingReturns_c AS totalRecieving_c, … FROM tiers) AS s
+ *
+ * `tiers` is where every amount becomes a paisa. `SUM(CAST(x * 100 ± 0.5 AS INTEGER))` accumulates
+ * **integers**, so a total is the exact sum of the rows behind it rather than a float sum of
+ * two-decimal values whose value depends on addition order.
+ *
+ * The second layer exists so a derived total reads its dependencies' paisa sums instead of restating
+ * them: `totalRecieving` is evaluated once, from `recieving_c - recieved_c - recievingReturns_c`, so
+ * each bucket is summed once and the arithmetic between them is integer. The float form needed
+ * `round2(round2(a) - round2(b))` here; paisas need one subtraction.
+ *
+ * Division by 100 happens once, on the way out, through `printf('%.2f', …)` — which also keeps the
+ * trailing zeroes a money field must have.
+ */
+function aggregateSql(t, sql, toPaisas = toCents) {
+  // The openings are bound, and they must be converted in the layer that comes AFTER the report's own
+  // parameters in the SQL TEXT — a bound parameter's index is its position in the text. See the note
+  // in the registry.
+  const openNames = Object.keys(t.openings || {});
+  const openCols = openNames.map((name) => `${toCents(`CAST(${t.openings[name]} AS REAL)`)} AS ${cent(name)}`);
+
+  const tiers = Object.entries(t.cents || {}).map(([key, expr]) => `SUM(${toPaisas(expr)}) AS ${cent(key)}`);
+  // The count lives in `tiers` too, and for the same reason: `tiers` is an AGGREGATE, so it produces
+  // one row, and `COUNT(*)` in the outer SELECT would therefore have counted the tiers row and
+  // answered 1 for every report. Carrying it out of the layer that actually saw the rows is the fix.
+  const tierCols = ["COUNT(*) AS rowCount", ...tiers, ...openCols];
+
+  // `refs` is what a `derived` key is built from: the paisa ALIAS in `tiers`, never the per-row
+  // expression. Handing it the raw expression instead produced a `derived` that re-evaluated the CASE
+  // per row in the second layer — the sum was then a float sum again, which is the thing paisas exist
+  // to avoid.
+  //
+  // The references are QUALIFIED with `tiers.`. Unqualified, the general ledger's
+  // `recievable_c + openR_c AS recievable_c` was self-referential: SQLite resolved `recievable_c` to
+  // the alias being defined, the value came back NULL, and every total on that report read 0.00.
+  //
+  // A `derived` value is DATA (`{ op, terms }`), not a function, so the parity gate can evaluate the
+  // same definition over the SQL's own paisa values and check it holds. A function returning SQL text
+  // could only be checked by asking SQLite whether it agrees with itself.
+  const refs = {};
+  for (const key of Object.keys(t.cents || {})) refs[key] = `tiers.${cent(key)}`;
+  for (const name of openNames) refs[name] = `tiers.${cent(name)}`;
+  for (const [key, def] of Object.entries(t.derived || {})) {
+    refs[key] = `(${def.terms.map((t) => refs[t]).join(` ${def.op} `)})`;
+  }
+
+  // The reported keys, in manifest order: the cents that are not shadowed, then derived, then consts.
+  const derivedKeys = Object.keys(t.derived || {});
+  const carried = Object.keys(t.cents || {}).filter((k) => !derivedKeys.includes(k));
+  const reported = [...carried, ...derivedKeys, ...Object.keys(t.consts || {})];
+
+  // The second layer is what the outer select reads, so it must NAME every reported key. A plain cents
+  // key is passed through under its own alias; a derived key is computed from the paisa sums; a const
+  // is a literal paisa amount. Naming only the derived keys left the plain ones as `no such column`
+  // on `s`, which is the whole reason this layer exists rather than selecting `tiers` directly.
+  const secondLayer = [
+    ...carried.map((key) => `tiers.${cent(key)} AS ${cent(key)}`),
+    ...derivedKeys.map((key) => `${refs[key]} AS ${cent(key)}`),
+    ...Object.entries(t.consts || {}).map(([key, paisas]) => `${paisas} AS ${cent(key)}`),
+  ];
+
+  // `rowCount` is an integer, so it is read straight through — `printf` is for money, and `tiers` is
+  // the layer that actually counted rows.
+  const values = ["s.rowCount AS rowCount",
+    ...reported.map((key) => `${money(`s.${cent(key)} / 100.0`)} AS ${key}`)];
+
+  const from = secondLayer.length
+    // `rowCount` is carried through the second layer, or the outer select's `s.rowCount` is a name the
+    // subquery never produced.
+    ? `FROM (SELECT\n    rowCount,\n    ${secondLayer.join(",\n    ")}\n  FROM tiers) AS s`
+    : "FROM tiers AS s";
+  // `source(sql)` is CALLED here. `${source}` would interpolate the function itself, and
+  // `String(fn)` is its source text — so the statement would have begun with `(sql) => \`WITH …` and
+  // every totals query would have failed to parse with `near "("`.
+  const withClause = `${source(sql)}${tierCols.length
+    ? `,\n  tiers AS (SELECT\n    ${tierCols.join(",\n    ")}\n  FROM totals_src)`
+    : ""}`;
+
+  return `${withClause}\nSELECT\n  ${values.join(",\n  ")}\n${from}`;
+}
+
+/**
+ * The totals statement: ONE row, in the same unit the report's money rule already guarantees.
+ *
+ * See [[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]] for why it wraps the
+ * report rather than restating it, and why the two shapes exist.
+ */
+async function totalsSql(name, alt) {
+  // The `alt` flag selects the gate-only alternate paisa conversion, so its two statements are
+  // cached apart.
+  const cacheKey = alt ? `${name}:alt` : name;
+  if (totalsCache.has(cacheKey)) return totalsCache.get(cacheKey);
+  const { sql, spec } = await sqlFor(name);
+  const t = spec.totals || {};
+  const out = t.order || t.pick ? pickSql(t, sql) : aggregateSql(t, sql, alt ? toCentsAlt : toCents);
+  totalsCache.set(cacheKey, out);
+  return out;
+}
+
+/**
+ * The totals statement's binds.
+ *
+ * The report's own binds come FIRST because the report statement is textually first (it is the
+ * materialised `totals_src`); the openings follow, in the order `totalsParams` was given them, which
+ * is the order `totalsSql` wrote them into the `tiers` layer.
+ */
+async function totalsParams(name, filters) {
+  const { spec } = await sqlFor(name);
+  const binds = await params(name, filters);
+  const openings = (spec.totals || {}).openings || {};
+  if (!Object.keys(openings).length) return binds;
+  const f = filters || {};
+  const text = (v) => (v === undefined || v === null ? "" : String(v));
+  return binds.concat(Object.values(openings).map((p) => text(f[p.replace(/^:/, "")])));
+}
+
 
 const sqlCache = new Map();
 const totalsCache = new Map();
@@ -410,95 +621,6 @@ async function unboundParams(name) {
   return [...new Set([...body.replace(/--[^\n]*/g, "").matchAll(/:([a-z_][a-z0-9_]*)/gi)].map((m) => m[1]))];
 }
 
-/* ----------------------------------------------------------------------- totals */
-
-/** The totals manifest, in the order `totalsSql` emits the columns. */
-function totalsCols(spec) {
-  const t = spec.totals || {};
-  return ["rowCount", ...Object.keys(t.sums || {}), ...Object.keys(t.pick || {}), ...Object.keys(t.consts || {})];
-}
-
-/**
- * The totals statement: ONE row of scalars, aggregating the report's OWN statement.
- *
- * It wraps the statement rather than restating it:
- *
- *     SELECT COUNT(*) AS rowCount, printf('%.2f', SUM(credit)) AS credit
- *     FROM ( <the report statement> ) AS t
- *
- * so a total can never be computed over a different row set from the one the report prints — which
- * is the failure a copied-out second file would invite, and it is invisible in the row data.
- *
- * Cost, measured on this depot over all 14 reports: the aggregate pass is within noise of a bare
- * `COUNT(*)` over the same statement (5,401 ms vs 5,320 ms for the whole set), because it reads the
- * same CTEs and never materialises a row. Two passes is not two times the cost.
- *
- * `pick` reports instead of aggregating — one row chosen by `order`. The count comes from
- * `COUNT(*) OVER ()`, which SQLite evaluates over the whole set BEFORE `ORDER BY`/`LIMIT`, so the
- * pick and the count come from one pass.
- */
-async function totalsSql(name) {
-  if (totalsCache.has(name)) return totalsCache.get(name);
-  const { sql, spec } = await sqlFor(name);
-  const t = spec.totals || {};
-
-  const cols = [];
-  cols.push("COUNT(*) AS rowCount");
-  for (const [key, expr] of Object.entries(t.sums || {})) cols.push(`${money(expr)} AS ${key}`);
-  for (const [key, col] of Object.entries(t.pick || {})) {
-    // With an `order`, the value is the picked ROW's column, read from the materialised CTE — and
-    // `COALESCE` covers a party whose window matched nothing, which is where the JS default "0.00"
-    // (reports.js:350) comes from.
-    const expr = t.order ? `(SELECT ${col} FROM totals_src ORDER BY ${t.order} LIMIT 1)` : `COALESCE(${col}, 0)`;
-    cols.push(`${money(`COALESCE(${expr}, 0)`)} AS ${key}`);
-  }
-  for (const [key, literal] of Object.entries(t.consts || {})) cols.push(`${literal} AS ${key}`);
-
-  const from = [`FROM ( ${sql.replace(/;\s*$/, "")} ) AS t`];
-  if (t.opening) {
-    // The openings are bound, and a bound parameter's INDEX is the order it appears in the SQL
-    // TEXT — which for a FROM-clause subquery is AFTER the report's own parameters. Putting them in
-    // a second FROM entry is therefore load-bearing: writing them in the SELECT list would give them
-    // the low indices and silently shift every filter bind by three.
-    from.push("CROSS JOIN (SELECT CAST(:openingRecievables AS REAL) AS r, CAST(:openingPayables AS REAL) AS p, CAST(:openingCash AS REAL) AS c) AS o");
-  }
-
-  let out;
-  if (t.order) {
-    // The report's statement is materialised ONCE into a CTE and then read twice — once to count, once
-    // to pick the row. Two references force materialisation, so this is still a single pass over the
-    // data even though the text appears once.
-    //
-    // It is `SELECT * FROM ( … )`, NOT a bare nested `WITH … AS ( <report> )`: the report body carries
-    // the whole prelude, and SQLite re-evaluated that inner WITH per reference instead of materialising
-    // it (8.5 s against 0.2 s for the `SELECT *` form, same result).
-    //
-    // And it is a CTE, not `COUNT(*) OVER ()`: the guest's SQLite rejects the window function outright —
-    // the statement fails to PREPARE, which is why the page died in 8 ms rather than after a query.
-    out = `WITH totals_src AS (SELECT * FROM ( ${sql.replace(/;\s*$/, "")} ) AS t)\n`
-      + `SELECT\n  COUNT(*) AS rowCount,\n  ${cols.slice(1).join(",\n  ")}\nFROM totals_src`;
-  } else {
-    out = `SELECT\n  ${cols.join(",\n  ")}\n${from.join("\n")}`;
-  }
-  totalsCache.set(name, out);
-  return out;
-}
-
-/**
- * The totals statement's binds.
- *
- * The report's own binds come FIRST because the report statement is textually first (it is the
- * wrapped subquery); the openings follow, matching the CROSS JOIN's position.
- */
-async function totalsParams(name, filters) {
-  const { spec } = await sqlFor(name);
-  const binds = await params(name, filters);
-  if (!spec.totals || !spec.totals.opening) return binds;
-  const f = filters || {};
-  const text = (v) => (v === undefined || v === null ? "" : String(v));
-  return binds.concat([text(f.openingRecievables), text(f.openingPayables), text(f.openingCash)]);
-}
-
 /**
  * Run the totals statement and return its single row.
  *
@@ -589,10 +711,10 @@ export async function parts(name, filters) {
   return { file: spec.sql, sql, cols: spec.cols, binds: await params(name, filters) };
 }
 
-/** The totals statement and manifest, for the parity gate. */
-export async function totalsParts(name, filters) {
+/** The totals statement and manifest, for the parity gate. `alt` picks the alternate conversion. */
+export async function totalsParts(name, filters, alt) {
   const { spec } = await sqlFor(name);
-  return { sql: await totalsSql(name), cols: totalsCols(spec), binds: await totalsParams(name, filters) };
+  return { sql: await totalsSql(name, alt), cols: totalsCols(spec), binds: await totalsParams(name, filters) };
 }
 
 /**
@@ -608,6 +730,19 @@ export function parameters(name) {
 /** The same, for the totals statement — the report's parameters plus any openings. */
 export async function totalsParameters(name) {
   const { spec } = await sqlFor(name);
-  if (!spec.totals || !spec.totals.opening) return unboundParams(name);
-  return [...await unboundParams(name), "openingRecievables", "openingPayables", "openingCash"];
+  if (!Object.keys((spec.totals || {}).openings || {}).length) return unboundParams(name);
+  return [...await unboundParams(name), ...Object.values(spec.totals.openings).map((p) => p.replace(/^:/, ""))];
+}
+
+/**
+ * The report's totals spec, for the parity gate to check the paisa arithmetic INDEPENDENTLY.
+ *
+ * For a bucket that is a bare column, the exact total is computable in the gate from the rows it
+ * already has — `sum(Math.round(x * 100)) / 100` in integer JS arithmetic. That makes the gate able to
+ * say which side of a difference is right, instead of only that they differ.
+ */
+export function totalsSpec(name) {
+  const spec = REPORTS[name];
+  if (!spec) throw new Error(`No spooled report: ${name}`);
+  return spec.totals || {};
 }

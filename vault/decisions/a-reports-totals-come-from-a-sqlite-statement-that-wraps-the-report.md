@@ -19,15 +19,47 @@ A report runs **two** statements against SQLite:
 2. a **totals statement** that wraps the report statement and reduces it to one row of scalars.
 
 ```sql
-SELECT COUNT(*) AS rowCount,
-       printf('%.2f', SUM(credit)) AS credit,
-       printf('%.2f', SUM(debit))  AS debit
-FROM ( <the report statement> ) AS t
+WITH totals_src AS (SELECT * FROM ( <the report statement> ) AS t),
+     tiers     AS (SELECT COUNT(*) AS rowCount,
+                         SUM(CAST(x * 100 + 0.5 AS INTEGER)) AS recieving_c,
+                         …                                      FROM totals_src)
+SELECT COUNT(*) AS rowCount, printf('%.2f', s.recieving_c / 100.0) AS recieving, …
+FROM (SELECT recieving_c - recieved_c - recievingReturns_c AS totalRecieving_c, … FROM tiers) AS s
 ```
 
 The totals are **values**, not addresses: one row of formatted strings, and QuickJS holds a dozen of
 them. That is not "results in JS" — it is a scalar aggregate, and it is what the totals strip and the
 page payload need.
+
+## The arithmetic is integer paisas, and that is the accuracy standard
+
+Every amount becomes a whole number of **paisas** inside the `tiers` layer, the sums are integer
+sums, and the division by 100 happens once on the way out. A total is therefore *the exact sum of the
+rows behind it*, and its value does not depend on the order SQLite happened to add in.
+
+The alternative — a float `SUM` of two-decimal amounts — is not a rounding preference, it is a
+correctness bug with a small magnitude: representation error accumulates, and where the true total
+lands near a half-paisa the answer flips. On this depot exactly one party in 872 has a group sum on
+such a boundary, and the float form put the area-ledger credit total a paisa away from the true
+figure. Reproducible, and for no reason a bookkeeper could name
+([[report-parity-flakes-on-float-arithmetic]]).
+
+**The standard for a total is therefore absolute, not "matches the old JS".** `compute/reports.js`
+accumulates floats in row order and rounds once at the end, so it is an *approximation* of the same
+quantity; reproducing its drift would be agreement with an approximation, not accuracy. Nine totals
+differ from it by a paisa and the SQL is right in every case. The gate therefore proves the SQL is
+exact rather than proving it agrees:
+
+- **exact** — the total equals the integer paisa sum of its rows, reduced independently;
+- **sound** — a derived total satisfies its `{op, terms}` definition over the SQL's own other totals;
+- **corroborated** — a second, independently written paisa construction produces the same integers,
+  which is what covers a `CASE` bucket that cannot be reduced from rows in JS.
+
+Ties are broken **half up**, the accounting convention, and are chosen on merit. On the values the
+money rule already guarantees — the 2 dp projections — a tie cannot occur at all, so the rule only
+decides genuinely sub-paisa input. The general ledger is the one report where it matters, because its
+account columns are raw (1 dp, e.g. `2422.5`) rather than rounded, and it is worth exactly one paisa
+there.
 
 ## Why the totals statement WRAPS the report rather than restating it
 
@@ -35,12 +67,14 @@ Because a total computed over a *different* row set from the one the report prin
 that looks right. The wrap makes that impossible: the aggregate reads the very statement the page
 renders, so the two cannot drift.
 
-The per-report knowledge is a small declarative spec in the registry — which aggregate expression
-produces which key — not a second `.sql` file. A file would be a place for the filters to be typed
-twice and diverge.
+The per-report knowledge is a small declarative spec in the registry — a `cents` map of per-row
+expressions, a `derived` map of `{op, terms}` over the paisa sums, and a `consts` map. It is data
+rather than functions precisely so the gate can evaluate the same definitions independently. A second
+`.sql` file would be a place for the filters to be typed twice and diverge.
 
-The alternative was copying the report's projection into a totals file. Rejected: the `outstanding`
-and `stockreport` projections are long, and the money rule would then exist in two files per report.
+`derived` being data also collapsed the float form's `round2(round2(a) - round2(b))` into a single
+subtraction of integers: the nesting existed only to correct a float sum, and there is no float sum
+left to correct.
 
 ## The row cap is a `LIMIT`, not a slice
 
@@ -70,10 +104,10 @@ a proxy for a full row scan, and measuring it as one would have been the wrong c
 
 ## Two shapes
 
-- **aggregate** (13 reports) — `SUM`/`COUNT` over the wrapped statement. Always returns one row;
-  `SUM` over an empty set is NULL and `printf('%.2f', NULL)` is `0.00`, which is the JS default.
+- **aggregate** (13 reports) — the `tiers`/`s` form above. Always returns one row; `SUM` over an empty
+  set is NULL and `printf('%.2f', NULL)` is `0.00`, which is the JS default.
 - **pick** (`ledgers/party`, one report) — the total is the **last row's** balance, so the value is
-  read from a materialised CTE by a scalar subquery. No window functions: **the guest's SQLite rejects
+  read from the materialised CTE by a scalar subquery. No window functions: **the guest's SQLite rejects
   `COUNT(*) OVER ()` at prepare time**, which surfaced as a page dying in 8 ms with no cause. And the
   CTE body is `SELECT * FROM ( … )`, not a bare nested `WITH … AS ( <report> )`, because SQLite
   re-evaluated the inner `WITH` per reference instead of materialising it — 8.5 s against 0.2 s.
@@ -81,6 +115,9 @@ a proxy for a full row scan, and measuring it as one would have been the wrong c
 ## The fallback
 
 `useJs: true` on a report page definition, or `compute.useJs: true` on a declarative page, re-enables
-`compute/reports.js` for that page alone. It is normalised to a strict boolean by
-`lib/pages.js` and read through `reportPages.useJsFor()`, so a stray non-empty value cannot switch a
-money report's execution path. It is an escape hatch, not a second implementation to maintain.
+`compute/reports.js` for that page alone. It is normalised to a strict boolean by `lib/pages.js` and
+read through `reportPages.useJsFor()`, so a stray non-empty value cannot switch a money report's
+execution path. It is an escape hatch, not a second implementation to maintain.
+
+Its totals can differ from the spooled ones by a paisa, for the reason above. That is expected of a
+fallback that is being retired, not a defect in either.
