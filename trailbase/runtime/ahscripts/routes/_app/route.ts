@@ -1917,7 +1917,14 @@ function filtersFor(def: any, query: Record<string, any>): Record<string, any> {
     const value = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
     filters[field.name] = field.type === "check" ? (value === "on" ? "on" : "") : value || field.value;
   }
-  if (filters.type !== undefined && filters.type !== "") filters.type = Number(filters.type);
+  // The value stays a STRING. It used to be coerced to a Number here, and that silently broke the
+  // Payment Type select: the template marks an option selected with
+  // `filters[field.name] == o.value`, and `o.value` is a string, so `Number(2) == "2"` is false in
+  // minijinja and no option came back selected — an applied filter that looked unapplied.
+  //
+  // Nothing downstream needs the number. The statement casts it itself
+  // (`AND (:type = '' OR pv.type = CAST(:type AS INTEGER))`), and the totals spec reads the same
+  // string. Coercing here bought nothing and cost the UI its feedback.
   return filters;
 }
 

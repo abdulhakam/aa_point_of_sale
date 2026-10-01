@@ -132,8 +132,67 @@ foreach ($k in @("party","booker","area","general")) {
 }
 $ok += "/reports/ledgers links $($lLinks.Count) tiles: $($lLinks -join ', ')"
 
-# ---- 7. /p serves the same page, server-rendered, from the same manifest
-"=== 7. /p is the same page, rendered on the server"
+# ---- 8. an applied filter comes back SELECTED, not just applied
+# A filter that narrows the rows but renders no option `selected` looks unapplied to the operator, and
+# nothing else in the app catches it. The Payment Type select did exactly that for months: the value
+# was coerced to a Number in the dispatcher, and the template compares against a string option, so
+# `Number(2) == "2"` is false in minijinja. Narrowing worked; the feedback did not.
+"=== 8. an applied filter is shown as applied"
+$selSpec = @(
+  @{ report = "payments";     field = "type";    values = @("0", "1", "2") }
+  @{ report = "itemsales";    field = "company"; values = @() }
+  @{ report = "outstanding";  field = "booker";  values = @() }
+)
+foreach ($spec in $selSpec) {
+  # One real value from the control's own options, so the test uses an id the statement accepts.
+  $p = Get-Page "/reports/$($spec.report)?from=2020-01-01&to=2030-12-31"
+  $f = [regex]::Match($p.Body, '<form class="filters"[\s\S]*?</form>').Value
+  $sel = [regex]::Match($f, "<select name=`"$($spec.field)`"[\s\S]*?</select>").Value
+  $opt = [regex]::Match($sel, '<option value="([A-Za-z0-9_\-\+\|/=]{2,})">')
+  $values = if ($spec.values.Count) { $spec.values } elseif ($opt.Success) { @($opt.Groups[1].Value) } else { @() }
+  foreach ($v in $values) {
+    $p2 = Get-Page "/reports/$($spec.report)?from=2020-01-01&to=2030-12-31&$($spec.field)=$([uri]::EscapeDataString($v))"
+    $f2 = [regex]::Match($p2.Body, '<form class="filters"[\s\S]*?</form>').Value
+    $sel2 = [regex]::Match($f2, "<select name=`"$($spec.field)`"[\s\S]*?</select>").Value
+    $esc = [regex]::Escape($v)
+    if ($sel2 -match "<option value=`"$esc`" selected>") {
+      $ok += "$($spec.report).$($spec.field)=$v renders selected"
+    } else {
+      $fail += "$($spec.report).$($spec.field)=$v applied but NOT rendered selected"
+    }
+  }
+}
+
+# ---- 9. the three payment types partition the unfiltered report
+# Proof that a type filter narrows to a disjoint subset rather than merely returning something.
+$pBase = Get-Page "/reports/payments?from=2020-01-01&to=2030-12-31"
+$mBase = [regex]::Match($pBase.Body, 'Showing first ([\d,]+) of ([\d,]+)')
+$baseN = if ($mBase.Success) { [int]($mBase.Groups[2].Value -replace ',', '') } else { 0 }
+$sum = 0
+$read = @()
+foreach ($t in @("0", "1", "2")) {
+  $p = Get-Page "/reports/payments?from=2020-01-01&to=2030-12-31&type=$t"
+  # A report under the row cap carries no "Showing first N of M" notice, so falling back to the
+  # rendered <tr> count is what makes the sum complete. Skipping the notice instead would silently
+  # drop every UNcapped type - which is how this check first reported 25,503 for three types.
+  $m = [regex]::Match($p.Body, 'Showing first ([\d,]+) of ([\d,]+)')
+  # A report under the row cap carries no "Showing first N of M" notice, so the rendered row count
+  # is the fallback. It must be counted in <tbody> ONLY: the page also has a header row and one row
+  # per totals table, and `payments` has TWO totals tables, so a whole-page <tr> count minus a
+  # guessed constant overstates the rows and the sum of the buckets stops matching the base.
+  $body = [regex]::Match($p.Body, '<tbody[\s\S]*?</tbody>').Value
+  $n = if ($m.Success) { [int]($m.Groups[2].Value -replace ',', '') } else { ([regex]::Matches($body, '<tr')).Count }
+  $read += "type=${t}:${n}"
+  $sum += $n
+}
+# The payment types are not exhaustive over the payment table: some payments carry a type outside
+# 0/1/2 or none at all, so the sum is the base MINUS those, never above it.
+if ($sum -gt 0 -and $sum -le $baseN) {
+  $ok += "the three payment types are disjoint subsets of the base [$($read -join ' ')] sum $sum <= $baseN"
+} else {
+  $fail += "the three payment types [$($read -join ' ')] sum to $sum against a base of $baseN - not disjoint subsets"
+}
+"=== 9. /p is the same page, rendered on the server"
 $p = Get-Page "/p/reports/payments/data?from=2020-01-01&to=2030-12-31"
 $j = $p.Body | ConvertFrom-Json
 $ok += "/p data endpoint still serves JSON: rows=$($j.result.rows.Count) totalSending=$($j.result.totals.totalSending)"

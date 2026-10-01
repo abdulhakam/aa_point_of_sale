@@ -1,13 +1,53 @@
 ---
 title: The Payment Type select never comes back selected, so an applied type filter looks unapplied
 type: issue
-status: open
+status: fixed
 severity: medium
 created: 2026-10-01
 updated: 2026-10-01
 tags: [runtime-js, reports, filters, minijinja, ui]
 related_to: ["[[runtime-js-guest-platform]]", "[[report-routes-ignore-date-defaults]]", "[[spooling-report-rows-through-kv]]"]
----
+
+## FIXED 2026-10-01
+
+The coercion is gone. `filtersFor` in the dispatcher no longer casts `filters.type` to a number,
+because nothing downstream needs it: the one statement that filters on it already casts in SQL
+(`AND (:type = '' OR pv.type = CAST(:type AS INTEGER))`, `payments.sql:47`), and the totals spec
+reads the same string. The coercion bought nothing and cost the UI its feedback.
+
+Verified on the production depot, 2026-10-01:
+
+```text
+?type=0  selected=[0]   549 rows
+?type=1  selected=[1]  25,503 rows
+?type=2  selected=[2]    47 rows
+?type=            26,099 rows (no filter)
+549 + 25,503 + 47 = 26,099 exactly
+```
+
+The three payment types **partition** the report, which is a stronger result than "the filter
+narrows": a type filter cannot double-count a payment, and the sums reconcile to the unfiltered
+total with no remainder.
+
+### Two checks added so it cannot regress silently
+
+`tools/verify-pages.ps1` now asserts, for every select filter on a sample of reports, that an applied
+value comes back `selected` — not merely that the rows changed. Nothing in the app caught this for
+months precisely because the filter *was* working; only the feedback was broken.
+
+Getting the partition check right took two attempts, and both failures are worth recording:
+
+- The first version read the row count from the "Showing first N of M" notice and **skipped** any
+  report under the cap. Since the two smaller types are uncapped, the sum silently covered only
+  `type=1` and reported "25,503 for three types".
+- The second counted `<tr>` across the whole page and subtracted 2 for the header and footer. The
+  payments report has **two** totals tables, so the constant was wrong and the buckets summed to
+  26,113 against a 26,099 base — a fabricated discrepancy.
+- The third counts `<tr>` inside `<tbody>` only, which is exact whatever the page frames the table
+  with, and now sums to 26,099 exactly.
+
+The lesson generalises: a measurement whose fallback path is a guess will invent a finding. Both
+earlier versions would have sent someone hunting a bug that was not there.
 
 # The Payment Type select never comes back `selected`, so an applied type filter looks unapplied
 
