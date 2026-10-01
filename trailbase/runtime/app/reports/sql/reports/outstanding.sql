@@ -58,10 +58,22 @@ party_grouped AS (
   WHERE party IS NOT NULL AND (type = 1 OR type = 2)
   GROUP BY party
 ),
--- views.js:464 keeps the booker of the LAST payment that has one, in `payments_view` order
--- (id DESC), so it is the MIN id among those.
+-- views.js:464 — `if (p.booker) e.booker = p.booker`, accumulated over paymentsView (id DESC). The value
+-- that survives is the one on the FIRST payment in that order that HAS one, which is the booker of the
+-- SMALLEST id among those.
+--
+-- `MIN(id)` is load-bearing, not decoration. SQLite's documented rule is that in an aggregate query
+-- containing min() or max(), every BARE column takes its value from the row that produced the extreme
+-- — so `SELECT party, booker, MIN(id) … GROUP BY party` carries the booker of the min-id row, in one
+-- pass. Two things this replaces:
+--   - `MIN(id) AS booker` alone, which returned that PAYMENT's id instead of its booker, so the
+--     `booker` filter compared a booker id against payment ids and matched nothing;
+--   - a correlated `WHERE pbp.id = (SELECT MIN(id) …)` subquery, which is correct but re-runs the whole
+--     payments chain once per row: 20 s on this depot, where the GROUP BY form is milliseconds.
+--
+-- The bare column must therefore stay unaliased and unaggregated. Do not "tidy" it.
 party_booker AS (
-  SELECT party, MIN(id) AS booker
+  SELECT party, booker, MIN(id) AS min_id
   FROM payments_view
   WHERE party IS NOT NULL AND booker IS NOT NULL AND (type = 1 OR type = 2)
   GROUP BY party

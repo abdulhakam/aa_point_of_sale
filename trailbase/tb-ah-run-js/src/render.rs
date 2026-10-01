@@ -221,17 +221,70 @@ impl Renderer {
     }
 }
 
-/// A spool key spliced into the render context under `field`.
+/// A spool key spliced into the context under `field`.
 ///
 /// This is the whole handoff: JS holds a string key, and the rows are read back out of the KV store
-/// and turned into minijinja values **here in Rust**. Nothing about a 60k-row result is ever
+/// and turned into serde values **here in Rust**. Nothing about a 60k-row result is ever
 /// materialised in QuickJS, and no JSON string is built for it.
 #[derive(serde::Deserialize)]
 pub struct SpoolRef {
-  /// The context field the rows land on, e.g. `rows` -> `{{ rows }}` in the template.
+  /// Where the rows land. Dotted paths create the objects along the way, so `"result.rows"`
+  /// becomes `ctx.result.rows` — which is what the page-data payload needs.
   pub field: String,
   /// The KV key returned by `spool.run`.
   pub key: String,
+}
+
+/// Put `value` at a dotted path, creating the intermediate objects.
+///
+/// A path segment that already exists as a NON-object is replaced, because there is nowhere to
+/// descend and a silent no-op would drop the rows while the call reports success.
+fn splice(ctx: &mut serde_json::Map<String, serde_json::Value>, path: &str, value: serde_json::Value) {
+  let mut cursor = ctx;
+  let parts: Vec<&str> = path.split('.').filter(|p| !p.is_empty()).collect();
+  let Some((last, parents)) = parts.split_last() else {
+    return;
+  };
+  for part in parents {
+    let entry = cursor
+      .entry((*part).to_string())
+      .or_insert_with(|| serde_json::Value::Object(serde_json::Map::new()));
+    if !entry.is_object() {
+      *entry = serde_json::Value::Object(serde_json::Map::new());
+    }
+    cursor = entry.as_object_mut().expect("just replaced with an object");
+  }
+  cursor.insert((*last).to_string(), value);
+}
+
+/// Load every spool and splice it into `ctx`.
+///
+/// Every spool is loaded BEFORE any is spliced, so one unreadable key fails the whole call instead
+/// of leaving a context that is half spooled and half not.
+fn splice_all(mut ctx: serde_json::Map<String, serde_json::Value>, spools: &[SpoolRef]) -> Result<serde_json::Map<String, serde_json::Value>, String> {
+  let mut rows_for = Vec::with_capacity(spools.len());
+  for spool in spools {
+    rows_for.push(crate::spool::load(&spool.key)?);
+  }
+  for (spool, rows) in spools.iter().zip(rows_for) {
+    splice(&mut ctx, &spool.field, rows);
+  }
+  return Ok(ctx);
+}
+
+fn release_all(keys: &[String]) {
+  for key in keys {
+    crate::spool::release(key);
+  }
+}
+
+fn context_map(ctx: serde_json::Value) -> serde_json::Map<String, serde_json::Value> {
+  match ctx {
+    serde_json::Value::Object(map) => map,
+    // A non-object context (null, a bare array) has nowhere to put `field`, so treat it as empty
+    // rather than silently rendering a template that sees `undefined` for every row.
+    _ => serde_json::Map::new(),
+  }
 }
 
 /// Render with `ctx` plus any number of spooled row sets, then release the spools.
@@ -239,29 +292,31 @@ pub struct SpoolRef {
 /// `release` runs even when rendering fails, so an error page cannot leak 60k rows into the KV
 /// store. The rows live only for the duration of one render.
 pub fn render_spooled(name: &str, ctx: serde_json::Value, spools: Vec<SpoolRef>) -> Result<String, String> {
-  let mut ctx = match ctx {
-    serde_json::Value::Object(map) => map,
-    // A non-object context (null, a bare array) has nowhere to put `field`, so treat it as empty
-    // rather than silently rendering a template that sees `undefined` for every row.
-    _ => serde_json::Map::new(),
-  };
+  let keys: Vec<String> = spools.iter().map(|s| s.key.clone()).collect();
 
-  let mut loaded = Vec::with_capacity(spools.len());
-  for spool in &spools {
-    // Load before any mutation, so a bad key fails the whole call instead of leaving the context
-    // half-populated with rows from an earlier key.
-    let rows = crate::spool::load(&spool.key)?;
-    ctx.insert(spool.field.clone(), rows);
-    loaded.push(spool.key.clone());
-  }
+  let result = splice_all(context_map(ctx), &spools).and_then(|map| {
+    with(|r| r.render_value(name, serde_json::Value::Object(map)))
+  });
 
-  let result = with(|r| r.render_value(name, serde_json::Value::Object(ctx)));
-
-  for key in &loaded {
-    crate::spool::release(key);
-  }
+  release_all(&keys);
 
   return result.map_err(|e| format!("{e}"));
+}
+
+/// The same handoff, serialised as JSON instead of HTML.
+///
+/// The declarative pages (`/p/<slug>/data`) answer with a JSON body whose `result.rows` is the
+/// report. QuickJS cannot build that body without the rows in it, so the rows are spliced here and
+/// the WHOLE payload is serialised in Rust — JS hands over a small envelope and a key.
+pub fn json_spooled(ctx: serde_json::Value, spools: Vec<SpoolRef>) -> Result<String, String> {
+  let keys: Vec<String> = spools.iter().map(|s| s.key.clone()).collect();
+
+  let result = splice_all(context_map(ctx), &spools)
+    .and_then(|map| serde_json::to_string(&serde_json::Value::Object(map)).map_err(|e| e.to_string()));
+
+  release_all(&keys);
+
+  return result;
 }
 
 /// Process-wide renderer. Views live at `/app/views`, page templates at `/app/pages`,

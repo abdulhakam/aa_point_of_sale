@@ -8,7 +8,24 @@
 import { renderTemplate } from "./render-client.js";
 
 export async function page(req, shell, name, data) {
-  const ctx = {
+  return render.html(name, JSON.stringify(shellContext(shell, data)));
+}
+
+/**
+ * The same page, with row sets spliced in by the host instead of sitting in `data`.
+ *
+ * A report page's rows are 60k objects; putting them in `data` means building that object in
+ * QuickJS, which is the cost the spool exists to remove. So `data` carries the shell, the filters
+ * and the totals, and `spools` is a list of `{field, key}` the host splices into the same context
+ * just before it renders.
+ */
+export async function pageSpooled(req, shell, name, data, spools) {
+  return render.spooled(name, JSON.stringify(shellContext(shell, data)), spools || []);
+}
+
+/** Everything the shell contributes to a page context, plus the caller's own data. */
+function shellContext(shell, data) {
+  return {
     appName: shell.appName,
     // Printed reports carry the legacy business header (PrintHead parity).
     businessName: shell.businessName ?? shell.appName,
@@ -25,11 +42,6 @@ export async function page(req, shell, name, data) {
     paper: shell.paper ?? "",
     ...(data || {}),
   };
-  // NOTE: a direct JS→serde bridge exists (`render.html(name, ctx)` with an object is accepted and
-  // converted without a JSON string), but it measured no better and worse for large contexts than
-  // QuickJS `JSON.stringify` + Rust parse, so the proven string path is kept
-  // ([[direct-js-serde-bridge-no-win]]). Pass the object to use the direct path.
-  return render.html(name, JSON.stringify(ctx));
 }
 
 export function qs(value) {

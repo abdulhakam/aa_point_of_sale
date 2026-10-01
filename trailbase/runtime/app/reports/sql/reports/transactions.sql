@@ -58,7 +58,10 @@
     AND (:section = '' OR tr.section = :section)
     AND (:item = '' OR tr.item = :item)
     AND (:company = '' OR tr.company = :company)
-    AND (:invoice = '' OR tr.invoice = :invoice OR CAST(tr.invoiceNo AS TEXT) = :invoice)
+    -- `invoice` matches the id OR the human number (reports.js:211). TWO binds, and a CAST on the
+    -- number: see the note in lib/spoolreports.js — one bind cannot be both a BLOB and a number, and
+    -- `CAST(invoiceNo AS TEXT)` yields "3840.0" where the JS renders "3840".
+    AND (:invoiceId = '' OR tr.invoice = :invoiceId OR CAST(tr.invoiceNo AS REAL) = CAST(:invoiceNo AS REAL))
 ),
 tx_projected AS (
   -- txRow (reports.js:214-244). `INVOICE_TYPE_LABEL[type]` is a CASE; `qtyText` is the

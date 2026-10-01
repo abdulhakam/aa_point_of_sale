@@ -127,7 +127,10 @@ WHERE
   AND (:area = '' OR pb.area = :area)
   AND (:section = '' OR pb.section = :section)
   AND (:booker = '' OR pb.booker = :booker)
-  AND (:invoice = '' OR pb.invoice = :invoice OR CAST(pb.invoiceNo AS TEXT) = :invoice)
+  -- `invoice` matches the id OR the human number (reports.js:167). TWO binds, and a CAST on the
+  -- number: see the note in lib/spoolreports.js — one bind cannot be both a BLOB and a number, and
+  -- `CAST(invoiceNo AS TEXT)` yields "3840.0" where the JS renders "3840".
+  AND (:invoiceId = '' OR pb.invoice = :invoiceId OR CAST(pb.invoiceNo AS REAL) = CAST(:invoiceNo AS REAL))
 -- reports.js:183 sorts by compareText(date), and the totals sum the rows in that order
 -- (reports.js:185-188), so the order is part of the money.
 ORDER BY lower(substr(created, 1, 10)), substr(created, 1, 10), id;

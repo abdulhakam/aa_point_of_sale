@@ -3,12 +3,11 @@ title: Spooling report rows through KV (the spool path)
 type: system
 status: active
 created: 2026-09-30
-updated: 2026-09-30
+updated: 2026-10-01
 tags: [reports, sql, wasm, quickjs, spool, kv, performance]
 locator: trailbase/tb-ah-run-js/src/spool.rs
 belongs_to: "[[runtime-js-guest-platform]]"
-related_to: ["[[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]]", "[[report-rows-are-spooled-not-parsed]]", "[[runtime-js-single-host]]", "[[guest-app-host-port]]", "[[tb-0022-move-reports-to-sql]]", "[[deterministic-sort-and-sql-reads-in-guest]]", "[[money-is-2dp-everywhere]]", "[[legacy-sql-views-differ-from-js-views]]",
-  "[[guest-smoke-report-total-checks-fail-on-pristine-checkout]]"]
+related_to: ["[[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]]", "[[report-rows-are-spooled-not-parsed]]", "[[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]]", "[[runtime-js-single-host]]", "[[guest-app-host-port]]", "[[tb-0022-move-reports-to-sql]]", "[[deterministic-sort-and-sql-reads-in-guest]]", "[[money-is-2dp-everywhere]]", "[[legacy-sql-views-differ-from-js-views]]", "[[guest-smoke-report-total-checks-fail-on-pristine-checkout]]", "[[spool-blob-bind-decoder-rejected-unpadded-base64]]", "[[six-report-defects-the-empty-filter-parity-gate-could-not-see]]", "[[trailbase-guest-error-string-opaque]]"]
 ---
 
 # Spooling report rows through KV (the spool path)
@@ -29,20 +28,54 @@ not one JSON array**, so a large result never needs a second full-size buffer. S
 `render.spooled` after the render, error or not.
 
 **`render.spooled(name, ctx, [{field, key}])`** → HTML (`render.rs`). Reads each key back, splices the
-rows into the minijinja context **in Rust**, renders, and releases every spool it loaded.
+rows into the minijinja context **in Rust**, renders, and releases every spool it loaded. `field` takes
+a **dotted path** (`result.rows`), creating the objects along the way.
+
+**`render.json(ctx, [{field, key}])`** → a JSON string (`render.rs`). The same handoff, serialised. The
+declarative pages answer with a JSON body whose `result.rows` is the whole report, so the envelope and
+the key go to Rust and the finished JSON comes back as one string.
+
+**`render.spooled` errors now THROW the message** (`api/sqlite.rs`) rather than collapsing into
+`rquickjs::Error::Unknown`. `Unknown` reaches a route as `QuickJS library created a unknown error`,
+which names neither the statement nor the reason, and a guest `eprintln!` goes nowhere —
+request-handler logs are thread-local and only drained for init scripts. See
+[[trailbase-guest-error-string-opaque]].
 
 ## Layout
 
 | path | what |
 |---|---|
 | `app/reports/sql/prelude.sql` | the shared view chain, verified against `compute/views.js` |
-| `app/reports/sql/reports/*.sql` | one finished display projection per report |
+| `app/reports/sql/reports/*.sql` | one finished display projection per report (11 files, 14 reports) |
 | `app/reports/sql/views/*.sql` | **preserved legacy, NOT on this path** |
-| `app/lib/spoolreports.js` | the registry: report → `.sql` + column manifest |
+| `app/lib/spoolreports.js` | the registry: report → `.sql` + column manifest + totals spec |
+| `app/lib/http.js` | `pageSpooled(req, shell, name, data, spools)` — the page shell, with rows spliced by the host |
+| `app/lib/report-pages.js` | `useJsFor(pageDef)`, `openingRow(filters)` — the only two things a spooled report page still needs from JS |
 
 `lib/spoolreports.js` composes `prelude + report` and the report file opens with `, name AS (` when it
 adds CTEs, or is a bare `SELECT` when it does not. A file contributing only a `SELECT` must **not** be
 given the comma, and vice versa — both wrong shapes fail with the same `near "SELECT"`.
+
+## It is the LIVE path
+
+Both report surfaces run the spool by default:
+
+| surface | route | what the host does |
+|---|---|---|
+| report page | `GET /reports/<slug>` | `sqlite.spool` the rows (with `LIMIT`), `render.spooled` the page |
+| page payload | `GET /p/<slug>/data` | `sqlite.spool` the rows, `render.json` the whole payload |
+
+Each also runs one **totals statement** — see
+[[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]] — which returns a single row of
+formatted strings.
+
+`useJs: true` on a report page definition, or `compute.useJs: true` on a declarative page, re-enables
+`compute/reports.js` for that page alone. `lib/pages.js` normalises it to a strict boolean so a stray
+non-empty value cannot switch a money report's execution path.
+
+The page cache key is unchanged, and `/reports/refresh?full=1` now also drops the **composed-SQL cache**
+(`spoolreports.invalidate()`), or an edited `.sql` file would keep serving the text composed when the
+process first read it.
 
 ## Rules that came out of the port
 
@@ -60,10 +93,34 @@ given the comma, and vice versa — both wrong shapes fail with the same `near "
 - **Ids are BLOBs; bind them as BLOBs.** JS only ever holds an id as base64url, and the guest's
   `blob:` prefix decodes it back. Never `unhex(hex('..'))` for a BLOB READ — `hex()` on a hex string
   returns the hex of its ASCII bytes, so it rebuilds the bytes of the text and matches nothing.
+  **Both base64 spellings must be accepted**: an id LEAVING the host is padded (`value_to_json` emits
+  `==`), an id ARRIVING from a query string is not, and the padded engine alone rejects the second
+  with `Invalid padding` — which killed every id filter, invisibly. See
+  [[spool-blob-bind-decoder-rejected-unpadded-base64]].
+- **Never hand-type an id into a check.** 16 bytes of BLOB as base64url; a typo filters on a party
+  that does not exist and reports "zero rows" as though the report were broken. Use
+  `tools/sample-filter-ids.mjs`.
+- **A `WHERE` cannot use a `SELECT` alias when the base table has a column of that name.** SQLite
+  resolves the bare name to the COLUMN, so `dailysale`'s `dated` filter read `invoice_view.dated`
+  instead of the `COALESCE(dated, created)` alias beside it. Spell the expression out.
+- **One bind cannot serve two types.** `invoice` matches a BLOB id *or* a human number, so it needs
+  `:invoiceId` and `:invoiceNo`. And the number half needs `CAST(... AS REAL) = CAST(... AS REAL)`:
+  `CAST(invoiceNo AS TEXT)` is `"3840.0"` where the JS renders `"3840"`.
+- **Alias to the JS field names, not to your own column names.** `partials/table.html` reads
+  `row[column.key]`; projecting `transaction_type` where the page asks for `transactionType` renders a
+  blank column with correct row count and correct money.
 - **A CTE must not share a name with one of its own output columns**, or it shadows the column inside
   its own `WHERE` and every filter matches every row.
 - **Compute a correlated value ONCE per row, in a CTE.** See the `ledgers/party` note below — this is
   not a style preference, it was a 20 s timeout.
+- **Append `LIMIT` only after stripping the statement's `;`.** `…;\nLIMIT 100` is a syntax error, so
+  only `?all=1` worked.
+- **SQLite's bare-column rule is load-bearing.** In an aggregate query containing `min()`/`max()`, every
+  bare column takes the value from the row that produced the extreme. `SELECT party, booker, MIN(id) …
+  GROUP BY party` is therefore the booker of the min-id row, in one pass — where a correlated
+  `WHERE id = (SELECT MIN(id) …)` is correct and 20 s.
+- **The guest's SQLite has no window functions.** `COUNT(*) OVER ()` fails at PREPARE, so the page dies
+  in 8 ms with no cause. Use a materialised CTE and a scalar subquery.
 
 ## What the GUEST's SQLite has, and what it does not
 
@@ -77,10 +134,16 @@ answers a different question. The two engines disagree in both directions:
 | `abs` / `sign` / `round` / `printf` | present | present |
 | `format()` | present | present |
 | JSON1 (`json_extract`, `json_group_array`) | present | present |
+| window functions (`COUNT(*) OVER ()`) | present | **fails at prepare** |
 
 `CAST` and `NULLIF` report as missing in the probe, but that is a **probe artefact**: they are SQL
 syntax and keywords, not functions — `SELECT cast(1)` needs an `AS` target and `NULLIF` needs three
 arguments. Both are used freely throughout the ported SQL.
+
+The two engines also differ in **how a nested `WITH` is planned**: a CTE body of
+`SELECT * FROM ( <statement that carries its own WITH> )` materialises in 0.2 s, while a bare
+`WITH totals_src AS ( <that statement> )` re-evaluates the inner `WITH` per reference — 8.5 s, same
+answer.
 
 `SQLITE_ENABLE_MATH_FUNCTIONS` is not compiled into TrailBase's bundled SQLite, which is why every
 `round2` site is the CAST-only form.
@@ -99,15 +162,34 @@ node trailbase/tools/check-money-text.mjs        # every money TEXT keeps 2dp (t
 node trailbase/tools/check-money-text-in-guest.mjs   # the same, evaluated IN the guest
 node trailbase/tools/regen-round2.mjs           # regenerate every round2 from the verified template
 node trailbase/tools/sync-manifests.mjs         # derive column manifests from the SQL
+node trailbase/tools/check-report-pages.mjs     # the LIVE pages, and the page payloads
 pwsh -File trailbase/tools/run-spool-sweep.ps1  # both arms in the real guest, byte-identity asserted
 node trailbase/tools/diff-spool-html.mjs        # first byte that differs, with context
 ```
 
-`verify-spool-reports.mjs` compares row count, display fields as a multiset, the money columns
-field-by-field, row order separately, and each report's totals reduced the way **that** report reduces
-them. The registry is PARSED from `spoolreports.js`, not duplicated, and the key pattern must accept a
-slash — report keys are path-shaped (`"ledgers/booker"`), and a pattern that stops at `ledgers/`
-silently drops those entries and reports them as "not ported".
+`check-report-pages.mjs` needs a running server, so derive the ids first — the same command, twice:
+
+```powershell
+node trailbase/tools/sample-filter-ids.mjs | ForEach-Object { $k,$v = $_ -split '=',2; Set-Item -Path "env:$k" -Value $v }
+node trailbase/tools/check-report-pages.mjs
+```
+
+`verify-spool-reports.mjs` **imports the shipping loader** and injects only the guest's `fs` global,
+so it runs the statements the host runs. It used to parse the registry out of `spoolreports.js` as
+text, which broke the moment a report grew a nested `totals: {` block — the block looked like a new
+entry and the gate died on `registry entry totals has no sql`.
+
+It checks five things:
+
+1. row count, display fields as a multiset, and the money columns field-by-field;
+2. the **SQL totals statement** against `result.totals` from the JS reference — not a JS reduction of
+   SQL rows, which would be testing JS arithmetic instead of what ships;
+3. **every declared bind**, two ways: a value matching nothing must return 0 rows (proves the bind
+   reaches the statement at all) and a real busy id must return strictly fewer rows but not none
+   (proves it reaches the right *column*). 72 binds;
+4. every `REPORT_PAGES` column key and every `t.<key>` a totals strip reads exists in that report's
+   manifest;
+5. a list of columns only one side has — advisory, because that is where a misnamed field hides.
 
 Filter cases are derived from the live data. A hard-coded date window matching nothing yields two empty
 results that "agree" — a pass that proves nothing.
@@ -131,18 +213,29 @@ actually has — this is how the missing `floor()` was found).
 
 ## Current state
 
-- All **14** reports ported; `verify-spool-reports.mjs` reports 14/14. `guest-smoke.mjs` is **68/76**,
-  and that is not caused by the port — the same 8 fail on a pristine `HEAD` checkout, see
-  [[guest-smoke-report-total-checks-fail-on-pristine-checkout]].
+- All **14** reports ported, **and live on this path**. `verify-spool-reports.mjs` reports 14/14 with 72
+  binds verified; `check-report-pages.mjs` reports every report page and every page payload rendering,
+  with the two surfaces agreeing on row count and totals for identical filters.
+- `guest-smoke.mjs` is **68/76**, and that is not caused by the port — the same 8 fail on a pristine
+  `HEAD` checkout, see [[guest-smoke-report-total-checks-fail-on-pristine-checkout]].
 - `ledgers/party` renders in the guest, after the balance was moved out of the projection into
   `party_balanced`. Written inline it appeared four times per row and hit TrailBase's 20 s request
   timeout — over 100× slower than the JS it replaces.
-- The spooled path is exercised by the bench, **not** wired into the live report pages yet.
+- Totals are still **float `SUM` + the CAST-only `round2`**, which is what the JS did. Five exact
+  half-paisa differences are tolerated and recorded, on the per-row money check and on the totals of
+  `ledgers/area` and `outstanding`, all traced to ONE row whose raw group sum sits on a boundary
+  ([[report-parity-flakes-on-float-arithmetic]]). Counting in integer cents is the next step and
+  removes the class.
 
 ## Related
 
 - [[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]] — the decision
   and the measurements.
+- [[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]] — how the totals are computed.
+- [[spool-blob-bind-decoder-rejected-unpadded-base64]] — the shipped `blob:` decoder that killed every
+  id filter.
+- [[six-report-defects-the-empty-filter-parity-gate-could-not-see]] — six defects the old gate could not
+  see, and the gates that do now.
 - [[runtime-js-guest-platform]] — the host this runs in.
 - [[guest-smoke-report-total-checks-fail-on-pristine-checkout]] — the 8 pre-existing smoke failures.
 - [[tb-0022-move-reports-to-sql]] — the parent task.

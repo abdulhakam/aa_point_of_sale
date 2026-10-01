@@ -46,8 +46,14 @@
     AND (:section = '' OR pv.section = :section)
     AND (:type = '' OR pv.type = CAST(:type AS INTEGER))
     -- The three-way invoice match (reports.js:124): invoice id, the return-reference id, or the
-    -- human invoice number as a string.
-    AND (:invoice = '' OR pv.invoice = :invoice OR CAST(pv.invoiceNo AS TEXT) = :invoice)
+    -- human invoice number as a string. TWO binds, because the two halves compare different types —
+    -- see the note in lib/spoolreports.js.
+    --
+    -- `invoiceNo` is a REAL in the database, so `CAST(invoiceNo AS TEXT)` is "3840.0" while the JS
+    -- value is the NUMBER 3840 and `String()` gives "3840". Comparing the raw cast against a typed
+    -- number therefore matched nothing. The expression below is the same integer-normalising CASE the
+    -- display column above uses, so both sides render the number the same way.
+    AND (:invoiceId = '' OR pv.invoice = :invoiceId OR CAST(pv.invoiceNo AS REAL) = CAST(:invoiceNo AS REAL))
 )
 SELECT
   id,

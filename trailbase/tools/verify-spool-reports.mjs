@@ -32,6 +32,17 @@ const repo = resolve(here, "../..");
 const depotDb = process.env.DEPOT_DB || join(repo, "trailbase", "traildepot", "data", "main.db");
 const sqlDir = join(repo, "trailbase", "runtime", "app", "reports", "sql");
 
+// `app/lib/spoolreports.js` is the SHIPPING loader, so the gate runs the SQL the host runs rather
+// than a copy of it. It reads the statements through the guest's `fs` global (see `api/fs.rs`), so
+// the only thing standing between it and Node is that one global — injected here, and only here.
+globalThis.fs = {
+  readFile: async (p) => {
+    const rel = String(p).replace(/^\/app\//, "");
+    return readFileSync(join(repo, "trailbase", "runtime", "app", rel.replace(/\//g, "\\")));
+  },
+};
+const spool = await import("../runtime/app/lib/spoolreports.js");
+
 const argv = process.argv.slice(2);
 const VERBOSE = argv.includes("--verbose");
 const fIdx = argv.indexOf("--filter");
@@ -128,49 +139,54 @@ function buildAll(base) {
 /* --------------------------------------------------- registry + SQL composition */
 
 /**
- * The spool registry, parsed from app/lib/spoolreports.js rather than duplicated, so the harness
- * cannot drift from the manifest the host enforces.
+ * The registry, read from the SHIPPING loader rather than parsed out of its source text.
  *
- * Split on entry starts instead of matching `{...}` lazily: a `cols` list may contain `},` at a line
- * end, and a lazy body match stops there — registering only the first entry and reporting the rest as
- * "not ported". The key pattern must include the SLASH, since report keys are path-shaped
- * ("ledgers/booker"); without it those entries are dropped in silence.
+ * An earlier version regex-parsed `const REPORTS = { ... }` and split on entry starts. That broke the
+ * moment a report grew a nested `totals: {` block — the block looked like a new entry, and the gate
+ * died on `registry entry totals has no sql`. Importing the module removes the whole class of bug:
+ * there is one registry, and the gate reads the same one the host does.
  */
-const registrySrc = readFileSync(join(repo, "trailbase", "runtime", "app", "lib", "spoolreports.js"), "utf8");
 const REGISTRY = {};
-{
-  const start = registrySrc.indexOf("const REPORTS = {");
-  const end = registrySrc.indexOf("\n};", start);
-  const block = start >= 0 ? registrySrc.slice(start, end > start ? end : undefined) : "";
-  const entries = block.split(/\n\s*(?=(?:["'][^"']+["']|[A-Za-z_$][\w$]*)\s*:\s*\{)/).slice(1);
-  for (const entry of entries) {
-    const name = /^\s*(?:["']([^"']+)["']|([\w$]+))\s*:\s*\{/.exec(entry);
-    if (!name) continue;
-    const key = name[1] ?? name[2];
-    const sql = /sql:\s*"([^"]+)"/.exec(entry)?.[1];
-    const colsRaw = /cols:\s*\[([\s\S]*?)\]/.exec(entry)?.[1] ?? "";
-    const cols = colsRaw.split(",").map((s) => s.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
-    if (!sql) throw new Error(`registry entry ${key} has no sql`);
-    if (!cols.length) throw new Error(`registry entry ${key} has an empty cols manifest`);
-    REGISTRY[key] = { sql, cols };
-  }
+for (const name of spool.names()) {
+  const parts = await spool.parts(name, {});
+  if (!parts.cols.length) throw new Error(`registry entry ${name} has an empty cols manifest`);
+  REGISTRY[name] = { sql: parts.file, cols: parts.cols };
 }
-if (!Object.keys(REGISTRY).length) throw new Error("could not parse the spool registry at all");
 for (const key of Object.keys(REGISTRY)) {
   if (!REPORTS[key]) throw new Error(`registry has "${key}", which is not a report`);
 }
 
 /**
- * Per-report constant binds: parameters the page never supplies because they describe the REPORT,
- * not the user's filter. `salesreport` is "unpaid recieving/return only" (reports.js:146).
- * Without one, the statement returns the unrestricted row set and only the count differs — which is
- * how a real defect and a missing parameter look alike.
+ * Every column a report PAGE prints must exist in that report's manifest.
+ *
+ * `partials/table.html` reads `row[column.key]`, so a key the projection does not emit renders as an
+ * empty cell — no error, correct row count, correct money. `ledgers/general` did exactly this: the SQL
+ * emitted `transaction_type`/`account_type` and the page asked for `transactionType`/`accountType`,
+ * so the Type and Account columns were blank. The row-parity gate could not see it, because the JS
+ * reference and the SQL agreed on every field they both named.
  */
-const STATIC_BINDS = {
-  salesreport: { salesOnly: "1" },
-  difference: { agg: "difference" },
-  stockreport: { agg: "stock" },
-};
+async function verifyPageColumns() {
+  const issues = [];
+  const { REPORT_PAGES } = await import("../runtime/app/lib/report-pages.js");
+  for (const [name, def] of Object.entries(REPORT_PAGES)) {
+    const spec = REGISTRY[name];
+    if (!spec) {
+      issues.push(`${name}: a report page exists with no spooled statement`);
+      continue;
+    }
+    const missing = def.columns.map((c) => c.key).filter((k) => !spec.cols.includes(k));
+    if (missing.length) issues.push(`${name}: page columns absent from the projection: ${missing.join(", ")}`);
+    // A totals label reads `t.<key>` off the totals row, so an unmatched key prints "undefined".
+    const totalsKeys = (def.totals.toString().match(/t\.([A-Za-z_]\w*)/g) || []).map((s) => s.slice(2));
+    const totalsSpec = totalsKeys.length ? await spool.totalsParts(name, {}) : null;
+    for (const k of totalsKeys) {
+      if (totalsSpec && !totalsSpec.cols.includes(k)) {
+        issues.push(`${name}: totals strip reads t.${k}, which the totals statement does not produce`);
+      }
+    }
+  }
+  return issues;
+}
 
 /** Report unbalanced parentheses with a usable message. */
 function checkParenBalance(file) {
@@ -190,22 +206,6 @@ function checkParenBalance(file) {
     : { ok: false, depth, why: `${depth} unclosed paren(s)` };
 }
 
-/**
- * paymentsTotals / salesTotals bucket rules (reports.js:63-67, :88-90) as predicates over an SQL row.
- *
- * Keyed off the RAW type/paid/party_type, which is why the SQL carries those alongside the display
- * ones: `paymentRow` replaces them with labels, so summing the display row would bucket nothing.
- */
-const PAYMENT_TOTAL_RULES = {
-  recieving: (r) => Number(r.type_code) === 1 && !r.paid,
-  recieved: (r) => Number(r.type_code) === 1 && !!r.paid,
-  sending: (r) => Number(r.type_code) === 0 && !r.paid,
-  sent: (r) => Number(r.type_code) === 0 && !!r.paid,
-  recievingReturns: (r) => Number(r.type_code) === 2 && Number(r.party_type) === 0,
-  sendingReturns: (r) => Number(r.type_code) === 2 && Number(r.party_type) !== 0,
-  invoiceTotal: (r) => !r.paid,
-  totalPaid: (r) => !!r.paid,
-};
 
 const preludePath = join(sqlDir, "prelude.sql");
 // The prelude is a CTE list with NO statement: the loader joins each report's SELECT onto it. So it
@@ -222,50 +222,83 @@ const preludePath = join(sqlDir, "prelude.sql");
 }
 const prelude = readFileSync(preludePath, "utf8").replace(/;\s*$/, "").trimEnd();
 
-function runSpool(db, name, filters) {
+/**
+ * Run a statement the loader produced, binding it BY NAME.
+ *
+ * The loader returns binds in the statement's own declaration order, and the guest binds
+ * positionally in that order — so zipping its names with its binds is what ships. node:sqlite wants
+ * a named object, so this is where the two are joined; nothing here re-derives an order.
+ *
+ * A `blob:`-prefixed bind is inlined as a blob literal instead of bound. NOT `unhex(hex('..'))`:
+ * `hex()` on a hex STRING returns the hex of its ASCII bytes, so that idiom (right for BLOB writes)
+ * rebuilds the bytes of the text and matches nothing. The `\b` matters too — a bare `split(':k')`
+ * would also rewrite a longer name that starts with it.
+ */
+function runBound(db, sql, names, binds) {
+  const params = {};
+  let out = sql;
+  names.forEach((k, i) => {
+    const v = binds[i];
+    if (typeof v === "string" && v.startsWith("blob:")) {
+      out = out.replace(new RegExp(`:${k}\\b`, "g"), `x'${Buffer.from(v.slice(5), "base64url").toString("hex")}'`);
+    } else {
+      params[k] = v;
+    }
+  });
+  return db.prepare(out).all(params);
+}
+
+/** The report's display rows, as the host runs them. */
+async function runSpool(db, name, filters) {
   const spec = REGISTRY[name];
   if (!spec) throw new Error("not in the spool registry");
   const file = join(sqlDir, "reports", spec.sql);
   const bal = checkParenBalance(file);
   if (!bal.ok) throw new Error(`${spec.sql}:${bal.line ?? "end"} UNBALANCED PARENS (${bal.why})`);
 
-  const body = readFileSync(file, "utf8").trim();
-  // Two body shapes (mirrors the loader in app/lib/spoolreports.js):
-  //   - opens with its own CTEs -> the prelude needs a trailing COMMA to join them, and the body's
-  //     own leading one must go (both -> `..., , next AS (` -> `near ","`);
-  //   - contributes only a final SELECT -> NO comma (`..., SELECT` -> `near "SELECT"`).
-  // The CTE marker follows the header comment block, so leading `--` lines are skipped.
-  // Whitespace (blank lines included) may sit between the header comments and the CTE marker; requiring
-  // adjacency left a `, name AS (` unstripped, and the statement then failed with the same
-  // `near "SELECT"` as a missing comma -- pointing at the wrong cause.
-  const withoutLeadComment = body.replace(/^((?:\s*--[^\n]*\n)+)\s*/, "$1");
-  const opensWithCte = /^\s*,?\s*[\w$]+\s+AS\s*\(/.test(withoutLeadComment);
-  let sql = prelude + (opensWithCte ? ",\n" : "\n")
-    + (opensWithCte ? body.replace(/^((?:\s*--[^\n]*\n)+)\s*,\s*/, "$1") : body);
+  const { sql, binds } = await spool.parts(name, filters);
+  return runBound(db, sql, await spool.parameters(name), binds);
+}
 
-  // EVERY declared named parameter must be bound, even to "". node:sqlite binds nothing when handed
-  // `{}`, and SQLite then treats `:booker` as NULL -- so `(:booker = '' OR ...)` is NULL (falsy) and
-  // every filter excludes every row: 0 rows, no error, reads as "the port is wrong".
-  // Named parameters are collected from the SQL with comments STRIPPED. A comment that mentions
-  // something like `api::value_to_json` otherwise contributes `value_to_json` as a phantom parameter,
-  // which the binder then tries to supply and SQLite rejects ("Unknown named parameter").
-  const declared = [...new Set(
-    [...body.replace(/--[^\n]*/g, "").matchAll(/:([a-z_][a-z0-9_]*)/gi)].map((m) => m[1]),
-  )];
-  const params = { ...(STATIC_BINDS[name] ?? {}) };
-  for (const k of declared) {
-    const v = filters[k] ?? params[k];
-    const s = v === undefined || v === null ? "" : String(v);
-    // A blob id is a base64url string, so inline it as a blob literal. NOT `unhex(hex('..'))`:
-    // `hex()` on a hex STRING returns the hex of its ASCII bytes, so that idiom (right for BLOB
-    // writes) rebuilds the bytes of the text and matches nothing. Dates stay bound.
-    if (/^[A-Za-z0-9_-]{20,}$/.test(s) && s.length % 4 !== 1) {
-      sql = sql.split(`:${k}`).join(`x'${Buffer.from(s, "base64url").toString("hex")}'`);
-    } else {
-      params[k] = s;
-    }
-  }
-  return db.prepare(sql).all(params);
+/**
+ * The report's totals, as SQLite computes them.
+ *
+ * This is the same statement the live page runs (`spoolreports.totalsFor`), so the gate cannot pass
+ * against SQL the app does not use. ONE row of scalars; the JS reference is `result.totals`.
+ */
+async function runTotals(db, name, filters) {
+  const { sql, binds } = await spool.totalsParts(name, filters);
+  const rows = runBound(db, sql, await spool.totalsParameters(name), binds);
+  return rows[0] ?? {};
+}
+
+/**
+ * Is a difference explainable by a float sum landing on an exact half-paisa boundary?
+ *
+ * A float sum has no defined order: the JS accumulates in `payments_view` order (payments.id DESC)
+ * while SQLite's SUM does not promise that one. Where the TRUE magnitude sits exactly on a
+ * half-paisa boundary the two round to opposite sides.
+ *
+ * Measured on ledgers/area, over all 872 parties: exactly ONE has a raw group sum on a boundary —
+ * credit_sum 18731.385, i.e. 1873138.4999999998. JS rounds it to 18731.39, SQLite to 18731.38, and
+ * that single row shifts the report's credit TOTAL by a paisa (25,943,447.70 vs .69). The boundary is
+ * a property of an INDIVIDUAL row's raw sum, not of the total (millions have no meaningful fraction),
+ * so the evidence is the per-row raw values the statements carry (`credit_raw`/`debit_raw`,
+ * `invoice_raw`/`paid_raw`/`return_raw`).
+ *
+ * Forcing SQLite's order was tried and is WORSE: an ordered window SUM changed 664 credits and 754
+ * balances versus 1, because it perturbs every group rather than only the boundary ones. So plain SUM
+ * stands and this tolerance applies where — and only where — a raw value lands on a boundary.
+ * Counting in integer cents removes the class entirely.
+ */
+function isBoundaryDifference(got, want, rawValues) {
+  if (Math.abs(got - want) > 0.011) return false;
+  const list = Array.isArray(rawValues) ? rawValues : [rawValues];
+  return list.some((v) => {
+    if (v === null || v === undefined || !Number.isFinite(Number(v))) return false;
+    const cents = Number(v) * 100;
+    return Math.abs(cents - Math.round(cents)) >= 0.499;
+  });
 }
 
 /* -------------------------------------------------------------------- the gate */
@@ -274,10 +307,160 @@ const db = new DatabaseSync(depotDb, { readOnly: true });
 const base = loadBase(db);
 const views = buildAll(base);
 
+/**
+ * A real, DISCRIMINATING value for each id/text filter, taken from the depot itself.
+ *
+ * A hard-coded id would be wrong the moment the data is reloaded. These are the busiest value of
+ * each kind, so a correct filter leaves most of the report behind and a broken one does not.
+ */
+const DISCRIMINATING = {
+  party:   "SELECT party AS id FROM payments WHERE party IS NOT NULL GROUP BY party ORDER BY COUNT(*) DESC LIMIT 1",
+  // The booker is reached THROUGH the invoice on payments and through the payment's invoice on
+  // `outstanding`, so "the busiest invoice" is not the answer — it can be an invoice with no payments
+  // at all. Join to payments.
+  booker:  "SELECT i.booker AS id FROM payments p JOIN invoices i ON i.id = p.invoice WHERE i.booker IS NOT NULL GROUP BY i.booker ORDER BY COUNT(*) DESC LIMIT 1",
+  area:    "SELECT pa.area AS id FROM payments p JOIN parties pa ON pa.id = p.party WHERE pa.area IS NOT NULL GROUP BY pa.area ORDER BY COUNT(*) DESC LIMIT 1",
+  section: "SELECT ar.section AS id FROM payments p JOIN parties pa ON pa.id = p.party JOIN areas ar ON ar.id = pa.area WHERE ar.section IS NOT NULL GROUP BY ar.section ORDER BY COUNT(*) DESC LIMIT 1",
+  item:    "SELECT item AS id FROM transactions WHERE item IS NOT NULL GROUP BY item ORDER BY COUNT(*) DESC LIMIT 1",
+  company: "SELECT category AS id FROM items WHERE category IS NOT NULL GROUP BY category ORDER BY COUNT(*) DESC LIMIT 1",
+  // An invoice number that is on the busiest invoice THAT HAS LINES OR PAYMENTS. The filter also
+  // matches the invoice id, so the busiest invoice overall could legitimately return nothing on a
+  // report that only reads lines.
+  // The invoice filter is TWO binds off ONE filter value (`invoiceId` matches the BLOB id,
+  // `invoiceNo` matches the human number — see lib/spoolreports.js). The gate therefore drives them
+  // through `invoice`, which is the name the page and `params()` actually read.
+  invoiceId: "SELECT id AS id FROM invoices GROUP BY id ORDER BY COUNT(*) DESC LIMIT 1",
+  invoiceNo: "SELECT CAST(invoiceNo AS TEXT) AS id FROM invoices WHERE invoiceNo IS NOT NULL GROUP BY invoiceNo ORDER BY COUNT(*) DESC LIMIT 1",
+  type:    "SELECT CAST(type AS TEXT) AS id FROM payments WHERE type IN (0,1,2) GROUP BY type ORDER BY COUNT(*) DESC LIMIT 1",
+};
+// A PARAMETER name that is driven by a differently-named FILTER.
+const FILTER_FOR = { invoiceId: "invoice", invoiceNo: "invoice" };
+// A value that matches NOTHING, per filter. Proves the bind REACHES SQLite: a declared-but-unbound
+// parameter arrives as NULL, and `(:x = '' OR ...)` is then NULL — so the filter is silently dead and
+// the report answers with every row regardless of what the user asked for.
+//
+// The date bounds go BELOW year 1 rather than just being "in the past": this depot's `dated` and
+// `payment_date` columns hold values back to 1195, so `to: "1000-01-01"` still matches 19 invoices
+// and reads as a dead bind when it is not.
+const IMPOSSIBLE = {
+  party: () => Buffer.alloc(16).toString("base64url"),
+  booker: () => Buffer.alloc(16).toString("base64url"),
+  area: () => Buffer.alloc(16).toString("base64url"),
+  section: () => Buffer.alloc(16).toString("base64url"),
+  item: () => Buffer.alloc(16).toString("base64url"),
+  company: () => Buffer.alloc(16).toString("base64url"),
+  invoiceId: () => Buffer.alloc(16).toString("base64url"),
+  invoiceNo: () => "999999999",
+  type: () => "99",
+  from: () => "9999-12-31",
+  to: () => "0001-01-01",
+};
+
+/**
+ * Up to three REAL values for each filter, busiest first.
+ *
+ * One is not always enough: `outstanding` drops every party whose balance rounds to zero, so the
+ * busiest booker's payments can be entirely settled and its rows legitimately absent. Rather than
+ * weaken the check, try a few and require that at least ONE narrows the result — which still proves
+ * the bind reaches the right column.
+ */
+function busyValues(kind, limit = 3) {
+  const q = DISCRIMINATING[kind];
+  if (!q) return [];
+  return db.prepare(q.replace(/LIMIT 1$/, `LIMIT ${limit}`)).all()
+    .map((row) => (row.id == null ? null : (isBlob(row.id) ? b64(row.id) : String(row.id))))
+    .filter((v) => v !== null && v !== "");
+}
+
+async function countRows(name, filters) {
+  const { sql, binds } = await spool.parts(name, filters);
+  const wrapped = `SELECT COUNT(*) AS n FROM ( ${sql.replace(/;\s*$/, "")} ) AS c`;
+  return Number(runBound(db, wrapped, await spool.parameters(name), binds)[0].n);
+}
+
+/**
+ * Every filter must CHANGE the answer, in both directions.
+ *
+ * The row-parity pass above runs with EMPTY filters, which cannot see a dead bind: with nothing
+ * bound, "the filter is ignored" and "the filter matches everything" produce the same rows as the
+ * JS reference. So each filter is exercised on its own:
+ *
+ *   - a value that matches NOTHING must return 0 rows. This is what proves the bind reaches SQLite
+ *     at all. A bind that is dropped, or bound to the wrong slot, returns the full row set here.
+ *   - where a discriminating value exists (a real busy id), it must return strictly FEWER rows but
+ *     not none. This is what proves the bind reaches the right COLUMN — a value compared against
+ *     the wrong column matches everything, which the row-parity pass cannot see either.
+ *
+ * `from`/`to` cannot discriminate on this depot: every row shares one import `created`, so no range
+ * is a strict subset. Their impossible-value check still proves the bind arrives.
+ */
+async function verifyBinds() {
+  const issues = [];
+  let checked = 0;
+
+  for (const name of Object.keys(REGISTRY)) {
+    if (ONLY && !name.includes(ONLY)) continue;
+    const declared = await spool.parameters(name);
+    // `salesOnly`/`agg` describe the REPORT (registry constants), not the user's query; they are
+    // exercised by the row-parity pass, which runs both reports on one statement.
+    const filters = declared.filter((k) => k !== "salesOnly" && k !== "agg");
+    if (!filters.length) continue;
+
+    const all = await countRows(name, {});
+    for (const key of filters) {
+      const dead = IMPOSSIBLE[key];
+      if (!dead) {
+        issues.push(`${name}.${key}: no impossible value to prove the bind arrives`);
+        continue;
+      }
+      const filterKey = FILTER_FOR[key] || key;
+      checked++;
+      const none = await countRows(name, { [filterKey]: dead() });
+      if (none !== 0) {
+        issues.push(`${name}.${key}: a value matching nothing still returned ${none} of ${all} rows — the bind is not reaching the statement`);
+      }
+      const candidates = busyValues(key);
+      if (!candidates.length) continue;
+      const counts = [];
+      for (const v of candidates) counts.push(await countRows(name, { [filterKey]: v }));
+      // At least one real value must narrow the result without emptying it. A value that empties it
+      // is not proof of a defect — `outstanding` drops settled parties, `dailysale` drops non-sale
+      // invoices — but if NONE of them narrows it, the bind is not reaching the right column.
+      if (!counts.some((n) => n > 0 && n < all)) {
+        issues.push(`${name}.${key}: ${candidates.length} real value(s) returned [${counts.join(", ")}] against ${all} unfiltered rows — none narrowed the result`);
+      }
+      if (counts.some((n) => n >= all)) {
+        issues.push(`${name}.${key}: a real value returned all ${all} rows — the bind is not narrowing anything`);
+      }
+    }
+
+    // The general ledger's openings are bound by the TOTALS statement only, and they are placed in
+    // its FROM clause after the report's own parameters so their indices come last. Nothing else in
+    // the gate would notice if that order were wrong: the report's filters would silently shift by
+    // three slots and the totals would still print.
+    const spec = REGISTRY[name];
+    if (spec.cols && spec.file === "ledger_general.sql") {
+      checked++;
+      const zero = await runTotals(db, name, {});
+      const open = await runTotals(db, name, { openingRecievables: "1000", openingPayables: "2000", openingCash: "3000" });
+      const pairs = [["recievable", "1000.00"], ["payable", "2000.00"], ["cash", "3000.00"]];
+      for (const [k, delta] of pairs) {
+        const got = Number(open[k]) - Number(zero[k]);
+        if (Math.abs(got - Number(delta)) > 0.005) {
+          issues.push(`ledgers/general.${k}: opening moved the total by ${got}, expected ${delta}`);
+        }
+      }
+    }
+  }
+
+  return { issues, checked };
+}
+
 let passed = 0;
 const failed = [];
 const skipped = [];
 const orderOnly = [];
+const oneSidedColumns = [];
 const boundaryCases = [];
 
 for (const name of Object.keys(REPORTS)) {
@@ -301,8 +484,10 @@ for (const name of Object.keys(REPORTS)) {
   }
 
   let sqlRows;
+  let sqlTotals;
   try {
-    sqlRows = runSpool(db, name, {}) ?? [];
+    sqlRows = (await runSpool(db, name, {})) ?? [];
+    sqlTotals = await runTotals(db, name, {});
   } catch (e) {
     failed.push(`${name}: SQL ERROR ${e.message}`);
     console.log(`FAIL  ${name.padEnd(20)} SQL ERROR: ${e.message}`);
@@ -334,6 +519,15 @@ for (const name of Object.keys(REPORTS)) {
   // by the registry/parity checks rather than silently ignored here.
   const jsKeys0 = (js.rows ?? []).map((r) => Object.keys(r).filter((k) => k !== "id")).sort();
   const sqlKeys0 = sqlRows.length ? Object.keys(sqlRows[0]).filter((k) => k !== "id").sort() : [];
+  // Columns ONE side has are outside the comparison below, and a wrongly-projected field hides there.
+  // `outstanding.booker_id` is the case in point: the SQL held the id of the last payment that set a
+  // booker rather than the booker itself, the JS calls the field `booker` and the SQL calls it
+  // `booker_id`, and the two names never met — so the value was wrong and parity was green.
+  const jsOnly = [...new Set(jsKeys0.flat())].filter((k) => !sqlKeys0.includes(k)).sort();
+  const sqlOnly = sqlKeys0.filter((k) => !jsKeys0.flat().includes(k));
+  const oneSided = [...sqlOnly.map((k) => `sql-only ${k}`), ...jsOnly.map((k) => `js-only ${k}`)];
+  if (oneSided.length) oneSidedColumns.push(`${name}: ${oneSided.join(", ")}`);
+
   const shared = jsKeys0.filter((k) => sqlKeys0.includes(k) && !MONEY_COLS.has(k));
 
   const key = (r) => shared.map((k) => `${k}=${r[k] ?? ""}`).join("|");
@@ -398,8 +592,41 @@ for (const name of Object.keys(REPORTS)) {
 
   }
 
-  // --- totals, each reduced the way THAT report reduces them ---------------------------------
-  issues.push(...compareTotals(js.totals ?? {}, sqlRows));
+  // --- totals, AS SQLITE COMPUTES THEM -------------------------------------------------------
+  // The totals the live page prints come from the SQL aggregate statement, so the gate compares that
+  // statement's row against the JS reference — not a JS reduction of the SQL rows, which would be
+  // testing JS arithmetic instead of the thing that ships.
+  const sqlTotalKeys = Object.keys(sqlTotals).filter((k) => k !== "rowCount");
+  const missingTotal = sqlTotalKeys.filter((k) => !(k in (js.totals ?? {})));
+  if (missingTotal.length) {
+    issues.push(`SQL totals has no JS counterpart: ${missingTotal.join(", ")}`);
+  }
+  // The raw per-row sums behind the boundary-prone totals, used as the evidence below. The boundary
+  // belongs to ONE row; the total is millions and its own fraction says nothing.
+  const boundaryEvidence = sqlRows.length
+    ? [
+        ...(sqlRows[0].credit_raw !== undefined ? sqlRows.map((r) => Number(r.debit_raw) - Number(r.credit_raw)) : []),
+        ...(sqlRows[0].invoice_raw !== undefined ? sqlRows.map((r) => Number(r.invoice_raw) - Number(r.paid_raw) - Number(r.return_raw)) : []),
+      ]
+    : [];
+
+  for (const k of sqlTotalKeys) {
+    if (!(k in (js.totals ?? {}))) continue;
+    const got = String(sqlTotals[k]);
+    const want = String(js.totals[k]);
+    if (got === want) continue;
+    // The same boundary tolerance as the per-row money diff, from the same evidence. A report with
+    // one row sitting on a half-paisa boundary lands a whole paisa apart in its TOTAL even though
+    // every business field agrees, and that is the whole explanation for the difference.
+    if (isBoundaryDifference(Number(got), Number(want), boundaryEvidence)) {
+      boundaryCases.push(`TOTAL ${k}: sql ${got} js ${want} — propagated from a per-row float boundary (see below)`);
+      continue;
+    }
+    issues.push(`TOTAL ${k}: sql ${got} js ${want}`);
+  }
+  if (Number(sqlTotals.rowCount) !== (js.rows ?? []).length) {
+    issues.push(`rowCount sql ${sqlTotals.rowCount} js ${(js.rows ?? []).length}`);
+  }
 
   const label = `${name.padEnd(20)} ${String(jsKeys.length).padStart(6)} rows`;
   if (issues.length === 0) {
@@ -413,20 +640,37 @@ for (const name of Object.keys(REPORTS)) {
   }
 }
 
+// Before the close: the bind gate runs its own statements against the same read-only handle.
+const binds = await verifyBinds();
+const pageColumns = await verifyPageColumns();
 db.close();
+
 console.log(`\n${"-".repeat(70)}`);
-console.log(`${passed} passed, ${failed.length} failed, ${skipped.length} not ported`);
+const allFailures = [
+  ...failed,
+  ...binds.issues.map((i) => `BIND ${i}`),
+  ...pageColumns.map((i) => `PAGE COLUMN ${i}`),
+];
+console.log(`${passed} passed, ${allFailures.length} failed, ${skipped.length} not ported`);
+console.log(`binds verified: ${binds.checked} (each proved to reach its statement, and to narrow it where a real id exists)`);
 if (skipped.length) console.log(`  not ported: ${skipped.join(", ")}`);
 if (orderOnly.length) console.log(`  rows match but ORDER differs: ${orderOnly.join(", ")}`);
+if (oneSidedColumns.length) {
+  // Advisory, not a failure: many SQL-only columns are deliberate carriers (type_code, the *_raw
+  // sums, the formatted twins). Listed because a one-sided column is also where a MISNAMED field
+  // hides, and those are invisible to the shared-column comparison by construction.
+  console.log(`  columns only one side has (outside the comparison — check any that is not a deliberate carrier):`);
+  for (const c of oneSidedColumns) console.log(`    - ${c}`);
+}
 if (boundaryCases.length) {
   console.log(`  tolerated float-boundary differences (exact half-paisa):`);
   for (const bc of boundaryCases) console.log(`    - ${bc}`);
 }
-if (failed.length) {
+if (allFailures.length) {
   console.log(`\n  failures:`);
-  for (const f of failed) console.log(`   - ${f}`);
+  for (const f of allFailures) console.log(`   - ${f}`);
 }
-process.exit(failed.length ? 1 : 0);
+process.exit(allFailures.length ? 1 : 0);
 
 /* --------------------------------------------------------------- totals helpers */
 
@@ -447,167 +691,5 @@ process.exit(failed.length ? 1 : 0);
  * balances versus 1, because it perturbs every group rather than only the boundary ones. So plain SUM
  * stands and this tolerance applies where — and only where — a raw value lands on a boundary.
  */
-function isBoundaryDifference(got, want, rawValues) {
-  if (Math.abs(got - want) > 0.011) return false;
-  // Accepts one value or a list: the field-level check has a single row's raw sum, the totals check
-  // has the whole column.
-  const list = Array.isArray(rawValues) ? rawValues : [rawValues];
-  return list.some((v) => {
-    if (v === null || v === undefined || !Number.isFinite(Number(v))) return false;
-    const cents = Number(v) * 100;
-    return Math.abs(cents - Math.round(cents)) >= 0.499;
-  });
-}
 
-/**
- * Per-report totals, each reduced the way the JS reduces it.
- *
- * Applying one formula to all of them is how a real mismatch gets misread as a pass (or the
- * reverse), so the rule per report is stated explicitly. From compute/reports.js:
- *
- *   payments / salesreport  buckets over type/paid/party_type     (paymentsTotals,     :59-81)
- *   profit                  +profit for sale, -profit otherwise    (reportProfit,       :259-261)
- *   itemsales               two conditional sums, then their diff (reportItemSales,    :267-271)
- *   stockreport             sum of ROUNDED per-row stock_amount   (reportStock,        :300)
- *   ledgers/party           the LAST row's balanceText            (reportLedgerParty,  :349)
- *   ledgers/booker          round2(creditTotal - debitTotal)      (reportLedgerBooker, :361-363)
- *   ledgers/area            sum of the per-row balances           (reportLedgerArea,   :396-398)
- *   outstanding             invoice_total / paid_total sums, and the per-row balance sum
- *                                                               (reportOutstanding,  :513-517)
- *   productsale             round2 over the RAW sum               (reportProductSale,  :546)
- *
- * `dailysale`, `paymentsbycompany` and `ledgers/general` are not ported yet.
- */
-function compareTotals(T, rows) {
-  const issues = [];
-  const raw = (f) => rows.reduce((t, x) => t + Number(x[f] ?? 0), 0);
-  const rawR2 = (f) => r2(raw(f));
-  const roundedSum = (f) => r2(rows.reduce((t, x) => t + r2(x[f]), 0));
 
-  const cmp = (label, jsVal, sqlVal) => {
-    const a = typeof jsVal === "number" ? r2(jsVal) : parseFloat(jsVal);
-    const b = typeof sqlVal === "number" ? r2(sqlVal) : parseFloat(sqlVal);
-    if (!(Math.abs(a - b) <= 0.005)) issues.push(`${label}: js ${jsVal} sql ${sqlVal}`);
-  };
-
-  /**
-   * `rawValues` is the list of PER-ROW raw sums behind this total, and it is what proves or disproves
-   * a float boundary: the total itself is millions, so its own fraction says nothing, while one row
-   * sitting on a half-paisa value is the whole explanation for a one-paisa difference.
-   */
-  const cmpSum = (label, jsVal, sqlVal, rawValues) => {
-    const before = issues.length;
-    cmp(label, jsVal, sqlVal);
-    if (issues.length > before && isBoundaryDifference(Number(sqlVal), Number(jsVal), rawValues)) {
-      issues.pop();
-      const list = Array.isArray(rawValues) ? rawValues : [rawValues];
-      const which = list.findIndex((v) => {
-        const cents = Number(v) * 100;
-        return Number.isFinite(cents) && Math.abs(cents - Math.round(cents)) >= 0.499;
-      });
-      boundaryCases.push(
-        `${label}: js ${jsVal} vs sql ${sqlVal} — row ${which} has a raw sum on an exact `
-        + `half-paisa boundary (${list[which]})`,
-      );
-    }
-  };
-
-  const first = rows[0] ?? {};
-  const has = (f) => f in first;
-
-  // payments / salesreport — keyed off the RAW type/paid/party_type, so they must NOT also be applied
-  // to paymentsbycompany, whose `type` is a LABEL and whose party_type is not carried.
-  // `payments` ALSO publishes invoiceTotal/totalPaid/recievingReturns (paymentsTotals, :63-67) but
-  // buckets them off the RAW type/paid/party_type, not off the label — its `type` is a label too, so
-  // "has type_code and type" is not enough to tell the two apart. The distinguishing field is
-  // `party_type`, which only paymentsByCompany's rows lack (it is not projected there).
-  const labelBuckets = has("type_code") && has("type") && !has("party_type") && "invoiceTotal" in T;
-  if (!labelBuckets) {
-    for (const [k, pred] of Object.entries(PAYMENT_TOTAL_RULES)) {
-      if (!(k in T)) continue;
-      cmp(k, T[k], r2(rows.reduce((t, x) => t + (pred(x) ? Number(x.amount ?? 0) : 0), 0)));
-    }
-  }
-
-  // paymentsbycompany (reports.js:185-188) buckets on the LABEL, not on the raw type code:
-  //   invoiceTotal     = !paid && !type.startsWith("return")
-  //   totalPaid        = paid
-  //   recievingReturns = type.startsWith("return")
-  // `type` here is the composed label ("sale invoice", "recieving payment", ...), reports.js:170, so
-  // the generic PAYMENT_TOTAL_RULES above cannot be used: those key off `type_code` and would bucket
-  // everything as recieving/sending. This report is identified by having `type_code` AND a label.
-  if (labelBuckets && "invoiceTotal" in T) {
-    cmp("invoiceTotal", T.invoiceTotal, r2(rows.reduce(
-      (t, x) => t + (!x.paid && !String(x.type).startsWith("return") ? Number(x.amount ?? 0) : 0), 0,
-    )));
-  }
-  if (labelBuckets && "totalPaid" in T) {
-    cmp("totalPaid", T.totalPaid, r2(rows.reduce(
-      (t, x) => t + (x.paid ? Number(x.amount ?? 0) : 0), 0,
-    )));
-  }
-  if (labelBuckets && "recievingReturns" in T) {
-    cmp("recievingReturns", T.recievingReturns, r2(rows.reduce(
-      (t, x) => t + (String(x.type).startsWith("return") ? Number(x.amount ?? 0) : 0), 0,
-    )));
-  }
-
-  // profit (reports.js:259-261)
-  if ("profit" in T) {
-    cmp("profit", T.profit, r2(rows.reduce((t, x) => t + (Number(x.type_code) === 1 ? r2(x.profit) : -r2(x.profit)), 0)));
-  }
-
-  // itemsales (reports.js:267-271)
-  if ("sale" in T && "returns" in T) {
-    const sale = r2(rows.reduce((t, x) => t + (Number(x.type_code) === 1 ? r2(x.final_amount) : 0), 0));
-    const returns = r2(rows.reduce((t, x) => t + (Number(x.type_code) !== 1 ? r2(x.final_amount) : 0), 0));
-    cmp("sale", T.sale, sale);
-    cmp("returns", T.returns, returns);
-    cmp("total", T.total, r2(sale - returns));
-  }
-
-  // stockreport (reports.js:300): the ROW field is already round2(qty * cost_price) (reports.js:292),
-  // so the total sums ROUNDED rows. Summing raws gave 3,336,910.03 against the JS 3,336,971.22.
-  if ("stockAmount" in T) cmp("stockAmount", T.stockAmount, roundedSum("stock_amount"));
-
-  // productsale (reports.js:546): round2 over the RAW sum.
-  if ("amount" in T) cmp("amount", T.amount, rawR2("amount"));
-
-  // ledgers/booker (reports.js:361-363): round2 of each total, then their difference.
-  if ("credit" in T) cmpSum("credit", T.credit, roundedSum("credit"), rows.map((x) => x.credit_raw));
-  if ("debit" in T) cmpSum("debit", T.debit, roundedSum("debit"), rows.map((x) => x.debit_raw));
-
-  // `balance` differs per report, so the ROW SHAPE decides the formula rather than the presence of
-  // the key — ledgers/booker, ledgers/area and ledgers/party all publish one, and applying one
-  // formula to all of them reports the same real difference twice (or hides it):
-  //   ledgers/area   (reports.js:398): sum of the per-row balances, each round2(debit - credit).
-  //                   Identified by debit_raw, which only this report carries. The boundary evidence
-  //                   is the summed RAW per-row difference, NOT the total: the total is millions, so
-  //                   its own fraction is meaningless, while the per-row diffs add up to the exact
-  //                   half-paisa value (2774.495) that the float order decides.
-  //   ledgers/booker (reports.js:363): round2(creditTotal - debitTotal) of the two rounded totals.
-  //   ledgers/party  (reports.js:350): the LAST row's balanceText, so the ORDER decides it.
-  if ("balance" in T && !("invoice" in T)) {
-    if (has("debit_raw")) {
-      cmpSum("balance", T.balance, r2(raw("balance")), rows.map((x) => Number(x.debit_raw) - Number(x.credit_raw)));
-    } else if ("credit" in T && "debit" in T) {
-      cmp("balance", T.balance, r2(roundedSum("credit") - roundedSum("debit")));
-    } else if (rows.length && has("balance")) {
-      cmp("balance", T.balance, r2(rows[rows.length - 1].balance));
-    }
-  }
-
-  // outstanding (reports.js:513-517): invoice_total / paid_total sums, and the per-row balance sum.
-  // Guarded on `invoice` so it does not ALSO run the ledgers/party branch above — `outstanding` has a
-  // `balance` column, and without the guard one real difference is reported twice: once as "the last
-  // row's balance" (500.00) and once as the correct sum-of-rows.
-  if ("invoice" in T) cmp("invoice", T.invoice, rawR2("invoice_total"));
-  if ("paid" in T) cmp("paid", T.paid, rawR2("paid_total"));
-  if ("invoice" in T && "balance" in T) {
-    cmpSum("balance", T.balance, r2(raw("balance")), rows.map(
-      (x) => Number(x.invoice_raw) - Number(x.paid_raw) - Number(x.return_raw),
-    ));
-  }
-
-  return issues;
-}

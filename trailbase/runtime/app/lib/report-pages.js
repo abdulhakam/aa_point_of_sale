@@ -1,8 +1,55 @@
 // Report page definitions and helpers for the guest app
 // (REPORT_INDEX, LEDGER_INDEX, REPORT_PAGES, parseFilters, filterOptions).
 
-import { monthStart, today, yearStart } from "../compute/format.js";
+import { monthStart, num, today, yearStart } from "../compute/format.js";
 import { qs, qsb } from "./http.js";
+
+/**
+ * Whether this page runs the LEGACY JS report implementation instead of the spool.
+ *
+ * The spool is the only live path: every report runs its SQL, hands the rows to the renderer by KV
+ * key, and never materialises a row in QuickJS ([[spooling-report-rows-through-kv]]). `useJs: true`
+ * on a page definition re-enables `compute/reports.js` for that page alone — the escape hatch, for
+ * a report whose SQL is not trustworthy yet, not a second implementation to maintain.
+ *
+ * Strictly `=== true`, so a stray `"true"` or `1` does not silently switch a money report back.
+ */
+export function useJsFor(pageDef) {
+  return pageDef?.useJs === true;
+}
+
+/**
+ * The general ledger's opening-balance row.
+ *
+ * `reportLedgerGeneral` returns this SEPARATELY from `result.rows` and adds it to each total
+ * (reports.js:438-457). The three figures are the FILTER's, not the data's — there is nothing for
+ * SQL to contribute — so the spooled path builds the same row from the same three inputs.
+ */
+export function openingRow(filters) {
+  const amount = (v) => {
+    const n = num(filters ? filters[v] : "");
+    return { value: n, text: n.toFixed(2) };
+  };
+  const recievable = amount("openingRecievables");
+  const payable = amount("openingPayables");
+  const cash = amount("openingCash");
+  return {
+    date: "",
+    invoiceNo: "",
+    description: "Opening Balance",
+    transactionType: "",
+    accountType: "",
+    recievable: recievable.value,
+    recievableText: recievable.text,
+    payable: payable.value,
+    payableText: payable.text,
+    cash: cash.value,
+    cashText: cash.text,
+    stock: 0,
+    stockText: "0.00",
+    tone: "",
+  };
+}
 
 // `icon` mirrors the legacy tile glyph (@tabler/icons-react in
 // frontend/src/app/app/reports/page.tsx and ledgers/page.tsx); the values are names in

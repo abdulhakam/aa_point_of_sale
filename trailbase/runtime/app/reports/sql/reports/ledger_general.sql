@@ -33,8 +33,12 @@ SELECT
   substr(created, 1, 10) AS date,
   COALESCE(CAST(invoiceNo AS TEXT), '') AS invoiceNo,
   description,
-  transaction_type,
-  account_type,
+  -- Aliased to the JS field NAMES (`transactionType` / `accountType`, reports.js:426-433), not to
+  -- the snake_case names this CTE uses. The page's column list keys off those names, so projecting
+  -- `transaction_type` left the Type and Account columns of the general ledger blank — with the row
+  -- count, the money and the tone all correct.
+  transaction_type AS transactionType,
+  account_type AS accountType,
   accounts_recievable AS recievable,
   printf('%.2f', accounts_recievable) AS recievableText,
   accounts_payable AS payable,

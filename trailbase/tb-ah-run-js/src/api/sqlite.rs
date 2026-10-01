@@ -28,7 +28,12 @@ async fn spool_wrapper(
 ) -> Result<rquickjs::Value<'_>> {
     let handle = crate::spool::run(&name, &sql, &cols, params.0.unwrap_or_default())
         .await
-        .map_err(|e| { eprintln!("spool error: {e}"); rquickjs::Error::Unknown })?;
+        // The SQL error is THROWN, not swallowed into `Error::Unknown`. `Error::Unknown` reaches the
+        // route handler as an anonymous "QuickJS library created a unknown error", which names neither
+        // the statement nor the reason — and the guest's `eprintln!` goes nowhere, because request-handler
+        // logs are thread-local and only drained for init scripts. An exception carrying the message
+        // turns a 500 with no cause into a 500 that says `no such column: pv.foo`.
+        .map_err(|e| { eprintln!("spool error: {e}"); rquickjs::Exception::throw_message(&ctx, &e) })?;
 
     // The handle is small and fixed, so the JSON round-trip that `all` pays per row costs nothing
     // here.

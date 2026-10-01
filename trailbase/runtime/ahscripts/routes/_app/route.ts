@@ -165,6 +165,9 @@ async function app(): Promise<any> {
     payments: await loadModule("/app/lib/payments.js"),
     inventory: await loadModule("/app/lib/inventory.js"),
     service: await loadModule("/app/lib/reports.js"),
+    // The spooled report path — the LIVE one. `compute/reports.js` stays loaded only as the
+    // `useJs` fallback a page definition can opt into.
+    spooled: await loadModule("/app/lib/spoolreports.js"),
     http: await loadModule("/app/lib/http.js"),
     renderClient: await loadModule("/app/lib/render-client.js"),
     reportPages: await loadModule("/app/lib/report-pages.js"),
@@ -690,11 +693,12 @@ async function dispatch(req: any): Promise<any> {
       return { report: reportName, arm, rows: mapped.length, acquireMs, totalMs: Date.now() - t0, htmlBytes: html.length };
     }
 
-    const html: string = await spooled.renderReport(
+    const html: string = await spooled.renderPage(
       reportName,
       "bench/spooled.html",
       {},
       filters,
+      -1,
       (h: any) => {
         timing.handle = h;
       }
@@ -836,7 +840,12 @@ if (path === "/login" && method === "GET") {
   if (path === "/reports/status") return A.service.status();
   if (path === "/reports/refresh" && method === "POST") {
     const full = query.full === "1" || query.full === "on" || form.full === "1" || form.full === "on";
-    if (full) A.service.invalidate();
+    // `full` also drops the composed-SQL cache, or an edited `.sql` file would keep serving the
+    // text that was composed when the process first read it.
+    if (full) {
+      A.service.invalidate();
+      A.spooled.invalidate();
+    }
     await A.service.refresh(db);
     const accept = String((req.headers && req.headers.accept) || "");
     if (accept.includes("application/json")) return A.service.status();
@@ -852,12 +861,16 @@ if (path === "/login" && method === "GET") {
   if (reportMatch && method === "GET") {
     const key = reportMatch[1];
     const pageDef = A.reportPages.REPORT_PAGES[key];
-    if (!pageDef || !A.reportsCompute.REPORTS[key]) return text("Not found", 404);
+    // The spool registry, not `compute/reports.js`, decides what exists: the SQL is what a report
+    // IS now, and the JS registry is only the fallback.
+    if (!pageDef || !A.spooled.names().includes(key)) return text("Not found", 404);
     const filters = A.reportPages.parseFilters(pageDef, query);
 
     const showAll = String(query.all || "") === "1";
     const requestedMax = Number(query.maxRows || 0);
-    const maxRows = showAll ? Number.POSITIVE_INFINITY : requestedMax > 0 ? requestedMax : RENDER_MAX_ROWS;
+    // -1 means "no cap", which is what a `LIMIT`-less statement wants; the page renders everything
+    // rather than slicing in JS.
+    const maxRows = showAll ? -1 : requestedMax > 0 ? requestedMax : RENDER_MAX_ROWS;
 
     // Rendered-page cache lookup. The fingerprint is the live data version, so any write misses.
     let cacheKey: string | null = null;
@@ -870,21 +883,11 @@ if (path === "/login" && method === "GET") {
       cacheKey = null;
     }
 
-    const inputs = A.reportsCompute.REPORTS[key].inputs.concat(["refs"]);
-    const snap = await A.service.getViews(inputs);
+    const snap = await A.service.getViews(["refs"]);
     const options = A.reportPages.filterOptions(snap.views.refs, pageDef.fields);
     const missing = (pageDef.requires || []).filter((name: string) => !filters[name]);
-    const result = missing.length ? { rows: [], totals: {}, meta: {} } : await A.service.run(key, filters);
-    const allRows: any[] = result.rows || [];
-    const truncated = allRows.length > maxRows;
-    const rows = truncated ? allRows.slice(0, maxRows) : allRows;
     const rawQuery = String(req.query || "");
-    const rowInfo = {
-      shown: rows.length,
-      total: allRows.length,
-      truncated,
-      allHref: `${path}?${rawQuery ? rawQuery + "&" : ""}all=1`,
-    };
+    const allHref = `${path}?${rawQuery ? rawQuery + "&" : ""}all=1`;
     const appliedLabels = pageDef.fields
       .filter((field: any) => filters[field.name])
       .map((field: any) => {
@@ -897,7 +900,8 @@ if (path === "/login" && method === "GET") {
         return { label: field.label, value: raw };
       })
       .filter(Boolean);
-    const page = await A.http.page(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, pageDef.view || A.reportPages.DEFAULT_VIEW, {
+    // Everything the page renders apart from the rows, which the host splices in by KV key.
+    const frame = {
       def: pageDef,
       // Mobile layout is additive: a narrow report turns into labelled cards, a wide one keeps its
       // grid and scrolls sideways. The first column is the row's identity and reads as a heading
@@ -913,12 +917,44 @@ if (path === "/login" && method === "GET") {
       options,
       appliedLabels,
       missing,
-      rows,
-      rowInfo,
-      totalsGroups: pageDef.totals ? pageDef.totals(result.totals || {}) : [],
-      opening: result.opening || null,
-      meta: result.meta || {},
-    });
+    };
+    const view = pageDef.view || A.reportPages.DEFAULT_VIEW;
+
+    if (A.reportPages.useJsFor(pageDef)) {
+      // The escape hatch: `useJs: true` on the page definition runs `compute/reports.js` for this
+      // page only ([[spooling-report-rows-through-kv]]).
+      const result = missing.length ? { rows: [], totals: {}, meta: {} } : await A.service.run(key, filters);
+      const allRows: any[] = result.rows || [];
+      const truncated = allRows.length > maxRows;
+      const rows = truncated && maxRows >= 0 ? allRows.slice(0, maxRows) : allRows;
+      const page = await A.http.page(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
+        ...frame,
+        rows,
+        rowInfo: { shown: rows.length, total: allRows.length, truncated, allHref },
+        totalsGroups: pageDef.totals ? pageDef.totals(result.totals || {}) : [],
+        opening: result.opening || null,
+        meta: result.meta || {},
+      });
+      if (cacheKey) await pageCachePut(db, cacheKey, page);
+      return html(page);
+    }
+
+    // The spool path. Two statements: the rows, and a one-row totals aggregate over the SAME
+    // statement. Neither brings a row into QuickJS — the totals row is read back through the same
+    // KV handoff and lands here as a small object of formatted strings.
+    const totals = missing.length ? { rowCount: 0 } : await A.spooled.totalsFor(key, filters);
+    const total = Number(totals.rowCount || 0);
+    const shown = maxRows < 0 ? total : Math.min(total, maxRows);
+    const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows)).key }];
+    const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
+      ...frame,
+      rowInfo: { shown, total, truncated: shown < total, allHref },
+      totalsGroups: pageDef.totals ? pageDef.totals(totals) : [],
+      // The general ledger's opening row is an echo of three filter inputs, not a query result, so
+      // there is nothing for SQL to add and `compute/reports.js` is not involved here.
+      opening: pageDef.openings ? A.reportPages.openingRow(filters) : null,
+      meta: {},
+    }, spools);
     if (cacheKey) await pageCachePut(db, cacheKey, page);
     return html(page);
   }
@@ -1859,14 +1895,25 @@ if (path === "/login" && method === "GET") {
     if (ifNoneMatch === etag) {
       return { status: 304, body: "", contentType: "application/json; charset=utf-8", headers };
     }
-    const result = def.compute && def.compute.report ? await A.service.run(def.compute.report, filters) : null;
-    const payload: any = { version: snap.version, slug: def.slug, filters, result, meta: { report: (def.compute && def.compute.report) || null } };
+    const reportName = (def.compute && def.compute.report) || null;
+    // `compute.useJs` is the escape hatch back to `compute/reports.js`; the default runs the spool,
+    // where the rows are spliced into this payload and the whole body is serialised in Rust.
+    const payload: any = { version: snap.version, slug: def.slug, filters, meta: { report: reportName } };
     if (def.needs.tables.length) {
       const tables: any = {};
       for (const table of def.needs.tables) tables[table] = A.service.baseTable(table);
       payload.tables = tables;
     }
-    return { body: JSON.stringify(payload), contentType: "application/json; charset=utf-8", headers };
+
+    if (def.compute && def.compute.useJs === true) {
+      payload.result = reportName ? await A.service.run(reportName, filters) : null;
+      return { body: JSON.stringify(payload), contentType: "application/json; charset=utf-8", headers };
+    }
+
+    // No row cap here: the page shows every row it is given, exactly as the JS path did.
+    const totals = reportName ? await A.spooled.totalsFor(reportName, filters) : {};
+    const body = await A.spooled.jsonPayload(reportName, filters, payload, totals, {});
+    return { body, contentType: "application/json; charset=utf-8", headers };
   }
 
   const pageMatch = /^\/p\/(.+)$/.exec(path);

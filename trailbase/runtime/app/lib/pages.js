@@ -47,7 +47,13 @@ export function normalizeMeta(meta) {
       views: viewClosure(toArray(meta?.needs?.views)),
       tables: [...new Set([...toArray(meta?.needs?.tables), ...sources])],
     },
-    compute: meta?.compute && typeof meta.compute === "object" ? meta.compute : null,
+    // `compute.useJs` is the escape hatch that sends a page back to the legacy JS report
+    // implementation ([[spooling-report-rows-through-kv]]). It is normalised to a strict boolean
+    // here rather than read raw at the call site, so a manifest cannot switch a money report's
+    // execution path with a stray non-empty value.
+    compute: meta?.compute && typeof meta.compute === "object"
+      ? { ...meta.compute, useJs: meta.compute.useJs === true }
+      : null,
     requires: toArray(meta?.requires),
     filters,
     columns: Array.isArray(meta?.columns) ? meta.columns : [],

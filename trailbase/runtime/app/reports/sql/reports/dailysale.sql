@@ -33,8 +33,16 @@
   WHERE
     -- reports.js:468: sale invoices only.
     iv.type = 1
-    AND (:from = '' OR dated >= :from || ' 00:00:00')
-    AND (:to = '' OR dated <= :to || ' 23:59:59.999Z')
+    -- The resolved date is SPELLED OUT here rather than using the `dated` alias above.
+    --
+    -- SQLite resolves a bare name in WHERE against the underlying COLUMN, and `invoice_view` HAS a
+    -- column called `dated` — so `dated <= :to` was filtering on `i.dated` directly, not on
+    -- `COALESCE(NULLIF(dated, ''), created)`. Every non-empty value agrees, which is why the row
+    -- parity check never saw it, but the 23 invoices with an EMPTY `dated` compared `'' <= '…'` (true,
+    -- an empty string sorts before everything) where the JS falls back to `created` (views.js:98) and
+    -- would exclude them: 19 extra rows on any out-of-range date filter.
+    AND (:from = '' OR COALESCE(NULLIF(iv.dated, ''), iv.created) >= :from || ' 00:00:00')
+    AND (:to = '' OR COALESCE(NULLIF(iv.dated, ''), iv.created) <= :to || ' 23:59:59.999Z')
     AND (:booker = '' OR iv.booker = :booker)
     AND (:area = '' OR an.id = :area)
     AND (:section = '' OR ar.section = :section)

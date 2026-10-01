@@ -97,7 +97,16 @@ SELECT
        WHEN CAST(it.invoiceNo AS REAL) = CAST(CAST(it.invoiceNo AS INTEGER) AS REAL)
        THEN CAST(CAST(it.invoiceNo AS INTEGER) AS TEXT)
        ELSE CAST(it.invoiceNo AS TEXT) END AS invoice,
-  invoice AS invoiceId
+  invoice AS invoiceId,
+  -- CARRIED FOR THE TOTALS ALONE, and the report's order decides a money total, not just
+  -- presentation: `reportLedgerParty` takes the LAST row's balance as `totals.balance`
+  -- (reports.js:350), and the last row is decided by `payment_date ASC, id DESC`.
+  --
+  -- Every row shares ONE `created` on this depot, so `date` is constant and cannot pick it — an
+  -- `ORDER BY date, id DESC LIMIT 1` returns the SMALLEST id in the set, which is the opposite end
+  -- of the order. The payment date has to be visible to the totals statement's ORDER BY, so it is
+  -- projected here. The template does not read it.
+  payment_date AS paymentDate
 FROM party_balanced
 -- `invoice_chain`, NOT `invoice_totals`: the projection reads `invoiceNo`, which lives on the chain
 -- (`invoice_totals` carries only `final_total`). The booker comes through the same join, since

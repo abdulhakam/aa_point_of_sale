@@ -61,9 +61,16 @@ fn next_seq() -> u64 {
 /// Decode a bind parameter.
 ///
 /// Ids in this schema are BLOB uuid_v7, and the host's own convention for a BLOB crossing into JS
-/// is padded URL-safe base64 (`api::value_to_json`). So a JS caller can only ever hold an id as
-/// base64 — binding it as `Value::Text` would compare TEXT against BLOB and never match, silently
-/// filtering every row away. `blob:` is therefore an explicit, unambiguous escape hatch.
+/// is URL-safe base64 (`api::value_to_json`). So a JS caller can only ever hold an id as base64 —
+/// binding it as `Value::Text` would compare TEXT against BLOB and never match, silently filtering
+/// every row away. `blob:` is therefore an explicit, unambiguous escape hatch.
+///
+/// BOTH base64 spellings are accepted, and that is load-bearing. An id LEAVING the host is padded
+/// (`value_to_json` emits `==`), but an id ARRIVING from the app is not: the query string carries the
+/// 22-character unpadded form the app's own helpers produce, and a `?party=<id>` filter is the whole
+/// point. `URL_SAFE` — the padded engine — rejects those with `Invalid padding`, so every id filter on
+/// a spooled statement failed while the unfiltered report rendered perfectly: correct row count,
+/// correct money, and a filter that did nothing.
 ///
 /// Bare strings stay `Value::Text`, which is what every existing call site in this host expects
 /// (`api/sqlite.rs`, `api.rs`), so nothing else changes behaviour.
@@ -72,8 +79,10 @@ fn bind_param(s: &str) -> Result<Value, String> {
     return Ok(Value::Text(s.to_string()));
   };
   use base64::Engine as _;
-  let bytes = base64::engine::general_purpose::URL_SAFE
-    .decode(encoded)
+  // Strip any padding, then decode as NO_PAD: one branch covers both spellings. `URL_SAFE_NO_PAD`
+  // alone would reject a padded id, and `URL_SAFE` alone rejects the unpadded one.
+  let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+    .decode(encoded.trim_end_matches('='))
     .map_err(|e| format!("blob: parameter is not valid URL-safe base64: {e}"))?;
   return Ok(Value::Blob(bytes));
 }

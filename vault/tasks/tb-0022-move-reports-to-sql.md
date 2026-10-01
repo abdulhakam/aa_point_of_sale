@@ -4,10 +4,10 @@ type: task
 status: doing
 priority: high
 created: 2026-09-27
-updated: 2026-09-29
+updated: 2026-10-01
 tags: [reports, sql, no-build, performance]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[report-enum-translation-2026-09-29]]", "[[report-sql-filters-on-text-enums-returns-nothing]]", "[[legacy-sql-views-differ-from-js-views]]", "[[report-logic-stays-runtime-file-based]]", "[[guest-report-performance-options]]", "[[legacy-report-sql-uses-company-columns]]", "[[dispatcher-transpiled-per-request]]", "[[component-split-and-sql-materialised-tables]]", "[[manifest-driven-routing-and-data-dag]]"]
+related_to: ["[[report-enum-translation-2026-09-29]]", "[[report-sql-filters-on-text-enums-returns-nothing]]", "[[legacy-sql-views-differ-from-js-views]]", "[[report-logic-stays-runtime-file-based]]", "[[guest-report-performance-options]]", "[[legacy-report-sql-uses-company-columns]]", "[[dispatcher-transpiled-per-request]]", "[[component-split-and-sql-materialised-tables]]", "[[manifest-driven-routing-and-data-dag]]", "[[spooling-report-rows-through-kv]]", "[[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]]", "[[six-report-defects-the-empty-filter-parity-gate-could-not-see]]", "[[spool-blob-bind-decoder-rejected-unpadded-base64]]"]
 ---
 
 # TB-0022 Move report arithmetic into SQL (runtime .sql files)
@@ -82,16 +82,28 @@ switched.
       - `node trailbase/tools/guest-smoke.mjs` → **76/76**
       - See [[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]] and
         [[spooling-report-rows-through-kv]].
-- [ ] **Wire the spooled path into the live report pages**, per report. `/bench/spool` exercises it
-      today; the page routes still call `A.service.run`. Start with the 26k-row reports where the
-      gain is measured (payments, ledgers/party, ledgers/booker, ledgers/general), and leave the small
-      ones (`stockreport`, `difference`, `productsale`, `outstanding`) on the JS path, where the spool
-      is at or below noise and two are measurably slower.
-- [ ] **Decide the five tolerated float-boundary differences.** One party in 872 lands on an exact
-      half-paisa, and JS's accumulation order and SQLite's `SUM` order round it to opposite sides.
-      Forcing SQLite's order was measured and is worse (664 credits / 754 balances changed vs 1).
-      Options: accept and document, move the totals into SQL so one engine computes them, or store
-      money as integer cents ([[money-is-2dp-everywhere]], `tb-0015`).
+- [x] **2026-10-01 — DONE. The spool is the LIVE path for all 14 reports, on both surfaces.**
+      `/reports/<slug>` and `/p/<slug>/data` no longer call `A.service.run`. Each runs two
+      statements: the rows (capped by a `LIMIT`, not sliced in JS) and a **totals statement that wraps
+      the report statement** and reduces it to one row of formatted strings — see
+      [[a-reports-totals-come-from-a-sqlite-statement-that-wraps-the-report]]. `useJs: true` on a report
+      page, or `compute.useJs: true` on a declarative page, re-enables `compute/reports.js` for that
+      page alone. `render.json` was added so the page payload's `result.rows` is spliced and serialised
+      in Rust.
+      - `node trailbase/tools/verify-spool-reports.mjs` → **14/14**, plus **72 binds** proved to reach
+        their statement and to narrow it, plus page-column and totals-key checks
+      - `node trailbase/tools/check-report-pages.mjs` → every report page and every page payload
+        rendering, **with the two surfaces agreeing** on row count and totals for identical filters
+      - `node trailbase/tools/verify-prelude.mjs` → 15/15; `check-money-text.mjs` → 438,407 values at 2dp
+      - Seven defects found and fixed on the way, **all invisible to the old empty-filter gate** and all
+        producing correct row counts and correct money: see
+        [[six-report-defects-the-empty-filter-parity-gate-could-not-see]] and
+        [[spool-blob-bind-decoder-rejected-unpadded-base64]] (the latter shipped in `f449670` and
+        killed every id filter on a spooled report).
+- [ ] **Count totals in integer cents.** The totals statement is the last place arithmetic happens, and
+      the five tolerated half-paisa differences live in it. Rewrite every aggregate as
+      `SUM(CAST(ROUND(x * 100) AS INTEGER))` and format once at output; that removes the class rather
+      than documenting it. **This is the remaining work on this task.**
 
 ## Reconciliation status (2026-09-27)
 

@@ -9,6 +9,18 @@ mod kv;
 mod sqlite;
 mod time;
 
+/// Decode the `[{field, key}]` argument the spool renderers take.
+///
+/// It arrives as a JS array of plain objects and is deserialised through serde rather than typed as
+/// `Vec<SpoolRef>` directly, because rquickjs converts JS values via the `FromJs` trait and this
+/// type is only `Deserialize`.
+fn spools_arg(v: &JsValue<'_>, who: &str) -> Result<Vec<crate::render::SpoolRef>> {
+    serde_json::from_value(js_to_json(v)).map_err(|e| {
+        eprintln!("{who} bad spools arg: {e}");
+        rquickjs::Error::Unknown
+    })
+}
+
 pub fn init_api(ctx: &Ctx<'_>) -> Result<()> {
     let globals = ctx.globals();
     // Use an object to group trailbase functions
@@ -18,7 +30,6 @@ pub fn init_api(ctx: &Ctx<'_>) -> Result<()> {
     trailbase.set("query", Function::new(ctx.clone(), Async(query_js)))?;
 
     globals.set("trailbase", trailbase)?;
-
     // Polyfill: db (alias to functionality we have)
     // Most scripts use db.query
     let db = Object::new(ctx.clone())?;
@@ -97,19 +108,28 @@ pub fn init_api(ctx: &Ctx<'_>) -> Result<()> {
         "spooled",
         Function::new(ctx.clone(), |name: String, ctx_val: JsValue, spools_val: JsValue| -> Result<String> {
             let json = ctx_json_value(Some(&ctx_val));
-
-            // `spools` arrives as a JS array of `{field, key}`. It is deserialised through serde
-            // rather than typed as `Vec<SpoolRef>` directly, because rquickjs converts JS values
-            // via the `FromJs` trait and this type is only `Deserialize`.
-            let spools_json = js_to_json(&spools_val);
-            let spools: Vec<crate::render::SpoolRef> =
-                serde_json::from_value(spools_json).map_err(|e| {
-                    eprintln!("render.spooled bad spools arg: {e}");
-                    rquickjs::Error::Unknown
-                })?;
+            let spools = spools_arg(&spools_val, "render.spooled")?;
 
             crate::render::render_spooled(&name, json, spools).map_err(|e| {
                 eprintln!("render.spooled error: {e}");
+                rquickjs::Error::Unknown
+            })
+        }),
+    )?;
+
+    // `render.json(ctx, [{field, key}])` — the same handoff, serialised as JSON instead of HTML.
+    //
+    // The declarative pages answer with a JSON body (`/p/<slug>/data`) whose `result.rows` is the
+    // whole report. That body cannot be built in QuickJS without the rows in it, so the envelope
+    // and the key go to Rust and the completed JSON comes back as one string.
+    render.set(
+        "json",
+        Function::new(ctx.clone(), |ctx_val: JsValue, spools_val: JsValue| -> Result<String> {
+            let json = ctx_json_value(Some(&ctx_val));
+            let spools = spools_arg(&spools_val, "render.json")?;
+
+            crate::render::json_spooled(json, spools).map_err(|e| {
+                eprintln!("render.json error: {e}");
                 rquickjs::Error::Unknown
             })
         }),
