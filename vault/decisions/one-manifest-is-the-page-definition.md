@@ -69,7 +69,44 @@ and the defect cannot recur. Measured after the change, on the production depot:
 **`/reports` and `/p` can no longer disagree**, because there is only one file for them to disagree
 about.
 
-## How the migration was done
+## P2, 2026-10-01: `/p` is server-rendered too
+
+The manifest is the one definition, and now it is also the only **rendering** path.
+`renderReportPage` was lifted out of the `/reports` route and both routes call it, so `/p/<slug>` and
+`/reports/<key>` are the same page: rows arrive as a KV handle, are spliced into the template in Rust,
+and the browser gets finished HTML.
+
+`public/js/runtime/page.js` is **deleted** — 171 lines. `page_body.html` no longer embeds the manifest
+as JSON for a driver. A page with no report behind it still renders (filters, empty table, totals)
+and works with no JavaScript at all, which is the point of a declarative page.
+
+Measured, `/p/reports/payments?from=2020-01-01&to=2030-12-31`:
+
+| | before | after |
+|---|---|---|
+| response | 8,242 KB JSON | **465 KB HTML** |
+| time to content | 1,763 ms (fetch + client render) | **52 ms** |
+
+The `/p/<slug>/data` JSON endpoint stays, uncapped, as an API for a programmatic consumer. The
+browser does not use it.
+
+**Client JavaScript is now 378 lines in one file** (`app.js`) — a clock, the refresh dot, print, confirm
+on delete, select filtering, table search, and the live invoice grid. The grid's money formulas are a
+deliberate duplicate of the server's, per `decisions/client-side-live-recalculation.md`; that is a
+decided trade, not boilerplate.
+
+### The bug the extraction introduced, and how it was found
+
+Splicing the report block out by **line number** corrupted the `/bench/spool` route — a
+mis-counted offset put the report wrapper inside a template literal, so the whole dispatcher failed
+its top-level evaluation and every route returned 404, with no error in the log.
+
+Two things learned:
+- **Verify the parse before syncing.** `node --experimental-strip-types` on a copy of the file finds
+  the exact error in one second; the running server reports only "404". A hand-rolled regex
+  type-stripper is worse than useless here — it mangles ternaries and reports a phantom.
+- **Anchor edits on content, not line numbers.** Re-doing the extraction against verified assertion
+  points (assert the boundary lines are what they are expected to be) was the fix.
 
 `tools/gen-manifests.mjs` generated all 14 manifests from the JS definitions rather than by hand, so
 nothing was transcribed. It is a **one-shot** tool: the module it read no longer exists, and the

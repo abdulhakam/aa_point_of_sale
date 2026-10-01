@@ -132,11 +132,43 @@ foreach ($k in @("party","booker","area","general")) {
 }
 $ok += "/reports/ledgers links $($lLinks.Count) tiles: $($lLinks -join ', ')"
 
-# ---- 7. /p reads the same definition
-"=== 7. /p serves the same report from the same manifest"
+# ---- 7. /p serves the same page, server-rendered, from the same manifest
+"=== 7. /p is the same page, rendered on the server"
 $p = Get-Page "/p/reports/payments/data?from=2020-01-01&to=2030-12-31"
 $j = $p.Body | ConvertFrom-Json
-$ok += "/p payments rows=$($j.result.rows.Count) totalSending=$($j.result.totals.totalSending) total=$($j.result.totals.total)"
+$ok += "/p data endpoint still serves JSON: rows=$($j.result.rows.Count) totalSending=$($j.result.totals.totalSending)"
+
+# The PAGE, not the API: it must be finished HTML, not a shell waiting for JavaScript.
+$p = Get-Page "/p/reports/payments?from=2020-01-01&to=2030-12-31"
+$h = $p.Body
+$rowsInHtml = ([regex]::Matches($h, '<tr')).Count
+$checks = @(
+  @{ name = "renders data rows in the HTML";      ok = ($rowsInHtml -gt 100) }
+  @{ name = "carries no manifest JSON for a driver"; ok = ($h -notmatch 'id="page-meta"') }
+  @{ name = "loads no page.js";                   ok = ($h -notmatch 'runtime/page\.js') }
+  @{ name = "has a working GET filter form";      ok = ($h -match '<form class="filters" method="get"') }
+  @{ name = "renders the totals tables";          ok = (([regex]::Matches($h, 'totals-table')).Count -ge 2) }
+  @{ name = "offers the same total as /reports";  ok = ($h -match '6,?950,?631\.20') }
+)
+foreach ($c in $checks) { if ($c.ok) { $ok += "/p page: $($c.name)" } else { $fail += "/p page: $($c.name)" } }
+
+# Every /p page must render too, since the whole point is that a page is just a manifest.
+foreach ($k in @("reports/dailysale","reports/productsale","ledgers/general","reports/stock")) {
+  $p = Get-Page "/p/$k"
+  if ($p.Status -eq 200 -and $p.Body -notmatch 'Guest error') { $ok += "/p/$k renders server-side" }
+  else { $fail += "/p/$k FAILED status=$($p.Status)" }
+}
+
+# The row cap applies to /p as it does to /reports, so a wide report is not an 8 MB document.
+# The default window is today, which is too narrow to truncate, so ask for a wide range explicitly.
+$p = Get-Page "/p/reports/payments?from=2020-01-01&to=2030-12-31"
+# The notice reads `Showing first 1000 of 26099` — the template prints the numbers unformatted.
+$capped = $p.Body -match 'Showing first 1,?000 of 26,?099'
+if ($capped) { $ok += "/p honours the 1,000-row cap with a show-all link" }
+else {
+  $m2 = [regex]::Match($p.Body, 'Showing first ([\d,]+) of ([\d,]+)')
+  $fail += "/p did not cap its rows (notice = '$($m2.Value)', doc = $([Math]::Round($p.Body.Length/1024)) KB)"
+}
 
 "`n================ RESULT ================"
 "passed: $($ok.Count)"

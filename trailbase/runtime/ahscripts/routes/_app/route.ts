@@ -351,6 +351,117 @@ const RENDER_MAX_ROWS = 1000;
 // ledger does), which is how a report gets a bespoke layout without its own route.
 const DEFAULT_REPORT_VIEW = "reports/report.html";
 
+// ------------------------------------------------------------------ the report page
+//
+// Render a report from its manifest, server-side. Shared by `/reports/<key>` and `/p/<slug>`, so
+// the two routes are the same page: the rows arrive as a KV handle and are spliced into the
+// template in Rust, so no row is ever materialised in QuickJS and the browser receives finished
+// HTML. Before this, `/p` shipped the manifest to `public/js/runtime/page.js`, which rebuilt the
+// table in the DOM from a multi-megabyte JSON payload - 171 lines of client JavaScript and an
+// 8 MB response for the same report `/reports` returns in 465 KB.
+async function renderReportPage(
+  A: any, db: any, req: any, user: any, path: string, query: Record<string, any>,
+  key: string, pageDef: any
+): Promise<any> {
+  // `filtersFor` honours the manifest's declared defaults when the query does not carry the
+  // field, which is what the report page always wants. (The old `parseFilters` overwrote every
+  // default from the query, so a bare GET computed all-time figures —
+  // vault/issues/report-routes-ignore-date-defaults.md.)
+  const filters = filtersFor(pageDef, query);
+
+  const showAll = String(query.all || "") === "1";
+  const requestedMax = Number(query.maxRows || 0);
+  // -1 means "no cap", which is what a `LIMIT`-less statement wants; the page renders everything
+  // rather than slicing in JS.
+  const maxRows = showAll ? -1 : requestedMax > 0 ? requestedMax : RENDER_MAX_ROWS;
+
+  // Rendered-page cache lookup. The fingerprint is the live data version, so any write misses.
+  let cacheKey: string | null = null;
+  try {
+    const fp = await A.service.fingerprint();
+    cacheKey = JSON.stringify([fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax]);
+    const cached = await pageCacheGet(db, cacheKey);
+    if (cached !== null) return html(cached);
+  } catch {
+    cacheKey = null;
+  }
+
+  const snap = await A.service.getViews(["refs"]);
+  const options = A.reportPages.filterOptions(snap.views.refs, pageDef.fields);
+  const missing = (pageDef.requires || []).filter((name: string) => !filters[name]);
+  const rawQuery = String(req.query || "");
+  const allHref = `${path}?${rawQuery ? rawQuery + "&" : ""}all=1`;
+  const appliedLabels = pageDef.fields
+    .filter((field: any) => filters[field.name])
+    .map((field: any) => {
+      const raw = String(filters[field.name]);
+      if (field.type === "select") {
+        const hit = (options[field.source] || []).find((o: any) => o.value === raw);
+        return { label: field.label, value: hit ? hit.label : raw };
+      }
+      if (field.type === "check") return null;
+      return { label: field.label, value: raw };
+    })
+    .filter(Boolean);
+  // Everything the page renders apart from the rows, which the host splices in by KV key.
+  const frame = {
+    def: pageDef,
+    // Mobile layout is additive: a narrow report turns into labelled cards, a wide one keeps its
+    // grid and scrolls sideways. The first column is the row's identity and reads as a heading
+    // inside a card, so it is marked `lead` and drops its own label
+    // ([[mobile-layout-is-additive-to-the-legacy-look]]).
+    columns: pageDef.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
+    mobile: pageDef.columns.length <= 6 ? "cards" : "scroll",
+    basePath: path,
+    // The print link carries the filters that are on screen, so a sheet is the report the
+    // operator was looking at rather than an unfiltered default.
+    rawQuery,
+    filters,
+    options,
+    appliedLabels,
+    missing,
+  };
+  const view = pageDef.view || DEFAULT_REPORT_VIEW;
+
+  if (pageDef.compute && pageDef.compute.useJs === true) {
+    // The escape hatch: `useJs: true` on the manifest runs `compute/reports.js` for this page only
+    // ([[spooling-report-rows-through-kv]]).
+    const result = missing.length ? { rows: [], totals: {}, meta: {} } : await A.service.run(key, filters);
+    const allRows: any[] = result.rows || [];
+    const truncated = allRows.length > maxRows;
+    const rows = truncated && maxRows >= 0 ? allRows.slice(0, maxRows) : allRows;
+    const page = await A.http.page(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
+      ...frame,
+      rows,
+      rowInfo: { shown: rows.length, total: allRows.length, truncated, allHref },
+      totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], result.totals || {}),
+      opening: result.opening || null,
+      meta: result.meta || {},
+    });
+    if (cacheKey) await pageCachePut(db, cacheKey, page);
+    return html(page);
+  }
+
+  // The spool path. Two statements: the rows, and a one-row totals aggregate over the SAME
+  // statement. Neither brings a row into QuickJS — the totals row is read back through the same
+  // KV handoff and lands here as a small object of formatted strings.
+  const totals = missing.length ? { rowCount: 0 } : await A.spooled.totalsFor(key, filters);
+  const total = Number(totals.rowCount || 0);
+  const shown = maxRows < 0 ? total : Math.min(total, maxRows);
+  const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows)).key }];
+  const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
+    ...frame,
+    rowInfo: { shown, total, truncated: shown < total, allHref },
+    totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], totals),
+    // The general ledger's opening row is an echo of three filter inputs, not a query result, so
+    // there is nothing for SQL to add and `compute/reports.js` is not involved here.
+    opening: pageDef.openings ? A.reportPages.openingRow(filters) : null,
+    meta: {},
+  }, spools);
+  if (cacheKey) await pageCachePut(db, cacheKey, page);
+  return html(page);
+}
+
 async function dispatch(req: any): Promise<any> {
   const A = await app();
   const db: any = (globalThis as any).sqlite;
@@ -875,110 +986,15 @@ if (path === "/login" && method === "GET") {
     const key = reportMatch[1];
     // The manifest is the ONE page definition: `/reports/<key>` and `/p/<slug>` both read it, so a
     // report cannot be defined twice and drift. `REPORT_PAGES` in app/lib/report-pages.js used to be
-    // the second copy, and it had already diverged — see
+    // the second copy, and it had already diverged - see
     // vault/issues/report-page-definitions-duplicated-and-already-divergent.md.
     const pageDef = (await A.pages.reportPages(PAGES_DIR))[key];
     // The spool registry, not `compute/reports.js`, decides what exists: the SQL is what a report
     // IS now, and the JS registry is only the fallback.
     if (!pageDef || !A.spooled.names().includes(key)) return text("Not found", 404);
-    // `filtersFor` honours the manifest's declared defaults when the query does not carry the
-    // field, which is what the report page always wants. (The old `parseFilters` overwrote every
-    // default from the query, so a bare GET computed all-time figures —
-    // vault/issues/report-routes-ignore-date-defaults.md.)
-    const filters = filtersFor(pageDef, query);
-
-    const showAll = String(query.all || "") === "1";
-    const requestedMax = Number(query.maxRows || 0);
-    // -1 means "no cap", which is what a `LIMIT`-less statement wants; the page renders everything
-    // rather than slicing in JS.
-    const maxRows = showAll ? -1 : requestedMax > 0 ? requestedMax : RENDER_MAX_ROWS;
-
-    // Rendered-page cache lookup. The fingerprint is the live data version, so any write misses.
-    let cacheKey: string | null = null;
-    try {
-      const fp = await A.service.fingerprint();
-      cacheKey = JSON.stringify([fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax]);
-      const cached = await pageCacheGet(db, cacheKey);
-      if (cached !== null) return html(cached);
-    } catch {
-      cacheKey = null;
-    }
-
-    const snap = await A.service.getViews(["refs"]);
-    const options = A.reportPages.filterOptions(snap.views.refs, pageDef.fields);
-    const missing = (pageDef.requires || []).filter((name: string) => !filters[name]);
-    const rawQuery = String(req.query || "");
-    const allHref = `${path}?${rawQuery ? rawQuery + "&" : ""}all=1`;
-    const appliedLabels = pageDef.fields
-      .filter((field: any) => filters[field.name])
-      .map((field: any) => {
-        const raw = String(filters[field.name]);
-        if (field.type === "select") {
-          const hit = (options[field.source] || []).find((o: any) => o.value === raw);
-          return { label: field.label, value: hit ? hit.label : raw };
-        }
-        if (field.type === "check") return null;
-        return { label: field.label, value: raw };
-      })
-      .filter(Boolean);
-    // Everything the page renders apart from the rows, which the host splices in by KV key.
-    const frame = {
-      def: pageDef,
-      // Mobile layout is additive: a narrow report turns into labelled cards, a wide one keeps its
-      // grid and scrolls sideways. The first column is the row's identity and reads as a heading
-      // inside a card, so it is marked `lead` and drops its own label
-      // ([[mobile-layout-is-additive-to-the-legacy-look]]).
-      columns: pageDef.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
-      mobile: pageDef.columns.length <= 6 ? "cards" : "scroll",
-      basePath: "/reports/" + key,
-      // The print link carries the filters that are on screen, so a sheet is the report the
-      // operator was looking at rather than an unfiltered default.
-      rawQuery,
-      filters,
-      options,
-      appliedLabels,
-      missing,
-    };
-    const view = pageDef.view || DEFAULT_REPORT_VIEW;
-
-    if (pageDef.compute && pageDef.compute.useJs === true) {
-      // The escape hatch: `useJs: true` on the manifest runs `compute/reports.js` for this page only
-      // ([[spooling-report-rows-through-kv]]).
-      const result = missing.length ? { rows: [], totals: {}, meta: {} } : await A.service.run(key, filters);
-      const allRows: any[] = result.rows || [];
-      const truncated = allRows.length > maxRows;
-      const rows = truncated && maxRows >= 0 ? allRows.slice(0, maxRows) : allRows;
-      const page = await A.http.page(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
-        ...frame,
-        rows,
-        rowInfo: { shown: rows.length, total: allRows.length, truncated, allHref },
-        totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], result.totals || {}),
-        opening: result.opening || null,
-        meta: result.meta || {},
-      });
-      if (cacheKey) await pageCachePut(db, cacheKey, page);
-      return html(page);
-    }
-
-    // The spool path. Two statements: the rows, and a one-row totals aggregate over the SAME
-    // statement. Neither brings a row into QuickJS — the totals row is read back through the same
-    // KV handoff and lands here as a small object of formatted strings.
-    const totals = missing.length ? { rowCount: 0 } : await A.spooled.totalsFor(key, filters);
-    const total = Number(totals.rowCount || 0);
-    const shown = maxRows < 0 ? total : Math.min(total, maxRows);
-    const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows)).key }];
-    const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
-      ...frame,
-      rowInfo: { shown, total, truncated: shown < total, allHref },
-      totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], totals),
-      // The general ledger's opening row is an echo of three filter inputs, not a query result, so
-      // there is nothing for SQL to add and `compute/reports.js` is not involved here.
-      opening: pageDef.openings ? A.reportPages.openingRow(filters) : null,
-      meta: {},
-    }, spools);
-    if (cacheKey) await pageCachePut(db, cacheKey, page);
-    return html(page);
+    return renderReportPage(A, db, req, user, path, query, key, pageDef);
   }
+
 
   if (path === "/management") {
     const entities = A.entities.ENTITY_ORDER.map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
@@ -1934,9 +1950,35 @@ if (path === "/login" && method === "GET") {
     const slug = pageMatch[1];
     const def = await A.pages.readPage(PAGES_DIR, slug);
     if (!def) return text("No such page", 404);
-    const payload = { ...def, dataUrl: `/p/${def.slug}/data` };
-    const metaJson = JSON.stringify(payload).replace(/</g, "\\u003c");
-    return html(await A.http.page(req, shell(user, "pages", def.title), `${def.slug}/${def.template}`, { meta: def, metaJson }));
+
+    // A page that names a report is the SAME page as `/reports/<key>` - one manifest, one template,
+    // one rendering path. It used to be different: the shell shipped the manifest as JSON and
+    // `public/js/runtime/page.js` rebuilt the table in the DOM from `/p/<slug>/data`, which meant
+    // 171 lines of client JavaScript and an 8 MB response for a report `/reports` returns in 465 KB.
+    //
+    // The JSON endpoint stays, uncapped, as an API for a programmatic consumer. The BROWSER does
+    // not use it any more.
+    if (def.compute && typeof def.compute.report === "string" && A.spooled.names().includes(def.compute.report)) {
+      return renderReportPage(A, db, req, user, path, query, def.compute.report, def);
+    }
+
+    // A page with no report behind it is still a page: filters and an empty table, rendered
+    // server-side. It works with no JavaScript at all, which is the point of a declarative page.
+    const options = A.reportPages.filterOptions(
+      (await A.service.getViews(["refs"])).views.refs,
+      def.fields
+    );
+    return html(
+      await A.http.page(req, shell(user, "pages", def.title), `${def.slug}/${def.template}`, {
+        meta: def,
+        filters: filtersFor(def, query),
+        options,
+        // The rows are the host's business; a page with no statement behind it has none.
+        columns: def.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
+        rows: [],
+        totalsGroups: A.pages.bindTotalsGroups(def.totals || [], {}),
+      })
+    );
   }
 
   return text("Not found", 404);
