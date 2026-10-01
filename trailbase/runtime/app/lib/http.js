@@ -5,7 +5,6 @@
 // `render-client`, so whether a page is rendered in-process or by the separate `renderer.wasm`
 // component is `/app/config/renderer.json` rather than a change to any call site — 25 of them
 // (vault/decisions/rendering-is-a-component-behind-an-envelope.md).
-import { renderTemplate } from "./render-client.js";
 
 export async function page(req, shell, name, data) {
   return render.html(name, JSON.stringify(shellContext(shell, data)));

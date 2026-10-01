@@ -180,33 +180,12 @@ impl Renderer {
         Self { env }
     }
 
-    fn context(ctx_json: &str) -> Result<Value, String> {
-        let text = ctx_json.trim();
-        if text.is_empty() {
-            return Ok(Value::from_serialize(serde_json::json!({})));
-        }
-        let json: serde_json::Value = serde_json::from_str(text).map_err(|e| e.to_string())?;
-        Ok(Value::from_serialize(&json))
-    }
-
-    pub fn render(&mut self, name: &str, ctx_json: &str) -> Result<String, String> {
-        // minijinja caches compiled templates by name and 2.24 has no auto-reload, so clear
-        // before each render or on-disk edits are never seen (mtime is unusable on WASI — see
-        // `Loader`). This is the dev-friendly choice; a prod build may want a real cache.
-        self.env.clear_templates();
-        let ctx = Self::context(ctx_json)?;
-        let tmpl = self.env.get_template(name).map_err(|e| e.to_string())?;
-        tmpl.render(ctx).map_err(|e| e.to_string())
-    }
-
-    pub fn render_string(&mut self, source: &str, ctx_json: &str) -> Result<String, String> {
-        self.env.clear_templates();
-        let ctx = Self::context(ctx_json)?;
-        self.env.render_str(source, ctx).map_err(|e| e.to_string())
-    }
-
     /// Render with a context already converted to serde (the direct JS→serde bridge path): no
-    /// JSON string round-trip. `trailbase/host/src/api.rs` converts the JS value here.
+    /// JSON string round-trip. `crate::api` converts the JS value here.
+    ///
+    /// minijinja caches compiled templates by name and 2.24 has no auto-reload, so every render
+    /// clears the cache first — otherwise on-disk edits are never seen (mtime is unusable on WASI,
+    /// see `Loader`). This is the dev-friendly choice; a prod build may want a real cache.
     pub fn render_value(&mut self, name: &str, ctx: serde_json::Value) -> Result<String, String> {
         self.env.clear_templates();
         let ctx = Value::from_serialize(&ctx);

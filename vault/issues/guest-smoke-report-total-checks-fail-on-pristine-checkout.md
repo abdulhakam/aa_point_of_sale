@@ -65,6 +65,24 @@ checks, the earlier clean run was most likely luck of ordering rather than a pas
 `76/76` was never a reliable gate for these checks, and any claim resting on it should be re-measured
 by running it several times.
 
+## Re-measured 2026-10-01 after the dead-code sweep — same failures, so they are pre-existing
+
+The dead-code removal in [[tb-0031-remove-proven-dead-code]] was verified by running the suite on
+**both** sides of the change, each with a freshly built `wasm32-wasip2` component:
+
+| Run | Result | Failing set |
+|---|---|---|
+| HEAD (all changes stashed) | **66/76** | the 8 stable checks below, plus `page data revalidates an unchanged filtered result` and `repeat report run is served from the KV cache` |
+| Dead-code sweep applied | **66/76** | **identical** |
+
+The failing sets are the same 10 checks. An earlier run of the sweep scored 67/76, one check
+better than the baseline — that was the flaky pair landing the other way, which is direct
+confirmation that these cache checks are order-dependent and that a single run is not a gate.
+
+Consequence: **the smoke suite does not detect this class of regression at all**, so "the suite
+passed" is not evidence that a change preserved behaviour. Parity claims need a before/after pair
+like the one above.
+
 ## Next step
 
 Not the spool. Reproduce with the cache in play: run the suite repeatedly, capture whether

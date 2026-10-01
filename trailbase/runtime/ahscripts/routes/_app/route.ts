@@ -1258,14 +1258,6 @@ if (path === "/login" && method === "GET") {
   const round2to = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
   const pick = (value, fallback) => (value === undefined || value === null || value === "" ? fallback : value);
   const flag = (value) => (value === "1" || value === "on" || value === "true" ? "on" : "");
-  const editorItems = (refs) =>
-    (refs?.items ?? []).map((it) => ({
-      id: it.id,
-      name: it.name ?? "",
-      price: Number(it.sale_price) || 0,
-      costPrice: Number(it.cost_price) || 0,
-      boxSizeQty: Number(it.box_size_qty) || 0,
-    }));
 
   // ------------------------------------------------------------------ print queue
   //
@@ -1490,7 +1482,7 @@ if (path === "/login" && method === "GET") {
           typeLabel: A.invoices.typeLabel(type),
           parties: refs.parties ?? [],
           bookers: refs.bookers ?? [],
-          items: editorItems(refs),
+          items: A.routeKit.editorItems(refs),
         })
       );
     }
@@ -1577,7 +1569,7 @@ if (path === "/login" && method === "GET") {
         opKey: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e9).toString(36),
         parties: refs.parties ?? [],
         bookers: refs.bookers ?? [],
-        items: editorItems(refs),
+        items: A.routeKit.editorItems(refs),
         message: query.status === "ok" ? "Saved" : "",
       })
     );
@@ -1615,7 +1607,7 @@ if (path === "/login" && method === "GET") {
         },
         parties: refs.parties ?? [],
         bookers: refs.bookers ?? [],
-        items: editorItems(refs),
+        items: A.routeKit.editorItems(refs),
       })
     );
   }

@@ -20,11 +20,6 @@ async function load() {
   return out;
 }
 
-/** Invalidate the loaded SQL (a refresh, or a SIGHUP-style reload). */
-export function invalidate() {
-  cache = null;
-}
-
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function depsOf(views, name) {

@@ -41,11 +41,6 @@ export function optionLists(refs) {
   return out;
 }
 
-/** The base tables a write to this entity can change: the record plus its link tables. */
-export function touchedTables(entity) {
-  return [entity.api, ...entity.fields.filter((field) => field.type === "multi" && field.link).map((field) => field.link)];
-}
-
 /** One text value per defined column, so the template only prints. */
 export function displayRows(entity, rows, refs, links) {
   const lists = refLists(refs);

@@ -13,16 +13,6 @@ export const money = (v) => num(v).toFixed(2);
 /** `2026-09-24 16:17:32.436Z` -> `2026-09-24` (PocketBase-compatible text timestamps). */
 export const dateOnly = (v) => (v ? String(v).slice(0, 10) : "");
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-/** `2026-09-24 ...` -> `24-Sep-2026` (matches `moment().format("DD-MMM-YYYY")`). */
-export function fmtDate(v) {
-  const d = dateOnly(v);
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
-  if (!m) return d;
-  return `${m[3]}-${MONTHS[Number(m[2]) - 1]}-${m[1]}`;
-}
-
 /** Carton/unit display, mirroring the frontend's `qtyDisplay`. */
 export function qtyDisplay(boxSizeQty, qty) {
   const box = num(boxSizeQty, 0) || 1;

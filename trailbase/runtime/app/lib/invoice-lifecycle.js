@@ -53,10 +53,6 @@ export const lineAmount = (line) => {
 /** The line as it lands in the books: rounded to 2 dp. */
 export const lineTotal = (line) => round2(lineAmount(line));
 
-/** The line after the invoice's percent discounts. This is what the customer owes for the line. */
-export const lineNet = (line, invD1, invD2) =>
-  round2(lineAmount(line) * (1 - (Number(invD1) || 0) / 100) * (1 - (Number(invD2) || 0) / 100));
-
 /**
  * The invoice header chain, identical to buildInvoiceView in app/compute/views.js:
  *   s = Σ round2(line); afterD1 = s - s·d1/100; unrounded = afterD1 - afterD1·d2/100;

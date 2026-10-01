@@ -166,14 +166,11 @@ async fn render_handler(mut req: Request) -> Result<Response, HttpError> {
   };
 
   let t_render = Instant::now();
-  let rendered = {
-    let mut guard = render::global().lock().unwrap_or_else(|poison| poison.into_inner());
-    match (&name, &source) {
-      (Some(n), _) => guard.render(n, &context),
-      (None, Some(s)) => guard.render_string(s, &context),
-      _ => unreachable!("checked above"),
-    }
-  };
+  let rendered = render::with(|guard| match (&name, &source) {
+    (Some(n), _) => guard.render(n, &context),
+    (None, Some(s)) => guard.render_string(s, &context),
+    _ => unreachable!("checked above"),
+  });
 
   match rendered {
     Ok(body) => {

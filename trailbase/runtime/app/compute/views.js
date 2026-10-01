@@ -13,7 +13,7 @@
  *  - `transaction_view.profit` is total cost, not margin.
  */
 
-import { num, round2, qtyDisplay, compareText } from "./format.js";
+import { num, round2, compareText } from "./format.js";
 import { relId } from "./ids.js";
 
 const byId = (rows) => {
@@ -648,28 +648,4 @@ export function tablesForViews(names) {
   };
   for (const name of names) visit(name);
   return [...tables];
-}
-
-/**
- * Build every derived view once. `party_types`/`invoice_types`/`payment_types`
- * codes are read from the database (0 customer, 1 supplier; 0 purchase, 1 sale,
- * 2 return, 3 difference; 0 sending, 1 recieving, 2 return).
- */
-export function buildViews(base) {
-  const built = {};
-  for (const name of VIEW_ORDER) built[name] = buildView(name, base, built);
-  return built;
-}
-
-/**
- * Rebuild only the `dirty` views (a Set of names, e.g. from `viewsAffectedBy`),
- * reusing `previous` for every view that is still valid. Dirty views are rebuilt
- * in `VIEW_ORDER`, so a view always sees its dependencies already fresh.
- */
-export function buildSelectedViews(base, previous, dirty) {
-  const built = previous ? { ...previous } : {};
-  for (const name of VIEW_ORDER) {
-    if (dirty.has(name)) built[name] = buildView(name, base, built);
-  }
-  return built;
 }

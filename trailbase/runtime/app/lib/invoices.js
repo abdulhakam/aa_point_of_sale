@@ -20,19 +20,6 @@ export const INVOICE_TYPES = {
   3: "Difference",
 };
 
-/**
- * The types the app offers as new documents.
- *
- * Return (2) and difference (3) are NOT offered: a return is a negative-quantity row on the same
- * invoice and a difference is an invoice to the Difference party
- * (vault/decisions/returns-are-negative-quantities.md). They stay in `INVOICE_TYPES` because 54
- * returns and 1 difference are real imported rows that the list filter must still be able to show.
- */
-export const ENTRY_TYPES = [1, 0];
-
-/** The party a stock-difference invoice is booked against. */
-export const DIFFERENCE_PARTY = "Difference";
-
 export const typeLabel = (code) => INVOICE_TYPES[Number(code)] ?? "Invoice";
 
 /**
@@ -294,21 +281,4 @@ export async function readInvoice(db, publicId) {
     payments,
     paidPayments: payments.filter((p) => p.paid),
   };
-}
-
-/** Items offered by the line editor, already reduced to what the form needs. */
-export async function itemChoices(db) {
-  const rows = await db.all(
-    'SELECT it."id", it."name", it."sale_price", it."cost_price", it."box_size_qty" ' +
-      'FROM items it JOIN (SELECT DISTINCT "item" FROM transactions) u ON u."item" = it."id" ' +
-      'ORDER BY it."name" LIMIT 500',
-    []
-  );
-  return rows.map((r) => ({
-    id: r[0],
-    name: r[1],
-    price: Number(r[2]) || 0,
-    costPrice: Number(r[3]) || 0,
-    boxSizeQty: Number(r[4]) || 0,
-  }));
 }

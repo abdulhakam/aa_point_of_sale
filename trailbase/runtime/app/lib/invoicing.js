@@ -113,15 +113,6 @@ export async function releaseLock(db, invoiceHex, userHex) {
   ]);
 }
 
-/** The live holder of an invoice's lease, or null. */
-export async function lockHolder(db, invoiceHex) {
-  const rows = await db.all(
-    'SELECT hex("user") AS "user", "device", "lease_until" FROM "invoice_lock" WHERE "invoice" = unhex(?) AND "lease_until" > ?',
-    [invoiceHex, nowIso()]
-  );
-  return rows && rows.length ? { user: rows[0][0], device: rows[0][1], leaseUntil: rows[0][2] } : null;
-}
-
 /** Update the invoice header (full-state fields; money at 2 dp). */
 export async function patchHeader(db, invoiceHex, patch) {
   const sets = [];
@@ -180,24 +171,6 @@ export async function addLine(db, invoiceHex, line, opKey) {
     ]);
   }
   return await base64Id(db, "transactions", lineHex);
-}
-
-export async function updateLine(db, lineHex, line) {
-  return db.execute(
-    'UPDATE "transactions" SET "qty" = CAST(? AS REAL), "price" = CAST(? AS REAL), "cost_price" = CAST(? AS REAL), ' +
-      '"discount_1" = CAST(? AS REAL), "discount_2" = CAST(? AS REAL), "discount_rs" = CAST(? AS REAL), "scheme" = CAST(? AS REAL) ' +
-      'WHERE "id" = unhex(?)',
-    [
-      money(line.qty),
-      money(line.price),
-      money(line.cost_price),
-      money(line.discount_1),
-      money(line.discount_2),
-      money(line.discount_rs),
-      money(line.scheme),
-      lineHex,
-    ]
-  );
 }
 
 export async function deleteLine(db, lineHex) {

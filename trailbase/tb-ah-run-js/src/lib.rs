@@ -92,21 +92,6 @@ impl Guest for Endpoints {
 
 export!(Endpoints);
 
-async fn json_handler(mut req: Request) -> Json<serde_json::Value> {
-  if let Ok(json) = req.body().json::<serde_json::Value>().await {
-    return Json(json);
-  }
-
-  return Json(serde_json::json!({
-      "int": 5,
-      "real": 4.2,
-      "msg": "foo",
-      "obj": {
-        "nested": true,
-      },
-  }));
-}
-
 async fn get_scripts_handler(_req: Request) -> Json<serde_json::Value> {
   let mut scripts = Vec::new();
 

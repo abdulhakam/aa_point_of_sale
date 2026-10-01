@@ -18,9 +18,3 @@ export function normalize(p) {
 export function join(a, b) {
   return normalize(String(a).replace(/\/+$/, "") + "/" + String(b));
 }
-
-export function dirname(p) {
-  const n = normalize(p);
-  const i = n.lastIndexOf("/");
-  return i <= 0 ? "/" : n.slice(0, i);
-}
