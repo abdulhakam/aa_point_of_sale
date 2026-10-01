@@ -1,7 +1,7 @@
 ---
 title: "A heavy report blocks the other runtime threads, so concurrent requests fail fast"
 type: issue
-status: open
+status: resolved
 severity: high
 created: 2026-09-29
 updated: 2026-09-29
@@ -75,3 +75,41 @@ Note that `route.ts` already caps the *table body* at 1 000 rows with a "show al
 
 - [[report-build-cold-cache-near-the-call-deadline]] — the deadline itself, measured 2026-09-24.
 - [[tb-0022-move-reports-to-sql]] — the fix, 4/15 boxes.
+
+
+## RE-VERIFIED 2026-10-01: the deadline half is fixed, and the blocking half no longer reproduces
+
+Both halves of this note are stale against the running app.
+
+**The four reports that used to fail the 20 s deadline now return 200 in 100-165 ms** on the
+production depot:
+
+```text
+profit            200  165 ms
+itemsales         200  138 ms
+paymentsbycompany 200  100 ms
+ledgers/general   200  107 ms
+```
+
+**The blocking half no longer reproduces.** An uncapped `payments` (26,108 rows, 10 MB) was started
+and a light `/dashboard` was requested 700 ms later, while the heavy report was still running:
+
+```text
+light /dashboard during heavy: 200 in 64 ms
+heavy                          = 200
+```
+
+A light route is no longer starved. The SQL spool is why: the rows never enter QuickJS, they are
+serialised in Rust and handed over by KV address, so a heavy report no longer occupies a runtime
+thread for its whole duration ([[spooling-report-rows-through-kv]]).
+
+The engine limits themselves stand - TrailBase's guest is single-threaded per request with a ~20 s
+call deadline ([[trailbase-guest-cpu-js-limits]]) - and an uncapped 10 MB report is still slow
+(2.8 s warm, 7.5 s cold). But the specific failure this note recorded, and the deadline failures, are
+no longer what happens.
+
+One process note worth keeping: the first measurement of `?all=1` returned 404 for all four reports,
+and a re-test moments later returned 200 with the full row count. The cause was not identified, and
+the honest reading is that **a single 404 from this app is not necessarily reproducible** and should
+be retried before being treated as a finding. An earlier test in the same session also passed an
+HTML-escaped href (`&#x2f;…&amp;…`) literally and produced a nonsense result.
