@@ -14,6 +14,7 @@ use trailbase_wasm::fs::read_file;
 use std::fs;
 
 mod api;
+mod config;
 mod runtime;
 mod ts_transform;
 mod init;
@@ -66,7 +67,16 @@ impl Guest for Endpoints {
     // The host's `ahscripts/jobs` file discovery does not run jobs (see the vault issue
     // trailbase-runtime-js-scheduler-not-running-jobs), so the poller drives the app's own
     // `/jobs/reconcile` route directly. A synthetic user satisfies the app's auth gate.
-    return vec![Job::minutely("queue_poller", async || {
+    //
+    // The poller goes through the DISPATCHER, because `/jobs/reconcile` is a dynamic path with no
+    // route folder of its own. So in `crawler` mode there is nothing to poll: a crawler frontend
+    // brings its own scheduling, and registering a job whose route cannot exist would log a failure
+    // every minute forever.
+    let Some(dispatcher) = config::dispatcher() else {
+      return vec![];
+    };
+    let dispatcher = dispatcher.to_string();
+    return vec![Job::minutely("queue_poller", async move || {
         let request = serde_json::json!({
             "method": "POST",
             "path": "/jobs/reconcile",
@@ -76,7 +86,7 @@ impl Guest for Endpoints {
             "headers": {},
             "user": { "id": "system", "email": "system", "username": "system", "csrf_token": "" }
         });
-        match crate::runtime::run_route("/ahscripts/routes/_app/route.ts", "POST", request).await {
+        match crate::runtime::run_route(&dispatcher, "POST", request).await {
             Ok(value) => {
                 if let Some(count) = value.get("reconciled").and_then(|v| v.as_u64()) {
                     if count > 0 {
@@ -192,13 +202,16 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
 
   // Fallback: a single app dispatcher handles every path that has no route folder of its
   // own (dynamic routes like /reports/<key>, /management/<entity>, /p/<slug>).
+  // Only in `dispatcher` mode. In `crawler` mode there IS no catch-all: a path with no route folder
+  // of its own is a 404, which is the point - the host serves whatever folders it finds and holds
+  // no opinion about the app. The per-URL folder resolution above is tried first either way, so a
+  // route folder always wins over the dispatcher. See config.rs.
   if !std::path::Path::new(&file_path).exists() {
-      for candidate in ["/ahscripts/routes/_app/route.ts", "/ahscripts/routes/_app/route.js"] {
-          if std::path::Path::new(candidate).exists() {
-              file_path = candidate.to_string();
-              break;
-          }
+    if let Some(dispatcher) = config::dispatcher() {
+      if std::path::Path::new(dispatcher).exists() {
+        file_path = dispatcher.to_string();
       }
+    }
   }
   
   if std::path::Path::new(&file_path).exists() {

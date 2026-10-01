@@ -112,27 +112,56 @@ speed-up**: the context is kilobytes while the rows are megabytes, and `pagecach
 view straight from SQLite without rendering at all, which makes a before/after timing
 meaningless. The large win was P1 and P2 (one definition; `/p` at 465 KB instead of 8,242 KB).
 
-## The open implementation questions
+## `app.config.json` — the mode is the app's choice (P4, 2026-10-01)
 
-Carried forward, not yet decided:
+`/app/config/app.config.json` selects how the host routes, read once at server start by
+`tb-ah-run-js/src/config.rs`:
 
-1. **`app.config.json`** — `{ "mode": "crawler" | "dispatcher", "dispatcher": "./route.ts" }`, with the
-   crawler as the default and a custom dispatcher as the escape hatch for hosting a different
-   frontend. This is the piece that makes the contract configurable rather than hard-coded.
-2. **One SQL library** — `sql.query(...)` returning rows and `sql.spool(...)` returning a handle, so
-   the two existing `sqlite` functions get one name. A **statement guard** must reject
-   `DROP`/`ATTACH`/`ALTER`/`PRAGMA`: `sqlite.execute` is currently unrestricted.
-3. **Render context as a value, not a string.** `app/lib/http.js:10,22` still call
-   `JSON.stringify(shellContext(...))` before handing it to `render.*`, even though `api.rs:78` accepts
-   the JS value directly via `js_to_json`. The rows are already out via the spool; the context is not,
-   and the "never stringifies JSON in QuickJS" property is therefore only half-true today.
-4. **Parallelism** — `Promise.all` works; genuine fan-out exists only through the job queue.
+```json
+{ "mode": "dispatcher", "dispatcher": "/ahscripts/routes/_app/route.ts" }
+```
 
-## Status
+| mode | a path with **no route folder** of its own is answered by |
+|---|---|
+| `dispatcher` (default) | the catch-all. Dynamic paths like `/reports/<key>` need this — they cannot be URL folders. |
+| `crawler` | nothing. It is a 404. |
 
-Partly implemented. The manifest is authoritative for all 14 reports
-([[one-manifest-is-the-page-definition]]); the config file, the SQL library, the statement guard and
-the context hand-off are not.
+A per-URL folder is tried **first in both modes**, so a route folder always beats the dispatcher.
+
+### The host was already a crawler
+
+This is the finding that made P4 small. `lib.rs` resolves a URL to a FOLDER
+(`/mode` → `ahscripts/routes/mode/route.ts`) and only falls back to `_app` afterwards. The catch-all
+was never the primary mechanism — it was always the fallback. P4 does not build a crawler; it makes
+the *absence* of the fallback configurable.
+
+### Verified, both ways
+
+`ahscripts/routes/mode/route.ts` is a route folder and the smallest complete example of the contract:
+a folder, `GET` exported, one of the shapes the host knows. It answers in both modes, which is what
+makes it a proof.
+
+```text
+dispatcher mode:   /mode 200   /login 200   /dashboard 200   /reports/payments 200
+crawler mode:      /mode 200   /login 404   /dashboard 404   /reports/payments 404
+```
+
+The mode was switched in the **served copy only** and the source left at `dispatcher`, so the default
+cannot be lost by accident.
+
+### The queue poller follows the mode
+
+`job_handlers` drives `/jobs/reconcile`, a dynamic path with no folder of its own, so it needs the
+dispatcher. In `crawler` mode it registers **no job at all** rather than one whose route cannot
+exist — which would otherwise log a failure every minute forever.
+
+### Two limits, stated because they are real
+
+- **The host serves no static files.** `/static/*` was served by the app's own `readStatic`. In
+  `crawler` mode `/static/app.js` is a 404, because the app is gone entirely. A crawler frontend must
+  answer its own asset URLs from a route folder, or the host needs a static rule. Not fixed here.
+- **An unknown mode falls back to `dispatcher`**, and says so in the log. The catch-all is the more
+  permissive of the two, so an unrecognised mode must not silently become the strict one.
 
 ## Related
 

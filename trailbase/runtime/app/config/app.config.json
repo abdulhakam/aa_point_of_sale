@@ -1,0 +1,26 @@
+{
+  "mode": "dispatcher",
+  "dispatcher": "/ahscripts/routes/_app/route.ts",
+  "_comment": [
+    "How the app host routes a request. Read once at server start.",
+    "",
+    "  mode: 'dispatcher'  A single catch-all answers every path that has no route folder of its",
+    "                      own. This is what the current app needs: /reports/<key>,",
+    "                      /management/<entity> and /p/<slug> are dynamic, so they cannot be URL",
+    "                      folders. The dispatcher below handles them.",
+    "  mode: 'crawler'     ONLY per-URL route folders answer. /hello is served by",
+    "                      ahscripts/routes/hello/route.ts and by nothing else; a path with no",
+    "                      folder of its own is a 404. Use this to host a different frontend: the",
+    "                      host serves whatever folders it finds and holds no opinion about the app.",
+    "",
+    "  dispatcher           the catch-all script, used only in dispatcher mode. The host's own",
+    "                      per-URL folder resolution is tried FIRST in both modes, so a route",
+    "                      folder always wins over the dispatcher.",
+    "",
+    "A missing or unreadable file means 'dispatcher' with the default path, which is exactly how the",
+    "app behaved before this file existed. An unrecognised mode also falls back to dispatcher, and",
+    "says so in the log, because the catch-all is the more permissive of the two.",
+    "",
+    "This is MECHANISM: it names no route, no page and no business rule."
+  ]
+}
