@@ -1,13 +1,61 @@
 ---
 title: A report's total can disagree with the sum of its own printed column
 type: issue
-status: open
+status: fixed
 severity: medium
 created: 2026-10-01
 updated: 2026-10-01
 tags: [reports, money, rounding, productsale, paisa]
 related_to: ["[[money-is-2dp-everywhere]]", "[[sql-rounding-differs-from-js-round2]]", "[[report-page-definitions-duplicated-and-already-divergent]]"]
----
+
+## FIXED 2026-10-01
+
+`productsale.sql` now rounds with the **money rule first** and formats only afterwards:
+
+```sql
+printf('%.2f', <the prelude's round2 expression>)
+```
+
+After round2 the value is already 2 dp and carries no fractional tie, so `printf` supplies the
+trailing zeros and never a rounding decision. The round2 expression is the prelude's money rule written
+out (`prelude.sql:92-125`), because `floor()` does not exist in the guest's SQLite and is rebuilt from
+`CAST`, which truncates toward zero.
+
+Verified on the live page, 2026-10-01:
+
+```text
+printed rows      : 205
+their sum         : 29,988,457.51
+the printed Total : 29,988,457.51
+AGREE             : True   (was off by 0.01)
+```
+
+### The check, and proving the check
+
+`tools/verify-spool-reports.mjs` gains `verifyTotalsMatchPrintedColumn`: for every `cents` totals key
+that reads a plain column, it sums that column's PRINTED text in integer paisa and compares it to the
+total. **13 totals are compared.**
+
+Nothing else in the gate could have seen this. The EXACT check reduces a total from the RAW rows, so
+it is satisfied by any internally consistent total; and a formatted column is by construction not the
+raw value. This is a different property, and nothing tested it.
+
+A check that only ever passes proves nothing, so the old `printf` was put back and the gate re-run:
+
+```text
+TOTAL/COLUMN productsale.amount: the total reads 29988457.51 but its own printed
+                                amountText column sums to 29988457.50 - off by 0.01
+```
+
+which is the same figure the original `paisa-probe` reported, reached by a different route. Then the
+fix was restored and the gate returned to 14/14.
+
+### The general rule this establishes
+
+**A report's total should be provably the sum of the values it prints.** That is a structural
+invariant, not a per-report agreement, and it is now enforced for every report whose total reads a
+printed column. A report with a `derived` total or a `CASE` bucket is not covered by this check and is
+covered instead by the SOUND and CORROBORATED properties.
 
 # A report's total can disagree with the sum of its own printed column
 

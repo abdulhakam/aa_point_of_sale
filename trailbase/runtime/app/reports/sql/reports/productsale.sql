@@ -34,7 +34,23 @@ SELECT
   sg.amount,
   COALESCE(it.box_size_qty, 0) AS box_size_qty,
   (CASE WHEN COALESCE(it.box_size_qty, 0) = 0 THEN 1 ELSE it.box_size_qty END) AS box,
-  printf('%.2f', sg.amount) AS amountText,
+  -- The printed Amount, rounded with the MONEY RULE and only then formatted.
+  --
+  -- It used to be `printf('%.2f', sg.amount)`, which is round-half-to-EVEN. The totals strip rounds
+  -- the same per-item amounts half-UP, so on a value landing exactly on .xx5 the column and the
+  -- footer disagreed: item 116023525354 is 134116.525, printed 134116.52 against a total built from
+  -- 134116.53, and the report's footer was 2 paisa above the sum of the column a user could read.
+  --
+  -- So round2 FIRST, then printf. After round2 the value is already 2 dp and carries no fractional
+  -- tie, so printf's tie-breaking never engages and only supplies the trailing zeros. The round2
+  -- expression is the prelude's money rule written out (see prelude.sql:92-125): floor() does not
+  -- exist in the guest's SQLite, so it is rebuilt from CAST, which truncates toward zero.
+  printf('%.2f',
+    (CAST((((sg.amount) + 2.220446049250313e-16) * 100) + 0.5 AS INTEGER)
+     - (CASE WHEN ((((sg.amount) + 2.220446049250313e-16) * 100) + 0.5) < 0
+              AND ((((sg.amount) + 2.220446049250313e-16) * 100) + 0.5) <> CAST(((((sg.amount) + 2.220446049250313e-16) * 100) + 0.5) AS INTEGER)
+             THEN 1 ELSE 0 END)) / 100.0
+  ) AS amountText,
   -- reports.js:537: only items with POSITIVE units are reported, so a net-zero or return-only item
   -- disappears entirely. The filter is applied after aggregation, not before.
   -- qtyDisplay (format.js:27): "[-]N ctn(s) M unit(s)".

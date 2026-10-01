@@ -229,6 +229,66 @@ async function runTotals(db, name, filters, alt) {
   return rows[0] ?? {};
 }
 
+/**
+ * Every total must be the sum of the column it prints.
+ *
+ * A report whose footer disagrees with its own body is wrong even when the disagreement is one paisa,
+ * because the footer is what an operator trusts. Nothing else in this gate could see it: the EXACT
+ * check reduces a total from the RAW rows, so it is happy when the total is internally consistent,
+ * and a formatted column is by construction not the raw value.
+ *
+ * `productsale` was the case in point. It printed its amount with `printf('%.2f', …)`, which is
+ * round-half-to-EVEN, while the totals strip rounds the same amounts half-UP. On a value landing
+ * exactly on .xx5 the column and the footer disagreed, and the report's total was 2 paisa above the
+ * sum of the numbers a user could add up. The statement now rounds with the money rule FIRST and only
+ * then formats, so printf supplies trailing zeros and never a tie.
+ *
+ * The comparison is deliberately on the PRINTED text, in integer paisa, so it measures what a user
+ * reading the page would total, not what the engine happened to produce.
+ */
+async function verifyTotalsMatchPrintedColumn(db) {
+  const issues = [];
+  let compared = 0;
+  const WIDE = { from: "2020-01-01", to: "2030-12-31" };
+  for (const name of Object.keys(REGISTRY)) {
+    const tspec = await spool.totalsSpec(name);
+    const cents = tspec.cents || {};
+    // Only a `cents` key that reads a plain column can be paired with that column's printed twin. A
+    // CASE bucket and a `derived` key are not printed as columns at all.
+    const pairs = Object.entries(cents).filter(([, col]) => /^[A-Za-z_]\w*$/.test(String(col)));
+    if (!pairs.length) continue;
+    let rows, totals;
+    try {
+      rows = (await runSpool(db, name, WIDE)) ?? [];
+      totals = await runTotals(db, name, WIDE);
+    } catch (e) {
+      issues.push(`${name}: ${e.message}`);
+      continue;
+    }
+    for (const [key, col] of pairs) {
+      const printedKey = `${col}Text`;
+      if (!rows.length || rows[0][printedKey] === undefined) continue;   // not printed: nothing to compare
+      let paisa = 0;
+      for (const r of rows) {
+        const t = r[printedKey];
+        if (t === null || t === undefined || t === "") continue;
+        const n = Number(t);
+        if (!Number.isFinite(n)) { issues.push(`${name}.${printedKey}: a printed row is not a number (${t})`); break; }
+        paisa += Math.round(n * 100);
+      }
+      const reported = Math.round(Number(totals[key]) * 100);
+      compared++;
+      if (reported !== paisa) {
+        issues.push(
+          `${name}.${key}: the total reads ${(reported / 100).toFixed(2)} but its own printed ` +
+          `${printedKey} column sums to ${(paisa / 100).toFixed(2)} - off by ${((reported - paisa) / 100).toFixed(2)}`
+        );
+      }
+    }
+  }
+  return { issues, compared };
+}
+
 /* -------------------------------------------------------------------- the gate */
 
 const db = new DatabaseSync(depotDb, { readOnly: true });
@@ -542,6 +602,7 @@ for (const name of Object.keys(REGISTRY)) {
 // Before the close: the bind gate runs its own statements against the same read-only handle.
 const binds = await verifyBinds();
 const pageColumns = await verifyPageColumns();
+const printedTotals = await verifyTotalsMatchPrintedColumn(db);
 db.close();
 
 console.log(`\n${"-".repeat(70)}`);
@@ -549,8 +610,10 @@ console.log(`\n${"-".repeat(70)}`);
     ...failed,
     ...binds.issues.map((i) => `BIND ${i}`),
     ...pageColumns.map((i) => `PAGE COLUMN ${i}`),
+    ...printedTotals.issues.map((i) => `TOTAL/COLUMN ${i}`),
   ];
 console.log(`${passed} passed, ${allFailures.length} failed, ${skipped.length} not ported`);
+console.log(`totals compared against the column they print: ${printedTotals.compared}`);
 console.log(`binds verified: ${binds.checked} (each proved to reach its statement, and to narrow it where a real id exists)`);
 if (skipped.length) console.log(`  not ported: ${skipped.join(", ")}`);
 console.log(`  totals: ${totalsExact} proven the exact paisa sum of their rows, ${totalsCorroborated} corroborated by a second construction`);
