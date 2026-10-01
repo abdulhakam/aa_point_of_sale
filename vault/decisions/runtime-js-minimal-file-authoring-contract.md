@@ -50,8 +50,67 @@ app-specific authoring surface.
 
 The line, stated as a test: **a Rust component must not know the name of a report, a column, or a
 business rule.** Today the spool/KV handoff already satisfies this — `render.spooled(name, ctx,
-[{field, key}])` and `sqlite.spool(sql, cols, params)` are pure mechanism, and
+[{field, key}])` and `sql.spool(name, sql, cols, params)` are pure mechanism, and
 `tb-ah-run-js/src/render.rs` holds no report names at all.
+
+## The `sql` library, and the statement guard (P3, 2026-10-01)
+
+`tb-ah-run-js/src/api/sqlite.rs` exposes one SQL surface to the guest, named `sql`, with `sqlite` kept
+as an alias so the dispatcher's hundred existing call sites keep working:
+
+```
+sql.query(sql, params)                 -> rows
+sql.get(sql, params)                   -> the first row
+sql.spool(name, sql, cols, params)     -> { key, rows, bytes, queryMs, writeMs }   (never enters QuickJS)
+sql.execute(sql, params)               -> rows affected
+```
+
+Two changes beyond the naming:
+
+**The rows no longer round-trip through a JSON string.** The old path was
+`serde_json::to_string(&rows)` then `ctx.json_parse`, which allocated a copy of the entire result
+set as text and parsed it straight back. `json_to_js` builds the JS value directly.
+
+**A statement guard.** `DROP`, `ATTACH`, `DETACH`, `PRAGMA`, `VACUUM` and `REINDEX` are refused, on
+every entry point, with a thrown message that names the keyword. It is a **blocklist and not
+"only SELECT"** on purpose: the guest's own write path legitimately runs `CREATE TABLE` (the
+rendered-page cache), `INSERT`, `UPDATE` and `DELETE` (management CRUD), so a whitelist would refuse
+work the app is supposed to do. Everything on the list is a statement whose damage the app cannot undo.
+
+### The guard's first version did not work, and why that matters
+
+The obvious implementation — look at the statement's **leading** keyword — is not a guard, it is a
+spelling check. The spool hands the guard a *composed* statement: the prelude's `WITH …` chain
+followed by the report body, so the leading keyword is `WITH` and always was. A report body carrying
+
+```sql
+SELECT 1; DROP TABLE IF EXISTS pagecache
+```
+
+sails straight past it. This was found by **probing it with exactly that statement** rather than with
+a bare `DROP`, which the old code appeared to catch (it did not — SQLite rejected it as a syntax
+error, which looked like the guard working and was not).
+
+The guard now masks strings and comments, splits on `;`, and checks every statement. Verified with a
+throwaway report installed in the **served copy only**, never the source:
+
+```
+status: 500
+message: Guest error: totals statement failed for zzguard:
+         sql: DROP is not permitted by the guest's SQL guard
+```
+
+and `pagecache` was still there afterwards. The lesson worth keeping: **a security check is only
+tested by the attack it is meant to stop**, and a test that passes for the wrong reason is worse than
+no test, because it retires the question.
+
+### What P3 did NOT achieve
+
+The render context is now handed to the renderer as a value rather than a `JSON.stringify`d string, so
+the last `JSON.stringify` on the page path is gone. **This is a simplification, not a measured
+speed-up**: the context is kilobytes while the rows are megabytes, and `pagecache` serves a repeat
+view straight from SQLite without rendering at all, which makes a before/after timing
+meaningless. The large win was P1 and P2 (one definition; `/p` at 465 KB instead of 8,242 KB).
 
 ## The open implementation questions
 
