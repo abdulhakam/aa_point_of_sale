@@ -153,3 +153,58 @@ the same nine pre-existing failures as before the change.
 - [[report-logic-stays-runtime-file-based]] — why the SQL stays a file and not a database view.
 - [[browser-page-and-filter-sweep-2026-10-01]] — the page/filter sweep that found the duplication.
 - [[report-total-disagrees-with-its-own-printed-column]] — the other money bug this phase did not fix.
+
+
+## SQL-only: the JavaScript engine is gone (2026-10-01)
+
+The user set the direction: **every calculation is performed through SQL**, and the comparison against
+the legacy production system happens once the migration is complete rather than continuously. That
+retires the reason `compute/reports.js` had been kept.
+
+Deleted, with the escape hatch that reached it:
+
+- `app/compute/reports.js` — 577 lines, the JavaScript report engine
+- the `useJs` manifest flag and the branch in the report page that ran it
+- `/bench/runreport`, which timed the JS path
+- `lib/reports.js`'s `run()`, `viewsForReport()` and the report cache key
+- `tools/verify-spool-report.mjs` and `tools/bench-reports-baseline.mjs` (pure comparisons)
+- the JS-vs-SQL halves of `tools/verify-spool-reports.mjs`, which is now a self-consistency gate
+- `cachedReports` / `reportCacheHits` / `reportCacheMisses` from `/reports/status`
+
+`app/compute/` is now `format.js`, `ids.js` and `views.js` — 728 lines, none of it report
+arithmetic. `/bench/reportkeys` reads the spool registry, which is the list of reports.
+
+### Two things that would have failed quietly
+
+**`viewsForReport` had nowhere to read from.** It returned `REPORTS[name].inputs`, the input list the
+JS engine carried. The manifest declares the same thing as `needs.views`, so `/bench/report` now reads
+that. A registry read from a deleted file would have been a 500 on one bench route.
+
+**A counter that could only ever read 0.** `reportCacheHits` counted the JS path's KV result cache.
+With the engine gone it could never move, and the smoke check on it failed forever while measuring
+nothing. It is removed rather than left, and replaced with a check on the caches that exist. The
+lesson is the general one: **a metric whose subject no longer exists should be deleted, not left
+failing** — it reads as a defect and trains people to ignore the gate.
+
+### The provenance comments stay
+
+`spoolreports.js` carries ~19 comments citing `compute/reports.js:NN`. They record WHY a statement
+buckets on a raw field, or rounds a sub-total before subtracting, or excludes a party type — the kind
+of thing otherwise re-litigated on every read. They are kept, with the file's header saying the
+reference is to history and pointing at the commit that still holds it
+(`git show 04cd42b:trailbase/runtime/app/compute/reports.js`).
+
+## The runtime is the source; the depot is generated (2026-10-01)
+
+`trailbase/runtime/` is the **source** of the app: manifests, SQL, templates, route folders, client
+JavaScript. `trailbase/traildepot/runtime/` is the copy the server actually loads, and it is
+git-ignored.
+
+The copy used to happen only in `clear_db.bat`, which runs when the depot **does not exist yet** — so
+on every normal start the depot served the app as it was when the depot was created. An edit to
+`runtime/` was silently not served. That cost an hour during the P1 migration and would cost the
+next person the same.
+
+`RUN.BAT` now syncs unconditionally, before the server starts, with `/MIR` so a deleted or renamed
+file disappears from the copy too. Robocopy's 0-7 are success and 8+ are failures, so the check is
+`if errorlevel 8`.

@@ -34,14 +34,30 @@ if not exist "%DEPOT%\config.textproto" (
   if errorlevel 1 (echo ERROR: build.bat failed. & endlocal & goto :eof)
 )
 
+rem Sync the app into the depot EVERY start, not only when the depot is created.
+rem
+rem `runtime\` is the source of the guest app: the manifests, the SQL, the templates, the
+rem route folders and the client JavaScript. The running server reads `%DEPOT%\runtime`,
+rem which is a generated copy and is git-ignored. clear_db.bat also copies it, but that
+rem only runs when the depot does not exist yet - so without this line an edit to
+rem `runtime\` is silently not served, and the page you get is the page from whenever the
+rem depot was last created. That is a genuinely confusing failure, so the copy is
+rem unconditional and happens before the server starts.
+rem
+rem /MIR makes the destination match the source exactly, so a file deleted or renamed in
+rem `runtime\` disappears here too. Robocopy exit codes 0-7 are success; 8 and above are
+rem failures.
+echo Syncing runtime\ into %DEPOT%\runtime ...
+robocopy "runtime" "%DEPOT%\runtime" /MIR /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 (echo ERROR: could not sync runtime\ into %DEPOT%\runtime & endlocal & goto :eof)
+
 if exist "%DEPOT%\data" goto :start_server
 call :init_depot
 
 :start_server
 echo Starting TrailBase server on http://%ADDRESS% ...
 rem --runtime-root-fs points the guest at the app copy in the depot, so this one server
-rem serves both the APIs and the new frontend. clear_db.bat copies it from runtime\ into
-rem %DEPOT%\runtime\.
+rem serves both the APIs and the new frontend. The copy was just synced from runtime\ above.
 start "" trail "--depot=%DEPOT%" run --address=%ADDRESS% "--runtime-root-fs=%DEPOT%\runtime"
 
 rem Wait for the listener before opening the dashboard. A server that failed to start

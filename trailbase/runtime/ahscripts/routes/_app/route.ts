@@ -151,7 +151,6 @@ async function app(): Promise<any> {
     format: await loadModule("/app/compute/format.js"),
     ids: await loadModule("/app/compute/ids.js"),
     views: await loadModule("/app/compute/views.js"),
-    reportsCompute: await loadModule("/app/compute/reports.js"),
     entities: await loadModule("/app/lib/entities.js"),
     data: await loadModule("/app/lib/data.js"),
     pages: await loadModule("/app/lib/pages.js"),
@@ -165,8 +164,9 @@ async function app(): Promise<any> {
     payments: await loadModule("/app/lib/payments.js"),
     inventory: await loadModule("/app/lib/inventory.js"),
     service: await loadModule("/app/lib/reports.js"),
-    // The spooled report path — the LIVE one. `compute/reports.js` stays loaded only as the
-    // `useJs` fallback a page definition can opt into.
+    // The report engine. Every report is SQL: the statements under
+    // `app/reports/sql/reports/*.sql`, run through the spool. There is no JavaScript
+    // implementation of any report left to fall back to.
     spooled: await loadModule("/app/lib/spoolreports.js"),
     http: await loadModule("/app/lib/http.js"),
     renderClient: await loadModule("/app/lib/render-client.js"),
@@ -423,25 +423,6 @@ async function renderReportPage(
   };
   const view = pageDef.view || DEFAULT_REPORT_VIEW;
 
-  if (pageDef.compute && pageDef.compute.useJs === true) {
-    // The escape hatch: `useJs: true` on the manifest runs `compute/reports.js` for this page only
-    // ([[spooling-report-rows-through-kv]]).
-    const result = missing.length ? { rows: [], totals: {}, meta: {} } : await A.service.run(key, filters);
-    const allRows: any[] = result.rows || [];
-    const truncated = allRows.length > maxRows;
-    const rows = truncated && maxRows >= 0 ? allRows.slice(0, maxRows) : allRows;
-    const page = await A.http.page(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
-      ...frame,
-      rows,
-      rowInfo: { shown: rows.length, total: allRows.length, truncated, allHref },
-      totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], result.totals || {}),
-      opening: result.opening || null,
-      meta: result.meta || {},
-    });
-    if (cacheKey) await pageCachePut(db, cacheKey, page);
-    return html(page);
-  }
-
   // The spool path. Two statements: the rows, and a one-row totals aggregate over the SAME
   // statement. Neither brings a row into QuickJS — the totals row is read back through the same
   // KV handoff and lands here as a small object of formatted strings.
@@ -453,8 +434,8 @@ async function renderReportPage(
     ...frame,
     rowInfo: { shown, total, truncated: shown < total, allHref },
     totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], totals),
-    // The general ledger's opening row is an echo of three filter inputs, not a query result, so
-    // there is nothing for SQL to add and `compute/reports.js` is not involved here.
+      // The general ledger's opening row is an echo of three filter inputs, not a query result, so
+      // there is nothing for SQL to add.
     opening: pageDef.openings ? A.reportPages.openingRow(filters) : null,
     meta: {},
   }, spools);
@@ -479,24 +460,25 @@ async function dispatch(req: any): Promise<any> {
 // The report keys the sweep should cover, taken from the app's own registry so the bench cannot
   // drift from the reports that actually exist.
   if (path === "/bench/reportkeys" && method === "GET") {
-    return { keys: Object.keys(A.reportsCompute.REPORTS).slice().sort() };
+    return { keys: A.spooled.names().slice().sort() };
   }
 
-  // Per-report acquisition A/B, for the all-reports sweep.
-  //
-  // Scope, stated precisely: this measures acquiring the **base-table rows each report needs** —
-  // the step a component split would actually move. The report arithmetic (compute/reports.js)
-  // stays in the guest in both arms, because it is JavaScript; a component cannot serve it without
-  // porting it, which is separate work. So this is an acquisition benchmark per report, not a
-  // report benchmark.
+    // Per-report acquisition A/B, for the all-reports sweep.
+    //
+    // Scope, stated precisely: this measures acquiring the **base-table rows each report needs** —
+    // the step a component split would actually move. The report arithmetic is SQL in both arms, so
+    // this is an acquisition benchmark per report, not a report benchmark.
   if (path === "/bench/report" && method === "GET") {
     const key = String(query.key || "");
     const arm = String(query.arm || "inline");
 
     let tables: string[] = [];
     try {
-      const views = A.service.viewsForReport(key);
-      tables = A.views.tablesForViews(views).slice().sort();
+      // The manifest declares the views a report needs — it is the one page definition, and it
+      // replaced the input list the retired JS engine used to carry.
+      const page = (await A.pages.reportPages(PAGES_DIR))[key];
+      if (!page) return { error: "unknown report: " + key };
+      tables = A.views.tablesForViews(page.needs.views).slice().sort();
     } catch (e) {
       return { error: "unknown report: " + key };
     }
@@ -632,52 +614,6 @@ async function dispatch(req: any): Promise<any> {
       };
     }
     return { html: out, status: 200 };
-  }
-
-  // Baseline for the whole-report sweep: run a report through the LIVE JS path, timing it.
-  //
-  // This is the "before" arm for every report, and it is deliberately the shipping code path
-  // (`reports.run` -> refresh -> `compute/reports.js`), not a restatement of it, so the number is
-  // the one a user actually waits for.
-  // `/bench/runreport`, NOT `/bench/report`: that path is already the per-report *acquisition* A/B
-  // above (it takes ?key= and ?arm=), and a dispatcher matches the first branch, so reusing the path
-  // silently shadowed this one -- the request answered with the acquisition arm and `report` came
-  // back empty, which reads as "the probe is broken" rather than "two routes share a path".
-  if (path === "/bench/runreport" && method === "GET") {
-    const name = String(query.report || "");
-    const t0 = Date.now();
-    const tRefresh = Date.now();
-    await A.service.refresh(db);
-    const refreshMs = Date.now() - tRefresh;
-
-    const tRun = Date.now();
-    let result: any = null;
-    let error: string | null = null;
-    try {
-      result = await A.service.run(name, {
-        from: query.from || "",
-        to: query.to || "",
-        booker: query.booker || "",
-        party: query.party || "",
-        type: query.type || "",
-        area: query.area || "",
-        section: query.section || "",
-        item: query.item || "",
-      });
-    } catch (e: any) {
-      error = String(e && e.message ? e.message : e);
-    }
-    const runMs = Date.now() - tRun;
-
-    return {
-      report: name,
-      rows: result && Array.isArray(result.rows) ? result.rows.length : 0,
-      totals: result ? result.totals : null,
-      refreshMs,
-      runMs,
-      totalMs: Date.now() - t0,
-      error,
-    };
   }
 
   // Which SQL functions does the GUEST's SQLite actually have?
@@ -989,8 +925,7 @@ if (path === "/login" && method === "GET") {
     // the second copy, and it had already diverged - see
     // vault/issues/report-page-definitions-duplicated-and-already-divergent.md.
     const pageDef = (await A.pages.reportPages(PAGES_DIR))[key];
-    // The spool registry, not `compute/reports.js`, decides what exists: the SQL is what a report
-    // IS now, and the JS registry is only the fallback.
+    // The spool registry decides what exists: the SQL is what a report IS.
     if (!pageDef || !A.spooled.names().includes(key)) return text("Not found", 404);
     return renderReportPage(A, db, req, user, path, query, key, pageDef);
   }
@@ -1908,11 +1843,7 @@ if (path === "/login" && method === "GET") {
     const def = await A.pages.readPage(PAGES_DIR, slug);
     if (!def) return text("No such page", 404);
     const filters = filtersFor(def, query);
-    const reportInputs =
-      def.compute && def.compute.report && A.reportsCompute.REPORTS[def.compute.report]
-        ? A.reportsCompute.REPORTS[def.compute.report].inputs
-        : [];
-    const snap = await A.service.getViews(reportInputs.concat(def.needs.views || []));
+    const snap = await A.service.getViews(def.needs.views || []);
     await A.service.ensureTables(def.needs.tables || []);
     const etag = `W/"v3-${snap.version}-${encodeURIComponent(JSON.stringify(filters))}"`;
     const headers: Record<string, string> = {
@@ -1925,8 +1856,7 @@ if (path === "/login" && method === "GET") {
       return { status: 304, body: "", contentType: "application/json; charset=utf-8", headers };
     }
     const reportName = (def.compute && def.compute.report) || null;
-    // `compute.useJs` is the escape hatch back to `compute/reports.js`; the default runs the spool,
-    // where the rows are spliced into this payload and the whole body is serialised in Rust.
+    // The rows are spliced into this payload and the whole body is serialised in Rust.
     const payload: any = { version: snap.version, slug: def.slug, filters, meta: { report: reportName } };
     if (def.needs.tables.length) {
       const tables: any = {};
@@ -1934,12 +1864,7 @@ if (path === "/login" && method === "GET") {
       payload.tables = tables;
     }
 
-    if (def.compute && def.compute.useJs === true) {
-      payload.result = reportName ? await A.service.run(reportName, filters) : null;
-      return { body: JSON.stringify(payload), contentType: "application/json; charset=utf-8", headers };
-    }
-
-    // No row cap here: the page shows every row it is given, exactly as the JS path did.
+    // No row cap here: an API consumer asked for the rows, so it gets every row.
     const totals = reportName ? await A.spooled.totalsFor(reportName, filters) : {};
     const body = await A.spooled.jsonPayload(reportName, filters, payload, totals, {});
     return { body, contentType: "application/json; charset=utf-8", headers };

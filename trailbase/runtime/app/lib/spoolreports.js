@@ -1,8 +1,25 @@
 // Spool-backed reports: run a report's SQL in SQLite and hand the renderer an address.
 //
+// THIS IS THE ONLY REPORT IMPLEMENTATION. Every report is the SQL under
+// `reports/sql/reports/*.sql`; the JavaScript engine that used to sit beside it is deleted, and
+// there is no `useJs` escape hatch to reach a second implementation.
+//
+// A note on the `reports.js:NN` references in the comments below. They point at
+// `app/compute/reports.js`, the retired JavaScript engine, which no longer exists in the tree. Those
+// comments are kept deliberately: they record WHY a statement buckets on a raw field, or rounds a
+// sub-total before subtracting, or excludes a party type — the kind of thing that is otherwise
+// re-litigated every time someone reads the SQL. The reference is to history, not to a live file:
+//
+//   git show 04cd42b:trailbase/runtime/app/compute/reports.js
+//
+// The standard for a report is no longer "agrees with that engine". `tools/verify-spool-reports.mjs`
+// checks each total is EXACT (the integer paisa sum of the rows it reports), SOUND (a derived total
+// equals {op, terms} over this file's own totals, at paisa resolution) or CORROBORATED (a second,
+// independently written paisa construction agrees).
+//
 // The contract, end to end:
 //
-//   JS   compose the SQL, call `sqlite.spool`, get back `{ key, rows, bytes, queryMs, writeMs }`
+//   JS   compose the SQL, call `sql.spool`, get back `{ key, rows, bytes, queryMs, writeMs }`
 //   Rust run the statement, serialise every row to JSONL, write it to the KV store  (spool.rs)
 //   Rust read the key back and splice the rows into the context                     (render.rs)
 //   JS   never sees a row

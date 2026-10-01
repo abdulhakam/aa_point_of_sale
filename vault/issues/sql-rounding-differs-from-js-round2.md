@@ -1,13 +1,26 @@
 ---
 title: SQLite round() does not match the JS round2() — money must round in JS
 type: issue
-status: mitigated
+status: resolved
 severity: medium
 created: 2026-09-27
 updated: 2026-09-27
 tags: [reports, sql, rounding, parity, money]
 related_to: ["[[legacy-sql-views-differ-from-js-views]]", "[[tb-0022-move-reports-to-sql]]", "[[reports-and-ledgers]]", "[[tb-0015-integer-cents-for-money]]"]
 ---
+
+
+## RESOLVED 2026-10-01
+
+The rule is inverted and there is nothing left to match. The user set it: **all calculations go
+through SQL**, and where the JavaScript and SQL answers differ, the SQL answer is the one that stands
+— the engine's float behaviour is not the standard.
+
+Concretely, `productsale.sql` renders its column with `printf('%.2f', …)` (round-half-to-even) while
+the app's money rule is round-half-up, so on a value landing exactly on `.xx5` the printed column and
+the total disagree by one paisa. That is recorded separately as
+[[report-total-disagrees-with-its-own-printed-column]] and is a **statement** to fix, not a
+comparison against JavaScript.
 
 # SQLite round() does not match the JS round2() — money must round in JS
 

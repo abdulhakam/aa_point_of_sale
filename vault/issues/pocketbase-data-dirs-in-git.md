@@ -1,12 +1,18 @@
 ---
 title: A live PocketBase data directory is committed to git
 type: issue
-status: open
+status: resolved
 severity: high
 created: 2026-09-26
 tags: [git, pocketbase, hygiene, secrets, backend]
 related_to: ["[[backend]]", "[[build-and-run]]"]
 ---
+
+
+## RESOLVED 2026-10-01
+
+The user deleted the PocketBase data directories from this branch; there is no PocketBase on it
+anymore. Nothing to commit, and the risk is gone rather than mitigated.
 
 # A live PocketBase data directory is committed to git
 

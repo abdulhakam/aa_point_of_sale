@@ -43,23 +43,16 @@ impl Guest for Endpoints {
       routing::post("/{*wildcard}", wildcard_handler),
       routing::delete("/{*wildcard}", wildcard_handler),
       routing::patch("/{*wildcard}", wildcard_handler),
-      
+
+      // The root is a HOST concern, not an app one: whether an anonymous visitor is sent to the
+      // login page or an authenticated one to the dashboard is a fact the host already knows, and
+      // answering it here means it holds in both routing modes rather than only when a catch-all
+      // happens to exist. `/{*wildcard}` does not match the empty path, so this route is the only
+      // thing that can answer "/".
+      routing::get("/", root_handler),
+
       routing::get("/getscripts", get_scripts_handler),
-      routing::get("/count/{table}", async |req| {
-        let table = req
-          .path_param("table")
-          .ok_or_else(|| internal("missing {table}"))?;
-
-        let rows = query(format!("SELECT COUNT(*) FROM {table}"), [])
-          .await
-          .map_err(internal)?;
-
-        let Value::Integer(i) = rows[0][0] else {
-          panic!("expected integer");
-        };
-
-        return Ok(format!("Got {i} rows\n"));
-      }),
+      routing::get("/count/{table}", count_handler),
     ];
   }
 
@@ -141,6 +134,72 @@ async fn get_scripts_handler(_req: Request) -> Json<serde_json::Value> {
 
 fn internal(err: impl std::string::ToString) -> HttpError {
   return HttpError::message(StatusCode::INTERNAL_SERVER_ERROR, err);
+}
+
+/// Send an anonymous visitor to the login page and an authenticated one to the dashboard.
+///
+/// 303 rather than 302 so the browser follows with GET whatever the original verb was. This is
+/// answered by the host, so it does not depend on a catch-all existing.
+async fn root_handler(req: Request) -> Result<Response, HttpError> {
+  let mut response = "".into_response();
+  *response.status_mut() = StatusCode::SEE_OTHER;
+  response
+    .headers_mut()
+    .insert(header::LOCATION, HeaderValue::from_static(if req.user().is_some() { "/dashboard" } else { "/login" }));
+  Ok(response)
+}
+
+/// `GET /count/{table}` — rows in one table. **Authenticated callers only.**
+///
+/// This was unauthenticated, which let anyone enumerate the shape and size of the database: the
+/// table name went straight into the statement, a missing table answered 500 rather than 404, and a
+/// real table answered `0` — the endpoint was wrong as well as open.
+///
+/// The name is still interpolated, because SQLite has no way to bind an identifier and a bound
+/// parameter would be a constant string in `FROM`. So the shape is constrained instead: a single
+/// bare identifier, which admits no quotes, spaces, semicolons or SQL of any kind. Combined with the
+/// auth gate, the endpoint can only count a table that already exists.
+async fn count_handler(req: Request) -> Result<Response, HttpError> {
+  if req.user().is_none() {
+    return Err(HttpError::message(StatusCode::UNAUTHORIZED, "authentication required"));
+  }
+  let table = req
+    .path_param("table")
+    .ok_or_else(|| internal("missing {table}"))?;
+  if !is_bare_identifier(&table) {
+    return Err(HttpError::message(StatusCode::BAD_REQUEST, "not a table name"));
+  }
+
+  match query(format!("SELECT COUNT(*) FROM \"{table}\""), []).await {
+    Ok(rows) => {
+      let Value::Integer(i) = rows[0][0] else {
+        return Err(internal("expected integer"));
+      };
+      return Ok(format!("Got {i} rows\n").into_response());
+    }
+    Err(_) => {
+      // A table that does not exist is a 404, not a 500. The statement is well formed; the thing
+      // the caller asked for is not there.
+      return Err(HttpError::message(StatusCode::NOT_FOUND, "no such table"));
+    }
+  }
+}
+
+/// A single bare identifier: letters, digits and `_`, and it must start with a letter or `_`.
+///
+/// This is what makes `format!("... FROM {table}")` safe. Anything with a quote, a space, a
+/// semicolon, a dot or a comment marker is refused before it reaches the statement builder.
+fn is_bare_identifier(name: &str) -> bool {
+  let mut chars = name.chars();
+  match chars.next() {
+    Some(c) if c.is_ascii_alphabetic() || c == '_' => {}
+    _ => return false,
+  }
+  if !chars.all(|c| c.is_ascii_alphanumeric() || c == '_') {
+    return false;
+  }
+  // `sqlite_` and `trailbase_` are engine internals; an app does not count them.
+  !name.starts_with("sqlite_") && !name.starts_with("trailbase_")
 }
 
 /// Copy a route's `headers` object (name -> value, or name -> [values]) onto the response.

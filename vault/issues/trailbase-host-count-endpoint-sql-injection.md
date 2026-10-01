@@ -1,13 +1,36 @@
 ---
 title: The guest's `GET /count/{table}` is unauthenticated and interpolates the table name into SQL
 type: issue
-status: open
+status: resolved
 severity: high
 created: 2026-09-28
 updated: 2026-09-28
 tags: [trailbase, wasm, security, sql, auth, host, endpoints]
 related_to: ["[[api-contract-trailbase]]", "[[trailbase-auth-status-doc-mismatch]]", "[[guest-outbound-http-and-login]]", "[[trail-runtime-js-reference]]", "[[tb-0025-host-endpoint-hygiene]]"]
 ---
+
+
+## RESOLVED 2026-10-01
+
+`GET /count/{table}` is now **authenticated**, and the table name is constrained to a bare
+identifier before it reaches the statement builder. Both halves were needed: the auth gate closes the
+exposure, and the identifier check makes the interpolation safe, because SQLite cannot bind an
+identifier and a bound parameter in `FROM` would be a constant string.
+
+A missing table is now a **404** rather than a 500, and a real table returns its real count. The
+endpoint used to answer `0` for `invoices`, which held 8,935 rows — it was wrong as well as open.
+
+Verified on the running server, 2026-10-01:
+
+```text
+anon   /count/invoices                              -> 401  authentication required
+authed /count/invoices                              -> 200  Got 8935 rows
+authed /count/payments                              -> 200  Got 26526 rows
+authed /count/nope                                  -> 404  no such table
+authed /count/invoices; DROP TABLE pagecache        -> 400  not a table name
+```
+
+`pagecache` was still present afterwards, and the depot's own counts agree with the endpoint's.
 
 # The guest's `GET /count/{table}` is unauthenticated and interpolates the table name into SQL
 

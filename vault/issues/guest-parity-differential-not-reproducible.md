@@ -1,13 +1,34 @@
 ---
 title: The 14/14 report-parity differential can no longer be reproduced
 type: issue
-status: open
+status: resolved
 severity: high
 created: 2026-09-28
 updated: 2026-09-28
 tags: [trailbase, wasm, parity, reports, verification, risk, views]
 related_to: ["[[guest-app-host-port]]", "[[trailbase-drop-sql-views]]", "[[legacy-sql-views-differ-from-js-views]]", "[[report-parity-flakes-on-float-arithmetic]]", "[[tb-0022-move-reports-to-sql]]", "[[tb-0025-host-endpoint-hygiene]]"]
 ---
+
+
+## RESOLVED 2026-10-01 — by deleting the thing that could not be reproduced
+
+The differential was unreproducible because it needed `compute/reports.js`, and that file's
+reproducibility was the whole problem: 577 lines of JavaScript report arithmetic that nothing tested
+against the production system any more.
+
+It is now **deleted**. The user set the direction explicitly: every calculation is performed through
+SQL, and the comparison against the legacy production system happens once the migration is complete,
+not continuously. So the un-reproducible differential is no longer needed, and the thing it compared
+is gone.
+
+What replaced it as a standard is absolute rather than comparative. `tools/verify-spool-reports.mjs`
+is now a self-consistency gate: every page column exists in the projection, every totals key the page
+reads is produced by the statement, every filter with a real value narrows the result, and each total
+is **EXACT** (the integer paisa sum of the rows it reports, reduced independently in integer
+arithmetic), **SOUND** (a derived total equals `{op, terms}` over the SQL's own totals at paisa
+resolution) or **CORROBORATED** (a second, independently written paisa construction agrees).
+
+`14 passed, 0 failed, 72 binds verified, 15 totals proven EXACT, 26 CORROBORATED`.
 
 # The 14/14 report-parity differential can no longer be reproduced
 

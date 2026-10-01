@@ -1,13 +1,23 @@
 ---
 title: Report parity can flake on float last bits; SQL aggregates make it worse
 type: issue
-status: mitigated
+status: resolved
 severity: medium
 created: 2026-09-27
 updated: 2026-09-27
 tags: [reports, floats, parity, differential, sql]
 related_to: ["[[tb-0022-move-reports-to-sql]]", "[[convert-base-views-not-derivations]]", "[[guest-vs-node-performance]]", "[[reports-and-ledgers]]", "[[tb-0015-integer-cents-for-money]]", "[[sql-rounding-differs-from-js-round2]]", "[[money-is-2dp-everywhere]]"]
 ---
+
+
+## RESOLVED 2026-10-01
+
+There is no parity left to flake. The JavaScript implementation is deleted and the comparison is
+removed from the gate; see [[guest-parity-differential-not-reproducible]] for what replaced it.
+
+The underlying rounding question is settled by the same decision: money is computed in SQL, in
+integer paisa, and judged on what is right rather than on agreeing with a JavaScript float
+accumulation.
 
 # Report parity can flake on float last bits; SQL aggregates make it worse
 

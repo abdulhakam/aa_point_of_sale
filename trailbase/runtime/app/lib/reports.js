@@ -8,7 +8,6 @@
 
 import { TABLES, readTables } from "./data.js";
 import { buildView, viewClosure, tablesForViews, viewsAffectedBy, VIEW_ORDER } from "../compute/views.js";
-import { REPORTS, runReport } from "../compute/reports.js";
 import { relId } from "../compute/ids.js";
 import { rows as sqlViewRows } from "./sqlviews.js";
 
@@ -86,11 +85,8 @@ const state = {
   // Report results are cached in the KV store. The key includes a per-process nonce so a restart
   // never serves a stale entry, and the snapshot version so a rebuild/invalidate makes new keys.
   nonce: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
-  cacheHits: 0,
-  cacheMisses: 0,
 };
 
-const cacheKey = (name, filters) => `rpt:${state.nonce}:${state.version}:${name}:${JSON.stringify(filters)}`;
 
 /* --------------------------------------------------- materialised snapshot (shared across threads)
  *
@@ -215,13 +211,6 @@ function baseTablesFor(views) {
     for (const table of tablesForViews([name])) out.add(table);
   }
   return [...out];
-}
-
-/** The view arrays a report needs, per its registry `inputs`. */
-export function viewsForReport(name) {
-  const spec = REPORTS[name];
-  if (!spec) throw new Error(`Unknown report: ${name}`);
-  return spec.inputs;
 }
 
 /**
@@ -369,35 +358,6 @@ export async function refresh(db) {
   return state;
 }
 
-export async function run(name, filters) {
-  const spec = REPORTS[name];
-  if (!spec) throw new Error(`Unknown report: ${name}`);
-
-  const key = cacheKey(name, filters);
-  try {
-    const cached = await kv.get(key);
-    if (cached) {
-      state.cacheHits++;
-      return JSON.parse(cached);
-    }
-  } catch {
-    // A KV failure must not fail the report.
-  }
-
-  const current = await getViews(spec.inputs);
-  const ctx = {};
-  for (const input of spec.inputs) ctx[input] = current.views[input];
-  const result = runReport(name, ctx, filters);
-
-  try {
-    await kv.set(key, JSON.stringify(result));
-    state.cacheMisses++;
-  } catch {
-    // best effort
-  }
-  return result;
-}
-
 /** Base tables a page needs, read on demand (used by the page data endpoint). */
 export async function ensureTables(tables) {
   const missing = (tables || []).filter((table) => state.base[table] === undefined);
@@ -423,9 +383,12 @@ export function status() {
     tables: Object.keys(state.base).length,
     views: state.built.length,
     rows: baseRows || rows,
-    cachedReports: state.cacheHits + state.cacheMisses,
-    reportCacheHits: state.cacheHits,
-    reportCacheMisses: state.cacheMisses,
+    // No `cachedReports` / `reportCacheHits` / `reportCacheMisses`. Those counted a KV result cache
+    // that belonged to the retired JavaScript engine, so with it gone they could only ever read 0 —
+    // and a counter that cannot move is worse than no counter, because a check on it fails forever
+    // and looks like a defect. What caches a report now is the composed-SQL cache in
+    // `spoolreports.js` and the rendered-page cache in the dispatcher; neither is visible from here,
+    // and both are measured by their own gates.
     intervalMs: 0,
     fingerprints: state.fingerprints ? Object.keys(state.fingerprints).length : 0,
     refreshedAt: state.refreshedAt,
