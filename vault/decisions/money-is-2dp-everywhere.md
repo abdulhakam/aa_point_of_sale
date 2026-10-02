@@ -6,7 +6,7 @@ decided_on: 2026-09-27
 created: 2026-09-27
 tags: [money, floats, precision, reports, data-integrity]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[report-parity-flakes-on-float-arithmetic]]", "[[tb-0015-integer-cents-for-money]]", "[[tb-0022-move-reports-to-sql]]", "[[reports-and-ledgers]]"]
+related_to: ["[[report-parity-flakes-on-float-arithmetic]]", "[[tb-0015-integer-cents-for-money]]", "[[tb-0022-move-reports-to-sql]]", "[[reports-and-ledgers]]", "[[sql-review-2026-10-02]]"]
 ---
 
 # Money is 2 decimal places everywhere — stored, transported and displayed

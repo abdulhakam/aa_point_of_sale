@@ -9,68 +9,25 @@
 import { TABLES, readTables } from "./data.js";
 import { buildView, viewClosure, tablesForViews, viewsAffectedBy, VIEW_ORDER } from "../compute/views.js";
 import { relId } from "../compute/ids.js";
-import { rows as sqlViewRows } from "./sqlviews.js";
 
 /**
- * Views whose scan/join work can run in SQL instead of JS ([[convert-base-views-not-derivations]]).
+ * Every view is built by `compute/views.js`.
  *
- * **Off in the shipped code.** It was briefly enabled (the 2 dp money rule removed the float
- * flake), then turned off again in commit 5ccebd8: the SQL base views diverge on *fresh* invoices
- * (a sale invoice with an empty `dated`, which invoice entry creates) — `ledgers/party`/`itemsales`
- * error and `dailysale`/`itemsales`/`profit` row counts differ. The earlier float-accumulation
- * concern (SQLite's unordered `SUM` vs the JS fixed-order `+=`, ~1e-12 drift) was handled by the
- * 2 dp rule, but it is the fresh-invoice divergence that keeps this off. Re-enable only once the
- * equivalence gate covers fresh/partial invoices ([[legacy-sql-views-differ-from-js-views]],
- * [[convert-base-views-not-derivations]]).
- */
-const USE_SQL_VIEWS = false;
-
-const SQL_VIEWS = USE_SQL_VIEWS
-  ? { transactionView: "transaction_view", invoiceView: "invoice_view" }
-  : {};
-
-/**
- * Views where SQL supplies the rows but one column must be assembled in JS because SQL cannot
- * express it.
+ * There was a second path: `app/lib/sqlviews.js` read `app/reports/sql/views/*.sql` and inlined each
+ * one as CTEs, selected per view by the `USE_SQL_VIEWS` flag. It was switched off in commit 5ccebd8
+ * because those files are the *legacy* v1 views and they diverge from the JS on fresh invoices — a
+ * sale invoice with an empty `dated`, which invoice entry creates. Deleted 2026-10-02: the flag was
+ * a constant `false`, so the path was referenced but unreachable, and the `.sql` files it read were
+ * the only remaining copy of the legacy definitions.
  *
- * Empty on purpose: `paymentsView` was tried here (SQL rows + a JS `company` array) and broke
- * parity (differential 9–12/14, flaky) — the legacy `payments_view` differs from the JS in more
- * than `company`, as the equivalence gate warned ([[legacy-sql-views-differ-from-js-views]]). Only
- * views the gate proves byte-identical are converted.
+ * The report SQL that replaced them is `app/reports/sql/prelude.sql` — CTEs composed in front of
+ * every spooled statement. The long-term direction is for these JavaScript view builders to go too,
+ * leaving `meta.json` to name `.sql` files directly
+ * (vault/notes/manifest-first-architecture-gap-2026-10-02.md).
  */
-const HYBRID_SQL_VIEWS = {};
 
-/** Attach `company` (array, as the JS view does) from the booker's link table. */
-function augmentPaymentsView(rows) {
-  const byBooker = new Map();
-  for (const link of state.base.order_booker_companies ?? []) {
-    const booker = relId(link.order_booker);
-    if (!byBooker.has(booker)) byBooker.set(booker, []);
-    byBooker.get(booker).push(relId(link.company));
-  }
-  for (const row of rows) {
-    row.company = row.booker && byBooker.has(row.booker) ? byBooker.get(row.booker) : [];
-  }
-  return rows;
-}
 
 async function buildOne(name, built) {
-  const sqlName = SQL_VIEWS[name];
-  if (sqlName) {
-    try {
-      return await sqlViewRows(sqlName);
-    } catch (error) {
-      console.log(`[sqlview] ${name} failed, using JS: ${error}`);
-    }
-  }
-  const hybridName = HYBRID_SQL_VIEWS[name];
-  if (hybridName) {
-    try {
-      return augmentPaymentsView(await sqlViewRows(hybridName));
-    } catch (error) {
-      console.log(`[sqlview] ${name} (hybrid) failed, using JS: ${error}`);
-    }
-  }
   return buildView(name, state.base, built);
 }
 
@@ -198,16 +155,10 @@ export async function fingerprint() {
   return currentFingerprint();
 }
 
-/** Base tables a set of views needs materialised: none for pure-SQL views, the link table for a
- * hybrid's augment, and the declared tables for JS views. */
+/** Base tables a set of views needs materialised: the declared tables for each JS view. */
 function baseTablesFor(views) {
   const out = new Set();
   for (const name of views) {
-    if (SQL_VIEWS[name]) continue;
-    if (HYBRID_SQL_VIEWS[name]) {
-      out.add("order_booker_companies");
-      continue;
-    }
     for (const table of tablesForViews([name])) out.add(table);
   }
   return [...out];
