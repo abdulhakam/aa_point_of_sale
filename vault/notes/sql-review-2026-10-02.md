@@ -96,15 +96,18 @@ Those are the entire list, and they belong to the general document store
 | Kept current by | **12 triggers** — `document__{voucher,party,item,invoice}_{insert,update,delete}` on `payments`, `parties`, `items` and `inv_doc` |
 | Read by the app instead | `inv_doc` (8,927 rows), which the print path and `queue.js` actually query |
 
-> **CORRECTION 2026-10-02 — the first version of this section recommended deleting the store, and
-> that was wrong.** It reasoned from "unread, therefore vestigial", and did not check what the store
-> is *for*. It is deliberate, resolved work: [[document-store-and-streaming-render]] built it on
-> 2026-09-30 as the precomputed-document cache for the document/render path, deliberately scoped to
-> exclude the aggregates that are already fast, and verified 15/15 including the property that an
-> INSERT creates a document with no application code running. Nothing reads it because **the consumer
-> is not wired up yet**, not because it was abandoned. Deleting it would throw away verified work and
-> the design note that justifies its shape.
-
+> **SUPERSEDED 2026-10-02 - the store was dropped, and the first recommendation here was wrong for the
+> wrong reason.** It recommended deleting the store on "unread, therefore vestigial", without checking
+> what the store was *for*. The store was deliberate, resolved, verified work
+> ([[document-store-and-streaming-render]]); it was unread because its consumer was not wired up, not
+> because it was abandoned. The **decision** then came from the plan rather than the evidence: the
+> document path is not being built beyond invoices, so no consumer ever arrives. Migration
+> U1790600000 dropped the table, its 12 triggers, its 3 views and 36,603 rows, and TrailBase's SQLite
+> now holds no VIEW at all. See [[document-path-stops-at-invoices]].
+>
+> The reasoning that survives: a trigger-maintained document cannot be replaced by a guest-written
+> cache, because payments, parties, items and invoices are all writable through TrailBase's
+> record API and a write there never runs the guest.
 So the instruction still bites, but the answer is not "drop the store". A SQLite trigger cannot read a
 `.sql` file, and the triggers are the maintenance mechanism by design. The route that satisfies both
 constraints is to **keep the store and generate the trigger bodies from the `.sql` file** at migration
@@ -212,12 +215,12 @@ whenever the rounding decision is being made anyway.
 Rounding is **not** in this list — it is left as-is by decision (2026-10-02), and the analysis above
 is kept so the cost is known if that changes.
 
-1. **Settle the three SQLite `VIEW`s** the document store owns — keep the store, generate its trigger
-   bodies from a `.sql` file at migration time (see 2b; my first recommendation here was to delete it,
-   and that was wrong).
+1. ~~Settle the three SQLite `VIEW`s.~~ **Done 2026-10-02**: the document path stops at invoices, so
+   the store was dropped entirely — table, 12 triggers, 3 views, 36,603 rows. The database now holds
+   **no `VIEW` at all** ([[document-path-stops-at-invoices]]).
 2. ~~Delete the dead `views/` directory, `sqlviews.js`, its wiring and `verify-translated-views.py`.~~
    **Done 2026-10-02** — [[legacy-parity-checks-waived]].
-3. Replace the label CASE with `pb.type IN (1, 2)` in the six reports that carry it.
+3. Replace the label CASE with `pb.type IN (1, 2)` in the six reports that carry it. **Not done.**
 4. **[[tb-0032-manifest-first-refactor]]** — `meta.json` names the `.sql` files: `refs` gets a SQL
    equivalent, `counts` reads `counts_for_row_numbers.sql`, then `compute/views.js` and
    `app/lib/reports.js` retire. The parity half of its old gate is waived.

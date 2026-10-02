@@ -12,23 +12,28 @@ related_to: ["[[render-split-measured]]", "[[rendering-is-a-component-behind-an-
 
 # A document store, and streaming a render chunk by chunk
 
+> **2026-10-02: the store is dropped.** The document path is not being built beyond invoices, so no
+> consumer ever arrived; migration `U1790600000__drop_general_document_store.sql` removes the table,
+> its 12 triggers, its 3 views and 36,603 rows, and **TrailBase's SQLite now holds no `VIEW` at all**.
+> Decision and measurements: [[document-path-stops-at-invoices]]. **`inv_doc` is untouched** — 8,927
+> rows, 14 maintenance triggers, and it is what the print path reads.
+>
+> Two things worth keeping from the reasoning below, because they are why the store was the right
+> design and why a KV store cannot replace one:
+>
+> - **Triggers, not application code, was the load-bearing choice.** `payments`, `parties`, `items`
+>   and `invoices` are all writable through TrailBase's record API, so a guest-written cache — KV
+>   included — is stale from the instant it is written.
+> - **The excluded aggregates were deliberate** and the reasoning still applies to anything built
+>   later: cache what a kind *owns*, never what it could aggregate. A party document deliberately
+>   carries no balance and an item document no stock, because those aggregate and `outstanding` /
+>   `stockreport` already answer them in ~200 ms.
+>
+> The measurement half of this note is **unaffected**: streaming buys memory and time-to-first-byte,
+> not template CPU.
+
 Two questions answered with measurements on 2026-09-30, because both had plausible-sounding answers
 that turned out to be wrong.
-
-> **2026-10-02: nothing reads this store yet, and that is not a verdict on it.** A review asked
-> whether the store was vestigial — `SELECT … FROM "document"` returns zero hits in the guest, and the
-> `document` table is not an exposed record collection. It is not vestigial: it is infrastructure for
-> the document/render path described below, which is not wired up yet. Two facts a later session
-> should not have to rediscover:
->
-> - **Do not delete it.** The first recommendation from that review was to drop the table and its 12
->   triggers; that was wrong, and the correction is recorded in [[sql-review-2026-10-02]] §2b. The
->   exclusions above are deliberate, and the property that matters — an INSERT creates a document with
->   no application code running — is the reason the triggers are the mechanism.
-> - **Its three `CREATE VIEW`s are now in tension with a standing instruction** that TrailBase's
->   SQLite should hold no `VIEW`. A trigger cannot read a `.sql` file, so the way to satisfy both is to
->   generate the trigger bodies from the `.sql` file at migration time: one definition, no view in the
->   database. Until then, three views exist here and this is why.
 
 ## 1. "Send the layout first, then insert the data in chunks as it renders — how much would that save?"
 
