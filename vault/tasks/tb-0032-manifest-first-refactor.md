@@ -55,8 +55,8 @@ Three structural gaps, each of which is a separate piece of work:
 - [ ] `spoolreports.js` is a **loader**, not a registry: read the manifest, read the `.sql` files it
       names, run them, hand the spool keys to jinja. Its `REPORTS` table of hand-written `cols` and
       totals rules is gone — the manifest's `columns`/`totals` are the single declaration.
-- [ ] **`refs` has a `.sql` equivalent** and the filter dropdowns read it. This is the last thing
-      `compute/views.js` is needed for, so it is the blocking item.
+- [x] **`refs` has a `.sql` equivalent** and the filter dropdowns read it. **Done 2026-10-02** — see
+      phase 1 below.
 - [ ] `compute/views.js` and `app/lib/reports.js` are deleted; the dashboard's `counts` reads
       `counts_for_row_numbers.sql`, and the snapshot/fingerprint service shrinks to what a SQL
       statement cannot do.
@@ -67,17 +67,46 @@ Three structural gaps, each of which is a separate piece of work:
 
 ## Sequencing, in the order that keeps the app working
 
-1. **`refs` as SQL.** The only genuine blocker. Every filter dropdown on every report and ledger
-   depends on it, so it is a behaviour change to 14 pages and wants its own review.
-2. **Move the SQL registry into the manifests.** Add `sql`, `binds` and `cols` to each
-   `pages/*/meta.json`; make `spoolreports.js` read them. Pure data movement — the statements are
-   unchanged, so `verify-spool-reports.mjs` is the proof it worked.
-3. **`counts` from `counts_for_row_numbers.sql`**, then delete `compute/views.js` and
-   `app/lib/reports.js`.
-4. **Handlers.** Pick one page, move its route body into a manifest-declared handlers directory, and
-   have the dispatcher resolve it from the manifest. Then the remaining CRUD routes one at a time.
-5. **`route.ts` shrinks** as routes move to manifests. 1,821 lines is the ceiling on how much of the
-   dispatcher is genuinely hand-wired, and it should end up holding only what no manifest can say.
+### 1. ~~`refs` as SQL.~~ **Done 2026-10-02**
+
+`app/sql/refs.sql` is now the definition — nine `(ref_key, table_name)` pairs — read by
+`app/lib/refs.js`, which caches on the data fingerprint. `compute/views.js`'s `buildRefs` and its
+`VIEW_DEPS.refs` entry are **deleted**, along with the `case "refs"` in `buildView`. The four
+`getViews(["refs"])` call sites in `route.ts` and `route-kit.refs()` now go through the new loader.
+
+Those two JavaScript definitions named the same nine tables twice, which is the duplication class
+this task exists to remove. The `.sql` file is a table of pairs rather than a hand-written statement
+per table because the nine tables have different column counts and so cannot be `UNION ALL`'d with
+`SELECT *`; spelling out each table's columns would duplicate `pragma_table_info` and drift on the
+first migration that adds one. The definition moves to SQL, the transport stays shared, so the
+normalisation is identical **by construction** rather than by agreement.
+
+Verified:
+
+| Check | Result |
+|---|---|
+| `/bench/refs` before the swap | `identical: true` — 9/9 keys, same counts, same first and last ids |
+| Every page with a dropdown (23 of them) | all `200`, every populated `<select>` has options: parties 944, bookers 5, areas 71, items 207 |
+| `verify-spool-reports.mjs` | 14 passed, 0 failed, 72 binds verified |
+| `guest-smoke.mjs` | **71/78**, and the 7 failures are the documented pre-existing money set ([[guest-smoke-report-total-checks-fail-on-pristine-checkout]]) |
+
+`/bench/refs` no longer compares against JavaScript — that is gone — so it now guards the failure
+mode that actually matters: **a dropdown that silently renders empty**. It asserts every key present,
+every value an array, and reports any empty list. Counts are reported, not asserted, because the
+shop's master data grows and a hard count would fail for the wrong reason.
+
+**One smoke check had to change, and it is worth reading.** `guest-smoke.mjs` asserted
+`lastRefresh.rebuilt` includes `"refs"` — true only while `refs` was a view, and `sections` fed
+nothing else. It now asserts `paymentsInvoicesReport` (the incremental property, stated against a
+table the suite actually wrote) **and** that `refs` is *absent* from the rebuilt set, which is a
+regression guard for the swap: if it ever reappears, something is building refs twice.
+
+Observed flakiness, recorded so the next session does not chase it: the check
+`page data revalidates an unchanged filtered result` failed on one run of this code and passed on the
+next, with no change between. Independently verified on the production server that the mechanism is
+sound — `/p/reports/profit/data` answers `200`, then `304`, then `304` on `If-None-Match`.
+
+### 2. Move the SQL registry into the manifests
 
 ## Risks, named
 

@@ -24,7 +24,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  buildRefs, buildTransactionView, buildInvoiceView, buildTransactionsReport,
+  buildTransactionView, buildInvoiceView, buildTransactionsReport,
   buildPaymentsView, buildPaymentsInvoicesReport, buildItemsReport,
   buildItemsDifferenceReport, buildLedgerJournal, buildLedgerBooker, buildLedgerParty,
   buildOutstanding,

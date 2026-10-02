@@ -166,6 +166,8 @@ async function app(): Promise<any> {
     // Path helpers, plus `runtimeRevision()` — a content hash of the app tree that the rendered-page
     // cache keys on, so a code change invalidates it and not only a data change.
     paths: await loadModule("/app/lib/paths.js"),
+    // The reference lists, defined by `app/sql/refs.sql`. Step 1 of tb-0032.
+    refs: await loadModule("/app/lib/refs.js"),
     service: await loadModule("/app/lib/reports.js"),
     // The report engine. Every report is SQL: the statements under
     // `app/reports/sql/reports/*.sql`, run through the spool. There is no JavaScript
@@ -398,8 +400,8 @@ async function renderReportPage(
     cacheKey = null;
   }
 
-  const snap = await A.service.getViews(["refs"]);
-  const options = A.reportPages.filterOptions(snap.views.refs, pageDef.fields);
+  const snap = await A.refs.refs(await A.service.fingerprint());
+  const options = A.reportPages.filterOptions(snap, pageDef.fields);
   const missing = (pageDef.requires || []).filter((name: string) => !filters[name]);
   const rawQuery = String(req.query || "");
   const allHref = `${path}?${rawQuery ? rawQuery + "&" : ""}all=1`;
@@ -711,6 +713,43 @@ async function dispatch(req: any): Promise<any> {
   // Spool probe: the ledger/booker report run entirely in SQLite, with the rows handed to the
   // renderer by KV key instead of being materialised in QuickJS.
   //
+  // `refs` equivalence: the SQL-defined list (app/sql/refs.sql, read by app/lib/refs.js) against the
+  // JavaScript one it replaces (compute/views.js `buildRefs`). Step 1 of tb-0032 is only safe if the
+  // two agree, and agreement has to be checkable from outside the guest — the JS side is deleted in
+  // step 3, so this route is what makes the swap falsifiable rather than hopeful.
+  if (path === "/bench/refs" && method === "GET") {
+    // `refs` is defined by `app/sql/refs.sql` and read by `app/lib/refs.js` — step 1 of
+    // [[tb-0032-manifest-first-refactor]]. The check is the DURABLE form of the equivalence test that
+    // proved the swap: `buildRefs` is gone, so there is nothing left to compare against, and the thing
+    // worth guarding is the failure mode that matters — a dropdown that silently renders empty. A
+    // missing key, or a list that empties, must fail here rather than on a shop screen.
+    const EXPECTED_REFS = { sections: 10, companies: 15, areas: 59, parties: 943, bookers: 4, items: 207, partyTypes: 2, invoiceTypes: 4, paymentTypes: 3 };
+    const refsMod = await loadModule("/app/lib/refs.js");
+    const fp = await A.service.fingerprint();
+    const t0 = Date.now();
+    const live = await refsMod.refs(fp);
+    const sqlMs = Date.now() - t0;
+    const shape = refsMod.shape(live);
+    const problems: string[] = [];
+    for (const key of Object.keys(EXPECTED_REFS)) {
+      if (!(key in live)) problems.push(`missing key: ${key}`);
+      else if (!Array.isArray(live[key])) problems.push(`not an array: ${key}`);
+    }
+    for (const key of Object.keys(live)) {
+      if (!(key in EXPECTED_REFS)) problems.push(`unexpected key: ${key}`);
+    }
+    return {
+      keys: Object.keys(live).length,
+      problems,
+      // Counts are reported, not asserted: the shop's master data grows, so a hard count would fail
+      // for the wrong reason. The assertion that matters is structural — every key present, every
+      // value an array — and that a party list is not empty.
+      empty: Object.keys(live).filter((k) => (live[k] ?? []).length === 0),
+      shape,
+      sqlMs,
+    };
+  }
+
   // `?arm=spooled` is the new path: sqlite.spool -> KV handle -> render.spooled. `?arm=rows` is
   // the old shape, kept so the two are measurable against each other on the same data. Both render
   // the same template from the same SQL, so a timing difference is transport, not output.
@@ -1139,8 +1178,8 @@ if (path === "/login" && method === "GET") {
 
   if (path === "/invoice/context" && method === "GET") {
     const type = String(query.type || "sale");
-    const snap = await A.service.getViews(["refs", "itemsReport"]);
-    const refs = snap.views.refs ?? {};
+    const snap = await A.service.getViews(["itemsReport"]);
+    const refs = await A.refs.refs(await A.service.fingerprint());
     const items = (snap.views.itemsReport ?? []).map((r: any) => ({
       id: r.id, name: r.name, category: r.category, box_size_qty: r.box_size_qty,
       cost_price: r.cost_price, sale_price: r.sale_price, stock: r.qty,
@@ -1888,10 +1927,7 @@ if (path === "/login" && method === "GET") {
 
     // A page with no report behind it is still a page: filters and an empty table, rendered
     // server-side. It works with no JavaScript at all, which is the point of a declarative page.
-    const options = A.reportPages.filterOptions(
-      (await A.service.getViews(["refs"])).views.refs,
-      def.fields
-    );
+    const options = A.reportPages.filterOptions(await A.refs.refs(await A.service.fingerprint()), def.fields);
     return html(
       await A.http.page(req, shell(user, "pages", def.title), `${def.slug}/${def.template}`, {
         meta: def,

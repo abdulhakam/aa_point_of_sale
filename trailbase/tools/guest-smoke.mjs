@@ -380,9 +380,26 @@ async function main() {
       Array.isArray(fingerprintState?.lastRefresh?.changed) && fingerprintState.lastRefresh.changed.includes("sections"),
       JSON.stringify(fingerprintState?.lastRefresh)
     );
+    // This used to assert `rebuilt` includes "refs", which only held because `refs` was the single
+    // view depending on `sections` — and it is not a view any more (tb-0032 step 1: it is nine base
+    // tables named by app/sql/refs.sql and read by app/lib/refs.js). Asserting the removed detail
+    // would keep the check red for a correct implementation.
+    //
+    // The property worth keeping is the incremental one, and it is now stated against a table the
+    // suite actually wrote that a REPORT view depends on: the seeding run wrote payments, so a
+    // payment-driven view must be in the rebuilt set.
     check(
       "incremental refresh rebuilds the affected views",
-      Array.isArray(fingerprintState?.lastRefresh?.rebuilt) && fingerprintState.lastRefresh.rebuilt.includes("refs"),
+      Array.isArray(fingerprintState?.lastRefresh?.rebuilt) &&
+        fingerprintState.lastRefresh.rebuilt.includes("paymentsInvoicesReport"),
+      JSON.stringify(fingerprintState?.lastRefresh?.rebuilt)
+    );
+    // A regression guard for the swap: `refs` is read through its own loader, so the view service
+    // must NOT be rebuilding it. If this fails, something is building refs twice.
+    check(
+      "refs is not a report view",
+      Array.isArray(fingerprintState?.lastRefresh?.rebuilt) &&
+        !fingerprintState.lastRefresh.rebuilt.includes("refs"),
       JSON.stringify(fingerprintState?.lastRefresh?.rebuilt)
     );
 

@@ -506,22 +506,11 @@ export function buildCounts(base) {
   };
 }
 
-/** refs — the reference lists the templates and filter dropdowns read. */
-export function buildRefs(base) {
-  return {
-    sections: base.sections,
-    // no `categories` entry: the legacy categories collection maps onto `companies`,
-    // and consumers of the company list read `refs.companies`.
-    companies: base.companies,
-    areas: base.areas,
-    parties: base.parties,
-    bookers: base.order_bookers,
-    items: base.items,
-    partyTypes: base.party_types,
-    invoiceTypes: base.invoice_types,
-    paymentTypes: base.payment_types,
-  };
-}
+// `buildRefs` is GONE (2026-10-02). What refs is — the nine (key, table) pairs — is defined by
+// `app/sql/refs.sql` and read by `app/lib/refs.js`. Between them, `buildRefs` and the `VIEW_DEPS.refs`
+// entry named the same nine tables twice in JavaScript, which is the duplication class
+// [[tb-0032-manifest-first-refactor]] exists to remove. Swapped only after `/bench/refs` reported
+// `identical: true` across all nine keys — same counts, same first and last ids.
 
 /**
  * What each derived view reads: base tables directly, and the earlier views it
@@ -548,20 +537,9 @@ export const VIEW_DEPS = {
     tables: ["invoices", "payments", "areas", "sections", "companies", "items", "order_bookers", "parties"],
     views: [],
   },
-  refs: {
-    tables: [
-      "sections",
-      "companies",
-      "areas",
-      "parties",
-      "order_bookers",
-      "items",
-      "party_types",
-      "invoice_types",
-      "payment_types",
-    ],
-    views: [],
-  },
+  // `refs` is GONE from this table (2026-10-02). It is not a derived view — it is nine base tables
+  // read by name — so it never belonged here, and its entry duplicated `app/sql/refs.sql`. Reading
+  // it through `app/lib/refs.js` also stops it being rebuilt with the report views on a data change.
 };
 
 /** Topological order: every view comes after the views it consumes. */
@@ -596,8 +574,6 @@ export function buildView(name, base, built) {
       return buildOutstanding(base, built.paymentsView);
     case "counts":
       return buildCounts(base);
-    case "refs":
-      return buildRefs(base);
     default:
       throw new Error(`Unknown view: ${name}`);
   }

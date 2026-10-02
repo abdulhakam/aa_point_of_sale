@@ -19,7 +19,8 @@
 // Base64 is 3 bytes -> 4 sextets and the final partial group is PADDED, not filled: a 16-byte id
 // is 22 characters plus "=". Verified: 01A0EBFD3E2176D294C5C5797E90A6E5 -> AaDr_T4hdtKUxcV5fpCm5Q
 
-import { getViews, invalidate } from "./reports.js";
+import { getViews, invalidate, fingerprint } from "./reports.js";
+import * as refsModule from "./refs.js";
 import { page } from "./http.js";
 
 // Exactly the 64-character URL-safe base64 alphabet: A-Z a-z 0-9 then `-` (62) and `_` (63).
@@ -49,14 +50,18 @@ export { invalidate };
 /**
  * The reference snapshot (`parties`, `bookers`, `areas`, `sections`, `companies`, `items`, …).
  *
- * This is NOT a cache: `getViews` already holds `state.views.refs` and rebuilds only when it is
- * missing or invalidated. The win is that a handler stops writing `refs.parties ?? []` per list —
- * nine handlers each open with `getViews(["refs"])` and then null-coalesce the two or three lists
- * their template reads. Every list is an array here, always.
+ * This is NOT a cache: `app/lib/refs.js` holds the snapshot and rebuilds only when the data
+ * fingerprint moves. The win is that a handler stops writing `refs.parties ?? []` per list — nine
+ * handlers each ask for the snapshot and then null-coalesce the two or three lists their template
+ * reads. Every list is an array here, always.
+ *
+ * What refs CONTAINS is defined by `app/sql/refs.sql`, not here and not in `compute/views.js`. That
+ * file replaced a definition written twice in JavaScript, and it is step 1 of
+ * [[tb-0032-manifest-first-refactor]].
  */
 export async function refs() {
-  const snap = await getViews(["refs"]);
-  return snap.views.refs ?? {};
+  const r = await refsModule.refs(await fingerprint());
+  return r ?? {};
 }
 
 /** The invoice-editor's item shape. Shared by every screen that offers a line editor. */
