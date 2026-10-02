@@ -18,7 +18,7 @@
 -- is no `WITH` and no leading `,` here.
 SELECT
   pv.id AS id,
-  substr(pv.created, 1, 10) AS date,
+  substr(pv.payment_date, 1, 10) AS date,
   (CASE WHEN pv.description = 'payment' THEN 'Payment' ELSE 'Invoice' END) AS entry,
   -- round2, then the formatted twin the template prints (ledgerRow:331-332). Both come from the
   -- same `credit`; the JS recomputes rather than reusing, so both are reproduced.
@@ -44,8 +44,8 @@ WHERE
   -- `created` is TEXT in ISO form, so these bounds are string comparisons, exactly as `inDateRange`
   -- does them (`' 00:00:00'` low, `' 23:59:59.999Z'` high).
   (:booker = '' OR pv.booker = :booker)
-  AND (:from = '' OR pv.created >= :from || ' 00:00:00')
-  AND (:to = '' OR pv.created <= :to || ' 23:59:59.999Z')
+  AND (:from = '' OR pv.payment_date >= :from || ' 00:00:00')
+  AND (:to = '' OR pv.payment_date <= :to || ' 23:59:59.999Z')
 -- reportLedgerBooker sorts by compareText(date). `lower()` is the cheap key and matches for the ISO
 -- dates this column holds; the case tie-break in compareText is unreachable for `YYYY-MM-DD`.
-ORDER BY lower(substr(pv.created, 1, 10)), substr(pv.created, 1, 10);
+ORDER BY lower(substr(pv.payment_date, 1, 10)), substr(pv.payment_date, 1, 10);

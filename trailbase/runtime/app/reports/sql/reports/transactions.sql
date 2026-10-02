@@ -13,7 +13,7 @@
 , tx_filtered AS (
   SELECT
     tr.id,
-    tr.created,
+    tr.dated,
     tr.type,
     tr.invoice,
     tr.invoiceNo,
@@ -48,8 +48,8 @@
     -- reports.js:250: sale (1) or return (2) only.
     (tr.type = 1 OR tr.type = 2)
     -- reports.js:251 inDateRange on `created`.
-    AND (:from = '' OR tr.created >= :from || ' 00:00:00')
-    AND (:to = '' OR tr.created <= :to || ' 23:59:59.999Z')
+    AND (:from = '' OR tr.dated >= :from || ' 00:00:00')
+    AND (:to = '' OR tr.dated <= :to || ' 23:59:59.999Z')
     -- txFilters (reports.js:203-212): one nullable predicate per filter. All are BLOB ids except
     -- `invoice`, which also matches on the human invoice number.
     AND (:booker = '' OR tr.booker = :booker)
@@ -68,7 +68,10 @@ tx_projected AS (
   -- floor/modulo pluralised concat (format.js:27-35); the nine round2 calls are the money rule.
   SELECT
     id,
-    substr(created, 1, 10) AS date,
+    -- The INVOICE's business date, not the row's insert time. `reports.js:251` filters on
+  -- `created`, which in v1 WAS the business date; in TrailBase `created` is when the row was
+  -- written, so on an imported ledger "profit for September" returned nothing at all.
+  substr(dated, 1, 10) AS date,
     -- INVOICE_TYPE_LABEL (reports.js:17) is LOWERCASE: purchase/sale/return/difference. These labels
     -- are not decoration -- `reportProfit` sums on `r.type === "sale"` (reports.js:260) and
     -- `reportItemSales` on `r.type !== "sale"` (reports.js:268), so a case difference here would

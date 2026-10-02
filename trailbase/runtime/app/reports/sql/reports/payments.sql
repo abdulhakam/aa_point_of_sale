@@ -10,7 +10,7 @@
 , pay_filtered AS (
   SELECT
     pv.id,
-    pv.created,
+    pv.payment_date,
     pv.type,
     pv.invoice,
     pv.invoiceNo,
@@ -33,8 +33,8 @@
   LEFT JOIN (SELECT id, name FROM order_bookers) bn ON bn.id = pv.booker
   WHERE
     -- reportPayments:135 inDateRange on `created`.
-    (:from = '' OR pv.created >= :from || ' 00:00:00')
-    AND (:to = '' OR pv.created <= :to || ' 23:59:59.999Z')
+    (:from = '' OR pv.payment_date >= :from || ' 00:00:00')
+    AND (:to = '' OR pv.payment_date <= :to || ' 23:59:59.999Z')
     -- reportSalesPayments:146 — an extra restriction ONLY on the sales report: unpaid, and of type
     -- recieving (1) or return (2). `reportPayments` omits it, hence the parameter.
     AND (:salesOnly = '' OR (pv.paid = 0 AND (pv.type = 1 OR pv.type = 2)))
@@ -57,7 +57,10 @@
 )
 SELECT
   id,
-  substr(created, 1, 10) AS date,
+  -- The PAYMENT date, not the row's insert time. pay_filtered projects payment_date;
+  -- created was never in scope here, and v1's inDateRange ran on created where
+  -- created WAS the business date.
+  substr(payment_date, 1, 10) AS date,
   -- paymentsTypeLabel (reports.js:50): a 2x2 over (type, description). The else branch is the
   -- return label, which is what a type=2 payment gets regardless of description.
   (CASE type

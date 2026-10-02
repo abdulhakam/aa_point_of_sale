@@ -38,6 +38,33 @@ const results = [];
  */
 const hasRightCell = (html, value) => new RegExp(`class="right"[^>]*>${value}<`).test(html);
 
+/**
+ * Every money cell in the page, in document order, with its label.
+ *
+ * A money check that fails with an empty detail says only "expected 91.00", which cannot
+ * distinguish a wrong figure from a wrong label from a report that rendered nothing at all — and
+ * those three need completely different fixes. With parity waived, a pinned expectation may itself
+ * be the thing that is stale, so the tool has to show what the system actually computed before
+ * anyone decides which side is wrong.
+ */
+function moneyCells(html) {
+  const out = [];
+  const re = /<t[hd][^>]*>([\s\S]*?)<\/t[hd]>\s*<t[hd][^>]*class="right"[^>]*>([\s\S]*?)<\/t[hd]>/g;
+  let m;
+  while ((m = re.exec(html))) {
+    const label = m[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const value = m[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    if (/\d/.test(value)) out.push(`${label}=${value}`);
+  }
+  return out;
+}
+
+/** A compact "what the page actually shows" detail for a failing money check. */
+const moneyDetail = (html) => {
+  const cells = moneyCells(html);
+  return cells.length ? cells.slice(0, 12).join(" | ") : "NO NUMERIC CELLS RENDERED";
+};
+
 function check(name, ok, detail = "") {
   results.push({ name, ok, detail });
   console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail && !ok ? `  — ${detail}` : ""}`);
@@ -283,7 +310,7 @@ async function main() {
     const sep = "from=2026-09-01&to=2026-09-30";
 
     const profit = await get(cookies, `/reports/profit?${sep}`);
-  check("profit total is 91.00 (margin arithmetic)", hasRightCell(profit.body, "91.00"), "");
+  check("profit total is 91.00 (margin arithmetic)", hasRightCell(profit.body, "91.00"), moneyDetail(profit.body));
     check("profit row uses final-margin 90.42", profit.body.includes("90.42"), "");
 
     const pageProfit = await get(cookies, `/p/reports/profit/data?${sep}`);
@@ -330,8 +357,8 @@ async function main() {
     check("manual refresh leaves the snapshot ready", afterState?.ready === true && afterState?.build > 0, afterRefresh.body);
 
     const itemsales = await get(cookies, `/reports/itemsales?${sep}`);
-  check("item sales total sale is 731.00", hasRightCell(itemsales.body, "731.00"), "");
-  check("item sales net total is 591.00", hasRightCell(itemsales.body, "591.00"), "");
+  check("item sales total sale is 731.00", hasRightCell(itemsales.body, "731.00"), moneyDetail(itemsales.body));
+  check("item sales net total is 591.00", hasRightCell(itemsales.body, "591.00"), moneyDetail(itemsales.body));
 
     const stock2 = await get(cookies, "/reports/stockreport");
     check("stock quantity displays cartons+units", stock2.body.includes("7 ctns 7 units"), "");
@@ -341,8 +368,8 @@ async function main() {
     check("difference report counts only difference invoices", diff.body.includes("Chips") && diff.body.includes("0 ctns 3 units"), "");
 
     const pay = await get(cookies, `/reports/payments?${sep}`);
-  check("payments payable amount is 800.00", hasRightCell(pay.body, "800.00"), "");
-  check("payments recivable amount is 150.00", hasRightCell(pay.body, "150.00"), "");
+  check("payments payable amount is 800.00", hasRightCell(pay.body, "800.00"), moneyDetail(pay.body));
+  check("payments recivable amount is 150.00", hasRightCell(pay.body, "150.00"), moneyDetail(pay.body));
 
     const outc = await get(cookies, "/reports/outstanding");
   check("outstanding balance for the customer is 150.00", outc.body.includes("Customer One") && hasRightCell(outc.body, "150.00"), "");

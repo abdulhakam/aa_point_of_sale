@@ -18,8 +18,8 @@
   WHERE
     -- reports.js:371: recieving payments only.
     pv.type = 1
-    AND (:from = '' OR pv.created >= :from || ' 00:00:00')
-    AND (:to = '' OR pv.created <= :to || ' 23:59:59.999Z')
+    AND (:from = '' OR pv.payment_date >= :from || ' 00:00:00')
+    AND (:to = '' OR pv.payment_date <= :to || ' 23:59:59.999Z')
     AND (:area = '' OR pv.area = :area)
     AND (:section = '' OR pv.section = :section)
     -- reports.js:377 skips payments with no party.

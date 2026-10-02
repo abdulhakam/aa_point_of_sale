@@ -67,6 +67,8 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 
 | Risk | Why it matters | Where |
 | --- | --- | --- |
+| **Reports filter on the business date, verified** | **Fixed 2026-10-02.** Nine statements filtered on `created` — insert time — so on the imported ledger "September sales" was empty because everything was typed in on 1 October. Every window used during verification happened to include that date, which is why it hid. The smoke suite is now 78/78 | [[reports-filter-on-created-not-the-business-date]] |
+| **8,648 of 26,526 payments carry no `payment_date`** | An import defect, not a code one: they fall back to the import timestamp, so the sales report only answers windows that include 1 Oct 2026. Belongs with the v1 import | [[reports-filter-on-created-not-the-business-date]] |
 | Every report page now answers in 91–504 ms warm | The ledger being restored did **not** make them slow — measured, not assumed. An earlier "12.2 s" figure for `paymentsbycompany` was the **cold JSON API**, not the page; the page is 126 ms. Two SQL changes took a cold load down 20% | [[paymentsbycompany-performance-2026-10-02]] |
 | Invoices are published on save and editable afterwards | **Accepted 2026-10-02.** The draft phase and append-only rule are both withdrawn, with ORDERS gone. A report you already ran can change under you, and there is no edit trail yet | [[no-draft-invoices-published-on-save]] |
 | TrailBase subscriptions return 403 | No realtime push exists, so every "latest data" requirement is met by ETag polling, not a stream | [[trailbase-subscribe-endpoint-forbidden]] |

@@ -1,7 +1,8 @@
 ---
 title: guest-smoke report-total checks fail on a pristine checkout (pre-existing)
 type: issue
-status: open
+status: resolved
+resolved_on: 2026-10-02
 created: 2026-10-01
 updated: 2026-10-01
 tags: [guest, smoke, reports, totals, parity, flake]
@@ -23,6 +24,12 @@ failures stale — it makes them the *whole* remaining job:
 - this belongs to the money pass, deferred to the end of the migration by decision
 
 # guest-smoke report-total checks fail on a pristine checkout (pre-existing)
+> **RESOLVED 2026-10-02 — and the cause was not what this note assumed.** The failures were NOT a
+> pristine-checkout problem: they were [[reports-filter-on-created-not-the-business-date]]. Every
+> money check failed because a date-filtered report returned **zero rows** — the statements filtered
+> on created, the row's insert time, which on a freshly-seeded depot is *today*, so a September
+> window excluded rows dated September. With that predicate fixed, **guest-smoke.mjs is 78/78, every
+> check passing.** The pinned figures were correct throughout.
 
 `node trailbase/tools/guest-smoke.mjs` reports **68/76**, not 76/76. Eight checks fail, and they are
 NOT caused by the spooled-report work — verified by stashing every tracked change and re-running.

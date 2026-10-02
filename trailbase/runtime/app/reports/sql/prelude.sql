@@ -80,7 +80,15 @@ WITH
       ((t.price * t.qty) * (1 - (t.discount_1 / 100.0)) * (1 - (t.discount_2 / 100.0))) - t.discount_rs AS total,
       t.created,
       t.updated,
-      t.deleted
+      t.deleted,
+      -- The INVOICE's business date, so a transaction-level report can filter on the date an
+      -- operator means. It is the SAME expression `invoice_view` uses, and it has to be: 21 invoices
+      -- in the imported ledger carry an EMPTY `dated`, and `''` compares less than every date, so
+      -- without the fallback those invoices leaked into EVERY date window — including windows from
+      -- before the shop existed. `verify-spool-reports.mjs` caught that: a `to` bound matching
+      -- nothing still returned 25 of 21,815 rows. See
+      -- vault/issues/reports-filter-on-created-not-the-business-date.md.
+      COALESCE(NULLIF(i.dated, ''), i.created) AS dated
     FROM transactions t
     JOIN invoices i ON i.id = t.invoice
     LEFT JOIN parties pa ON pa.id = i.party
@@ -258,6 +266,9 @@ WITH
       tv.scheme AS scheme,
       tv.cost_price AS cost_price,
       tv.created AS created,
+      -- The INVOICE's business date, carried so every report downstream of this CTE can filter on
+      -- the date an operator means. Without it the only date in scope was the insert time.
+      tv.dated AS dated,
       tv.updated AS updated,
       tv.inv_booker AS booker,
       -- COALESCE to 0: views.js:132 reads `inv.unrounded_total` off an invoices map that has an entry
@@ -326,9 +337,15 @@ WITH
       pr.price,
       pr.qty,
       pr.scheme,
-      pr.cost_price,
-      pr.created,
-      pr.updated,
+    pr.cost_price,
+    pr.created,
+    -- `dated` carried through so a report can filter on the BUSINESS date. It was dropped here
+    -- until 2026-10-02, and `transactions.sql` filtered on `created` instead -- which is the row's
+    -- INSERT time. On the imported ledger every row's `created` is the import timestamp, so
+    -- "profit for September" returned nothing at all. See
+    -- vault/issues/reports-filter-on-created-not-the-business-date.md.
+    pr.dated AS dated,
+    pr.updated,
       pr.booker,
       pr.net_amount,
       pr.profit,

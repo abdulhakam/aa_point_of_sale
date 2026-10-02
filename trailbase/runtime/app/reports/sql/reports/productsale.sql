@@ -12,8 +12,8 @@
   WHERE
     -- reports.js:526: sale invoices only (INVOICE_TYPE.sale = 1).
     tv.inv_type = 1
-    AND (:from = '' OR tv.created >= :from || ' 00:00:00')
-    AND (:to = '' OR tv.created <= :to || ' 23:59:59.999Z')
+    AND (:from = '' OR tv.dated >= :from || ' 00:00:00')
+    AND (:to = '' OR tv.dated <= :to || ' 23:59:59.999Z')
     AND (:booker = '' OR tv.inv_booker = :booker)
     AND (:area = '' OR tv.party_area = :area)
     AND (:section = '' OR tv.party_section = :section)

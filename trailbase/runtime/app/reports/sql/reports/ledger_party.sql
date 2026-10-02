@@ -73,8 +73,8 @@ party_balanced AS (
   FROM party_rows pr
   WHERE
     (:party = '' OR pr.party = :party)
-    AND (:from = '' OR pr.created >= :from || ' 00:00:00')
-    AND (:to = '' OR pr.created <= :to || ' 23:59:59.999Z')
+    AND (:from = '' OR pr.payment_date >= :from || ' 00:00:00')
+    AND (:to = '' OR pr.payment_date <= :to || ' 23:59:59.999Z')
 )
 SELECT
   party_balanced.id AS id,
