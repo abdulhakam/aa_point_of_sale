@@ -6,7 +6,7 @@ decided_on: 2026-09-28
 created: 2026-09-28
 tags: [reports, performance, cache, rendering, genericity, trailbase]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[report-performance-baseline]]", "[[compiled-artifacts-are-generic-capabilities]]", "[[snapshot-persistence-hits-the-20s-deadline]]", "[[guest-report-performance-options]]", "[[runtime-js-single-host]]"]
+related_to: ["[[report-performance-baseline]]", "[[compiled-artifacts-are-generic-capabilities]]", "[[snapshot-persistence-hits-the-20s-deadline]]", "[[guest-report-performance-options]]", "[[runtime-js-single-host]]", "[[guest-report-result-cache]]", "[[tb-0032-manifest-first-refactor]]", "[[one-manifest-is-the-page-definition]]"]
 ---
 
 # Cache rendered report pages keyed by the live data fingerprint
@@ -76,3 +76,39 @@ Implemented entirely in runtime files: `app/lib/reports.js` exposes `fingerprint
 
 - [[report-performance-baseline]] — before/after numbers.
 - [[guest-report-performance-options]] — the cold-path work this does not replace.
+
+## Update 2026-10-02 — the key also carries the CODE revision
+
+The key was the live **data** fingerprint plus the viewing identity, the report and its filters. That
+made a write miss and re-render, and said nothing about code. Edit a `.sql` file or a manifest,
+restart, and the first request found an entry whose data fingerprint was still valid and served the
+**old** HTML. Nothing looks wrong; the numbers are simply yesterday's code.
+
+It is now paths.runtimeRevision(): an FNV-1a content hash of every file under the runtime root,
+computed once per process. Proof, on the production depot:
+
+1. Load `/reports/payments` — 2.5 s cold, then 151 ms and 121 ms from cache. One cache key,
+   `rev-36edb03a-111`.
+2. Change `app/pages/reports/payments/meta.json`'s title, `RUN.BAT`'s robocopy, restart.
+3. Load the page again — it renders the **new** title, and the cache holds **two** keys with different
+   revisions (`rev-36edb03a-111` and `rev-8f8941e8-111`). Without the revision the old title
+   would have been served from cache.
+
+Three details that are not obvious:
+
+- **The root is the runtime root, not `/app`.** `ahscripts/` is a *sibling* of `app/`, and
+  `ahscripts/routes/_app/route.ts` is the 1,900-line dispatcher. Walking `/app` covered 109 of
+  the tree's 111 files and left the one file most likely to change during
+  [[tb-0032-manifest-first-refactor]] outside the cache's view. Found by counting, not by reasoning.
+- **Content, not a timestamp.** The guest has `fs.readdir`, `fs.readFile` and `fs.exists` and
+  **no** `stat`, so mtime is not available — and a timestamp would miss an edit that preserves it
+  (robocopy, a checkout, a restore from backup).
+- **A path is hashed even when its content will not read.** Otherwise the size of the hole depends on
+  what the bridge happens to refuse, which is not knowable from the guest. Adding, renaming or
+  removing any file always invalidates; only an in-place edit of an unreadable file is invisible.
+
+Memoised once per process, and that is safe **because** `RUN.BAT` always mirrors `runtime\` into
+the depot *and* always restarts the server, so a new revision and a new process arrive together.
+Recomputing per request would mean reading 582 KB of app source on every page view.
+
+This closes the trap [[one-manifest-is-the-page-definition]] recorded under *Not done*.

@@ -5,7 +5,7 @@ status: active
 created: 2026-10-01
 updated: 2026-10-01
 tags: [runtime-js, reports, manifest, architecture, code-deletion]
-related_to: ["[[runtime-js-minimal-file-authoring-contract]]", "[[report-logic-stays-runtime-file-based]]", "[[report-page-definitions-duplicated-and-already-divergent]]", "[[report-routes-ignore-date-defaults]]", "[[compiled-artifacts-are-generic-capabilities]]", "[[payment-type-select-never-comes-back-selected]]"]
+related_to: ["[[runtime-js-minimal-file-authoring-contract]]", "[[report-logic-stays-runtime-file-based]]", "[[report-page-definitions-duplicated-and-already-divergent]]", "[[report-routes-ignore-date-defaults]]", "[[compiled-artifacts-are-generic-capabilities]]", "[[payment-type-select-never-comes-back-selected]]", "[[tb-0032-manifest-first-refactor]]", "[[rendered-page-cache]]", "[[legacy-parity-checks-waived]]"]
 ---
 
 # One manifest is the page definition; the JS copy is gone
@@ -149,9 +149,10 @@ the same nine pre-existing failures as before the change.
   for `counts` and `refs`; every report reads `prelude.sql` instead. Retiring them is
   [[tb-0032-manifest-first-refactor]], and the blocking item is that **`refs` has no `.sql` equivalent
   yet**.
-- **The rendered-page cache does not key on code.** A code or manifest change does not invalidate
-  `pagecache`, so a stale page is served until the fingerprint moves or the table is cleared. That
-  cost an hour of false negatives during this migration and is a live trap for the next one.
+- ~~**The rendered-page cache does not key on code.**~~ **Fixed 2026-10-02.** The key now carries
+  `paths.runtimeRevision()`, a content hash of the whole runtime tree, so a code change invalidates
+  the cache and not only a data change — see [[rendered-page-cache]]. The trap is closed *before*
+  [[tb-0032-manifest-first-refactor]] starts, rather than five phases into it.
 - **`traildepot/runtime/` is a generated copy** (`robocopy runtime traildepot\runtime /MIR`) and is
   git-ignored. Editing `trailbase/runtime` does nothing until it is synced, and the sync is not part
   of `build.bat`. Editing the wrong copy is silent.

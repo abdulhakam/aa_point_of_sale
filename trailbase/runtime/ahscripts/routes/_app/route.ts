@@ -163,6 +163,9 @@ async function app(): Promise<any> {
     qtyAsText: (await loadModule("/app/lib/format-qty.js")).qtyAsText,
     payments: await loadModule("/app/lib/payments.js"),
     inventory: await loadModule("/app/lib/inventory.js"),
+    // Path helpers, plus `runtimeRevision()` — a content hash of the app tree that the rendered-page
+    // cache keys on, so a code change invalidates it and not only a data change.
+    paths: await loadModule("/app/lib/paths.js"),
     service: await loadModule("/app/lib/reports.js"),
     // The report engine. Every report is SQL: the statements under
     // `app/reports/sql/reports/*.sql`, run through the spool. There is no JavaScript
@@ -273,7 +276,15 @@ function redirect(location: string, status?: number): any {
 
 // Rendered-page cache (generic): a report page is one SQLite read on a repeat view instead of a
 // full compute + minijinja render of every row. The key is the live data fingerprint + the viewing
-// identity + the report + its filters, so a write (which moves the fingerprint) misses and re-renders.
+// identity + the report + its filters + the RUNTIME REVISION, so a write (which moves the
+// fingerprint) misses and re-renders, and so does a code change.
+//
+// The revision is the part that was missing. Without it the cache keyed on data alone, so editing a
+// `.sql` file or a manifest, restarting, and requesting the page served the OLD html from a still-valid
+// data fingerprint. Nothing looked wrong; the numbers were just yesterday's code. It cost an hour of
+// false negatives during the manifest migration, and [[tb-0032-manifest-first-refactor]] is five
+// phases of editing exactly these files. `paths.runtimeRevision()` is a content hash of the whole
+// app tree, computed once per process, which `RUN.BAT` always pairs with a restart.
 async function pageCacheGet(db: any, cacheKey: string): Promise<string | null> {
   try {
     const rows = await db.all("SELECT html FROM pagecache WHERE key = ?", [cacheKey]);
@@ -379,7 +390,8 @@ async function renderReportPage(
   let cacheKey: string | null = null;
   try {
     const fp = await A.service.fingerprint();
-    cacheKey = JSON.stringify([fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax]);
+    const rev = await A.paths.runtimeRevision();
+    cacheKey = JSON.stringify([rev, fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax]);
     const cached = await pageCacheGet(db, cacheKey);
     if (cached !== null) return html(cached);
   } catch {
