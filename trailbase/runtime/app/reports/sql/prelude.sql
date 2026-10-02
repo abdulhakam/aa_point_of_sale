@@ -171,15 +171,24 @@ WITH
     -- d1/d2 ride along because `net_line` needs them to apply the INVOICE discount chain to each
     -- line. `party`/`type` ride along because `dailysale` filters sale invoices and resolves the
     -- party's area.
-    SELECT
-      id,
-      invoiceNo,
-      party,
-      type,
-      booker,
-      d1,
-      d2,
-      (s - (s * (d1 / 100.0))) AS after_d1,
+      SELECT
+        id,
+        invoiceNo,
+        party,
+        type,
+        booker,
+        d1,
+        d2,
+        -- The invoice's EFFECTIVE business date, carried so `payments_base` can date a payment that
+        -- carries none. Resolved here, not left raw, and that is the whole point: `invoice_view`
+        -- carries the RAW `i.dated`, and 21 invoices in the imported ledger hold `dated = ''`.
+        -- Resolving at this CTE makes the value identical to `invoiceView.dated`
+        -- (`inv.dated || inv.created`, views.js:98), so the SQL chain and the JS chain cannot pick
+        -- different fallbacks. Passing `dated` through raw cost 24 of 26,526 payments their invoice's
+        -- date and sent them to `p.created` instead — `verify-prelude.mjs` caught it. Same expression
+        -- `transaction_view` uses (prelude.sql:91).
+        COALESCE(NULLIF(dated, ''), created) AS dated,
+        (s - (s * (d1 / 100.0))) AS after_d1,
       ((s - (s * (d1 / 100.0))) - ((s - (s * (d1 / 100.0))) * (d2 / 100.0))) AS unrounded,
       drs
     FROM invoice_s
@@ -187,10 +196,13 @@ WITH
   invoice_totals AS (
     -- views.js:109: final_total = round2(unrounded - discount_rs) — round2 ONCE over the whole
     -- expression, not to `unrounded` and again to the subtraction.
-    SELECT
-      id,
-      invoiceNo,
-      booker,
+      SELECT
+        id,
+        invoiceNo,
+        booker,
+        -- Carried through for `payments_base`'s date fallback; already resolved in `invoice_chain`
+        -- (see the comment there), so it is never `''` here and step 2 of the chain always fires.
+        dated,
       (CAST(((((unrounded - drs) + 2.220446049250313e-16) * 100) + 0.5) AS INTEGER)
         - (CASE WHEN ((((unrounded - drs) + 2.220446049250313e-16) * 100) + 0.5) < 0
                   AND ((((unrounded - drs) + 2.220446049250313e-16) * 100) + 0.5)
@@ -209,7 +221,16 @@ WITH
       p.id AS id,
       p.created AS created,
       p.updated AS updated,
-      (CASE WHEN p.payment_date = '' THEN p.created ELSE p.payment_date END) AS payment_date,
+      -- A payment's date, with the fallback chain the shop actually needs:
+      --   1. the payment's own date — what a new entry always carries (`payments.js:197`),
+      --   2. the INVOICE's date — because an unpaid sale payment is usually recorded against an
+      --      invoice from an earlier day, and dating it by its own insert time put 8,648 imported
+      --      payments (every unpaid sale payment in the ledger) on the single import date. They now
+      --      spread across the 29 months they really belong to.
+      --   3. the row's insert time — last resort, so a payment with neither date still lands
+      --      somewhere rather than vanishing from every date window ('' compares less than every date).
+      -- `it.dated` is NULL for a payment with no invoice, hence step 3.
+      COALESCE(NULLIF(p.payment_date, ''), NULLIF(it.dated, ''), p.created) AS payment_date,
       p.invoice AS invoice,
       it.booker AS booker,
       -- The human invoice number, carried because three reports print it and paymentFilters also

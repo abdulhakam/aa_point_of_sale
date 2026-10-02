@@ -2,6 +2,7 @@
 title: Reports filter on created (insert time) instead of the business date
 type: issue
 status: resolved
+follow_up: the 8,648 dateless payments now fall back to their INVOICE's date (decided 2026-10-02)
 severity: critical
 created: 2026-10-02
 updated: 2026-10-02
@@ -113,3 +114,83 @@ answers questions whose window includes 1 October 2026.
 - [[reports-and-ledgers]] — the report inventory.
 - [[no-draft-invoices-published-on-save]] — the other defect found in this session's sweep, and the
   reason the reports were empty at all when this one was first measured.
+
+## Follow-up, 2026-10-02: import work is out of scope, and this repo cannot answer the question
+
+The owner ruled: **do not modify the v1 import** — the v1 server is unavailable. That closes the
+question this note raised, in a way worth recording rather than losing.
+
+**The question cannot be answered from this repository.** There is no `backend/`, no `frontend/` and
+no .db file anywhere under the workspace root — only `trailbase/`, `guests/` and `vault/`. So
+neither the legacy source code nor its data is here, and "did v1 store a payment date, or did the
+import drop it?" is not answerable from what is checked out. A test import is possible; a comparison
+against a real source is not.
+
+**The blanks are historical and cannot recur.** `app/lib/payments.js`:197 inserts payment_date
+from the form, so every payment created in the new system carries the operator's date. The 8,648
+empties are imported history only.
+
+**So the remaining lever is the fallback, which is SQL and not import code.**
+Until this was fixed, `payments_base.payment_date` was
+`CASE WHEN p.payment_date = '' THEN p.created ELSE p.payment_date END` — it fell back to the insert
+time, which for imported rows is the import date. The replacement is the three-step chain below.
+Measured, for the 8,648 unpaid sale/return payments:
+
+| Fallback | Where the money lands |
+|---|---|
+| today (created) | **one day** — every row at 2026-10-01 |
+| the invoice's date | **29 months**, Feb 2024 → Apr 2026, with 19 rows still undated |
+
+The ledger's real trading range is Feb 2024 → Apr 2026, so "1 Jan 2026 to today" — the window this
+session's verification used — covers only the last quarter of it.
+
+## Follow-up, 2026-10-02: a dateless payment falls back to its INVOICE's date
+
+**Decided by the owner, and it is right for a shop.** The reason a payment is dateless is that it
+was recorded against an invoice from an earlier day — "there could be some sales that may need to be
+added to previous days sometimes". So the invoice's date is the better guess, and falling straight to
+created was never a neutral default: it put every unpaid sale payment in the ledger on the single
+import date.
+
+payments_base.payment_date is now a three-step chain, and compute/views.js carries the **same**
+one so the ledgers and the reports cannot disagree:
+
+```sql
+COALESCE(NULLIF(p.payment_date, ''), NULLIF(it.dated, ''), p.created)
+```
+
+1. the payment's own date — what every new entry carries (payments.js:197);
+2. the invoice's date — the case above;
+3. the row's insert time — last resort, so a payment with neither date still lands somewhere.
+   ('' compares less than every date, so an empty value would drop the row from *every* window.)
+
+dated had to be threaded through invoice_chain and invoice_totals to reach payments_base; it
+did not previously exist there. Step 2 is only equivalent to the JS if `it.dated` is the invoice's
+EFFECTIVE date, so `invoice_chain` resolves it with `COALESCE(NULLIF(dated, ''), created)` — the
+same expression `invoiceView.dated` gets in views.js:98. Passing the raw column through instead sent
+24 of 26,526 payments to `p.created` rather than their invoice's date; that was the one failing
+check before this correction, and it is why the parity harness, not the two smoke suites, is the
+gate that covers this rule.
+
+**Verified.** The 8,648 now spread across the 29 months they belong to, and the app reproduces the
+SQL measurement row for row:
+
+| month | payments | profit | itemsales | salesreport |
+|---|---|---|---|---|
+| 2024-02 | 18 | 26 | 26 | **7** |
+| 2024-09 | 954 | 492 | 492 | **222** |
+| 2025-06 | 1229 | 865 | 865 | **364** |
+| 2025-12 | 1599 | 1440 | 1440 | **494** |
+| 2026-02 | 928 | 1311 | 1311 | **484** |
+| 2026-04 | 333 | 595 | 595 | **205** |
+
+The salesreport column matches the distribution measured directly in SQL before the change, which is
+why it is quoted here rather than a total. `verify-prelude.mjs` **PASS** — the prelude matches
+`compute/views.js` on all of payments_view (0/26,526 mismatched on `payment_date`, `amount`,
+`credit`, `debit`), invoice_totals.final_total and transactions_report; `verify-spool-reports.mjs`
+14/14 with 72 binds; guest-smoke.mjs **78/78**; all 23 dropdown pages 200 with every select
+populated; every report and ledger still 200.
+
+Note that `verify-prelude.mjs` is **not** run by `RUN.BAT`, `build.bat` or `clear_db.bat`, so it is
+a manual gate. The two smoke suites above never noticed this defect, because neither compares the
+SQL against the JS.

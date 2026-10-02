@@ -167,7 +167,13 @@ export function buildPaymentsView(base, invoiceView) {
       id: p.id,
       created: p.created,
       updated: p.updated,
-      payment_date: p.payment_date || p.created,
+      // The payment's own date, else its INVOICE's, else the row's insert time. The middle step is
+      // what keeps this in step with `payments_base` in prelude.sql: an unpaid sale payment is
+      // usually recorded against an invoice from an earlier day, and falling straight to `created`
+      // dated 8,648 imported payments on the single import date. Both implementations must carry the
+      // same fallback or the ledgers and the reports disagree.
+      // See vault/issues/reports-filter-on-created-not-the-business-date.md.
+      payment_date: p.payment_date || invoice?.dated || p.created,
       invoice: invoice ? invoice.id : null,
       original_invoices: returnRef.get(p.id) ?? null,
       invoiceNo: invoice ? invoice.invoiceNo : null,
