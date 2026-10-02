@@ -18,15 +18,29 @@
   --
   -- `unrounded ? sum / unrounded : 0` (views.js:212) — the same zero-denominator guard the allocation
   -- uses, and it matters: SQLite would yield NULL (-> printf "0.00") where the JS yields 0.
+  --
+  -- READS `net_rounded`, NOT `transactions_report`. The three columns this needs — the line's
+  -- `net_amount`, the item's `category` (which is where `company` comes from, transactions_report
+  -- joining `items` for it) and the invoice's `unrounded` (already carried as `unrounded_total` by
+  -- `net_line`, with the same COALESCE the old `ic.unrounded` guard applied) — are all available two
+  -- CTEs earlier. Reading `transactions_report` instead drags in `allocated`, `alloc_rounded` and
+  -- `profit_rounded`, so SQLite computes the invoice-discount allocation, the cost line and the
+  -- profit for all 23,413 transaction rows to throw three of the four away. Grouping on
+  -- `unrounded_total` (already COALESCE'd to 0) rather than the raw `ic.unrounded` merges nothing:
+  -- NULL and 0 take the same branch of the CASE, and they cannot both occur for one invoice, since
+  -- it is the same join key.
+  --
+  -- Measured on the production depot, 2026-10-02: 81 ms of a 595 ms page query and 78 ms of a 641 ms
+  -- uncapped one, with the 13,862-row result byte-identical.
   SELECT
-    tr.invoice AS invoice,
-    tr.company AS company,
-    (CASE WHEN COALESCE(ic.unrounded, 0) <> 0
-          THEN SUM(tr.net_amount) / ic.unrounded
+    nr.invoice AS invoice,
+    it.category AS company,
+    (CASE WHEN COALESCE(nr.unrounded_total, 0) <> 0
+          THEN SUM(nr.net_amount) / nr.unrounded_total
           ELSE 0 END) AS ratio
-  FROM transactions_report tr
-  LEFT JOIN invoice_chain ic ON ic.id = tr.invoice
-  GROUP BY tr.invoice, tr.company, ic.unrounded
+  FROM net_rounded nr
+  LEFT JOIN items it ON it.id = nr.item
+  GROUP BY nr.invoice, it.category, nr.unrounded_total
 ),
 payments_by_company AS (
   -- views.js:215-241. The type map is `typeMap[p.type] ?? p.type` (views.js:235), so an unmapped type

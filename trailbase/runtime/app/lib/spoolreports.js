@@ -358,8 +358,25 @@ const cent = (name) => `${name}_c`;
  * It is `SELECT * FROM ( … )`, NOT a bare nested `WITH … AS ( <report> )`. The report body carries the
  * whole prelude, and SQLite re-evaluated that inner `WITH` per reference instead of materialising it:
  * 8.5 s against 0.2 s, same answer.
+ *
+ * `ordered: false` drops the report's own trailing `ORDER BY`, for the aggregate shape ONLY. An
+ * aggregate sums `SUM(CAST(x * 100 ± 0.5 AS INTEGER))` — INTEGER paisas — so the order rows arrive in
+ * cannot change a total, and the sort is pure cost: on `paymentsbycompany` it was 121 ms of a 518 ms
+ * pass (24%), because the statement sorts the whole 13,862-row fan-out to keep 3 sums. The `pick`
+ * shape keeps it: its `ORDER BY … LIMIT 1` re-orders anyway, but its statement is the one the ledger
+ * pages are read from, and there is no measurement here to say the sort is free.
+ *
+ * `String.replace` returns a new string, so the cached page statement in `sqlCache` is untouched —
+ * stripping the sort for the totals pass cannot leak into the rows the page renders.
  */
-const source = (sql) => `WITH totals_src AS (SELECT * FROM ( ${sql.replace(/;\s*$/, "")} ) AS t)`;
+const source = (sql, { ordered = true } = {}) => {
+  const statement = sql.replace(/;\s*$/, "");
+  // The newline after the strip is REQUIRED, not tidiness: every report's `ORDER BY` is preceded by
+  // a `--` comment block, so a statement that now ends inside that comment would swallow the closing
+  // `) AS t)` into it and the statement would not parse (`near "tiers": syntax error`).
+  const body = ordered ? statement : `${statement.replace(/\nORDER BY[\s\S]*$/, "")}\n`;
+  return `WITH totals_src AS (SELECT * FROM ( ${body} ) AS t)`;
+};
 
 /** The `pick` shape: one row, chosen by `order`, with the count over the whole set. */
 function pickSql(t, sql) {
@@ -454,7 +471,7 @@ function aggregateSql(t, sql, toPaisas = toCents) {
   // `source(sql)` is CALLED here. `${source}` would interpolate the function itself, and
   // `String(fn)` is its source text — so the statement would have begun with `(sql) => \`WITH …` and
   // every totals query would have failed to parse with `near "("`.
-  const withClause = `${source(sql)}${tierCols.length
+  const withClause = `${source(sql, { ordered: false })}${tierCols.length
     ? `,\n  tiers AS (SELECT\n    ${tierCols.join(",\n    ")}\n  FROM totals_src)`
     : ""}`;
 
