@@ -25,7 +25,7 @@
       "label": "Date From",
       "type": "date",
       "default": {
-        "fn": "monthStart"
+        "source": "payments"
       }
     },
     {
@@ -33,7 +33,7 @@
       "label": "Date To",
       "type": "date",
       "default": {
-        "fn": "today"
+        "source": "payments"
       }
     },
     {

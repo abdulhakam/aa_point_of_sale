@@ -30,6 +30,18 @@
 {% if rowInfo and rowInfo.truncated %}
 <p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>
 {% endif %}
+{# An empty window is the one result that cannot be read off the table alone: the rows say "no
+   data", not which period would have data. Name the period, and offer it, so an operator who typed
+   the wrong month is one click from the right one. `latest` is null when no period could be found,
+   and this then degrades to the plain statement. #}
+{% if rowInfo and rowInfo.total == 0 and filters.from %}
+  {% if rowInfo.latest %}
+<p class="notice">No rows between {{ filters.from }} and {{ filters.to }}. The most recent period with data is
+  <a href="{{ basePath }}?from={{ rowInfo.latest.from }}&amp;to={{ rowInfo.latest.to }}">{{ rowInfo.latest.from }} to {{ rowInfo.latest.to }}</a>.</p>
+  {% else %}
+<p class="notice">No rows between {{ filters.from }} and {{ filters.to }}.</p>
+  {% endif %}
+{% endif %}
 {# Printing a report: A4 landscape (the page sets `paper`), carrying the filters that are on
    screen, so the sheet is the report the operator was looking at. The button is hidden by the
    print stylesheet, so it cannot appear on the paper. #}

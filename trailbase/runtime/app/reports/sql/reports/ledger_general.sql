@@ -25,6 +25,14 @@
   FROM ledger_journal j
   WHERE
     -- reports.js:410: inDateRange on `created`, which for the journal is the payment_date.
+    --
+    -- This is the ONE report whose date filter is not on a business date column: `ledger_journal.created`
+    -- is the row's insert time. That is a different defect from the one `app/sql/latest_business_date.sql`
+    -- fixes — on the imported ledger every journal row shares one import timestamp, so a window on it
+    -- answers "when was this imported", not "when did this happen" — but it is why this page's default
+    -- stays on the wall clock (`monthStart`/`today` in its manifest). A probe over `invoices.dated` or
+    -- `payments.payment_date` would answer a question this statement never asks. Fixing the column is
+    -- its own change and needs its own evidence.
     (:from = '' OR j.created >= :from || ' 00:00:00')
     AND (:to = '' OR j.created <= :to || ' 23:59:59.999Z')
 )

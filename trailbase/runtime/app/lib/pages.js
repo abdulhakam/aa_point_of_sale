@@ -27,6 +27,11 @@ function resolveDefault(value) {
       return "";
     }
   }
+  // `{"source": "payments"}` is not a default VALUE, it names the DATA a date default must come
+  // from, and that needs a SQL probe this function cannot run — it is sync and has no database. So it
+  // resolves to "" here and the route fills it from `app/lib/dates.js`. Without this branch it
+  // reached `String(value)` and became the literal text "[object Object]" in a date input.
+  if (value && typeof value === "object" && typeof value.source === "string") return "";
   return value === null || value === undefined ? "" : String(value);
 }
 
@@ -39,6 +44,10 @@ function normalizeFilter(filter) {
     label: String(filter?.label ?? name),
     type,
     source: type === "select" && typeof filter?.source === "string" ? filter.source : null,
+    // Which date column this filter reads, when the manifest says so: "invoice" or "payments". It is
+    // what lets a payments report default to the newest PAYMENT month instead of to whatever month
+    // the newest invoice happens to be in (app/lib/dates.js).
+    dateSource: typeof filter?.default?.source === "string" ? filter.default.source : null,
     value: isCheck ? (filter?.default === true || filter?.default === "on" ? "on" : "") : resolveDefault(filter?.default),
   };
 }

@@ -168,6 +168,9 @@ async function app(): Promise<any> {
     paths: await loadModule("/app/lib/paths.js"),
     // The reference lists, defined by `app/sql/refs.sql`. Step 1 of tb-0032.
     refs: await loadModule("/app/lib/refs.js"),
+    // The data-derived default date window, defined by `app/sql/latest_business_date.sql`, so a
+    // report opens on a month that has data rather than on the wall clock's current month.
+    dates: await loadModule("/app/lib/dates.js"),
     service: await loadModule("/app/lib/reports.js"),
     // The report engine. Every report is SQL: the statements under
     // `app/reports/sql/reports/*.sql`, run through the spool. There is no JavaScript
@@ -380,7 +383,7 @@ async function renderReportPage(
   // field, which is what the report page always wants. (The old `parseFilters` overwrote every
   // default from the query, so a bare GET computed all-time figures —
   // vault/issues/report-routes-ignore-date-defaults.md.)
-  const filters = filtersFor(pageDef, query);
+  const filters = await filtersFor(A, pageDef, query);
 
   const showAll = String(query.all || "") === "1";
   const requestedMax = Number(query.maxRows || 0);
@@ -446,7 +449,22 @@ async function renderReportPage(
   const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows)).key }];
   const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
     ...frame,
-    rowInfo: { shown, total, truncated: shown < total, allHref },
+    // `latest` is only resolved when the window is empty, and it is what lets the page say WHICH
+    // period has data instead of only that this one does not. The probe is fingerprint-cached, so
+    // the empty case costs one indexed read.
+    rowInfo: {
+      shown,
+      total,
+      truncated: shown < total,
+      allHref,
+      // Resolved only when the window is empty, and it is what lets the page say WHICH period has data
+      // instead of only that this one does not. One fingerprint-cached probe, so the cost is on the
+      // empty path alone.
+      latest:
+        missing.length || total > 0
+          ? null
+          : await latestPeriod(A, pageDef.filters.find((f: any) => f.dateSource)?.dateSource),
+    },
     totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], totals),
       // The general ledger's opening row is an echo of three filter inputs, not a query result, so
       // there is nothing for SQL to add.
@@ -1880,7 +1898,7 @@ if (path === "/login" && method === "GET") {
     const slug = dataMatch[1];
     const def = await A.pages.readPage(PAGES_DIR, slug);
     if (!def) return text("No such page", 404);
-    const filters = filtersFor(def, query);
+    const filters = await filtersFor(A, def, query);
     const snap = await A.service.getViews(def.needs.views || []);
     await A.service.ensureTables(def.needs.tables || []);
     const etag = `W/"v3-${snap.version}-${encodeURIComponent(JSON.stringify(filters))}"`;
@@ -1931,7 +1949,7 @@ if (path === "/login" && method === "GET") {
     return html(
       await A.http.page(req, shell(user, "pages", def.title), `${def.slug}/${def.template}`, {
         meta: def,
-        filters: filtersFor(def, query),
+        filters: await filtersFor(A, def, query),
         options,
         // The rows are the host's business; a page with no statement behind it has none.
         columns: def.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
@@ -1944,13 +1962,64 @@ if (path === "/login" && method === "GET") {
   return text("Not found", 404);
 }
 
-/** Resolve only declared filter fields; a manifest controls the compute input. */
-function filtersFor(def: any, query: Record<string, any>): Record<string, any> {
+/**
+ * The month that actually holds data, for the empty-window notice. `null` when the probe cannot
+ * answer — an empty depot, or the probe failing — so the notice degrades to a plain statement that
+ * the period is empty rather than to a broken link.
+ */
+async function latestPeriod(A: any, source?: string): Promise<{ from: string; to: string } | null> {
+  try {
+    const period = await A.dates.defaultPeriod(await A.service.fingerprint(), source);
+    return period.from ? period : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve only declared filter fields; a manifest controls the compute input.
+ *
+ * Async because a page's `from`/`to` default is not always the manifest's: when a report declares
+ * both date fields and the URL carries neither, the window comes from the DATA instead — the month
+ * the newest entered business date falls in (`app/lib/dates.js`). `monthStart()`/`today()` are
+ * `new Date()` inside the guest, so on 2026-10-02 they opened every report on a window whose only
+ * rows were the dateless imported payments falling back to their insert time. An explicit `?from=`
+ * or `?to=` always wins; the manifest default is the last resort, and a ledger with no entered date
+ * at all still gets it.
+ */
+async function filtersFor(A: any, def: any, query: Record<string, any>): Promise<Record<string, any>> {
   const filters: Record<string, any> = {};
   for (const field of def.filters) {
     const raw = query[field.name];
     const value = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
     filters[field.name] = field.type === "check" ? (value === "on" ? "on" : "") : value || field.value;
+  }
+// A date filter whose manifest named a `source` takes its default from the DATA, not from
+  // `monthStart()`/`today()` — those are `new Date()` inside the guest, so on 2026-10-02 every report
+  // opened on 2026-10-01 → 2026-10-02 and the only rows on screen were the dateless imported payments
+  // falling back to their insert time. The source is per filter, not global: this depot's newest
+  // entered PAYMENT date is 2026-04-11 while an invoice is dated 2026-10-02, so one global maximum
+  // is right for one report and empty for the other.
+  //
+  // An explicit `?from=`/`?to=` always wins, and a filter that declares no source keeps its manifest
+  // default. `app/lib/dates.js` is fingerprint-cached, so this costs one indexed read per request at
+  // most and none at all after the first.
+  const wanted = def.filters.filter((f: any) => f.dateSource && !query[f.name]);
+  if (wanted.length) {
+    try {
+      const fp = await A.service.fingerprint();
+      for (const field of wanted) {
+        const period = await A.dates.defaultPeriod(fp, field.dateSource);
+        if (!period.from) continue;
+        if (field.name === "from" || field.name === "to") filters[field.name] = period[field.name as "from" | "to"];
+        else if (!(field.name in query)) filters[field.name] = period.to;
+      }
+    } catch (e: any) {
+      // A probe failure must not take the report down — the manifest default is a usable window —
+      // but it must be VISIBLE, because the symptom otherwise is a page quietly opening on the wrong
+      // month again, which is the defect this replaced.
+      console.error("[dates] default period probe failed: " + String(e && e.message ? e.message : e));
+    }
   }
   // The value stays a STRING. It used to be coerced to a Number here, and that silently broke the
   // Payment Type select: the template marks an option selected with
