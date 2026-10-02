@@ -77,7 +77,8 @@ paths does not audit a Rust/WASM component**, whose paths are string literals in
 - [x] `cmd /c trailbase\build.bat` — component built, copied to `traildepot/wasm/tb-ah-run-js.wasm`
 - [x] `cmd /c trailbase\clear_db.bat` — exit 0
 - [x] `node trailbase/tools/guest-smoke.mjs` — **71/71**
-- [x] `node trailbase/tools/view-equivalence.mjs` — resolves its imports and runs;
+- [x] `node trailbase/tools/view-equivalence.mjs` — resolves its imports and runs (tool deleted
+      2026-10-02 with the legacy view layer);
       `transactionView` / `invoiceView` / `transactionsReport` identical, `paymentsView` DIFFers
       (the pre-existing [[legacy-sql-views-differ-from-js-views]] finding, not a regression)
 

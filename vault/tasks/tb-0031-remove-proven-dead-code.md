@@ -68,6 +68,9 @@ document, the README, or the `.bat` launchers.
   (`report-pages.useJsFor`) and the parity reference the `verify-spool-*` gates import.
 - Every one of the 26 app JS modules is transitively loaded by the dispatcher's `loadModule`
   block, including `paths.js` and `sqlviews.js`, which a filename scan also called orphaned.
+  (`sqlviews.js` was deleted 2026-10-02 with the legacy view layer — see
+  [[legacy-parity-checks-waived]] — so the count is **25** today. The count was 26 when measured and
+  is left as the historical figure.)
 
 ## `jobs.rs` deliberately kept
 
@@ -90,6 +93,9 @@ caller is `jobs.rs:29`. Deleting it would break a file that is being kept.
   dynamically by `verify-legacy-views.mjs`, `translate-enums.mjs`, `view-equivalence.mjs`,
   `verify-guest-only-views.py` and `verify-translated-views.py`, so removing `sql-bench.mjs`
   orphaned none of them.
+  **2026-10-02:** those five readers, the fixtures and `sqlviews.js` were all deleted with the
+  legacy view layer — see [[legacy-parity-checks-waived]]. The sweep above could not see through a
+  constant-false flag, so it never classified this layer as dead; the numbers it recorded stand.
 - **Behavioural parity, measured before/after.** `trailbase/build.bat` (wasm32-wasip2 release) then
   `guest-smoke.mjs`, run on HEAD with every change stashed and again with the sweep applied:
 

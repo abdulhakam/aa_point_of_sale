@@ -12,7 +12,8 @@ related_to: ["[[tb-0022-move-reports-to-sql]]", "[[report-logic-stays-runtime-fi
 
 ## What was tested
 
-`trailbase/tools/view-equivalence.mjs` reads the depot's base tables exactly as the guest's data
+`trailbase/tools/view-equivalence.mjs` (deleted 2026-10-02 with the legacy view layer) reads the
+depot's base tables exactly as the guest's data
 layer does, builds every view with `trailbase/runtime/app/compute/views.js` (the code the guest runs
 and that produces the current 14/14 report parity), runs the composed legacy SQL for the same view,
 and diffs the rows.
@@ -28,6 +29,10 @@ SQL path enabled the differential also showed `dailysale`/`itemsales`/`profit` r
 `USE_SQL_VIEWS` is therefore back **off** (`trailbase/runtime/app/lib/reports.js`), and the SQL path
 stays a switch to enable only after the equivalence gate covers fresh/partial invoices — or after
 the arithmetic moves to SQL properly ([[convert-base-views-not-derivations]]).
+
+> **2026-10-02:** the gate, the 15 `sql/views/` files, `app/lib/sqlviews.js` and `USE_SQL_VIEWS`
+> were all deleted with the legacy view layer — see [[legacy-parity-checks-waived]]. This note is
+> kept as the 2026-09-27 record.
 
 ## Result: 0/13 views are identical
 
@@ -85,7 +90,9 @@ legacy SQL.**
 ## Evidence
 
 - `trailbase/tools/view-equivalence.mjs` — output above (0/13 identical; field-level diffs).
-- `trailbase/runtime/app/reports/sql/views/*.sql` vs `trailbase/runtime/app/compute/views.js`.
+  Tool deleted 2026-10-02 with the legacy view layer.
+- `trailbase/runtime/app/reports/sql/views/*.sql` (deleted 2026-10-02) vs
+  `trailbase/runtime/app/compute/views.js`.
 
 ## Related
 

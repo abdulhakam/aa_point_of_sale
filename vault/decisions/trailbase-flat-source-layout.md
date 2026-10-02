@@ -99,7 +99,8 @@ and matches the generated `traildepot/runtime/`.
 - `cmd /c trailbase\build.bat` — built and copied `traildepot/wasm/tb-ah-run-js.wasm` after the move.
 - `cmd /c trailbase\clear_db.bat` — exit 0, `traildepot/` re-assembled from the flattened sources.
 - `node trailbase/tools/guest-smoke.mjs` — **71/71** from the new layout.
-- `node trailbase/tools/view-equivalence.mjs` — `transactionView` 23,413 identical,
+- `node trailbase/tools/view-equivalence.mjs` (deleted 2026-10-02 with the legacy view layer) —
+  `transactionView` 23,413 identical,
   `invoiceView` 8,927 identical, `transactionsReport` 23,413 identical; `paymentsView` still
   DIFFers, which is the pre-existing [[legacy-sql-views-differ-from-js-views]] finding and is
   unrelated to the move.

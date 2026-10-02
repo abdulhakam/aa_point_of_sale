@@ -78,15 +78,15 @@ touching it. (This is also why the totals pass could drop the report's `ORDER BY
 > the `views/*.sql` directory discussed in 2a. Read that way, 2b is the only real obstacle and it is
 > bigger and simpler than it looked. Rounding is explicitly left as-is for now.
 
-### 2b. The only three `VIEW`s in the database belong to a table nothing reads
+### 2b. The only three `VIEW`s in the database belong to the document store
 
 ```sql
 SELECT name FROM sqlite_master WHERE type='view';
 -- document__item_src, document__party_src, document__voucher_src
 ```
 
-Those are the entire list. They belong to the general document store
-(`U1790401000__general_document_store.sql`), and the store turns out to be **unread**:
+Those are the entire list, and they belong to the general document store
+(`U1790401000__general_document_store.sql`). The store is **not read by anything today**:
 
 | Question | Answer |
 |---|---|
@@ -96,12 +96,23 @@ Those are the entire list. They belong to the general document store
 | Kept current by | **12 triggers** — `document__{voucher,party,item,invoice}_{insert,update,delete}` on `payments`, `parties`, `items` and `inv_doc` |
 | Read by the app instead | `inv_doc` (8,927 rows), which the print path and `queue.js` actually query |
 
-So the instruction does not need the views moved into `.sql` files — **it needs the store deleted**,
-and the three views go with the table. A SQLite trigger cannot read a `.sql` file, so any alternative
-(inlining a 20–25 line `json_object` projection into nine trigger bodies) would be strictly worse.
+> **CORRECTION 2026-10-02 — the first version of this section recommended deleting the store, and
+> that was wrong.** It reasoned from "unread, therefore vestigial", and did not check what the store
+> is *for*. It is deliberate, resolved work: [[document-store-and-streaming-render]] built it on
+> 2026-09-30 as the precomputed-document cache for the document/render path, deliberately scoped to
+> exclude the aggregates that are already fast, and verified 15/15 including the property that an
+> INSERT creates a document with no application code running. Nothing reads it because **the consumer
+> is not wired up yet**, not because it was abandoned. Deleting it would throw away verified work and
+> the design note that justifies its shape.
 
-**What keeping it costs**, measured on a copy of the depot by dropping the 12 triggers and re-running
-the same UPDATEs:
+So the instruction still bites, but the answer is not "drop the store". A SQLite trigger cannot read a
+`.sql` file, and the triggers are the maintenance mechanism by design. The route that satisfies both
+constraints is to **keep the store and generate the trigger bodies from the `.sql` file** at migration
+time: the projection stays defined once, the database ends up with no `VIEW`, and the nine trigger
+bodies stop being hand-maintained copies.
+
+**What the 12 triggers cost meanwhile**, measured on a copy of the depot by dropping them and
+re-running the same UPDATEs:
 
 | Write | With the triggers | Without | Saved per write |
 |---|---|---|---|
@@ -111,9 +122,9 @@ the same UPDATEs:
 
 (These absolute figures include the harness re-preparing each statement, so they are inflated; the
 **difference** is the meaningful number, and it is consistent in direction and size across all three
-tables.) Every payment, party and item write builds a JSON document nobody reads. It also
-**duplicates** `inv_doc` — the 8,927 invoice rows in `document` carry `kind: null` and mirror what
-`inv_doc` already holds.
+tables.) Every payment, party and item write builds a JSON document no screen currently shows. That is
+a legitimate cost to reconsider **when the document path is built and starts reading them** — and a
+poor reason to delete the store before then.
 
 This needs a decision rather than a refactor: it is a migration that **drops a table and its
 contents**.
@@ -201,12 +212,12 @@ whenever the rounding decision is being made anyway.
 Rounding is **not** in this list — it is left as-is by decision (2026-10-02), and the analysis above
 is kept so the cost is known if that changes.
 
-1. **Delete the unread `document` store** — the table, its 12 triggers, its 3 views, 36,603 rows.
-   This is the only thing standing between the database and "no SQL VIEW at all", and it removes
-   ~5 ms from every payment write. Needs approval: it drops data.
-2. Delete the dead `views/` directory, `sqlviews.js`, its wiring and `verify-translated-views.py`.
+1. **Settle the three SQLite `VIEW`s** the document store owns — keep the store, generate its trigger
+   bodies from a `.sql` file at migration time (see 2b; my first recommendation here was to delete it,
+   and that was wrong).
+2. ~~Delete the dead `views/` directory, `sqlviews.js`, its wiring and `verify-translated-views.py`.~~
+   **Done 2026-10-02** — [[legacy-parity-checks-waived]].
 3. Replace the label CASE with `pb.type IN (1, 2)` in the six reports that carry it.
-4. Then, as its own piece of work: make `meta.json` name `.sql` files instead of JS views — give
-   `refs` a `.sql` equivalent, wire `counts_for_row_numbers.sql` to the dashboard, then delete
-   `compute/views.js`, `compute/reports.js` and `app/lib/reports.js`. Gated on a golden-output corpus
-   and an N-way differ existing first, per step 14 of [[trailbase-migration]].
+4. **[[tb-0032-manifest-first-refactor]]** — `meta.json` names the `.sql` files: `refs` gets a SQL
+   equivalent, `counts` reads `counts_for_row_numbers.sql`, then `compute/views.js` and
+   `app/lib/reports.js` retire. The parity half of its old gate is waived.

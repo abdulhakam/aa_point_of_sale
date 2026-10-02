@@ -1,15 +1,38 @@
 ---
 title: Drop SQL views and aggregate reports client-side
 type: decision
-status: accepted
+status: superseded
 decided_on: 2026-09-24
 created: 2026-09-26
+superseded_by: "[[tb-0032-manifest-first-refactor]]"
+superseded_on: 2026-10-02
 tags: [trailbase, views, reports, aggregation]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[reports-and-ledgers]]", "[[backend]]"]
+related_to: ["[[reports-and-ledgers]]", "[[backend]]", "[[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]]", "[[component-split-and-sql-materialised-tables]]", "[[legacy-parity-checks-waived]]", "[[manifest-first-architecture-gap-2026-10-02]]"]
 ---
 
 # Drop SQL views and aggregate reports client-side
+
+> **SUPERSEDED. Do not read the Decision section below as current architecture.**
+>
+> This document is the **most dangerous stale record in the vault**: it states, as a live decision,
+> that *"report arithmetic moves into JavaScript, in `app/compute/views.js` and `app/compute/reports.js`"*
+> and that *"TrailBase has no views"*. **Both were reversed, twice.**
+>
+> 1. **2026-09-28** — [[component-split-and-sql-materialised-tables]] brought the SQL back for the
+>    report path. The four heavy reports cannot fit the 20 s call deadline in in-process QuickJS.
+> 2. **2026-10-01** — [[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]]
+>    moved **all 14** into SQLite. `app/compute/reports.js` was deleted.
+> 3. **2026-10-02** — parity waived and the legacy layer deleted
+>    ([[legacy-parity-checks-waived]]), and [[tb-0032-manifest-first-refactor]] is now the live work:
+>    `meta.json` will name the `.sql` files directly and the **JavaScript view builders retire**.
+>
+> So the arithmetic moved **JS → SQL → and the JS copies are on their way out**, which is the opposite
+> of what this page says. What genuinely survives is the *typeability* reasoning below: TrailBase
+> still exposes no views as record APIs. The three `CREATE VIEW`s that did exist in the database
+> belonged to the document store, not to reports — see [[document-store-and-streaming-render]].
+>
+> The sections below are kept verbatim as the record of what was decided then and why.
 
 ## Context
 
@@ -95,3 +118,7 @@ SQL inside a component rather than needing to be exposed as a table.
 As of 2026-09-29 the preserved `.sql` files had drifted out of use badly enough to return nothing
 (see [[report-sql-filters-on-text-enums-returns-nothing]]), which is the cost of leaving a
 specification unexecuted for a while. `USE_SQL_VIEWS` is still off.
+
+**Update 2026-10-02:** the flag, the preserved `.sql` files and `app/lib/sqlviews.js` were deleted
+with the legacy view layer, so there is nothing left to switch on — see
+[[legacy-parity-checks-waived]].

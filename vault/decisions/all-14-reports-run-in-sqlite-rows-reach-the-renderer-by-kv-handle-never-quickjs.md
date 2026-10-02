@@ -24,7 +24,8 @@ Rust  render.spooled: KV key -> JSONL -> minijinja context    (tb-ah-run-js/src/
 ```
 
 Supersedes the plan in [[tb-0022-move-reports-to-sql]], which expected the legacy `sql/views/` files
-to be reused. They were not reused: they are known to differ from the JS
+to be reused (they were deleted 2026-10-02 with the legacy view layer — see
+[[legacy-parity-checks-waived]]). They were not reused: they are known to differ from the JS
 ([[legacy-sql-views-differ-from-js-views]]), so each statement was ported from `compute/` directly and
 gated against it.
 

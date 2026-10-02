@@ -128,7 +128,8 @@ the sections above for the rest. What is actually left:
 
 - With the SQL report path enabled, **fresh invoices (empty `dated`) diverged** between the SQL and
   JS base views and the guest errored on some reports, so `USE_SQL_VIEWS` is back **off**
-  ([[legacy-sql-views-differ-from-js-views]]).
+  ([[legacy-sql-views-differ-from-js-views]]; the flag was deleted 2026-10-02 with the legacy view
+  layer).
 - On the integration depot, `ledgers/party` now fails guest-side (the ~20 s guest limit on a
   26.5k-row ledger) while the other 13 pages match — a performance limit
   ([[trailbase-guest-cpu-js-limits]], [[guest-report-performance-options]]).

@@ -66,8 +66,10 @@ Round money with the JS-equivalent expression above (done), **or** return raw va
 
 ## Evidence
 
-- `trailbase/tools/extract-legacy-views.mjs` — `jsRoundLike`.
-- `trailbase/tools/view-equivalence.mjs` — `transactionView` 23,413/23,413 identical.
+- `trailbase/tools/extract-legacy-views.mjs` — `jsRoundLike` (deleted 2026-10-02 with the legacy
+  view layer).
+- `trailbase/tools/view-equivalence.mjs` — `transactionView` 23,413/23,413 identical (deleted
+  2026-10-02 with the legacy view layer).
 - `trailbase/runtime/app/compute/format.js` — `round2`.
 
 ## Related

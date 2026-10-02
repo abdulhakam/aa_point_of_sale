@@ -44,12 +44,14 @@ any way to re-run it:
   `notes/guest-vs-node-performance.md:18`). It needed both apps running against one TrailBase
   server; only one app exists.
 - **The code has changed since.** `USE_SQL_VIEWS` was enabled in `tb-0022` (`:84-85` records
-  "14/14 on three consecutive differential runs with the SQL path on") and then **turned back off**
+  "14/14 on three consecutive differential runs with the SQL path on"; the flag was deleted
+  2026-10-02 with the legacy view layer) and then **turned back off**
   (commit `5ccebd8`, for fresh-invoice divergence — see
   [[invoice-entry-freshness-and-writes]] and
   `issues/report-parity-flakes-on-float-arithmetic.md:78`). So the path that was proven is not the
   path that ships.
-- **The remaining harness only half-covers it.** `view-equivalence.mjs` compares the *SQL views* to
+- **The remaining harness only half-covers it.** `view-equivalence.mjs` (deleted 2026-10-02 with
+  the legacy view layer) compares the *SQL views* to
   `compute/views.js` and reads a depot, but (a) it never ran against the legacy Next.js code and
   (b) with `USE_SQL_VIEWS = false` it is testing a path the app does not take. Its current output
   is `transactionView` / `invoiceView` / `transactionsReport` identical and `paymentsView`
@@ -73,10 +75,12 @@ respect to the legacy behaviour, and the vault's own wording invites exactly tha
    offline from the two databases and diff them — no second app needed, because the legacy report
    arithmetic is reproducible from `backend/p_data` with a Node script. This is the cheapest path to
    a *regenerable* gate and is close to what `extract-legacy-views.mjs` +
-   `verify-legacy-views.mjs` already do for SQL.
+   `verify-legacy-views.mjs` already do for SQL (both deleted 2026-10-02 with the legacy view
+   layer).
 2. **Accept it as historical.** Mark 14/14 explicitly as "measured 2026-09-27, not reproducible
    since", in every doc that states it, and record the current baseline instead (guest smoke 71/71
-   + `view-equivalence` on a current depot).
+   + `view-equivalence` on a current depot; both harnesses deleted 2026-10-02 with the legacy
+     view layer, so that baseline no longer exists — see [[legacy-parity-checks-waived]]).
 3. **Re-add a differential harness** for the one path that ships, comparing the guest's 14 screens
    against a Node re-implementation of the same views. Higher cost, and it re-treads
    `guest-parity.mjs`.
@@ -88,9 +92,10 @@ Option 1 is the one worth taking; it turns a memory into a gate.
 - `trailbase/tools/` — eight harnesses, none of which compares against the legacy app.
 - `notes/vault-code-drift-audit.md:27-29` — the harness removal.
 - `vault/tasks/tb-0022-move-reports-to-sql.md:84-90` — the SQL-on 14/14, then the revert.
-- `trailbase/runtime/app/lib/reports.js:27` — `const USE_SQL_VIEWS = false`.
+- `trailbase/runtime/app/lib/reports.js:27` — `const USE_SQL_VIEWS = false` (line and flag both
+  deleted 2026-10-02 with the legacy view layer).
 - `node trailbase/tools/view-equivalence.mjs` on 2026-09-28 — `paymentsView` DIFF, the rest
-  identical.
+  identical (tool deleted 2026-10-02 with the legacy view layer).
 - `trailbase/traildepot/` — no `data/` directory.
 
 ## Related

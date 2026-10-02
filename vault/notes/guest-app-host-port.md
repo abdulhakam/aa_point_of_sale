@@ -34,8 +34,9 @@ existed).
   restart; the dispatcher file itself is read per request).
 - **App modules:** `/app/compute/{format,ids,views,reports}.js` are the **verbatim** shared files;
   `/app/lib/` holds guest ports of the former Node frontend's `src/lib` modules (async `fs` instead
-  of `node:fs`) — now **13** of them: `entities`, `data`, `pages`, `plugins`, `http`,
-  `report-pages`, `reports`, plus the later additions `sqlviews`, `queue`, `management`,
+  of `node:fs`) — **12** of them: `entities`, `data`, `pages`, `plugins`, `http`,
+  `report-pages`, `reports`, plus the later additions ~~`sqlviews`~~ (deleted 2026-10-02 with the
+  legacy view layer), `queue`, `management`,
   `invoicing`, `paths`.
 - **Auth:** TrailBase's own cookie (`auth_token`, `SameSite=Strict`) resolved by the host into
   `req.user`; unauthenticated page requests redirect to `/login`, whose POST redirects to

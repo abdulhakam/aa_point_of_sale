@@ -136,10 +136,19 @@ the same nine pre-existing failures as before the change.
 
 ## Not done, and why
 
-- **`compute/reports.js` still exists** (577 lines). It is the parity oracle the gates import, and
-  `verify-spool-reports.mjs` still reports a 1-paisa `productsale.amount` difference against it. It
-  is deliberately NOT deleted until a golden-output corpus replaces it — see
-  [[guest-parity-differential-not-reproducible]].
+> **This section was written 2026-10-01 and its first bullet is now history.** `compute/reports.js`
+> was deleted the same day (see *SQL-only* below), and the parity reason for keeping it was waived on
+> 2026-10-02 ([[legacy-parity-checks-waived]]). What is still outstanding is `compute/views.js` and
+> `app/lib/reports.js`, now tracked as [[tb-0032-manifest-first-refactor]].
+
+- ~~**`compute/reports.js` still exists**~~ — **deleted 2026-10-01** with the JavaScript report engine,
+  along with the `useJs` manifest flag and the JS-vs-SQL halves of `verify-spool-reports.mjs`. The
+  golden-output corpus that was to replace it was never needed, because parity was waived rather than
+  preserved: [[legacy-parity-checks-waived]].
+- **`compute/views.js` (621 lines) and `app/lib/reports.js` (371) remain.** They are now needed only
+  for `counts` and `refs`; every report reads `prelude.sql` instead. Retiring them is
+  [[tb-0032-manifest-first-refactor]], and the blocking item is that **`refs` has no `.sql` equivalent
+  yet**.
 - **The rendered-page cache does not key on code.** A code or manifest change does not invalidate
   `pagecache`, so a stale page is served until the fingerprint moves or the table is cleared. That
   cost an hour of false negatives during this migration and is a live trap for the next one.

@@ -24,7 +24,8 @@ adaptation, replacing the reference with a deterministic subquery over the link 
 
 `ORDER BY oc.id` on uuid_v7 link rows means "the first company linked", which is deterministic and
 the closest single-valued equivalent of PocketBase's `company` relation. With that, **all 15 views
-compose and run** (`trailbase/tools/verify-legacy-views.mjs`, exit 0):
+compose and run** (`trailbase/tools/verify-legacy-views.mjs`, exit 0 — tool deleted 2026-10-02 with
+the legacy view layer):
 
 ```text
 net_price               depot= 23414  pb= 23414
@@ -42,6 +43,10 @@ outstanding_summary     depot=     0
 
 If the business ever wants a booker's *multiple* companies represented, that is a deliberate
 change to the report model, not a porting detail.
+
+> **2026-10-02:** the 15 ported `.sql` files and the tools that verified them were deleted with the
+> legacy view layer — see [[legacy-parity-checks-waived]]. This note is kept as the 2026-09-27
+> record; the mitigation below is not in the shipped code.
 
 ## Original finding
 
@@ -66,8 +71,10 @@ had a `company` field on the row; the rewrite moved it to a link table.
 
 ## Evidence
 
-- `trailbase/tools/verify-legacy-views.mjs` — 15/15 composed and ran (exit 0).
+- `trailbase/tools/verify-legacy-views.mjs` — 15/15 composed and ran (exit 0). Deleted 2026-10-02
+  with the legacy view layer.
 - `trailbase/tools/extract-legacy-views.mjs` — the `ADAPTATIONS` map carrying the one change.
+  Deleted 2026-10-02 with the legacy view layer.
 - `trailbase/migrations/main/U1790208000__create_base_tables.sql` — `order_bookers` has
   no `company` column; `order_booker_companies`/`party_companies` exist instead.
 
@@ -78,10 +85,16 @@ had a `company` field on the row; the rewrite moved it to a link table.
 - [[guest-report-performance-options]] — the reason for moving to SQL.
 
 
-## What happens
+## Original finding — duplicate of the section above, superseded
 
-Porting the legacy view SQL **verbatim** ([[report-logic-stays-runtime-file-based]]) runs cleanly
-for the views that only touch core tables, but fails for the payment/ledger family because they
+> Everything from here to the end of this file is the **pre-mitigation draft**, kept as the record of
+> what the problem was. Its *Impact*, *Mitigation* and *Also found* sections are written in the
+> present tense and **are not the shipped state**: the mitigation shipped, and the 15 `.sql` files and
+> their tooling were then deleted ([[legacy-parity-checks-waived]]). The resolved version is
+> [above](#the-resolution).
+
+Porting the legacy view SQL **verbatim** ([[report-logic-stays-runtime-file-based]]) ran cleanly
+for the views that only touch core tables, but failed for the payment/ledger family because they
 reference `order_bookers.company`:
 
 ```text
@@ -100,7 +113,8 @@ The TrailBase schema deliberately does not carry company relation columns on `or
 had a `company` field on the row; the rewrite moved it to a link table.
 
 Verified with `trailbase/tools/verify-legacy-views.mjs` (composes each ported view, inlines its
-dependencies as CTEs, and runs it against the TrailBase depot):
+dependencies as CTEs, and runs it against the TrailBase depot; tool deleted 2026-10-02 with the
+legacy view layer):
 
 ```text
 ok   net_price               depot= 23414  pb= 23414
@@ -138,7 +152,8 @@ must merge CTEs instead of prefixing a second `WITH`. A composer fix, not a SQL 
 
 ## Evidence
 
-- `trailbase/tools/verify-legacy-views.mjs` output above.
+- `trailbase/tools/verify-legacy-views.mjs` output above (tool deleted 2026-10-02 with the legacy
+  view layer).
 - `trailbase/migrations/main/U1790208000__create_base_tables.sql` — `order_bookers` has
   no `company` column; `order_booker_companies`/`party_companies` exist instead.
 - [[trailbase-link-tables-over-json]], [[tb-0014-point-company-fields-at-companies]].

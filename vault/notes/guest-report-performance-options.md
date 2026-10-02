@@ -31,12 +31,12 @@ verified in `trailbase/migrations/main`.
   [[dispatcher-transpiled-per-request]].
 - **Option 2 — IN PROGRESS (2026-09-27).** All 15 legacy report/ledger views extracted **verbatim**
   from `backend/p_data/data.db` into `trailbase/runtime/app/reports/sql/views/` (the migrations only
-  carry some), with two documented adaptations: PocketBase's double-quoted string literals
+  carry some; the directory was deleted 2026-10-02 with the legacy view layer), with two documented adaptations: PocketBase's double-quoted string literals
   normalised to single quotes, and `payments_view`'s `order_bookers.company` re-pointed at the
   `order_booker_companies` link table. A composer inlines dependencies as CTEs; **15/15 now run
   against the depot** with row counts matching PocketBase where comparable
   ([[legacy-report-sql-uses-company-columns]]). An equivalence gate
-  (`trailbase/tools/view-equivalence.mjs`) then showed **0/13 views identical**: the legacy SQL is
+  (`trailbase/tools/view-equivalence.mjs`, deleted 2026-10-02 with the legacy view layer) then showed **0/13 views identical**: the legacy SQL is
   not equivalent to the JS views serving the reports (formatting, columns, and genuine math
   differences). The parity reference is the **JS**, so each view is reconciled against it
   ([[legacy-sql-views-differ-from-js-views]]). Converting `printf` to numbers collapsed the
@@ -56,7 +56,9 @@ verified in `trailbase/migrations/main`.
 **Correction (2026-09-28).** The switch was turned **off again** in `5ccebd8` (invoice entry):
 the SQL base views diverge on fresh invoices with an empty `dated`
 ([[legacy-sql-views-differ-from-js-views]]). So the shipped code has `USE_SQL_VIEWS = false`, and
-the figures above measure the SQL path *when it was on*, not the running system. The code as shipped
+the figures above measure the SQL path *when it was on*, not the running system. `USE_SQL_VIEWS`
+is itself gone — deleted 2026-10-02 with the legacy view layer, see
+[[legacy-parity-checks-waived]]. The code as shipped
 computes reports in JS; its timings are in [[new-system-report-timings]]. Note this was a
 **correctness** reversal, not a speed one — the SQL path was faster on cold builds.
 

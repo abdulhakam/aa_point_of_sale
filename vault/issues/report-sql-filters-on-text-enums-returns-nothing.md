@@ -19,7 +19,8 @@ original defect is what made them findable.
 
 ## Finding
 
-The 15 preserved view files under `trailbase/runtime/app/reports/sql/views/` are the legacy
+The 15 preserved view files under `trailbase/runtime/app/reports/sql/views/` (**deleted 2026-10-02**
+with the legacy view layer) are the legacy
 PocketBase SQL, carried over **untranslated**. They compare enum columns against **TEXT literals**,
 but [[trailbase-encode-enums-as-integer-codes]] made those columns `INTEGER` foreign keys into
 vocabulary tables. Every such comparison is now false against real data, and the view returns **zero
@@ -50,7 +51,8 @@ through `CASE WHEN type = 'sending' THEN 'purchase' …`, and `ledger_journal.sq
 
 ## Why it was not caught
 
-`USE_SQL_VIEWS` is **off** in shipped code — disabled in commit `5ccebd8` for the fresh-invoice
+`USE_SQL_VIEWS` is **off** in shipped code (the flag was deleted 2026-10-02 with the legacy view
+layer, and is not coming back) — disabled in commit `5ccebd8` for the fresh-invoice
 divergence ([[legacy-sql-views-differ-from-js-views]]) — so the `.sql` files are loaded but never
 the source of truth. The JS `app/compute/` path translates codes to names before comparing, which is
 why the guest reports are numerically right and these files are not. The drift was therefore
@@ -58,9 +60,11 @@ invisible for as long as the SQL path stayed disabled.
 
 ## Fix
 
-`node trailbase/tools/translate-enums.mjs --write` — asserts every site matches its expected count
+`node trailbase/tools/translate-enums.mjs --write` (deleted 2026-10-02 with the legacy view
+layer) — asserts every site matches its expected count
 *and* that each replacement actually changes the text, then re-scans for leftover literals.
-`python trailbase/tools/verify-translated-views.py` rebuilds all 15 and compares against the legacy
+`python trailbase/tools/verify-translated-views.py` (deleted 2026-10-02 with the legacy view layer)
+rebuilds all 15 and compares against the legacy
 views in PocketBase, where the same SQL runs unmodified.
 
 Two consequences of the schema change beyond the enums themselves:
@@ -98,8 +102,11 @@ Both were in the same files and both were silent. See [[report-enum-translation-
 
 ## Evidence
 
-- `trailbase/runtime/app/reports/sql/views/outstanding_summary.sql:28` — the TEXT filter, since fixed.
+- `trailbase/runtime/app/reports/sql/views/outstanding_summary.sql:28` — the TEXT filter, since
+  fixed. File deleted 2026-10-02 with the legacy view layer.
 - `python` against `traildepot/data/main.db` — 0 rows on the TEXT filter, 25,967 on codes `1,2`.
-- `trailbase/tools/translate-enums.mjs` — 53 sites, 10 files, no leftovers.
-- `trailbase/tools/verify-translated-views.py` — 13 of 15 views now match PocketBase row for row.
+- `trailbase/tools/translate-enums.mjs` — 53 sites, 10 files, no leftovers (deleted 2026-10-02 with
+  the legacy view layer).
+- `trailbase/tools/verify-translated-views.py` — 13 of 15 views now match PocketBase row for row
+  (deleted 2026-10-02 with the legacy view layer; see [[legacy-parity-checks-waived]]).
 - [[tb-0022-move-reports-to-sql]] — the task this blocked, now unblocked.

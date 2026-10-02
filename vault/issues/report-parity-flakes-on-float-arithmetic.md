@@ -37,7 +37,8 @@ guest-smoke:  71/71   (pinned totals unchanged)
 management-check: all checks passed
 ```
 
-`USE_SQL_VIEWS` was **true** at the time of this measurement (the SQL path). **Corrected
+`USE_SQL_VIEWS` was **true** at the time of this measurement (the SQL path; the flag was deleted
+2026-10-02 with the legacy view layer). **Corrected
 2026-09-28:** it is now **false** again — `5ccebd8` (invoice entry) turned it off because the SQL
 base views diverge on fresh invoices with an empty `dated`
 ([[legacy-sql-views-differ-from-js-views]]). The earlier "is now true" claim is stale.
@@ -74,20 +75,23 @@ reports as a mismatch even though no cent moved.
 ## Consequences
 
 - The **SQL base views are off by default** (`USE_SQL_VIEWS = false` in
-  `trailbase/runtime/app/lib/reports.js`) until the accumulation is deterministic; the JS path is the
+  `trailbase/runtime/app/lib/reports.js`; the flag and the `.sql` views were deleted 2026-10-02, see
+  [[legacy-parity-checks-waived]]) until the accumulation is deterministic; the JS path is the
   parity-safe default ([[convert-base-views-not-derivations]]).
 - The differential should compare money with a tiny tolerance (e.g. 1e-6 absolute, far below a
   cent) rather than exact JSON, or the reports must be bit-deterministic. The equivalence gate
-  already does this (`view-equivalence.mjs` canonicalises to 6 decimals).
+  already does this (`view-equivalence.mjs` canonicalises to 6 decimals — deleted 2026-10-02 with
+  the legacy view layer).
 - The real fix is storing money as **integer cents** ([[tb-0015-integer-cents-for-money]]): integer
   sums are exact and the whole class of drift disappears.
 
 ## Evidence
 
 - `trailbase/tools/guest-parity.mjs` — 13/14 then 14/14 on the same code and data.
-- `trailbase/runtime/app/lib/reports.js` — `USE_SQL_VIEWS = false` with the reason.
+- `trailbase/runtime/app/lib/reports.js` — `USE_SQL_VIEWS = false` with the reason (deleted
+  2026-10-02 with the legacy view layer).
 - `trailbase/runtime/app/lib/sqlviews.js` — `ORDER BY "id" DESC` added to align order (helped but
-  cannot bind an aggregate's scan order).
+  cannot bind an aggregate's scan order). Deleted 2026-10-02 with the legacy view layer.
 
 ## Related
 

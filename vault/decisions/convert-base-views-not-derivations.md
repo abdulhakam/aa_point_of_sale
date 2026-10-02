@@ -1,16 +1,33 @@
 ---
 title: Convert the base views to SQL; keep the report-level derivations in JS
 type: decision
-status: accepted
+status: superseded
 decided_on: 2026-09-27
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-02
+superseded_by: "[[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]]"
+superseded_on: 2026-09-28
 tags: [reports, sql, strategy, parity, no-build]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[tb-0022-move-reports-to-sql]]", "[[legacy-sql-views-differ-from-js-views]]", "[[report-logic-stays-runtime-file-based]]", "[[guest-report-performance-options]]"]
+related_to: ["[[tb-0022-move-reports-to-sql]]", "[[legacy-sql-views-differ-from-js-views]]", "[[report-logic-stays-runtime-file-based]]", "[[guest-report-performance-options]]", "[[tb-0032-manifest-first-refactor]]", "[[legacy-parity-checks-waived]]"]
 ---
 
 # Convert the base views to SQL; keep the report-level derivations in JS
+
+> **SUPERSEDED 2026-09-28 by [[all-14-reports-run-in-sqlite-rows-reach-the-renderer-by-kv-handle-never-quickjs]].**
+> The split below — *base views in SQL, report-level derivations in JS* — never shipped. **All 14
+> reports ended up in SQL**, because the derivations are where the money arithmetic lives and doing
+> them in SQL is what made the whole statement one query. Two of its three premises are now dead:
+>
+> - *"The JS is the parity reference, so keeping it removes the drift risk"* — parity is **waived**
+>   ([[legacy-parity-checks-waived]]), and `app/compute/reports.js` was deleted on 2026-10-01.
+> - *"`sql+js` where a column cannot be expressed in SQL"* — the `strategy` field and its three values
+>   no longer exist.
+>
+> Its diagnosis still holds and is why the reversal was safe: the derivations were **wrong** in the
+> legacy SQL relative to the JS, and re-deriving the correct policy in SQL was the point. The live
+> successor is [[tb-0032-manifest-first-refactor]], which retires the remaining JS view builders so
+> the `.sql` files become the single source.
 
 ## What the equivalence gate taught us
 
@@ -56,7 +73,8 @@ keeping the derivations as cheap passes over the already-joined rows is where th
 
 ## Evidence
 
-- `trailbase/tools/view-equivalence.mjs` — `transactionView` and `invoiceView` identical;
+- `trailbase/tools/view-equivalence.mjs` (deleted 2026-10-02 with the legacy view layer) —
+  `transactionView` and `invoiceView` identical;
   `transactionsReport` down to 2/23,413 rows after a zero-denominator guard.
 - [[legacy-sql-views-differ-from-js-views]] — the per-view difference map this resolves.
 

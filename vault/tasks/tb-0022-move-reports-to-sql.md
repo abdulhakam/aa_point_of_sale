@@ -21,6 +21,10 @@ switched.
 
 ## Done
 
+> **2026-10-02:** the 15 `sql/views/` files, `app/lib/sqlviews.js`, `USE_SQL_VIEWS` and the six tools
+> named in this list were deleted with the legacy view layer — see [[legacy-parity-checks-waived]].
+> The items below are the 2026-09 record of what was built; the tools can no longer be re-run.
+
 - [x] Host: cache the transpiled route source by content hash ([[dispatcher-transpiled-per-request]])
 - [x] `trailbase/tools/extract-legacy-views.mjs` — extracts all view SQL **verbatim** from
       `backend/p_data/data.db` (the migrations only carry some) and normalises PocketBase's
@@ -149,11 +153,12 @@ with `sql+js` for columns SQL cannot express (the `company` array).
 
 ## Runtime plumbing (2026-09-27)
 
-- `trailbase/runtime/app/lib/sqlviews.js`: loads `app/reports/sql/views/*.sql` at runtime, inlines
+- `trailbase/runtime/app/lib/sqlviews.js` (deleted 2026-10-02): loads `app/reports/sql/views/*.sql`
+  at runtime, inlines
   dependencies as CTEs, derives column names (comment-aware), runs via `sqlite.all`, and appends
   `ORDER BY "id" DESC` to match the JS input order.
 - `trailbase/runtime/app/lib/reports.js`: a `SQL_VIEWS` map + `USE_SQL_VIEWS` (true at this
-  point in history; **off again since `5ccebd8`** — see the correction below).
+  point in history; **off again since `5ccebd8`** — see the correction below; both deleted 2026-10-02).
 - Fixed a real **loader bug**: aliased named imports were inverted
   (`import { rows as x }` generated `{x: rows}`), which silently broke `sqlviews` until corrected.
 - **Enabled after enforcing the 2 dp money rule** ([[money-is-2dp-everywhere]]): with money at 2 dp

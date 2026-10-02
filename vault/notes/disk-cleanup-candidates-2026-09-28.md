@@ -49,7 +49,8 @@ either a rebuild artifact or an ignored/untracked path.
 - `trailbase/traildepot/migrations/main/*.sql` — authored migrations, git-ignored
   but not present anywhere else in the repo.
 - `backend/p_data/` (68 MB) — committed, and `trailbase/tools/extract-legacy-views.mjs`
-  and `verify-legacy-views.mjs` both read `backend/p_data/data.db`. See
+  and `verify-legacy-views.mjs` both read `backend/p_data/data.db` (both tools deleted 2026-10-02
+  with the legacy view layer; the directory is the legacy source data regardless). See
   [[pocketbase-data-dirs-in-git]] for the separate decision to untrack it.
 - `backend/pb_data/data.db` (11 MB) — legacy production data.
 - `vault/credentials/` — plaintext secrets; do not commit (see build-and-run).

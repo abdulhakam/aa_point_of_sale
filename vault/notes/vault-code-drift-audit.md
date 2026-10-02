@@ -20,7 +20,8 @@ endpoints, host globals, sizes).
   (`trailbase/runtime/app/lib/reports.js:25`), turned off in `5ccebd8` because the SQL base
   views diverge on fresh (empty-`dated`) invoices — a correctness reversal, not a speed one.
   Corrected in [[guest-report-performance-options]], [[report-parity-flakes-on-float-arithmetic]]
-  and [[tb-0022-move-reports-to-sql]], each stating the earlier claim.
+  and [[tb-0022-move-reports-to-sql]], each stating the earlier claim. (The flag and the `.sql`
+  views it selected were deleted 2026-10-02 — see [[legacy-parity-checks-waived]].)
 - **Smoke count** — four docs said the guest smoke passes **69/69**; the suite is now **71/71**.
   Corrected in [[guest-outbound-http-and-login]], [[jobs-in-process-durable-queue]],
   [[guest-app-host-port]] and [[tb-0018-port-app-host-on-runtime-js]].
@@ -38,7 +39,8 @@ endpoints, host globals, sizes).
   (`route.ts:296`), `/invoice/context`, `/jobs/reconcile` all present.
 - **Host globals**: `trailbase`, `db`, `sqlite`, `kv`, `fs`, `http` (fetch), `render`, `time`,
   `setTimeout` — matches the claimed surface.
-- **Counts**: 15 legacy SQL views extracted (`app/reports/sql/views/`), 17 business tables, 14
+- **Counts**: 15 legacy SQL views extracted (`app/reports/sql/views/`, since deleted 2026-10-02),
+  17 business tables, 14
   report/ledger pages, `workers: 1`.
 - **Importer mapping**: `v1-categories-map-to-companies` matches the PLAN's `mirrorApi: "companies"`
   and the code (`flush()` writes to both id maps).

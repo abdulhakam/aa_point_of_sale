@@ -32,7 +32,8 @@ The former Node-vs-guest differential flaked on exactly this: one side emitted a
 money value while the other emitted the rounded one ([[report-parity-flakes-on-float-arithmetic]]).
 If money is rounded to 2 dp in the data on both sides, the last-bit residue cannot appear and the
 comparison is stable. Expected side effect: `USE_SQL_VIEWS` can be turned on without the flake
-([[tb-0022-move-reports-to-sql]]).
+([[tb-0022-move-reports-to-sql]]). **It never was:** the flag and its `.sql` views were deleted
+2026-10-02 — see [[legacy-parity-checks-waived]].
 
 ## Caveat to watch — CORRECTED 2026-10-01, the magnitude is not a cent
 

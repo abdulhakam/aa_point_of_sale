@@ -47,7 +47,7 @@ request-handler logs are thread-local and only drained for init scripts. See
 |---|---|
 | `app/reports/sql/prelude.sql` | the shared view chain, verified against `compute/views.js` |
 | `app/reports/sql/reports/*.sql` | one finished display projection per report (11 files, 14 reports) |
-| `app/reports/sql/views/*.sql` | **preserved legacy, NOT on this path** |
+| `app/reports/sql/views/*.sql` | **preserved legacy, NOT on this path** — deleted 2026-10-02 |
 | `app/lib/spoolreports.js` | the registry: report → `.sql` + column manifest + totals spec |
 | `app/lib/http.js` | `pageSpooled(req, shell, name, data, spools)` — the page shell, with rows spliced by the host |
 | `app/lib/report-pages.js` | `filterOptions`, `openingRow(filters)` — the only two things a spooled report page still needs from JS |

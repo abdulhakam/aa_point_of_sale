@@ -64,7 +64,8 @@ The captured legacy UI is the reference for this work
   `trailbase/tools/uuid.mjs`.
 - The Node-comparative harnesses (`trailbase/tools/guest-parity.mjs`, `perf-compare.mjs`) were
   deleted with the Node app; the guest's standalone checks (`guest-smoke.mjs`,
-  `management-check.mjs`, `invoice-check.mjs`, `jobs-check.mjs`, `view-equivalence.mjs`) remain.
+  `management-check.mjs`, `invoice-check.mjs`, `jobs-check.mjs`, `view-equivalence.mjs` — deleted
+  2026-10-02 with the legacy view layer) remain.
 - [[guest-app-host-port]] records the parity results that justified dropping the Node reference.
 
 ## Related

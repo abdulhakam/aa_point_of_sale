@@ -7,13 +7,28 @@ created: 2026-09-30
 updated: 2026-09-30
 tags: [render, documents, cache, performance, streaming, reports]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[render-split-measured]]", "[[rendering-is-a-component-behind-an-envelope]]", "[[tb-0022-move-reports-to-sql]]", "[[tb-0027-materialised-invoice-documents]]", "[[money-is-2dp-everywhere]]", "[[guest-report-performance-options]]", "[[heavy-report-blocks-runtime-threads]]"]
+related_to: ["[[render-split-measured]]", "[[rendering-is-a-component-behind-an-envelope]]", "[[tb-0022-move-reports-to-sql]]", "[[tb-0027-materialised-invoice-documents]]", "[[money-is-2dp-everywhere]]", "[[guest-report-performance-options]]", "[[heavy-report-blocks-runtime-threads]]", "[[sql-review-2026-10-02]]", "[[tb-0032-manifest-first-refactor]]"]
 ---
 
 # A document store, and streaming a render chunk by chunk
 
 Two questions answered with measurements on 2026-09-30, because both had plausible-sounding answers
 that turned out to be wrong.
+
+> **2026-10-02: nothing reads this store yet, and that is not a verdict on it.** A review asked
+> whether the store was vestigial — `SELECT … FROM "document"` returns zero hits in the guest, and the
+> `document` table is not an exposed record collection. It is not vestigial: it is infrastructure for
+> the document/render path described below, which is not wired up yet. Two facts a later session
+> should not have to rediscover:
+>
+> - **Do not delete it.** The first recommendation from that review was to drop the table and its 12
+>   triggers; that was wrong, and the correction is recorded in [[sql-review-2026-10-02]] §2b. The
+>   exclusions above are deliberate, and the property that matters — an INSERT creates a document with
+>   no application code running — is the reason the triggers are the mechanism.
+> - **Its three `CREATE VIEW`s are now in tension with a standing instruction** that TrailBase's
+>   SQLite should hold no `VIEW`. A trigger cannot read a `.sql` file, so the way to satisfy both is to
+>   generate the trigger bodies from the `.sql` file at migration time: one definition, no view in the
+>   database. Until then, three views exist here and this is why.
 
 ## 1. "Send the layout first, then insert the data in chunks as it renders — how much would that save?"
 

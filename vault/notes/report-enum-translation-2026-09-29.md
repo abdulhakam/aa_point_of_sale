@@ -16,9 +16,14 @@ SQL carried over untranslated, so they compared enum columns against **text** wh
 **integers**. That is [[report-sql-filters-on-text-enums-returns-nothing]]. This note records the fix
 and the two larger defects it uncovered, because both were silent and both understated money.
 
+> **2026-10-02:** the 15 `sql/views/` files, `app/lib/sqlviews.js`, `USE_SQL_VIEWS` and all six of the
+> tools named below were deleted with the legacy view layer — see [[legacy-parity-checks-waived]].
+> Everything after this is the 2026-09-29 record, kept as history; nothing here can be re-run.
+
 ## The pass
 
-`node trailbase/tools/translate-enums.mjs --write` — **53 sites across 10 files**, 0 leftovers.
+`node trailbase/tools/translate-enums.mjs --write` (deleted 2026-10-02 with the legacy view layer) —
+**53 sites across 10 files**, 0 leftovers.
 
 The translation is **asymmetric**, and that is the whole subtlety:
 
@@ -99,7 +104,7 @@ screen**, and it was 7.7× too high.
 `python trailbase/tools/verify-translated-views.py` rebuilds all 15 views on a copy of the depot,
 composing dependencies as CTEs the way `app/lib/sqlviews.js` does, and compares against the **same
 views unmodified in PocketBase** — where the enum columns really are text. Same data, same
-arithmetic, two encodings.
+arithmetic, two encodings. (Both tools deleted 2026-10-02 with the legacy view layer.)
 
 | view | guest | legacy | |
 |---|---|---|---|
@@ -116,7 +121,8 @@ arithmetic, two encodings.
 | counts_for_row_numbers | 1 | 1 | agree |
 
 `payments_summary` (2,675) and `outstanding_summary` (602) are **guest-only** — no legacy view — so
-`verify-guest-only-views.py` compares them against the JS builders, which are the guest's current
+`verify-guest-only-views.py` (deleted 2026-10-02 with the legacy view layer) compares them against
+the JS builders, which are the guest's current
 source of truth:
 
 - `outstanding_summary`: **602 parties on both sides, 601 balances identical, 1 differing by
@@ -133,7 +139,8 @@ which presents as a data divergence that is not there. The verifier normalises w
 
 ### Two harnesses that were lying, and one stale default
 
-**`verify-legacy-views.mjs` reported "15/15 pass" while the views returned nothing.** It counted
+**`verify-legacy-views.mjs` reported "15/15 pass" while the views returned nothing.** (The tool was
+deleted 2026-10-02 with the legacy view layer.) It counted
 `ok++` for any view that *composed and ran*, and printed the PocketBase row count without ever
 comparing it. A view that compiles and returns zero rows passes that check perfectly — which is
 exactly the shape the enum defect took. The tool now compares the counts and exits non-zero on a
@@ -153,7 +160,8 @@ stale "no production data is currently loaded" claims elsewhere in the vault.
   standalone PocketBase counterpart. For those, the checks that have been run are the row counts
   recorded above and the per-party/aggregate diffs for `payments_view` and `outstanding_summary`.
 - A full per-column diff of all 15 against the JS has **not** been done. That, not the enums, is
-  what stands between here and enabling `USE_SQL_VIEWS`.
+  what stands between here and enabling `USE_SQL_VIEWS` (as of 2026-09-29; on 2026-10-02 the flag,
+  the files and these harnesses were deleted instead — see [[legacy-parity-checks-waived]]).
 
 ## Related
 
