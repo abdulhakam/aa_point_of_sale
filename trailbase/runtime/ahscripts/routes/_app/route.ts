@@ -1427,7 +1427,6 @@ if (path === "/login" && method === "GET") {
       to: pick(query.to, ""),
       party: pick(query.party, ""),
       unpaid: flag(query.unpaid),
-      drafts: flag(query.drafts),
     };
     const rows = await A.invoices.listInvoices(db, filters);
     const totals = await A.invoices.sumInvoices(db, filters);
@@ -1565,11 +1564,11 @@ if (path === "/login" && method === "GET") {
       await A.http.page(req, shell(user, "invoices", "Invoice #" + invoice.invoiceNo), "invoices/grid.html", {
         invoice: {
           ...invoice,
-          status: state.status,
           canWrite,
-          // A draft's committed lines are inputs; an open invoice's lines are permanent text.
-          lineInputs: state.status === "draft" && canWrite,
-          editable: state.status === "draft" && canWrite,
+          // Every saved invoice is editable, so the committed lines are inputs whenever the writer
+          // holds the lease (vault/decisions/no-draft-invoices-published-on-save.md).
+          lineInputs: canWrite,
+          editable: canWrite,
           // Somebody else holding the lease is named, so a read-only grid says why.
           heldBy:
             state.lease && String(state.lease.user ?? "").toUpperCase() !== userHex
@@ -1582,19 +1581,6 @@ if (path === "/login" && method === "GET") {
         items: A.routeKit.editorItems(refs),
       })
     );
-  }
-
-  // draft -> open. One UPDATE, and the lease is released with it.
-  const invoiceCommit = /^\/invoices\/([^\/]+)\/commit$/.exec(path);
-  if (invoiceCommit && method === "POST") {
-    try {
-      const hex = A.routeKit.b64ToHex(String(invoiceCommit[1]));
-      await A.lifecycle.requireLease(db, hex, userHex, String(form.device || ""));
-      await A.routeKit.write(() => A.lifecycle.commit(db, hex, userHex));
-      return redirect("/invoices/" + invoiceCommit[1] + "/grid?status=ok");
-    } catch (e: any) {
-      return text("Cannot open the invoice: " + (e && e.message ? e.message : String(e)), e?.status ?? 409);
-    }
   }
 
   // The grid's save. A `remove:` op is a single action; a `save` posts the whole sheet, which the
@@ -1633,9 +1619,10 @@ if (path === "/login" && method === "GET") {
               discount_rs: drs[i] ?? "0",
               scheme: scheme[i] ?? "0",
             };
-            // A row that carries its own id is an EDIT and only a draft may be edited; a row with an
-            // empty id is an APPEND and is how a return is entered on an open invoice. The guard
-            // lives in editLine, not here — deciding by invoice state instead turned an edit into a
+            // A row that carries its own id is an EDIT of that line; a row with an empty id is an APPEND,
+            // which is how a return is entered. Both are valid on a saved invoice
+            // (vault/decisions/no-draft-invoices-published-on-save.md). The guard lives in
+            // editLine, not here — deciding by invoice state instead turned an edit into a
             // silent extra line.
             const existing = ids[i] ? A.routeKit.b64ToHex(String(ids[i])) : null;
             if (existing) {

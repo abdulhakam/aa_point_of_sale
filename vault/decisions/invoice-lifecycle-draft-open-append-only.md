@@ -1,15 +1,25 @@
 ---
 title: "Invoice lifecycle — draft, open, and an append-only correction rule"
 type: decision
-status: accepted
+status: superseded
 decided_on: 2026-09-29
 created: 2026-09-29
+superseded_by: "[[no-draft-invoices-published-on-save]]"
+superseded_on: 2026-10-02
 tags: [invoices, lifecycle, concurrency, ledger, audit, trailbase, guest]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[tb-0021-invoices-cashmemos-printing]]", "[[invoice-entry-freshness-and-writes]]", "[[guest-invoice-lifecycle]]", "[[single-writer-per-invoice]]", "[[returns-are-negative-quantities]]", "[[verified-negative-quantity-stock-and-money]]", "[[money-is-2dp-everywhere]]", "[[guest-writes-via-sql]]", "[[legacy-invoice-numbering-is-racy]]"]
+related_to: ["[[tb-0021-invoices-cashmemos-printing]]", "[[invoice-entry-freshness-and-writes]]", "[[guest-invoice-lifecycle]]", "[[single-writer-per-invoice]]", "[[returns-are-negative-quantities]]", "[[verified-negative-quantity-stock-and-money]]", "[[money-is-2dp-everywhere]]", "[[guest-writes-via-sql]]", "[[legacy-invoice-numbering-is-racy]]", "[[no-draft-invoices-published-on-save]]"]
 ---
 
 # Invoice lifecycle — draft, open, and an append-only correction rule
+
+> **SUPERSEDED 2026-10-02 by [[no-draft-invoices-published-on-save]].** The ORDERS system this
+> lifecycle existed for has been removed, so there is no draft phase and no append-only rule: an
+> invoice is in the books when it is saved and stays editable. Everything below is kept as the record
+> of the design that was in force and why — it is **not** the current behaviour. In particular,
+> "`status` is the single source of truth", the two-state table, the lease, the commit step and the
+> "an open invoice is append-only" rule are all withdrawn. The draft filter also emptied the
+> production reports — see [[imported-invoices-are-all-drafts-so-every-report-is-empty]].
 
 ## Context
 

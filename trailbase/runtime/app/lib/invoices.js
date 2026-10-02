@@ -34,7 +34,7 @@ const named = (columns) => (row) => {
 
 const LIST_COLUMNS = [
   "id", "type", "invoiceNo", "dated", "completed", "deleted", "discount_1", "discount_rs",
-  "partyName", "bookerName", "total", "paid", "status",
+  "partyName", "bookerName", "total", "paid",
 ];
 
 const HEAD_COLUMNS = [
@@ -56,7 +56,7 @@ const LIST_SQL =
   // Σ round2(line total) — the same line arithmetic `compute/views.js` uses, so this screen and
   // the reports cannot disagree — then the header's percent discounts and its rupee discount.
   'ROUND(COALESCE(t.total, 0) * (1 - COALESCE(i."discount_1", 0) / 100.0) * (1 - COALESCE(i."discount_2", 0) / 100.0) - COALESCE(i."discount_rs", 0), 2) AS total, ' +
-  'COALESCE(p.paid, 0) AS paid, i."status" AS status ' +
+  'COALESCE(p.paid, 0) AS paid ' +
   'FROM invoices i ' +
   'LEFT JOIN parties pa ON pa."id" = i."party" ' +
   'LEFT JOIN order_bookers bo ON bo."id" = i."booker" ' +
@@ -90,10 +90,7 @@ function filteredQuery(filters) {
     where.push('i."party" = ?');
     params.push(String(filters.party));
   }
-  // A draft is not a document, so it is not in the list — the same rule the reports apply. The
-  // writer finds their own drafts with `?drafts=on`; a draft in nobody's list is invisible, which
-  // is the point of the state.
-  where.push(filters.drafts === "on" ? 'i."status" = \'draft\'' : 'i."status" = \'open\'');
+  // No status predicate: every invoice is published (vault/decisions/no-draft-invoices-published-on-save.md).
   // The unpaid test needs the computed total and paid, so it is applied by an outer query around
   // the same statement rather than in the inner WHERE.
   const inner = LIST_SQL + 'WHERE ' + where.join(' AND ');
@@ -116,11 +113,10 @@ export async function listInvoices(db, filters = {}) {
       typeLabel: typeLabel(r.type),
       invoiceNo: Number(r.invoiceNo),
       dated: dateOnly(r.dated),
-      // The lifecycle state, never `completed`: in the imported v1 data that column is 0 on 8,923
-      // of 8,935 invoices, so labelling by it would call almost every invoice a draft
-      // ([[imported-completed-flag-carries-no-information]]).
-      status: r.status,
-      completed: r.status === "open",
+      // There is no lifecycle state any more. `completed` is a legacy column with no meaning in this
+      // app — it is 0 on 8,923 of the imported invoices
+      // ([[imported-completed-flag-carries-no-information]]) — so the list never reports it and the
+      // status cell is derived from the balance alone.
       partyName: r.partyName ?? "",
       bookerName: r.bookerName ?? "",
       total,

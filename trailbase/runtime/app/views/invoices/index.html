@@ -23,7 +23,6 @@
     </select>
   </label>
   <label class="field check"><input type="checkbox" name="unpaid"{% if filters.unpaid %} checked{% endif %}> <span>Unpaid only</span></label>
-  <label class="field check"><input type="checkbox" name="drafts"{% if filters.drafts %} checked{% endif %}> <span>Show drafts instead</span></label>
   <div class="filter-actions">
     <button class="btn primary" type="submit">APPLY</button>
     <a class="btn" href="/invoices">RESET</a>
@@ -54,7 +53,7 @@
         <td class="right" data-label="Total">{{ r.totalText }}</td>
         <td class="right" data-label="Paid">{{ r.paidText }}</td>
         <td class="right" data-label="Balance">{{ r.balanceText }}</td>
-        <td data-label="Status">{% if not r.completed %}<span class="tag">Draft</span>{% elif r.balance > 0.005 %}<span class="tag">Unpaid</span>{% else %}<span class="tag">Paid</span>{% endif %}</td>
+        <td data-label="Status">{% if r.balance > 0.005 %}<span class="tag">Unpaid</span>{% elif r.balance < -0.005 %}<span class="tag">Credit</span>{% else %}<span class="tag">Paid</span>{% endif %}</td>
       </tr>
     {% else %}
       <tr><td class="empty" colspan="7">No invoices match these filters.</td></tr>

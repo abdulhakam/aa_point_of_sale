@@ -12,13 +12,6 @@
 <h1 class="page-title">{{ invoice.typeLabel }} Invoice #{{ invoice.invoiceNo }}</h1>
 
 <div class="pagebar">
-  <span class="tag {{ 'tag-draft' if invoice.status == 'draft' else 'tag-open' }}">{{ invoice.status }}</span>
-  {% if invoice.heldBy %}<span class="notice" data-state="warn">Being edited by {{ invoice.heldBy }}</span>{% endif %}
-  {% if invoice.status == 'draft' and invoice.canWrite %}
-  <form method="post" action="/invoices/{{ invoice.id }}/commit" style="display:inline">
-    <button class="btn primary" type="submit">OPEN INVOICE</button>
-  </form>
-  {% endif %}
   <a class="btn" href="/payments/new?invoice={{ invoice.id }}&amp;type={{ invoice.paymentTypeHint }}&amp;party={{ invoice.party }}&amp;amount={{ invoice.balanceText }}">+ PAYMENT</a>
 </div>
 
@@ -88,9 +81,8 @@
         <th class="right">Free</th><th class="right">Amount</th><th class="right">Actions</th>
       </tr></thead>
       <tbody>
-      {# A draft's committed lines are editable; an open invoice's lines are permanent, so they are
-         shown as text and the only writable row is the empty one at the bottom, which is how a
-         return is entered. #}
+{# Every line is an input when the writer holds the lease, and plain text when they do not
+         (vault/decisions/no-draft-invoices-published-on-save.md). #}
       {% for l in invoice.lines %}
         {% if invoice.lineInputs %}
         <tr data-line="{{ l.id }}">

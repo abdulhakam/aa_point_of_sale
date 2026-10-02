@@ -7,6 +7,7 @@ created: 2026-10-01
 updated: 2026-10-01
 tags: [runtime-js, reports, filters, minijinja, ui]
 related_to: ["[[runtime-js-guest-platform]]", "[[report-routes-ignore-date-defaults]]", "[[spooling-report-rows-through-kv]]"]
+---
 
 ## FIXED 2026-10-01
 

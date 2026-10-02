@@ -8,7 +8,6 @@
 
 import { base64ToHex } from "./management.js";
 import { round2 } from "../compute/format.js";
-import { DRAFT, OPEN } from "./invoice-lifecycle.js";
 
 const LEASE_MS = 120_000;
 
@@ -62,14 +61,14 @@ export async function createInvoice(db, { type, key, userHex, device }) {
   }
 
   const idHex = await uuidHex(db);
-  // `status` is the single source of truth for the lifecycle; `completed` is kept because the
-  // record API and the v1 import depend on it. Both are set here, together, forever
-  // (vault/decisions/invoice-lifecycle-draft-open-append-only.md). A new invoice is a DRAFT, so
-  // it is in no report until it is committed.
+  // No `status`: an invoice is published the moment it is saved and stays editable afterwards
+  // (vault/decisions/no-draft-invoices-published-on-save.md), so there is nothing to write. The
+  // number is allocated here and the lines follow, which is the legacy `count+1` scheme preserved
+  // deliberately ([[legacy-invoice-numbering-is-racy]]).
   await db.execute(
-    'INSERT INTO "invoices" ("id", "type", "invoiceNo", "completed", "status") ' +
-      'SELECT unhex(?), ?, COALESCE((SELECT COUNT(*) FROM "invoices" WHERE "type" = ?), 0) + 1, 0, ?',
-    [idHex, typeCode, typeCode, DRAFT]
+    'INSERT INTO "invoices" ("id", "type", "invoiceNo") ' +
+      'SELECT unhex(?), ?, COALESCE((SELECT COUNT(*) FROM "invoices" WHERE "type" = ?), 0) + 1',
+    [idHex, typeCode, typeCode]
   );
 
   if (key) {
@@ -178,25 +177,15 @@ export async function deleteLine(db, lineHex) {
 }
 
 /**
- * Mark the invoice open, and release the lease.
+ * Release the lease once the operator is done with the invoice.
  *
- * Forward only. The old design could reopen a completed invoice; the lifecycle cannot
- * (vault/decisions/invoice-lifecycle-draft-open-append-only.md) — a mistake in an open invoice is
- * corrected by appending, not by reopening. `invoice-lifecycle.commit` is the guarded version and
- * additionally checks for a line before it will commit; this one stays for the existing callers and
- * the check tool.
+ * There is no state to move any more: the invoice is published the moment it is saved and stays
+ * editable afterwards (vault/decisions/no-draft-invoices-published-on-save.md). What this does is
+ * hand the invoice back so another device can pick it up, which is the point of the lease. The
+ * `completed` argument is accepted and ignored so the existing callers and the check tool keep
+ * working; nothing refuses it any more.
  */
-export async function completeInvoice(db, invoiceHex, userHex, completed = true) {
-  // The guest's DB bridge binds text parameters only, so the flag goes as a string.
-  if (completed === false) {
-    const err = new Error("an open invoice cannot be reopened; append a correcting line instead");
-    err.status = 409;
-    throw err;
-  }
-  const affected = await db.execute(
-    'UPDATE "invoices" SET "status" = ?, "completed" = 1 WHERE "id" = unhex(?)',
-    [OPEN, invoiceHex]
-  );
+export async function completeInvoice(db, invoiceHex, userHex, _completed = true) {
   await releaseLock(db, invoiceHex, userHex);
-  return affected;
+  return 1;
 }

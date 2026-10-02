@@ -7,6 +7,7 @@ created: 2026-10-01
 updated: 2026-10-01
 tags: [reports, money, rounding, productsale, paisa]
 related_to: ["[[money-is-2dp-everywhere]]", "[[sql-rounding-differs-from-js-round2]]", "[[report-page-definitions-duplicated-and-already-divergent]]"]
+---
 
 ## FIXED 2026-10-01
 

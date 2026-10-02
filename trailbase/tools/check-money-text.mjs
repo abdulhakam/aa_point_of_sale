@@ -81,14 +81,8 @@ let checkedColumns = 0;
 let checkedValues = 0;
 
 const base = {};
+// No draft filter: every invoice is published (vault/decisions/no-draft-invoices-published-on-save.md).
 for (const t of TABLES) base[t] = readTable(db, t);
-const committed = new Set(
-  db.prepare(`SELECT id FROM invoices WHERE status IS NULL OR status <> 'draft'`).all().map((r) => b64(r.id)),
-);
-base.invoices = base.invoices.filter((r) => r.status !== "draft");
-for (const t of ["transactions", "payments"]) {
-  base[t] = base[t].filter((r) => r.invoice == null || committed.has(String(r.invoice)));
-}
 
 const values = {
   booker: "", from: "", to: "", party: "", area: "", section: "", item: "", company: "",

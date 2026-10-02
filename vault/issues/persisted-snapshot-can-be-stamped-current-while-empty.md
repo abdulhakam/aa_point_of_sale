@@ -11,6 +11,24 @@ related_to: ["[[snapshot-persistence-hits-the-20s-deadline]]", "[[guest-fingerpr
 ---
 
 
+## RECURRED 2026-10-02 - the empty views are back, but this time the cache is innocent
+
+The claim below that "the condition does not exist in the current depot" is **no longer true**. On
+2026-10-02 six persisted views were `"[]"` again (`paymentsView`, `invoiceView`, `transactionView`,
+`outstanding`, `paymentsInvoicesReport`, `transactionsReport`), and every report rendered empty —
+the same symptom, the same non-recovery through `?full=1`.
+
+**But this instance is not the defect this note describes, and its recovery advice does not apply.**
+The snapshot is empty because the data feeding it is empty:
+[[imported-invoices-are-all-drafts-so-every-report-is-empty]] — all 8,927 invoices are `draft`, the
+committed-invoice filter in `app/lib/data.js` removes every invoice, transaction and payment, and
+the rebuild then computes exactly the empty views it correctly should.
+
+The two are distinguishable, and the test is cheap: **delete the `mview` rows and rebuild.** If the
+views come back populated, it was this cache defect. If they come back `"[]"` again, the cache is
+faithful and the cause is upstream in the data. On 2026-10-02 the answer was the second one, so
+clearing the cache alone would have changed nothing.
+
 ## REPRODUCED LIVE 2026-10-01 - still true, and `?full=1` still does not recover it
 
 The condition does not exist in the current depot: all 14 persisted views are populated (the largest,

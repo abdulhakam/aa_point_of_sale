@@ -9,6 +9,13 @@ related_to: ["[[runtime-js-guest-platform]]", "[[report-routes-ignore-date-defau
 
 # Browser sweep of every guest page and filter, 2026-10-01
 
+> **Superseded in part, 2026-10-02.** Every report, ledger and invoice list in this sweep now
+> renders empty, because the ledger re-imported at `2026-10-01 17:57:43Z` marked all 8,927 invoices
+> `draft` and took them out of the books — see
+> [[imported-invoices-are-all-drafts-so-every-report-is-empty]]. The measurements below are still
+> the record of the code paths working; the current numbers are in
+> [[browser-journey-sweep-2026-10-02]].
+
 What a full pass over the guest frontend found, driving the real browser through DevTools MCP
 against `trailbase/RUN.BAT` on `http://127.0.0.1:4000` with the production depot loaded
 (8,204 sale invoices, 943 parties, 59 areas, 8 sections, 4 bookers, 15 companies, 207 items).

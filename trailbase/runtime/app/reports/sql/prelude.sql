@@ -4,7 +4,7 @@
 --
 -- It provides, for every report:
 --
---   committed            invoices that are in the books (a draft is not)
+--   committed            every invoice (there is no draft; an invoice is published on save)
 --   invoice_view         invoice columns, num()-coerced
 --   transaction_view     per-line total with the line discount chain
 --   line_totals          round2 PER LINE (this is the money rule — see the note)
@@ -24,10 +24,10 @@
 -- files — those are known to differ (vault: legacy-sql-views-differ-from-js-views).
 
 WITH
-  -- lib/data.js isCommitted: a draft invoice is not in the books, and payments/transactions are
-  -- judged by their invoice. A NULL status predates the lifecycle migration, so it stays in.
+  -- An invoice is in the books the moment it is saved and is editable afterwards, so there is no
+  -- status to exclude: the set is every invoice (vault/decisions/no-draft-invoices-published-on-save.md).
   committed AS (
-    SELECT id FROM invoices WHERE status IS NULL OR status <> 'draft'
+    SELECT id FROM invoices
   ),
   invoice_view AS (
     -- `d1`/`d2`/`drs` are `num()`-coerced (COALESCE, since a NULL discount becomes 0 in
@@ -85,7 +85,6 @@ WITH
     JOIN invoices i ON i.id = t.invoice
     LEFT JOIN parties pa ON pa.id = i.party
     LEFT JOIN areas ar ON ar.id = pa.area
-    WHERE i.status IS NULL OR i.status <> 'draft'
   ),
 
   -- ==========================================================================
@@ -152,12 +151,9 @@ WITH
     LEFT JOIN (
       SELECT invoice, SUM(total) AS s FROM line_totals GROUP BY invoice
     ) lt ON lt.invoice = iv.id
-    -- `base.invoices` excludes DRAFT invoices (lib/data.js isCommitted), and `buildInvoiceView`
-    -- iterates exactly that list — so `invoiceView` has no drafts in it. Not filtering here gave
-    -- dailysale 8,614 sale invoices against the JS 8,204, i.e. every draft was being counted.
-    --
-    -- After the join, not before: a WHERE placed between FROM and LEFT JOIN splits the join clause
-    -- and SQLite fails at the keyword (`near "LEFT": syntax error`).
+    -- `committed` is every invoice, so this filter is now a no-op. It is kept so the join shape the
+    -- reports are written against does not change: a WHERE between FROM and LEFT JOIN splits the
+    -- join clause and SQLite fails at the keyword (`near "LEFT": syntax error`).
     WHERE iv.id IN (SELECT id FROM committed)
   ),
   invoice_chain AS (

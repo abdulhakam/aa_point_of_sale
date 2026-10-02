@@ -1,12 +1,16 @@
-// Invoice lifecycle: the states, the transitions, the write lease, and the canonical money
-// arithmetic that the grid's browser-side preview mirrors.
+// Invoice lifecycle: the write lease, the line operations, and the canonical money arithmetic that
+// the grid's browser-side preview mirrors.
 //
-// The design is vault/decisions/invoice-lifecycle-draft-open-append-only.md:
+// There is no lifecycle. The design is vault/decisions/no-draft-invoices-published-on-save.md, which
+// supersedes vault/decisions/invoice-lifecycle-draft-open-append-only.md: the ORDERS system the
+// draft phase existed for has been removed, so an invoice is published the moment it is saved and
+// stays editable afterwards. There is no `status`, no commit step, and no append-only rule — a line
+// is edited in place and a removed line is deleted, so what is on screen is what is in the books. A
+// return is still a negative-quantity row on the same invoice
+// (vault/decisions/returns-are-negative-quantities.md).
 //
-//   draft -> open, one way. A draft is readable by everyone and writable only by the lease holder.
-//   It is NOT in the books: every report filters status = 'open'. An open invoice is append-only —
-//   no row is edited and no row is deleted, and a "remove" is an appended reversal. A return is a
-//   negative-quantity row on the same invoice (vault/decisions/returns-are-negative-quantities.md).
+// What remains of the old design is the write lease, which stops two devices typing into the same
+// invoice at once (vault/decisions/single-writer-per-invoice.md).
 //
 // The money here is the single server implementation. app/public/js/app.js mirrors it in integer
 // paisa for the grid's live preview, and the smoke suite asserts the two agree on the pinned
@@ -90,11 +94,8 @@ export function balanceOf(total, paid) {
 }
 
 // ---------------------------------------------------------------------------
-// States and the write lease
+// The write lease
 // ---------------------------------------------------------------------------
-
-export const DRAFT = "draft";
-export const OPEN = "open";
 
 /**
  * A refused write. `status` is the HTTP code the route should answer with.
@@ -111,12 +112,12 @@ export const LifecycleError = (message, status = 409) => {
   return error;
 };
 
-/** The invoice's id, state and lease holder in one read. */
+/** The invoice's id and lease holder in one read. */
 export async function readState(db, invoiceHex) {
-  // `status` is a TEXT column and `party` is a BLOB the bridge already base64-encodes, so both come
-  // back in their public form without any decoding here.
+  // `party` is a BLOB the bridge already base64-encodes, so it comes back in its public form
+  // without any decoding here.
   const rows = await db.all(
-    'SELECT "status", "completed", "party", "type", "invoiceNo" FROM "invoices" WHERE "id" = unhex(?)',
+    'SELECT "completed", "party", "type", "invoiceNo" FROM "invoices" WHERE "id" = unhex(?)',
     [invoiceHex]
   );
   if (!rows || !rows.length) return null;
@@ -125,17 +126,13 @@ export async function readState(db, invoiceHex) {
       'WHERE "invoice" = unhex(?) AND "lease_until" > ?',
     [invoiceHex, nowIso()]
   );
-  // A row written before the status migration, or through the record API without the column, has a
-  // NULL status. Fall back to `completed` so it stays readable rather than becoming un-openable.
-  const status = rows[0][0] ? String(rows[0][0]) : Number(rows[0][1]) === 1 ? OPEN : DRAFT;
   return {
     hex: invoiceHex,
     id: await base64Id(db, "invoices", invoiceHex),
-    status,
-    completed: Number(rows[0][1]) === 1,
-    type: Number(rows[0][3]),
-    invoiceNo: Number(rows[0][4]),
-    party: rows[0][2] ?? null,
+    completed: Number(rows[0][0]) === 1,
+    type: Number(rows[0][2]),
+    invoiceNo: Number(rows[0][3]),
+    party: rows[0][1] ?? null,
     lease: lease && lease.length ? { user: lease[0][0], device: lease[0][1], leaseUntil: lease[0][2] } : null,
   };
 }
@@ -176,34 +173,32 @@ export async function releaseLease(db, invoiceHex, userHex) {
 }
 
 /**
- * draft -> open. One UPDATE sets `status` and `completed` together, so the column the app treats
- * as truth and the column the record API exposes cannot drift. The lease is released at the same
- * moment, which is what makes the invoice visible to writers again.
+ * An invoice must have at least one live line before it counts as a document.
+ *
+ * There is no commit transition any more — the invoice is published the moment it is saved — so
+ * this is the whole of what the old `commit` enforced, and it is kept because an invoice with no
+ * lines is a number in the sequence that reports will show as an empty document.
  */
-export async function commit(db, invoiceHex, userHex) {
+export async function assertHasLines(db, invoiceHex) {
   const live = await db.all(
     'SELECT COUNT(*) FROM "transactions" WHERE "invoice" = unhex(?) AND "deleted" = 0',
     [invoiceHex]
   );
-  if (!live?.[0]?.[0]) throw LifecycleError("an invoice needs at least one line before it can be opened", 400);
-  const affected = await db.execute(
-    'UPDATE "invoices" SET "status" = ?, "completed" = 1 WHERE "id" = unhex(?) AND "status" = ?',
-    [OPEN, invoiceHex, DRAFT]
-  );
-  if (!affected) throw LifecycleError("only a draft can be opened", 409);
-  await releaseLease(db, invoiceHex, userHex);
-  return affected;
+  if (!live?.[0]?.[0]) throw LifecycleError("an invoice needs at least one line", 400);
+  return live[0][0];
 }
 
 // ---------------------------------------------------------------------------
 // Line operations.
 //
-// A draft is freely editable and is not in the books, so a hard DELETE there loses nothing. An
-// open invoice is append-only: modifying or removing a line appends a correcting row instead, and
-// the original is left in place for the audit.
+// Every saved invoice is editable, so a line is changed in place and a removed line is deleted.
+// The trade is deliberate: with append-only withdrawn there is no second copy of what an invoice
+// used to say, so a report already read can change afterwards
+// (vault/decisions/no-draft-invoices-published-on-save.md). A return is still recorded as a
+// negative-quantity line, which is a real line the operator typed rather than a reversal.
 // ---------------------------------------------------------------------------
 
-/** Append a line. Valid on any state; on an open invoice this is how a return is recorded. */
+/** Append a line. */
 export async function appendLine(db, invoiceHex, line, opKey) {
   // A relation id that is not one is a bad request, and `unhex()` on rubbish does not fail politely:
   // it reaches the bridge as a constraint error with no message. Check it here so the caller gets a
@@ -242,14 +237,9 @@ export async function appendLine(db, invoiceHex, line, opKey) {
   return await base64Id(db, "transactions", lineHex);
 }
 
-/** Edit a line in place. Draft only — an open invoice's rows are immutable. */
+/** Edit a line in place. Valid on every invoice — a saved invoice stays editable. */
 export async function editLine(db, invoiceHex, lineHex, line) {
   if (!/^[0-9A-F]{32}$/.test(String(lineHex ?? ""))) throw LifecycleError("not a line id", 400);
-  const state = await readState(db, invoiceHex);
-  if (!state) throw LifecycleError("no such invoice", 404);
-  if (state.status !== DRAFT) {
-    throw LifecycleError("an open invoice is append-only; add a correcting line instead", 409);
-  }
   return db.execute(
     'UPDATE "transactions" SET "qty" = CAST(? AS REAL), "price" = CAST(? AS REAL), "cost_price" = CAST(? AS REAL), ' +
       '"discount_1" = CAST(? AS REAL), "discount_2" = CAST(? AS REAL), "discount_rs" = CAST(? AS REAL), "scheme" = CAST(? AS REAL) ' +
@@ -270,42 +260,29 @@ export async function editLine(db, invoiceHex, lineHex, line) {
 
 /**
  * Remove a line.
- *   draft -> hard DELETE. Nothing is in the books, so nothing is lost.
- *   open  -> append the line's exact negative, which is also how a partial return is expressed.
+ *
+ * A hard DELETE, so the books match the screen: `transactions.deleted` exists and the invoice
+ * screens read it, but no report filters on it (`line_totals` sums every row of `transaction_view`),
+ * so a soft-deleted line would still be counted in money. Deleting is what makes "what you see is
+ * what is in the books" true here.
  */
 export async function removeLine(db, invoiceHex, lineHex, opKey) {
-  const state = await readState(db, invoiceHex);
-  if (!state) throw LifecycleError("no such invoice", 404);
   const rows = await db.all(
-    'SELECT "item", "qty", "price", "cost_price", "discount_1", "discount_2", "discount_rs", "scheme" ' +
-      'FROM "transactions" WHERE "id" = unhex(?) AND "invoice" = unhex(?)',
+    'SELECT "id" FROM "transactions" WHERE "id" = unhex(?) AND "invoice" = unhex(?)',
     [lineHex, invoiceHex]
   );
   if (!rows || !rows.length) return 0;
-
-  if (state.status === DRAFT) {
-    // Nothing is in the books yet, so removing the row outright loses nothing.
-    return db.execute('DELETE FROM "transactions" WHERE "id" = unhex(?)', [lineHex]);
+  if (opKey) {
+    // Idempotency: a retried remove must not remove a different line. The key is claimed first, so
+    // a replay returns the original result without touching anything.
+    const seen = await db.all('SELECT hex("line") AS hx FROM "invoice_line_op" WHERE "key" = ?', [opKey]);
+    if (seen && seen.length) return 0;
+    await db.execute('INSERT OR IGNORE INTO "invoice_line_op" ("key", "line") VALUES (?, unhex(?))', [
+      opKey,
+      lineHex,
+    ]);
   }
-
-  // Open: append the line's exact negative. `item` comes back base64 from the bridge, which is
-  // exactly what appendLine wants for a relation.
-  const r = rows[0];
-  return appendLine(
-    db,
-    invoiceHex,
-    {
-      item: r[0],
-      qty: -1 * (Number(r[1]) || 0),
-      price: r[2],
-      cost_price: r[3],
-      discount_1: r[4],
-      discount_2: r[5],
-      discount_rs: r[6],
-      scheme: r[7],
-    },
-    opKey
-  );
+  return db.execute('DELETE FROM "transactions" WHERE "id" = unhex(?)', [lineHex]);
 }
 
 export { nowIso, base64Id, uuidHex };
