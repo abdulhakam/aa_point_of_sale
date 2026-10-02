@@ -42,6 +42,10 @@ Two design choices follow directly and are recorded elsewhere:
 - **Everything binds loopback** (`127.0.0.1`), so nothing is exposed on the network by default.
   This is why `trailbase/RUN.BAT` has to override TrailBase's own `[::1]:4000` default
   ([[trailbase-ipv6-loopback-default-bind]]).
+  > **Superseded in part, 2026-10-02.** The legacy pair is still loopback-only, but
+  > `trailbase/RUN.BAT` now defaults to `ADDRESS=0.0.0.0:4000` so the new system is reachable from
+  > other devices on the LAN, with a Private-profile inbound firewall rule for TCP 4000 — see
+  > [[serve-the-app-on-all-interfaces]]. The override of TrailBase's IPv6 default is still required.
 - **The new frontend has no build step and no UI framework** ([[runtime-js-guest-platform]]):
   plain HTML, one stylesheet, and MiniJinja templates read from disk at render time — no bundler.
   On a machine with no build tooling, "no build" is a feature.

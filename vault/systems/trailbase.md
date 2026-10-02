@@ -140,11 +140,16 @@ trailbase\RUN.BAT
    nothing races initialisation. Defaults: `admin@localhost` / `administrator-0ne`.
    Later runs skip straight to starting the server, so a password you change yourself is
    never overwritten.
-2. It binds `ADDRESS=127.0.0.1:4000` explicitly, because TrailBase's own default bind is
-   `[::1]:4000` (IPv6 only), which a client at `127.0.0.1` cannot reach. See
-   [[trailbase-ipv6-loopback-default-bind]].
+2. It always gives the bind address explicitly, because TrailBase's own default bind is
+   `[::1]:4000` (IPv6 loopback only), which a client at `127.0.0.1` — or at this machine's
+   LAN address — cannot reach. The default is `0.0.0.0:4000`, so the app is served on every
+   interface and other devices on the LAN can open it; see
+   [[serve-the-app-on-all-interfaces]]. See also [[trailbase-ipv6-loopback-default-bind]].
 
-Override with `set "DEPOT=C:\some\depot"` / `set "ADDRESS=127.0.0.1:4001"` before invoking.
+Override with `set "DEPOT=C:\some\depot"` / `set "ADDRESS=127.0.0.1:4000"` before invoking.
+
+LAN clients additionally need inbound TCP 4000 allowed in Windows Defender Firewall. The rule in
+place is Private-profile and scoped to `trail.exe`.
 
 Endpoints: admin dashboard `http://localhost:4000/_/admin/`, record APIs
 `/api/records/v1/<name>`, per-API schema `/api/records/v1/<name>/schema`, auth

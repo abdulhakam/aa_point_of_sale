@@ -25,21 +25,30 @@ while every client gets a connection refused. Nothing in the message says "wrong
 
 ## The fix, as shipped
 
-`trailbase/RUN.BAT` binds IPv4 loopback explicitly, and says why in a comment:
+> **Corrected 2026-10-02.** The upstream trap below is unchanged and still needs an explicit
+> address, but `RUN.BAT`'s default is now `ADDRESS=0.0.0.0:4000`, not `127.0.0.1:4000`, so the app
+> is reachable from other devices on the LAN — see [[serve-the-app-on-all-interfaces]]. The comment
+> this section quoted, and the `trailbase/README.md` sentence that repeats it, have both been
+> rewritten to match. The rest of this note still stands.
+
+`trailbase/RUN.BAT` always passes `--address`, and says why in a comment:
 
 ```bat
-rem IPv4 loopback explicitly. TrailBase defaults to [::1]:4000 (IPv6 only), which a
-rem browser at 127.0.0.1 - and the frontend, whose TRAILBASE_URL is
-rem http://127.0.0.1:4000 - cannot reach.
-if not defined ADDRESS set "ADDRESS=127.0.0.1:4000"
+rem Always give the bind address: TrailBase defaults to [::1]:4000 (IPv6 loopback only),
+rem which neither a browser at 127.0.0.1 nor one at this machine's LAN address can reach.
+rem 0.0.0.0 serves every interface, so other devices on the LAN can open the app; set
+rem ADDRESS to go back to loopback only:
+rem     set "ADDRESS=127.0.0.1:4000" && RUN.BAT
+rem Inbound TCP 4000 also has to be allowed in Windows Defender Firewall for LAN clients.
+if not defined ADDRESS set "ADDRESS=0.0.0.0:4000"
 ...
 start "" trail "--depot=%DEPOT%" run --address=%ADDRESS%
 ```
 
-That comment's "frontend ... TRAILBASE_URL" predates the guest platform, where the app is served
-by TrailBase itself ([[guest-app-host-port]]); the bind it documents is unchanged.
+That comment's "frontend ... TRAILBASE_URL" phrasing predates the guest platform, where the app is
+served by TrailBase itself ([[guest-app-host-port]]); the bind it documents is unchanged.
 
-The address is overridable (`set "ADDRESS=127.0.0.1:4001" && RUN.BAT`), and it is also what the
+The address is overridable (`set "ADDRESS=127.0.0.1:4000" && RUN.BAT`), and it is also what the
 BAT file polls for readiness — it waits on
 `netstat -a -n -p tcp | findstr "%ADDRESS%" | findstr LISTENING` — so the override keeps the
 readiness check and the bind in agreement.

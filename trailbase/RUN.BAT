@@ -18,9 +18,12 @@ setlocal
 cd /d "%~dp0"
 
 if not defined DEPOT set "DEPOT=traildepot"
-rem IPv4 loopback explicitly. TrailBase defaults to [::1]:4000 (IPv6 only), which a
-rem browser at 127.0.0.1 - and the frontend, whose TRAILBASE_URL is
-rem http://127.0.0.1:4000 - cannot reach.
+rem Always give the bind address: TrailBase defaults to [::1]:4000 (IPv6 loopback only),
+rem which neither a browser at 127.0.0.1 nor one at this machine's LAN address can reach.
+rem 0.0.0.0 serves every interface, so other devices on the LAN can open the app; set
+rem ADDRESS to go back to loopback only:
+rem     set "ADDRESS=127.0.0.1:4000" && RUN.BAT
+rem Inbound TCP 4000 also has to be allowed in Windows Defender Firewall for LAN clients.
 if not defined ADDRESS set "ADDRESS=0.0.0.0:4000"
 set "ADMIN_USER=admin@localhost"
 set "ADMIN_PASSWORD=administrator-0ne"
@@ -50,6 +53,15 @@ rem failures.
 echo Syncing runtime\ into %DEPOT%\runtime ...
 robocopy "runtime" "%DEPOT%\runtime" /MIR /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 (echo ERROR: could not sync runtime\ into %DEPOT%\runtime & endlocal & goto :eof)
+
+rem The migrations are synced for the same reason. The server applies what is in
+rem %DEPOT%\migrations, and that directory is a generated copy of migrations\ - so a new
+rem migration written in the source and not copied here is silently never applied, and the
+rem app then disagrees with the schema it was written against. This is exactly how the draft
+rem status survived a repair migration: the file existed, but not in the depot.
+echo Syncing migrations\ into %DEPOT%\migrations ...
+robocopy "migrations" "%DEPOT%\migrations" /MIR /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 (echo ERROR: could not sync migrations\ into %DEPOT%\migrations & endlocal & goto :eof)
 
 if exist "%DEPOT%\data" goto :start_server
 call :init_depot

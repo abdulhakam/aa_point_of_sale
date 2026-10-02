@@ -14,6 +14,9 @@ traildepot/uploads/
 traildepot/secrets/
 traildepot/wasm/
 *.log
+# A hand-taken copy of `data/` before a schema change. `traildepot/backups/` is TrailBase's own and
+# is ignored above, but a copy made by hand lands beside it and is a 95 MB database: never staged.
+traildepot/backup-*/
 # The bench orchestrator redirects the server's streams to `*.log.err`, which `*.log` misses.
 traildepot/*.log.*
 

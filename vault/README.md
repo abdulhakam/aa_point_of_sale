@@ -72,6 +72,10 @@ removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and
 6. [[build-and-run]] and [[environment]] — how to start each system, and the credentials each
    needs (the local-only `credentials/` collection, e.g. `credentials/experimental-trailbase.md`).
 
+Since 2026-10-02 the new system is served on **all interfaces** (`0.0.0.0:4000`) so other devices
+on the LAN can use it, behind a Private-profile Windows firewall rule —
+[[serve-the-app-on-all-interfaces]]. The legacy pair is still loopback-only.
+
 ## Status at a glance
 
 - 17 of 17 TrailBase tables exposed as record APIs; migration applies clean on an empty depot.
