@@ -17,118 +17,28 @@ const COMPUTE_DIR = "/app/compute";
 
 // ------------------------------------------------------------------ module loading
 
-const MODULE_CACHE: Record<string, any> = (() => {
-  const g: any = globalThis as any;
-  if (!g.__AA_MODS__) g.__AA_MODS__ = {};
-  return g.__AA_MODS__;
-})();
+// The module loader is injected by the host.
+//
+// `tb-ah-run-js` `run_route()` prepends a prelude to every route, so `__AA_LOAD__` exists before any
+// route code runs. It used to live in this file, which meant only this file could use it - and a route
+// entry that reached for a shared module with `import` failed in the guest with
+// `Unexpected token '{'`, because a route file is type-stripped by SWC and then ESM-rewritten by a regex
+// shim, and that composition does not survive an import statement.
+//
+// What the prelude installs is deliberately a two-name surface: `__AA_LOAD__` to load a module, and
+// `__AA_TRANSFORM_ESM__` for the one caller that needs the raw transform. Everything else a route might
+// want is reached through a module, not through the loader.
+const loadModule: (path: string) => Promise<any> = (globalThis as any).__AA_LOAD__;
 
+/** The host's wildcard yields a leading double slash ("//healthz"); collapse it. */
 function normalizePath(p: string): string {
   const abs = String(p).startsWith("/");
-  const parts = String(p).replace(/\\/g, "/").split("/");
-  const out: string[] = [];
-  for (const part of parts) {
-    if (!part || part === ".") continue;
-    if (part === "..") {
-      out.pop();
-      continue;
-    }
-    out.push(part);
-  }
+  const out = String(p)
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((part) => part && part !== ".");
   return (abs ? "/" : "") + out.join("/");
 }
-
-function dirOf(p: string): string {
-  const n = normalizePath(p);
-  const i = n.lastIndexOf("/");
-  return i <= 0 ? "/" : n.slice(0, i);
-}
-
-function resolveSpec(from: string, spec: string): string {
-  if (spec.startsWith("./") || spec.startsWith("../") || spec.startsWith("/")) {
-    return normalizePath(dirOf(from) + "/" + spec);
-  }
-  return spec;
-}
-
-function transformEsm(src: string): { code: string; names: string[]; deps: string[] } {
-  const names: string[] = [];
-  const deps: string[] = [];
-  let code = String(src);
-
-  code = code.replace(/import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]\s*;?/g, (_m, list, spec) => {
-    deps.push(spec);
-    const bind = list
-      .split(",")
-      .map((s: string) => s.trim())
-      .filter(Boolean)
-      .map((n: string) => {
-        const m = n.split(/\s+as\s+/);
-        // `{ exported as local }` -> `{ exported: local }`
-        return m.length === 2 ? `${m[0]}: ${m[1]}` : n;
-      })
-      .join(", ");
-    return `const { ${bind} } = __require(${JSON.stringify(spec)});`;
-  });
-
-  code = code.replace(/import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s*from\s*['"]([^'"]+)['"]\s*;?/g, (_m, ns, spec) => {
-    deps.push(spec);
-    return `const ${ns} = __require(${JSON.stringify(spec)});`;
-  });
-
-  code = code.replace(/import\s+([A-Za-z0-9_$]+)\s*from\s*['"]([^'"]+)['"]\s*;?/g, (_m, name, spec) => {
-    deps.push(spec);
-    return `const ${name} = __require(${JSON.stringify(spec)}).default;`;
-  });
-
-  code = code.replace(/import\s*['"]([^'"]+)['"]\s*;?/g, (_m, spec) => {
-    deps.push(spec);
-    return `__require(${JSON.stringify(spec)});`;
-  });
-
-  code = code.replace(/\bexport\s*\{([^}]*)\}\s*(?:from\s*['"]([^'"]+)['"]\s*)?;?/g, (_m, list, spec) => {
-    const lines: string[] = [];
-    if (spec) deps.push(spec);
-    for (const raw of list.split(",")) {
-      const n = raw.trim();
-      if (!n) continue;
-      const m = n.split(/\s+as\s+/);
-      const local = m[1] || m[0];
-      names.push(local);
-      lines.push(spec ? `const ${local} = __require(${JSON.stringify(spec)})[${JSON.stringify(m[0])}];` : m[1] ? `const ${local} = ${m[0]};` : ``);
-    }
-    return lines.filter(Boolean).join("\n");
-  });
-
-  code = code.replace(/\bexport\s+default\s+/g, "const __default = ");
-  code = code.replace(/\bexport\s+(async\s+)?function\s+([A-Za-z0-9_$]+)/g, (_m, a, n) => {
-    names.push(n);
-    return `${a || ""}function ${n}`;
-  });
-  code = code.replace(/\bexport\s+(const|let|var)\s+([A-Za-z0-9_$]+)/g, (_m, k, n) => {
-    names.push(n);
-    return `${k} ${n}`;
-  });
-
-  return { code, names, deps };
-}
-
-async function loadModule(path: string): Promise<any> {
-  const key = normalizePath(path);
-  if (MODULE_CACHE[key]) return MODULE_CACHE[key];
-  const src: string = await fs.readFile(key);
-  const { code, names, deps } = transformEsm(src);
-  for (const dep of deps) await loadModule(resolveSpec(key, dep));
-  const exports: Record<string, any> = {};
-  const assign = names
-    .map((n) => `try { __exports[${JSON.stringify(n)}] = typeof ${n} !== "undefined" ? ${n} : undefined; } catch (e) {}`)
-    .join("\n");
-  const factory = new Function("__require", "__exports", code + "\n" + assign);
-  factory((spec: string) => MODULE_CACHE[resolveSpec(key, spec)], exports);
-  MODULE_CACHE[key] = exports;
-  return exports;
-}
-
 async function app(): Promise<any> {
   const g: any = globalThis as any;
   // Optional per-deployment business identity; defaults to the legacy values in DEFAULT_BUSINESS.

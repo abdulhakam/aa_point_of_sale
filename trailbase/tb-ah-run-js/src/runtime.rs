@@ -169,6 +169,148 @@ pub fn map_js_result(res: Result<String, rquickjs::Error>) -> anyhow::Result<Str
     }
 }
 
+// ── The route prelude ────────────────────────────────────────────────────────────────────
+//
+// The module loader, injected into EVERY route before the route's own code runs. It used to live
+// inside `ahscripts/routes/_app/route.ts`, so only that one file could use it — and a route entry
+// that reached for a shared module with `import` failed in the guest with `Unexpected token '{'`,
+// because a route file is type-stripped by SWC and then ESM-rewritten by a regex shim and that
+// composition does not survive an import statement.
+//
+// GENERATED. Source: route.ts lines 20-131, lifted verbatim with only the type annotations
+// removed. Regenerate rather than edit — see the header of the generator.
+pub const ROUTE_PRELUDE: &str = r##"// ── injected by the host into every route ────────────────────────────────────────────────
+//
+// The module loader, injected by `tb-ah-run-js` `run_route()` BEFORE the route's own code.
+//
+// It used to live inside `ahscripts/routes/_app/route.ts`, which meant only that one file could use
+// it — and a route entry that reached for a shared module with `import` failed in the guest with
+// `Unexpected token '{'`, because a route file is type-stripped by SWC and then ESM-rewritten by a
+// regex shim, and that composition does not survive an import statement. Injecting the loader here
+// gives every route entry a loader as a global: no ESM, no import, and no second copy of it.
+//
+// The body below is route.ts's, verbatim, with only the type annotations removed.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+(function () {
+  const g = globalThis;
+  if (g.__AA_LOAD__) return; // already installed in this context
+  const MODULE_CACHE = (()=> {
+    const g = globalThis;
+    if (!g.__AA_MODS__) g.__AA_MODS__ = {};
+    return g.__AA_MODS__;
+  })();
+
+  function normalizePath(p) {
+    const abs = String(p).startsWith("/");
+    const parts = String(p).replace(/\\/g, "/").split("/");
+    const out = [];
+    for (const part of parts) {
+      if (!part || part === ".") continue;
+      if (part === "..") {
+        out.pop();
+        continue;
+      }
+      out.push(part);
+    }
+    return (abs ? "/" : "") + out.join("/");
+  }
+
+  function dirOf(p) {
+    const n = normalizePath(p);
+    const i = n.lastIndexOf("/");
+    return i <= 0 ? "/" : n.slice(0, i);
+  }
+
+  function resolveSpec(from, spec) {
+    if (spec.startsWith("./") || spec.startsWith("../") || spec.startsWith("/")) {
+      return normalizePath(dirOf(from) + "/" + spec);
+    }
+    return spec;
+  }
+
+  function transformEsm(src) {
+    const names = [];
+    const deps = [];
+    let code = String(src);
+
+    code = code.replace(/import\s*\{([^}]*)\}\s*from\s*['"]([^'"]+)['"]\s*;?/g, (_m, list, spec)=> {
+      deps.push(spec);
+      const bind = list
+        .split(",")
+        .map((s)=> s.trim())
+        .filter(Boolean)
+        .map((n)=> {
+          const m = n.split(/\s+as\s+/);
+          // `{ exported as local }` -> `{ exported: local }`
+          return m.length === 2 ? `${m[0]}: ${m[1]}` : n;
+        })
+        .join(", ");
+      return `const { ${bind} } = __require(${JSON.stringify(spec)});`;
+    });
+
+    code = code.replace(/import\s*\*\s*as\s+([A-Za-z0-9_$]+)\s*from\s*['"]([^'"]+)['"]\s*;?/g, (_m, ns, spec)=> {
+      deps.push(spec);
+      return `const ${ns} = __require(${JSON.stringify(spec)});`;
+    });
+
+    code = code.replace(/import\s+([A-Za-z0-9_$]+)\s*from\s*['"]([^'"]+)['"]\s*;?/g, (_m, name, spec)=> {
+      deps.push(spec);
+      return `const ${name} = __require(${JSON.stringify(spec)}).default;`;
+    });
+
+    code = code.replace(/import\s*['"]([^'"]+)['"]\s*;?/g, (_m, spec)=> {
+      deps.push(spec);
+      return `__require(${JSON.stringify(spec)});`;
+    });
+
+    code = code.replace(/\bexport\s*\{([^}]*)\}\s*(?:from\s*['"]([^'"]+)['"]\s*)?;?/g, (_m, list, spec)=> {
+      const lines = [];
+      if (spec) deps.push(spec);
+      for (const raw of list.split(",")) {
+        const n = raw.trim();
+        if (!n) continue;
+        const m = n.split(/\s+as\s+/);
+        const local = m[1] || m[0];
+        names.push(local);
+        lines.push(spec ? `const ${local} = __require(${JSON.stringify(spec)})[${JSON.stringify(m[0])}];` : m[1] ? `const ${local} = ${m[0]};` : ``);
+      }
+      return lines.filter(Boolean).join("\n");
+    });
+
+    code = code.replace(/\bexport\s+default\s+/g, "const __default = ");
+    code = code.replace(/\bexport\s+(async\s+)?function\s+([A-Za-z0-9_$]+)/g, (_m, a, n)=> {
+      names.push(n);
+      return `${a || ""}function ${n}`;
+    });
+    code = code.replace(/\bexport\s+(const|let|var)\s+([A-Za-z0-9_$]+)/g, (_m, k, n)=> {
+      names.push(n);
+      return `${k} ${n}`;
+    });
+
+    return { code, names, deps };
+  }
+
+  async function loadModule(path) {
+    const key = normalizePath(path);
+    if (MODULE_CACHE[key]) return MODULE_CACHE[key];
+    const src = await fs.readFile(key);
+    const { code, names, deps } = transformEsm(src);
+    for (const dep of deps) await loadModule(resolveSpec(key, dep));
+    const exports = {};
+    const assign = names
+      .map((n)=> `try { __exports[${JSON.stringify(n)}] = typeof ${n} !== "undefined" ? ${n} : undefined; } catch (e) {}`)
+      .join("\n");
+    const factory = new Function("__require", "__exports", code + "\n" + assign);
+    factory((spec)=> MODULE_CACHE[resolveSpec(key, spec)], exports);
+    MODULE_CACHE[key] = exports;
+    return exports;
+  }
+
+
+  g.__AA_LOAD__ = loadModule;
+  g.__AA_TRANSFORM_ESM__ = transformEsm;
+})();"##;
+
 pub async fn run_route(path: &str, method: &str, req: serde_json::Value) -> anyhow::Result<serde_json::Value> {
     // Read every time (edits stay live); transpile only when the content changed.
     let raw_code = fs::read_to_string(path)?;
@@ -178,8 +320,20 @@ pub async fn run_route(path: &str, method: &str, req: serde_json::Value) -> anyh
     let req_json = serde_json::to_string(&req)?;
     
     // Wrapper to execute the specific method
+    //
+    // `ROUTE_PRELUDE` runs BEFORE the route's own code, so every route entry has `__AA_LOAD__` — the
+    // module loader — as a global. That is what lets a route reach a shared module without an `import`,
+    // which a route file cannot carry (see the constant's comment), and it is why most routes will
+    // need no JavaScript at all.
+    //
+    // It is an IIFE that returns early when `__AA_LOAD__` already exists, so the per-context cost is one
+    // closure on the first route and nothing on the rest.
     let wrapper = format!(
         r#"
+        (function () {{
+          {prelude}
+        }})();
+
         {code}
         
         (async () => {{
@@ -191,6 +345,7 @@ pub async fn run_route(path: &str, method: &str, req: serde_json::Value) -> anyh
             return JSON.stringify(res);
         }})()
         "#,
+        prelude = ROUTE_PRELUDE,
         code = code,
         method = method
     );

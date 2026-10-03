@@ -255,21 +255,27 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
      id must be well-formed all the way down, or the gate tests the codec instead of the route. It is
      now a real UUIDv7 in base64.
 
-  #### BLOCKED on the loader, not on the plan
+  #### UNBLOCKED 2026-10-03 — the loader moved into the host
 
-  Step 5 needs the dispatcher's ~630 lines of infrastructure (`ctx.js`) extracted before any route can
-  move, because a route folder's handler cannot close over this file's locals. That extraction was built,
-  reviewed as a diff (**every hunk an annotation, nothing else** — after the stripper had silently eaten
-  the English word "as" in six comments), and then **reverted**: a repointed `route.ts` that reaches
-  `ctx.js` with an ESM `import` transforms cleanly in Node and fails in the guest with
-  `Unexpected token '{'` on every route. Full analysis, the three dead ends, and the four ways out:
-  [[esm-import-in-a-route-ts-does-not-survive-the-loader]].
+  Step 5 needs a route folder's handler to reach shared code, and that was blocked: the module loader
+  lived *inside this file*, so no other route could have it, and a repointed `route.ts` reaching a
+  shared module with an ESM `import` fails in the guest with `Unexpected token '{'`. Full analysis
+  and the dead ends: [[esm-import-in-a-route-ts-does-not-survive-the-loader]].
 
-  The blocker is a property of the guest's two-stage loader (SWC on the entry file, then a regex ESM
-  shim), not of the app. The most promising fix is a self-contained `app/lib/loader.js` with a small
-  bootstrap in `route.ts`; nothing found here rules it out, it simply is not built.
+  **The fix was not to make `import` work — it was to notice the loader was trapped in one file.**
+  `tb-ah-run-js`'s `run_route()` now prepends a generated `ROUTE_PRELUDE` to every route, which
+  installs `globalThis.__AA_LOAD__` and `__AA_TRANSFORM_ESM__`. So:
 
-  Two findings from the attempt stand on their own:
+  - **every route entry has a loader**, with no `import` and no local copy — which also removes the
+    reason a route file cannot carry ESM, since it no longer needs to;
+  - `route.ts` shrank by **112 lines** (2,204 → 2,114) and keeps one line for the loader;
+  - verified by a probe route with **no import and no local loader** that loaded two shared modules and
+    called into them.
+
+  This is also the shape step 5 wants, given the direction of **fewer JS files and more manifests**: a
+  route that needs one helper calls `__AA_LOAD__("/app/lib/x.js")`, and most routes need none.
+
+  Two findings from the extraction attempt stand on their own:
 
   - **`route.ts` has a collapsed line** — `parsePairs` has two statements on one physical line, the
     same defect the vault documents had ([[three-reference-docs-lost-their-line-structure]]).

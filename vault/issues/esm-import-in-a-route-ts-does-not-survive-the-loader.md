@@ -1,9 +1,10 @@
 ---
 title: An ESM import in a route.ts does not survive the guest's loader
 type: issue
-status: open
+status: fixed
 severity: high
 created: 2026-10-03
+updated: 2026-10-03
 tags: [guest, loader, esm, transform, route-ts, tb-0030, blocker]
 belongs_to: "[[tb-0030-retire-the-route-ts-dispatcher]]"
 related_to: ["[[tb-0032-manifest-first-refactor]]", "[[esm-shim-rewrites-text-inside-comments]]", "[[guest-helpers-pure-vs-cached]]", "[[vault-code-drift-audit-2026-10-03]]"]
@@ -11,8 +12,45 @@ related_to: ["[[tb-0032-manifest-first-refactor]]", "[[esm-shim-rewrites-text-in
 
 # An ESM import in a route.ts does not survive the guest's loader
 
-**Found 2026-10-03.** This is the blocker on tb-0030 steps 5 and 6, and it is a property of the guest's
-two-stage loader rather than of anything in the app.
+**Found and FIXED 2026-10-03, by moving the loader rather than working around it.**
+
+> ## The fix
+>
+> The loader — `MODULE_CACHE`, `transformEsm`, `loadModule`, `normalizePath`, `dirOf`, `resolveSpec` —
+> was **~110 lines of JavaScript living inside `ahscripts/routes/_app/route.ts`**, so only that one file
+> could use it. That is the actual defect. Everything else follows from it:
+>
+> - A route entry could not `import` a shared module, because `route.ts` is type-stripped by SWC and
+>   *then* ESM-rewritten by a regex shim, and that composition does not survive an import statement.
+> - Anything that wanted the loader had to live *inside* route.ts, which is why the shared context was
+>   heading for a second JS module — **more** files, the opposite of the direction we want.
+>
+> So the loader moved **into the host**: `tb-ah-run-js`'s `run_route()` now prepends a `ROUTE_PRELUDE`
+> constant to every route, which installs a deliberately small surface on `globalThis`:
+>
+> ```js
+> g.__AA_LOAD__ = loadModule;
+> g.__AA_TRANSFORM_ESM__ = transformEsm;
+> ```
+>
+> Consequences:
+>
+> - **Every route entry has a loader**, with no `import` and no local copy. `route.ts` shrank by **112
+>   lines** (2,204 → 2,114) and kept one line: `const loadModule = globalThis.__AA_LOAD__`.
+> - Verified by a probe route with **no import and no local loader** that loaded two shared modules and
+>   called into them: `loader ok; reports=14; sections=0`.
+> - `route-snapshot` 49 routes / 0 erroring, `route-coverage` **77/77**, `guest-smoke` passing in full.
+>
+> This is also the shape the rest of the programme wants. With the loader available to every route, a
+> route that needs one helper calls `__AA_LOAD__("/app/lib/x.js")`, and **most routes need no
+> JavaScript at all** — which is what makes "fewer JS files, more manifests" achievable rather than
+> blocked. See [[tb-0030-retire-the-route-ts-dispatcher]].
+>
+> The prelude is **generated** from `route.ts` lines 20–131 with only the type annotations removed, and
+> the generator asserts its own output: `node --check`, zero remaining annotations, and that a known
+> comment survived intact.
+
+The rest of this note is the diagnosis, kept because the failure mode is the lesson.
 
 ## What happens
 
@@ -61,41 +99,52 @@ Three rounds went into this. Two were my own probe lying to me, and both are wor
 
 ## What would fix it
 
-Not yet attempted, and each option costs something:
+**The fourth option is the one that was built**, by moving the loader into the host — see the top of this
+note. The others are kept because the reasoning still applies the next time a route needs something the
+loader does not provide.
 
-| Option | Cost |
+| Option | Status |
 |---|---|
-| **Split the loader out** — `app/lib/loader.js`, self-contained, and give `route.ts` a ~10-line bootstrap that reads and `eval`s it | The loader then loads itself, which is fine, and `ctx.js` imports it normally. Adds one indirection. **Most promising.** |
-| **Keep the loader in `route.ts`** and have `ctx.js` take it from `globalThis.__AA_LOAD__`, set before use | Explicit one-line ordering; but a route folder importing `ctx.js` would then depend on the dispatcher having been loaded. **Wrong direction** — route folders must work without it. |
-| **Apply SWC inside `loadModule`** for `.ts` files | The honest fix: `transformEsm` would then need to handle typed input, or the host would expose a strip step to the guest. A Rust change plus a guest change. |
-| **Stop using `import` in route files**; require `loadModule` calls | Works today, at the cost of the thing the split is for. |
+| **Move the loader into the host** — `run_route()` prepends it to every route | **DONE.** ~112 lines leave `route.ts`, every route gets a loader, no ESM needed anywhere |
+| **Split the loader out** — `app/lib/loader.js`, self-contained, with a ~10-line bootstrap in `route.ts` | Superseded. It solves the same problem and leaves the loader reachable only from the dispatcher, which is the wrong direction: a route folder must work without the dispatcher |
+| **Keep the loader in `route.ts`** and hand it to `ctx.js` via `globalThis.__AA_LOAD__` set before use | Same wrong direction as above — it makes every consumer depend on the dispatcher having loaded first |
+| **Apply SWC inside `loadModule`** for `.ts` files | The principled version, and still the one to do if something else needs the loader to be transparent to `import`. `transformEsm` would then have to cope with typed input, or the host would expose a strip step to the guest |
+| **Stop using `import` in route files**; require `loadModule` | Unnecessary once the host injects the loader — `__AA_LOAD__` is one call and needs no import |
 
-The first option is the one to try. It is not blocked by anything found here — only by not having been
-built.
+The third option — applying SWC inside `loadModule` — is the honest long-term fix and is **not** done.
+It was not needed here because moving the loader out of `route.ts` solves the actual problem, which was
+that the loader was trapped in one file rather than that `import` was unsupported.
 
-## What was reverted
+## What was reverted, and what survived
 
-The extraction itself: `app/lib/ctx.js` (the 630-line shared context) and the repointed `route.ts`.
-Both are gone; `route.ts` is back to 2,203 lines from `HEAD` and the gate is green.
+Reverted: the first extraction attempt — `app/lib/ctx.js` (the 630-line shared context) and a
+repointed `route.ts` that reached it with ESM. That path was abandoned for two reasons: it produced
+**more** JavaScript, which is the opposite of the direction we want, and it could not be made to load.
 
-Kept from the attempt, because both are worth having regardless of whether the split proceeds:
+Kept, because all three stand on their own:
 
 - **`tools/route-coverage.mjs` + `route-inventory.json`** — 77 routes, GET and POST, 77 reachable. The
-  gate steps 5 and 6 need, and the thing that makes them safe. Already committed.
-- **The findings about `route.ts` itself:** it has a collapsed line (two statements on one physical line,
-  `parsePairs`), the same defect the vault documents had, and `route.ts:54`'s `transformEsm` supports
-  only `export { a }` and `export { a as b } from "…"`, not a plain `export { a, b }` with aliases.
+  gate steps 5 and 6 need, and the thing that makes them safe.
+- **The loader move**, which is the actual fix and required no extraction at all: the loader left
+  `route.ts` and went into the host. That is what unblocks the split.
+- **Two findings about `route.ts` itself:** it has a **collapsed line** — `parsePairs` has two
+  statements on one physical line, the same defect the vault documents had
+  ([[three-reference-docs-lost-their-line-structure]]) — and `transformEsm`'s `export { … }` support is
+  **partial**: it handles `export { a }` and `export { a as b } from "…"`, but a plain aliased list like
+  `export { a as b, c }` emits code only for the aliased entries and silently drops the rest.
 
-## The lesson, again
+## The lesson, twice over
 
-Three times this session a check that could not run has cost more than the change it was guarding:
-five harnesses that had never authenticated, a route snapshot that had been snapshotting redirects, and
-now a loader combination that no local check could reproduce. **A gate is only worth what it can
-actually execute**, and "it passes here" means nothing when the production path differs — here by one
-transform pass.
+Three times this session a check that could not run has cost more than the change it guarded: five
+harnesses that had never authenticated, a route snapshot that had been snapshotting redirects, and a
+loader combination no local check could reproduce. **A gate is only worth what it can actually
+execute**, and "it passes here" means nothing when the production path differs — here by one transform
+pass.
 
-The compensating control that did work: `route-coverage.mjs` proved 77/77 on the reverted tree, which is
-what made the revert safe and left no question about whether the working state still holds.
+And the diagnosis was wrong in an instructive way. I concluded "SWC breaks ESM imports" from the
+*absence* of a local reproduction, not from evidence, and said so at the time. The real cause was one
+level up: the loader was trapped in a single file. Fixing that fixed the import problem **and** removed
+112 lines of JavaScript, where chasing the import would have fixed neither.
 
 ## Related
 
