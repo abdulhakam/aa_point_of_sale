@@ -28,6 +28,40 @@ files are the supported entry points.
 > - **The smoke count is no longer hard-coded here.** It used to read "The current figure is 76/76",
 >   which was already wrong when written. See [[smoke-count-is-not-a-hard-coded-number]].
 
+## How a report is served (manifest-first, since 2026-10-03)
+
+There is **no report registry in JavaScript**. Each report page's `meta.json` declares everything the
+report is, next to the page it renders:
+
+```json
+"compute": { "report": "paymentsbycompany" },
+"spool": {
+  "sql":    "payments_by_company.sql",     // under app/reports/sql/reports/
+  "binds":  { "agg": "difference" },        // report CONSTANTS the statement binds but no caller sends
+  "row":    ["id", "date", "type", ...],    // SELECT order — a contract the host asserts on width
+  "totals": { "cents": { ... }, "derived": { ... } }
+}
+```
+
+`app/lib/spoolreports.js` is a **loader**: it walks `app/pages/**/meta.json` through the host `fs`
+global, builds the registry once, caches it, and then does what it always did — read the `.sql` file the
+manifest names, bind the statement's own parameters, hand the spool key to the renderer. `names()` and
+`totalsSpec()` are async because the registry is built on first use.
+
+What this removed: the hand-written `REPORTS` table (14 entries of `sql`, `cols` and totals rules) and
+four shared SQL fragments — `PAY`, `SALES`, `BYCOMPANY`, `ITEMSALES` — which existed because three
+reports share `payments.sql` *and* its totals buckets. Those buckets now live in each manifest.
+
+Two consequences worth knowing before editing anything:
+
+- **The `.sql` file's SELECT order and `spool.row` are a contract.** `db::query` returns positional
+  vectors with no column metadata, so a forgotten or reordered column is a loud error, never a
+  mislabelled cell. `tools/sync-manifests.mjs` regenerates `spool.row` from the statement.
+- **`binds` is not a user filter.** `salesOnly` (`salesreport`, "unpaid recieving/return only") and `agg`
+  (`stockreport` vs `difference`, which share one statement) describe the *report*. Omitting one leaves
+  the statement unrestricted, so only the row count changes — which reads as a data defect rather than a
+  missing bind.
+
 ## Start order
 
 ```text
