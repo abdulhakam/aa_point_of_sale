@@ -6,7 +6,7 @@
 //   write()      a write must invalidate the report snapshot, or the next report is stale
 //                ([[reports.no_precomputation]]). It was enforced by remembering to add
 //                `A.service.invalidate()` after every mutation; this makes it the call's type.
-//   refs()       `getViews(["refs"])` then null-coalesce each list a template wants.
+//   refs()       the reference lists from `app/sql/refs.sql`, null-coalesced for a template.
 //   renderRoute() the `page(req, shell(user, active, title), tpl, data)` triple-nest.
 //   hex/b64      the base64/hex pair, which must agree with itself.
 //
@@ -19,7 +19,7 @@
 // Base64 is 3 bytes -> 4 sextets and the final partial group is PADDED, not filled: a 16-byte id
 // is 22 characters plus "=". Verified: 01A0EBFD3E2176D294C5C5797E90A6E5 -> AaDr_T4hdtKUxcV5fpCm5Q
 
-import { getViews, invalidate, fingerprint } from "./reports.js";
+import { invalidate, fingerprint } from "./reports.js";
 import * as refsModule from "./refs.js";
 import { page } from "./http.js";
 

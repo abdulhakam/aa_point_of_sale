@@ -466,27 +466,71 @@ async function prelude() {
   return preludeCache;
 }
 
+/**
+ * The base tables a report's own composed statement reads.
+ *
+ * This replaces `tablesForViews(manifest.needs.views)`, which asked a hand-written provenance map in
+ * `compute/views.js` which base tables a named view needed. That map described a world where reports
+ * read derived views; they now read base tables through the prelude, so the honest answer is "whatever
+ * this statement names" — which is both accurate and self-maintaining, where the map was neither once
+ * the reports stopped using it.
+ *
+ * CTE names are excluded, so `stock_deltas` does not read as a table. `FROM (` (a subquery) matches
+ * nothing, because the pattern requires a word character.
+ *
+ * Used only by `/bench/report`, which measures what a component split would have to acquire. That is a
+ * benchmark question, not a correctness one.
+ */
+export async function tablesForReport(name) {
+  const { sql } = await sqlFor(name);
+  // Strip comments before scanning. The prelude documents its own provenance in prose, and a
+  // "-- … FROM the … AS (…" line parses as perfectly good SQL: the first version of this read the
+  // statement unstripped and answered `[…, sections, the, transactions_report]`.
+  const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/--[^\n]*/g, " ");
+  const composed = strip(sql);
+
+  // CTE names come from the COMPOSED statement, because most of them are defined in the prelude.
+  const ctes = new Set();
+  for (const m of composed.matchAll(/(?:^|[,\s])([\w$]+)\s+AS\s*\(/g)) ctes.add(m[1]);
+
+  // The base tables come from the report's OWN body, not the composed statement — and that distinction
+  // is the whole point. The prelude is shared, so scanning the composed statement reports the prelude's
+  // table set for EVERY report (all ten answers came back identical: areas, companies, expenses,
+  // invoices, items, order_bookers, parties, payments, sections, transactions). That is true and
+  // useless: `/bench/report` exists to measure what a report costs BEYOND the common query, which is a
+  // per-report property. So this is the report's own extra acquisition, with prelude-defined CTEs
+  // filtered out so `FROM stock_deltas` does not read as a table.
+  const own = strip(String(await fs.readFile(`${DIR}/${specFor(name).sql}`)));
+  const tables = new Set();
+  for (const m of own.matchAll(/\b(?:FROM|JOIN)\s+([\w$]+)/gi)) {
+    if (!ctes.has(m[1])) tables.add(m[1]);
+  }
+  return [...tables].sort();
+}
+
+/**
+ * Compose a statement onto the shared prelude.
+ *
+ * Exported because `app/lib/baseviews.js` needs the same composition for `items_report.sql`, and a
+ * second copy of this rule is a second copy that can be subtly wrong — the failure it guards against is
+ * a `near "SELECT"` parse error that points at the wrong line. One implementation, two callers.
+ */
+export async function composeStatement(body) {
+  const text = String(body).trim();
+  const withoutLeadComment = text.replace(/^((?:\s*--[^\n]*\n)+)\s*/, "$1");
+  const opensWithCte = /^\s*,?\s*[\w$]+\s+AS\s*\(/.test(withoutLeadComment);
+  return (await prelude()) + (opensWithCte ? ",\n" : "\n") + (opensWithCte
+    ? text.replace(/^((?:\s*--[^\n]*\n)+)\s*,\s*/, "$1")
+    : text);
+}
+
 /** The composed statement for a report: the shared prelude plus the report's own body. */
 async function sqlFor(name) {
   await registry();
   const spec = specFor(name);
   if (!spec) throw new Error(`No spooled report: ${name}`);
   if (!sqlCache.has(name)) {
-    const body = String(await fs.readFile(`${DIR}/${spec.sql}`)).trim();
-    // The body continues the prelude's WITH clause. Two shapes exist:
-    //   - it opens with its own CTEs, `name AS (...)` ... then a SELECT. Join them with a comma.
-    //   - it contributes only a final SELECT (ledger_booker.sql). No comma, or the prelude's last
-    //     CTE ends up dangling: `... AS (...), SELECT` -> `near "SELECT"`.
-    //
-    // The CTE marker may sit after the header comments AND blank lines. The strip below allows
-    // whitespace between them, because requiring adjacency left a `, name AS (` unstripped whenever a
-    // blank line separated the comment block — and the report then failed to parse with the same
-    // `near "SELECT"` as a missing comma, pointing at the wrong cause.
-    const withoutLeadComment = body.replace(/^((?:\s*--[^\n]*\n)+)\s*/, "$1");
-    const opensWithCte = /^\s*,?\s*[\w$]+\s+AS\s*\(/.test(withoutLeadComment);
-    sqlCache.set(name, (await prelude()) + (opensWithCte ? ",\n" : "\n") + (opensWithCte
-      ? body.replace(/^((?:\s*--[^\n]*\n)+)\s*,\s*/, "$1")
-      : body));
+    sqlCache.set(name, await composeStatement(await fs.readFile(`${DIR}/${spec.sql}`)));
   }
   return { spec, sql: sqlCache.get(name) };
 }

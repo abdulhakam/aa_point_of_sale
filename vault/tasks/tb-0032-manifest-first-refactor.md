@@ -161,7 +161,91 @@ hand-picked list is a list that will miss the next field.
 | `guest-smoke.mjs` | **every check passes** — see [[smoke-count-is-not-a-hard-coded-number]] rather than a figure |
 | migration fidelity | 14/14 entries identical on all five fields |
 
-### 3. Delete the JavaScript view layer
+### 3. Delete the JavaScript view layer — **the live consumers are gone (2026-10-03)**
+
+Four call sites still asked `app/lib/reports.js` `getViews([...])`. Two of them wanted data, and two
+wanted only the snapshot's `version` counter:
+
+| Call site | What it actually used | Now |
+|---|---|---|
+| `/dashboard` | `counts` — eleven row counts | `A.baseviews.counts()` → `app/sql/counts.sql` |
+| `/invoice/context` | `itemsReport` rows | `A.baseviews.itemsReport()` → `app/reports/sql/items_report.sql` |
+| `/inventory` | `itemsReport` rows | `A.baseviews.itemsReport()` |
+| `/p/<slug>/data` | **only** `snap.version` for the ETag | `A.service.dataVersion()` |
+
+`app/lib/baseviews.js` serves the first two. It is deliberately **not** a report page — no manifest, no
+render, no totals block — but `sqlite.all` returns positional arrays with no column metadata, so it
+names each statement's columns in SELECT order and `columnsToObjects()` **refuses a width mismatch**. A
+statement that gains or loses a column is a loud error, not a row of shifted values.
+
+`items_report.sql` reuses the prelude's `stock_deltas` rather than re-deriving the sign rules. Re-deriving
+them would create a third copy of the arithmetic and a way for two to disagree — which is the failure
+class this task exists to remove.
+
+#### The version counter was wrong twice
+
+`/p/<slug>/data` and `/invoice/context` keyed their ETags on the snapshot's in-memory version **counter**.
+It ticked when the refresh job ran, not when the data changed, and it was per-process, so two runtime
+threads disagreed. Both now key on the data **fingerprint**, folded to a 31-bit FNV-1a —
+`A.service.dataVersion()`. `version` stays a **number**, which is the shape `/p/<slug>/data` has always
+published. (Slicing the fingerprint string instead produced `"[[\"areas\",\"0"` — a double-encoded JSON
+fragment — in both a payload and an ETag.)
+
+`/p/<slug>/data` also stopped hydrating the views its manifest declared. Nothing in that route used the
+snapshot except the version: the rows come from `spooled.jsonPayload`, which reads base tables through
+the prelude. The server log no longer shows `[mview] hydrate 3/3 views` on that route.
+
+#### `/bench/report`
+
+Kept — `tb-0030` says so and `tools/split-bench.mjs` calls it. But its table list came from
+`A.views.tablesForViews(page.needs.views)`, a hand-written provenance map naming views that are no longer
+a layer. It now derives the answer from the SQL, in two steps that were both wrong first:
+
+- Scanning the **composed** statement answers correctly but uselessly: the prelude is shared, so all ten
+  reports returned the identical set (areas, companies, expenses, invoices, items, order_bookers, parties,
+  payments, sections, transactions). True, and not a per-report property.
+- Scanning the **report's own body** is the per-report answer, with prelude-defined CTE names filtered out
+  so `FROM stock_deltas` does not read as a table:
+
+  ```text
+  profit         -> [areas, companies, items, order_bookers, parties, sections]
+  payments       -> [areas, order_bookers, parties, sections]
+  stockreport    -> [companies, items]
+  difference     -> [companies, items]
+  ledgers/general -> []
+  ```
+
+- Comments must be stripped **before** scanning. The prelude documents its own provenance in prose, and a
+  `-- … FROM the … AS (…)` line parses as perfectly good SQL: the first version answered
+  `[…, sections, the, transactions_report]`, where `the` came from a comment and `transactions_report`
+  from a CTE it could not see.
+
+#### Gate
+
+| Check | Result |
+|---|---|
+| `verify-spool-reports.mjs` | **14 passed, 0 failed**, 72 binds verified |
+| `route-snapshot.mjs` | 49 routes, **0 erroring**; no `mview` hydration |
+| diff vs baseline | 1 line: `page profit data` `version=0` → `627931119` (the fingerprint-derived version) |
+| `guest-smoke.mjs` | every check passes |
+
+#### What is NOT yet done
+
+`app/compute/views.js` **still exists** and is still loaded by `route.ts`. Nothing in the running app
+calls it — `getViews` is now an unused import in `route-kit.js` (removed) and `A.views.*` has no
+caller. Two consumers remain, and both are verification, not application:
+
+- `tools/verify-prelude.mjs` genuinely uses six builders. It is the only check that the prelude's CTEs
+  still match the arithmetic they were ported from, so deleting the builders **deletes the reference**.
+- `tools/verify-spool-reports.mjs` imports six builders and **never calls them** — a dead import left
+  from when the gate was a JS-vs-SQL differential. It can simply be deleted.
+
+So the remaining step is to **move** the builders to `trailbase/tools/_src/` — where a parity fixture
+belongs, rather than shipping to the guest as application code — and repoint `verify-prelude.mjs`. Not
+delete them: `verify-prelude.mjs` still has value, and exact parity being waived
+([[legacy-parity-checks-waived]]) is not the same as the SQL being unchecked.
+
+### 4. Serve at least one page through a manifest-declared handlers directory
 
 ## Risks, named
 

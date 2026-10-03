@@ -150,7 +150,7 @@ async function app(): Promise<any> {
   const modules = {
     format: await loadModule("/app/compute/format.js"),
     ids: await loadModule("/app/compute/ids.js"),
-    views: await loadModule("/app/compute/views.js"),
+    views: await loadModule("/app/compute/views.js"), // slated for deletion in tb-0032 step 3; no runtime consumer remains
     entities: await loadModule("/app/lib/entities.js"),
     data: await loadModule("/app/lib/data.js"),
     pages: await loadModule("/app/lib/pages.js"),
@@ -176,6 +176,10 @@ async function app(): Promise<any> {
     // `app/reports/sql/reports/*.sql`, run through the spool. There is no JavaScript
     // implementation of any report left to fall back to.
     spooled: await loadModule("/app/lib/spoolreports.js"),
+    // The two derived reads the app still needs, as SQL: the dashboard counts and the item rows behind
+    // invoice entry and /inventory. These replace the last live callers of the JavaScript view layer
+    // (tb-0032 step 3) — `app/compute/views.js` has no runtime consumer once this is loaded.
+    baseviews: await loadModule("/app/lib/baseviews.js"),
     http: await loadModule("/app/lib/http.js"),
     renderClient: await loadModule("/app/lib/render-client.js"),
     reportPages: await loadModule("/app/lib/report-pages.js"),
@@ -506,13 +510,16 @@ async function dispatch(req: any): Promise<any> {
 
     let tables: string[] = [];
     try {
-      // The manifest declares the views a report needs — it is the one page definition, and it
-      // replaced the input list the retired JS engine used to carry.
-      const page = (await A.pages.reportPages(PAGES_DIR))[key];
-      if (!page) return { error: "unknown report: " + key };
-      tables = A.views.tablesForViews(page.needs.views).slice().sort();
+      // Which base tables this report touches, read from its own composed statement. It used to be
+      // `A.views.tablesForViews(page.needs.views)` — a hand-written provenance map naming views that no
+      // longer exist as a layer (tb-0032 step 3). Deriving it keeps the benchmark honest: it measures
+      // the tables the query really reads, and cannot drift from the SQL.
+      if (!(await A.spooled.names()).includes(key)) return { error: "unknown report: " + key };
+      tables = await A.spooled.tablesForReport(key);
     } catch (e) {
-      return { error: "unknown report: " + key };
+      // Name the failure. The first version returned a bare "unknown report", which sent me looking
+      // for a report that plainly exists — the error was in table derivation, and it said so nowhere.
+      return { error: `bench/report ${key}: ${(e && (e as any).message) || String(e)}` };
     }
 
     const t0 = Date.now();
@@ -923,8 +930,7 @@ if (path === "/login" && method === "GET") {
   }
 
   if (path === "/dashboard") {
-    const snap = await A.service.getViews(["counts"]);
-    const c = snap.views.counts;
+    const c = await A.baseviews.counts();
     const tiles = [
       { label: "Sections", value: c.sections },
       { label: "Areas", value: c.areas },
@@ -1196,9 +1202,7 @@ if (path === "/login" && method === "GET") {
 
   if (path === "/invoice/context" && method === "GET") {
     const type = String(query.type || "sale");
-    const snap = await A.service.getViews(["itemsReport"]);
-    const refs = await A.refs.refs(await A.service.fingerprint());
-    const items = (snap.views.itemsReport ?? []).map((r: any) => ({
+    const items = (await A.baseviews.itemsReport()).map((r: any) => ({
       id: r.id, name: r.name, category: r.category, box_size_qty: r.box_size_qty,
       cost_price: r.cost_price, sale_price: r.sale_price, stock: r.qty,
     }));
@@ -1207,13 +1211,20 @@ if (path === "/login" && method === "GET") {
       const hit = (counts ?? []).find((r: any[]) => Number(r[0]) === code);
       return (hit ? Number(hit[1]) : 0) + 1;
     };
-    const etag = `W/"inv-ctx-${snap.version}-${JSON.stringify(counts)}-${type}"`;
+    const refs = await A.routeKit.refs();
+    // The ETag used to carry the snapshot's in-memory version COUNTER, which ticked when the refresh
+    // job ran rather than when the data changed — so an invoice edited from another tab could leave the
+    // ETag valid. The data fingerprint is what actually determines this payload, and it is already
+    // memoised for 1.5 s, so it is both cheaper and more honest. Nothing reads `version` (checked
+    // against app/public/js and the entry templates), but it stays in the payload for the shape's sake.
+    const version = await A.service.dataVersion();
+    const etag = `W/"inv-ctx-${version}-${JSON.stringify(counts)}-${type}"`;
     const headers = { etag, "cache-control": "private, no-cache" };
     if (String((req.headers && req.headers["if-none-match"]) || "") === etag) {
       return { status: 304, body: "", contentType: "application/json; charset=utf-8", headers };
     }
     const payload = {
-      version: snap.version,
+      version,
       type,
       items,
       parties: refs.parties ?? [],
@@ -1863,10 +1874,9 @@ if (path === "/login" && method === "GET") {
     return redirect("/payments?status=ok");
   }
 
-  if (path === "/inventory" && method === "GET") {
-    const snap = await A.service.getViews(["itemsReport", "refs"]);
-    const refs = await A.routeKit.refs();
-    const rows = A.inventory.stockRows(snap.views.itemsReport ?? [], refs, pick(query.q, ""));
+    if (path === "/inventory" && method === "GET") {
+      const refs = await A.routeKit.refs();
+      const rows = A.inventory.stockRows(await A.baseviews.itemsReport(), refs, pick(query.q, ""));
     const editId = String(query.edit || "");
     return html(
       await A.http.page(req, shell(user, "inventory", "Inventory"), "inventory/index.html", {
@@ -1899,9 +1909,13 @@ if (path === "/login" && method === "GET") {
     const def = await A.pages.readPage(PAGES_DIR, slug);
     if (!def) return text("No such page", 404);
     const filters = await filtersFor(A, def, query);
-    const snap = await A.service.getViews(def.needs.views || []);
-    await A.service.ensureTables(def.needs.tables || []);
-    const etag = `W/"v3-${snap.version}-${encodeURIComponent(JSON.stringify(filters))}"`;
+    // The ETag keys on the DATA fingerprint, not on a snapshot version counter. The rows come from
+    // `spooled.jsonPayload`, which reads base tables through the prelude — nothing here used the view
+    // snapshot except for its version, so hydrating the declared views was pure cost. And the fingerprint
+    // is the honest key: it changes when the data changes, where the counter only ticked when the
+    // refresh job ran.
+    const version = await A.service.dataVersion();
+    const etag = `W/"v3-${version}-${encodeURIComponent(JSON.stringify(filters))}"`;
     const headers: Record<string, string> = {
       etag,
       "cache-control": "private, no-cache",
@@ -1913,8 +1927,9 @@ if (path === "/login" && method === "GET") {
     }
     const reportName = (def.compute && def.compute.report) || null;
     // The rows are spliced into this payload and the whole body is serialised in Rust.
-    const payload: any = { version: snap.version, slug: def.slug, filters, meta: { report: reportName } };
+    const payload: any = { version, slug: def.slug, filters, meta: { report: reportName } };
     if (def.needs.tables.length) {
+      await A.service.ensureTables(def.needs.tables);
       const tables: any = {};
       for (const table of def.needs.tables) tables[table] = A.service.baseTable(table);
       payload.tables = tables;

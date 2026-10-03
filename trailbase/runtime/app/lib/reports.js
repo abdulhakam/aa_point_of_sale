@@ -155,6 +155,29 @@ export async function fingerprint() {
   return currentFingerprint();
 }
 
+/**
+ * Public: a small, stable integer for "which data is this?", for ETags and payloads.
+ *
+ * This replaces the snapshot's in-memory version COUNTER, which is what `/p/<slug>/data` and
+ * `/invoice/context` used to key on. The counter was wrong twice over: it ticked when the refresh job
+ * ran rather than when the data changed, and it was per-process, so two runtime threads disagreed.
+ *
+ * The fingerprint is the honest key — it changes when the data changes — but it is a long JSON string
+ * (`[["areas","0:…"],…]`). Slicing it produced `"[[\"areas\",\"0"` in both an ETag and a JSON payload,
+ * which is double-encoded junk. So it is folded to a 31-bit FNV-1a instead: cheap, no dependency, and
+ * it keeps `version` a NUMBER, which is the shape `/p/<slug>/data` has always published.
+ */
+export async function dataVersion() {
+  const fp = await currentFingerprint();
+  let h = 0x811c9dc5;
+  for (let i = 0; i < fp.length; i++) {
+    h ^= fp.charCodeAt(i);
+    // h *= 16777619, kept in 32-bit range without Math.imul (not guaranteed in this runtime).
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h & 0x7fffffff;
+}
+
 /** Base tables a set of views needs materialised: the declared tables for each JS view. */
 function baseTablesFor(views) {
   const out = new Set();
