@@ -150,7 +150,6 @@ async function app(): Promise<any> {
   const modules = {
     format: await loadModule("/app/compute/format.js"),
     ids: await loadModule("/app/compute/ids.js"),
-    views: await loadModule("/app/compute/views.js"), // slated for deletion in tb-0032 step 3; no runtime consumer remains
     entities: await loadModule("/app/lib/entities.js"),
     data: await loadModule("/app/lib/data.js"),
     pages: await loadModule("/app/lib/pages.js"),
@@ -177,8 +176,8 @@ async function app(): Promise<any> {
     // implementation of any report left to fall back to.
     spooled: await loadModule("/app/lib/spoolreports.js"),
     // The two derived reads the app still needs, as SQL: the dashboard counts and the item rows behind
-    // invoice entry and /inventory. These replace the last live callers of the JavaScript view layer
-    // (tb-0032 step 3) — `app/compute/views.js` has no runtime consumer once this is loaded.
+    // invoice entry and /inventory. These replaced the last live callers of the JavaScript view layer
+    // (tb-0032 step 3), which now lives in `trailbase/tools/_src/legacy-views.js` as a verification fixture.
     baseviews: await loadModule("/app/lib/baseviews.js"),
     http: await loadModule("/app/lib/http.js"),
     renderClient: await loadModule("/app/lib/render-client.js"),

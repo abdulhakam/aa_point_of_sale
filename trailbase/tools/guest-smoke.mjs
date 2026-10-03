@@ -407,19 +407,28 @@ async function main() {
       Array.isArray(fingerprintState?.lastRefresh?.changed) && fingerprintState.lastRefresh.changed.includes("sections"),
       JSON.stringify(fingerprintState?.lastRefresh)
     );
-    // This used to assert `rebuilt` includes "refs", which only held because `refs` was the single
-    // view depending on `sections` — and it is not a view any more (tb-0032 step 1: it is nine base
-    // tables named by app/sql/refs.sql and read by app/lib/refs.js). Asserting the removed detail
-    // would keep the check red for a correct implementation.
+    // This used to assert `rebuilt` includes "refs", then "paymentsInvoicesReport". Both asserted a
+    // VIEW being rebuilt, and there are no views to rebuild any more (tb-0032 step 3 removed the layer):
+    // a report's cost is its SQL, run against current data, so `refresh()` is a probe and a diff and
+    // `rebuilt` is always []. Keeping the assertion would have kept the suite red for a correct
+    // implementation — the same mistake the previous revision of this comment describes, one layer along.
     //
-    // The property worth keeping is the incremental one, and it is now stated against a table the
-    // suite actually wrote that a REPORT view depends on: the seeding run wrote payments, so a
-    // payment-driven view must be in the rebuilt set.
+    // The property still worth asserting is that a refresh is INCREMENTAL and correctly scoped: a write
+    // to `sections` must move the fingerprint, and must not be reported as a change to every table.
     check(
-      "incremental refresh rebuilds the affected views",
-      Array.isArray(fingerprintState?.lastRefresh?.rebuilt) &&
-        fingerprintState.lastRefresh.rebuilt.includes("paymentsInvoicesReport"),
-      JSON.stringify(fingerprintState?.lastRefresh?.rebuilt)
+      "refresh is scoped to what actually changed",
+      Array.isArray(fingerprintState?.lastRefresh?.changed) &&
+        fingerprintState.lastRefresh.changed.includes("sections") &&
+        fingerprintState.lastRefresh.changed.length < 17,
+      JSON.stringify(fingerprintState?.lastRefresh?.changed)
+    );
+    // And that the refresh actually published a fingerprint, rather than leaving the memo stale.
+    // `status().fingerprints` is a COUNT of probed tables, not an array — asserting on the shape
+    // rather than the value is how this read as a failure on a working refresh.
+    check(
+      "refresh publishes a fingerprint for every table it probes",
+      fingerprintState?.fingerprints > 0 && fingerprintState?.ready === true,
+      JSON.stringify(fingerprintState)
     );
     // A regression guard for the swap: `refs` is read through its own loader, so the view service
     // must NOT be rebuilding it. If this fails, something is building refs twice.

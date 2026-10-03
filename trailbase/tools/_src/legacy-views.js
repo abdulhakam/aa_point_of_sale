@@ -1,4 +1,21 @@
 /**
+ * The legacy JavaScript view builders — a VERIFICATION FIXTURE, not application code.
+ *
+ * Moved here from `trailbase/runtime/app/compute/views.js` on 2026-10-03 (tb-0032 step 3). Nothing in
+ * the running application imports this: the last live consumers were `/dashboard`, `/invoice/context`,
+ * `/inventory` and `/p/<slug>/data`, all of which now read SQL. The module lived under `runtime/` — which is
+ * copied into the depot and loaded into the guest — so it was being shipped to every server and
+ * evaluated for no benefit.
+ *
+ * It is kept because `tools/verify-prelude.mjs` compares each prelude CTE against the builder it was
+ * ported from, on row count and on the money fields. That is the only remaining check that the SQL still
+ * computes the legacy arithmetic, so it outlives its role as application code.
+ *
+ * ⚠️ Its own header comments now describe a world where reports read these views. That is correct history
+ * and the wrong present tense; read the module as a reference implementation, not as a live layer.
+ */
+
+/**
  * Derived "views" rebuilt in JavaScript from the TrailBase base tables.
  *
  * These reproduce the PocketBase view SQL preserved verbatim in
@@ -13,8 +30,10 @@
  *  - `transaction_view.profit` is total cost, not margin.
  */
 
-import { num, round2, compareText } from "./format.js";
-import { relId } from "./ids.js";
+// Imported from the RUNTIME, not copied alongside: a second copy of `format.js` is a second answer to "what
+// does round2 do", and the point of moving this fixture out of the app is to stop duplicating things.
+import { num, round2, compareText } from "../../runtime/app/compute/format.js";
+import { relId } from "../../runtime/app/compute/ids.js";
 
 const byId = (rows) => {
   const m = new Map();

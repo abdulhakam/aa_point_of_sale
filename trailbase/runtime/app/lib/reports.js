@@ -1,138 +1,67 @@
-// Guest report service.
-//
-// The Node service keeps a warm snapshot of *all* views, refreshed off the request path. The
-// guest is an interpreter (see vault: ~1M ops/s, ~20s call deadline), so building every view
-// per request is too slow. Instead this builds lazily: only the `viewClosure` a request needs,
-// reading only the base tables those views read, and merges the result into a cached snapshot.
-// `invalidate()` drops the snapshot (management writes call it).
-
-import { TABLES, readTables } from "./data.js";
-import { buildView, viewClosure, tablesForViews, viewsAffectedBy, VIEW_ORDER } from "../compute/views.js";
-import { relId } from "../compute/ids.js";
-
 /**
- * Every view is built by `compute/views.js`.
+ * The data fingerprint, and the refresh job that probes it.
  *
- * There was a second path: `app/lib/sqlviews.js` read `app/reports/sql/views/*.sql` and inlined each
- * one as CTEs, selected per view by the `USE_SQL_VIEWS` flag. It was switched off in commit 5ccebd8
- * because those files are the *legacy* v1 views and they diverge from the JS on fresh invoices — a
- * sale invoice with an empty `dated`, which invoice entry creates. Deleted 2026-10-02: the flag was
- * a constant `false`, so the path was referenced but unreachable, and the `.sql` files it read were
- * the only remaining copy of the legacy definitions.
+ * What this used to be: a 376-line snapshot service that built thirteen derived views in JavaScript and
+ * persisted them to SQLite (`mview` / `mview_meta`) so runtime threads could hydrate them. All of that is
+ * gone as of 2026-10-03 (tb-0032 step 3) — the reports read base tables through `prelude.sql`, and
+ * `app/compute/views.js` moved to `trailbase/tools/_src/legacy-views.js` as a verification fixture.
  *
- * The report SQL that replaced them is `app/reports/sql/prelude.sql` — CTEs composed in front of
- * every spooled statement. The long-term direction is for these JavaScript view builders to go too,
- * leaving `meta.json` to name `.sql` files directly
- * (vault/notes/manifest-first-architecture-gap-2026-10-02.md).
+ * What is left is genuinely small, and the size is the point: what a report costs is now its SQL, and
+ * what "which data is this?" means is a probe of `count:newest updated` per table. That is the whole
+ * remaining job.
+ *
+ * `invalidate()`, `refresh()` and `status()` are kept because they answer questions the app still asks —
+ * "did anything change?", "is the refresh job healthy?", and "is this cached response still valid?".
  */
 
+/**
+ * `TABLES` and `readTables` come from `data.js`, which owns them. The first version of this file
+ * hand-wrote its own seventeen-table list, which is precisely the duplication this task exists to
+ * remove — and it had already drifted: `data.js` carries `party_types`, `invoice_types` and
+ * `payment_types`, and notes that there is no `categories` table at all.
+ */
+import { TABLES, readTables } from "./data.js";
 
-async function buildOne(name, built) {
-  return buildView(name, state.base, built);
+/** Base rows read on demand, for the page payload's `tables` key. Not a cache: a write must show. */
+const base = {};
+
+/** Base tables a page needs, read on demand (used by the page data endpoint). */
+export async function ensureTables(tables) {
+  const missing = (tables || []).filter((table) => base[table] === undefined);
+  if (missing.length) {
+    const rows = await readTables(missing);
+    for (const table of missing) base[table] = rows[table];
+  }
+  return base;
+}
+
+export function baseTable(name) {
+  return base[name] || [];
 }
 
 const state = {
-  base: {},
-  views: {},
-  version: 0,
-  built: [], // view names currently materialised
-  fingerprints: null, // table -> `${count}:${newest updated}`
+  fingerprints: null,
   refreshedAt: null,
   lastRefresh: null,
-  // Report results are cached in the KV store. The key includes a per-process nonce so a restart
-  // never serves a stale entry, and the snapshot version so a rebuild/invalidate makes new keys.
-  nonce: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`,
+  /** Bumped by `refresh()` so a caller can tell "nothing changed" from "never probed". */
+  build: 0,
 };
 
+/** Memoised ~1.5 s, so one request does not probe seventeen tables repeatedly. */
+let probe = { at: 0, fingerprint: null, map: null };
 
-/* --------------------------------------------------- materialised snapshot (shared across threads)
- *
- * The host keeps the QuickJS context in a `thread_local` (see `host/src/runtime.rs`), so each of
- * the runtime threads has its own `state` and its own view snapshot. Building the heavy views per
- * thread, on the request path, is what pushes a report past the ~20 s call deadline. To share one
- * build across every thread, the built view rows are persisted to SQLite (`mview` / `mview_meta`)
- * and a thread with nothing materialised hydrates from there. The build itself runs off the request
- * path — the minutely `/jobs/reconcile` job calls `refresh` — so a request only reads.
- *
- * This is a generic capability: the view rows are stored as JSON, whatever shape a view has, so it
- * serves any app, not just this report set.
- */
-const MVIEW = true;
-const MVIEW_TABLE = "mview";
-const MVIEW_META = "mview_meta";
-let mviewEnsured = false;
-let mviewProbe = { at: 0, fingerprint: null, map: null };
-
-const fpString = (fp) => JSON.stringify(Object.keys(fp).sort().map((key) => [key, fp[key]]));
-
-async function ensureMviewTables() {
-  if (mviewEnsured) return;
-  await sqlite.execute(`CREATE TABLE IF NOT EXISTS ${MVIEW_TABLE} (name TEXT PRIMARY KEY, data TEXT)`);
-  await sqlite.execute(`CREATE TABLE IF NOT EXISTS ${MVIEW_META} (k TEXT PRIMARY KEY, v TEXT)`);
-  mviewEnsured = true;
-}
-
-/** Persist every materialised view as one JSON blob per view, plus the fingerprint/version.
- *
- * Upsert, not replace: a build may materialise only the views one report needed, and a later build
- * adds the rest. Views built under an earlier fingerprint stay valid as long as their source tables
- * did not change, which is exactly what the affected-view rebuild guarantees.
- */
-async function persistViews(fingerprint) {
-  await ensureMviewTables();
-  for (const name of Object.keys(state.views)) {
-    if (state.views[name] === undefined) continue;
-    await sqlite.execute(`INSERT OR REPLACE INTO ${MVIEW_TABLE}(name,data) VALUES(?,?)`, [name, JSON.stringify(state.views[name])]);
-  }
-  await sqlite.execute(`INSERT OR REPLACE INTO ${MVIEW_META}(k,v) VALUES('fingerprint',?)`, [fingerprint]);
-  await sqlite.execute(`INSERT OR REPLACE INTO ${MVIEW_META}(k,v) VALUES('version',?)`, [String(state.version)]);
-}
-
-async function persistedMeta() {
-  await ensureMviewTables();
-  const rows = await sqlite.all(`SELECT k,v FROM ${MVIEW_META}`);
-  const out = {};
-  for (const row of rows) out[String(row[0])] = String(row[1]);
-  return out;
-}
-
-async function loadPersisted() {
-  await ensureMviewTables();
-  const rows = await sqlite.all(`SELECT name,data FROM ${MVIEW_TABLE}`);
-  const views = {};
-  for (const row of rows) {
-    try {
-      views[String(row[0])] = JSON.parse(String(row[1]));
-    } catch {
-      // A corrupt blob is skipped; the view is rebuilt as missing.
-    }
-  }
-  return views;
-}
-
-/** Read a single materialised view, or undefined when it is not in the store. */
-async function loadPersistedView(name) {
-  await ensureMviewTables();
-  const rows = await sqlite.all(`SELECT data FROM ${MVIEW_TABLE} WHERE name = ?`, [name]);
-  if (!rows.length) return undefined;
-  try {
-    return JSON.parse(String(rows[0][0]));
-  } catch {
-    return undefined;
-  }
-}
-
-/** A cheap change probe per table: row count and newest `updated`.
- *
- * Link tables have no `updated` column, so those fall back to a count-only fingerprint (a row
- * added/removed still changes it). */
 async function probeFingerprints() {
   const out = {};
   for (const table of TABLES) {
     try {
-      const rows = await sqlite.all(`SELECT COUNT(*) AS n, COALESCE(MAX("updated"), '') AS newest FROM "${table}"`, []);
+      const rows = await sqlite.all(
+        `SELECT COUNT(*) AS n, COALESCE(MAX("updated"), '') AS newest FROM "${table}"`,
+        []
+      );
       out[table] = `${rows[0][0]}:${rows[0][1]}`;
     } catch {
+      // A table that is not there (older depot, or one already dropped) still needs an entry, or every
+      // refresh would report it as changed.
       const rows = await sqlite.all(`SELECT COUNT(*) AS n FROM "${table}"`, []);
       out[table] = `${rows[0][0]}:`;
     }
@@ -140,32 +69,38 @@ async function probeFingerprints() {
   return out;
 }
 
-/** The fingerprint as a string, memoised ~1.5 s so a request does not probe 17 tables repeatedly. */
-async function currentFingerprint() {
-  const now = Date.now();
-  if (!mviewProbe.fingerprint || now - mviewProbe.at > 1500) {
-    const map = await probeFingerprints();
-    mviewProbe = { at: now, fingerprint: fpString(map), map };
-  }
-  return mviewProbe.fingerprint;
+function fpString(map) {
+  return JSON.stringify(TABLES.map((t) => [t, map[t]]));
 }
 
-/** Public: the live data fingerprint, for callers that cache derived output (e.g. rendered pages). */
+/** The fingerprint as a string, memoised ~1.5 s. */
+async function currentFingerprint() {
+  const now = Date.now();
+  if (!probe.fingerprint || now - probe.at > 1500) {
+    const map = await probeFingerprints();
+    probe = { at: now, fingerprint: fpString(map), map };
+  }
+  return probe.fingerprint;
+}
+
+/**
+ * Public: the live data fingerprint, for callers that cache derived output (rendered pages, ETags).
+ */
 export async function fingerprint() {
   return currentFingerprint();
 }
 
 /**
- * Public: a small, stable integer for "which data is this?", for ETags and payloads.
+ * Public: a small, stable integer for "which data is this?".
  *
- * This replaces the snapshot's in-memory version COUNTER, which is what `/p/<slug>/data` and
+ * This replaces the snapshot's in-memory version COUNTER, which `/p/<slug>/data` and
  * `/invoice/context` used to key on. The counter was wrong twice over: it ticked when the refresh job
  * ran rather than when the data changed, and it was per-process, so two runtime threads disagreed.
  *
  * The fingerprint is the honest key — it changes when the data changes — but it is a long JSON string
  * (`[["areas","0:…"],…]`). Slicing it produced `"[[\"areas\",\"0"` in both an ETag and a JSON payload,
- * which is double-encoded junk. So it is folded to a 31-bit FNV-1a instead: cheap, no dependency, and
- * it keeps `version` a NUMBER, which is the shape `/p/<slug>/data` has always published.
+ * which is double-encoded junk. So it is folded to a 31-bit FNV-1a instead: cheap, no dependency, and it
+ * keeps `version` a NUMBER, which is the shape `/p/<slug>/data` has always published.
  */
 export async function dataVersion() {
   const fp = await currentFingerprint();
@@ -178,191 +113,59 @@ export async function dataVersion() {
   return h & 0x7fffffff;
 }
 
-/** Base tables a set of views needs materialised: the declared tables for each JS view. */
-function baseTablesFor(views) {
-  const out = new Set();
-  for (const name of views) {
-    for (const table of tablesForViews([name])) out.add(table);
-  }
-  return [...out];
-}
-
 /**
- * Make sure the given views (and their view dependencies) are built, reading only the base
- * tables they need. Returns the snapshot.
+ * Forget the memoised fingerprint, so the next read re-probes.
  *
- * Hydration is per view and lazy: when another runtime thread has persisted a fresh snapshot, only
- * the views this request needs are read back from SQLite — not the whole snapshot — so a small
- * report never pays for the large views it does not use.
+ * Called from `routeKit.write()` — i.e. by the TYPE of every mutation, not by remembering to do it. That
+ * is the rule `reports.no_precomputation` turns on: a write cannot leave a cached derived answer standing.
  */
-export async function getViews(names) {
-  const requested = (names && names.length ? names : VIEW_ORDER);
-  const need = viewClosure(requested);
-
-  let missingViews = need.filter((name) => state.views[name] === undefined);
-  if (missingViews.length && MVIEW && state.built.length === 0) {
-    // Is the persisted snapshot current? If so, read only the missing views needed here.
-    try {
-      const meta = await persistedMeta();
-      if (meta.fingerprint && meta.fingerprint === (await currentFingerprint())) {
-        if (mviewProbe.map) state.fingerprints = mviewProbe.map;
-        const hydrated = [];
-        for (const name of missingViews) {
-          const view = await loadPersistedView(name);
-          if (view !== undefined) {
-            state.views[name] = view;
-            hydrated.push(name);
-          }
-        }
-        if (hydrated.length) console.log(`[mview] hydrate ${hydrated.length}/${need.length} views`);
-      }
-    } catch {
-      // Fall through and build.
-    }
-    missingViews = need.filter((name) => state.views[name] === undefined);
-  }
-
-  if (missingViews.length) {
-    // Pure-SQL views read the database themselves; hybrid views need only the link table their
-    // JS augment reads; JS views need their declared base tables.
-    const tables = baseTablesFor(missingViews).filter((table) => state.base[table] === undefined);
-    if (tables.length) {
-      const rows = await readTables(tables);
-      for (const table of tables) state.base[table] = rows[table];
-    }
-    // `viewClosure` is already in VIEW_ORDER order, so a view sees fresh dependencies.
-    const built = {};
-    for (const name of need) {
-      built[name] = state.views[name] !== undefined ? state.views[name] : await buildOne(name, built);
-    }
-    for (const name of need) state.views[name] = built[name];
-    state.version++;
-    // Publish the build so the other runtime threads hydrate instead of rebuilding.
-    if (MVIEW) {
-      try {
-        await persistViews(await currentFingerprint());
-        console.log(`[mview] persist ${Object.keys(state.views).length} views`);
-      } catch {
-        // Persistence is best effort; the in-memory snapshot still serves this thread.
-      }
-    }
-  }
-  state.built = Object.keys(state.views);
-  return state;
-}
-
-/** Drop everything; the next getViews() re-reads from the database. Bumps the version so cached
- * report results (whose keys include it) cannot be served. */
 export function invalidate() {
-  state.base = {};
-  state.views = {};
-  state.built = [];
-  state.version++;
-  mviewProbe = { at: 0, fingerprint: null, map: null };
+  probe = { at: 0, fingerprint: null, map: null };
+  // Base rows are a read cache for the page payload, so a write must clear them too — otherwise
+  // `/p/<slug>/data` would ship the item list from before the edit.
+  for (const key of Object.keys(base)) delete base[key];
+  state.build++;
 }
 
 /**
- * Fingerprint refresh: probe every table (`count:newest updated`), then re-read only the tables
- * that changed and rebuild only the views affected by them. With nothing materialised yet
- * (e.g. after a `full` invalidate) it builds the whole set, so the snapshot is ready afterwards —
- * matching the Node service, which refreshes off the request path.
+ * The refresh job: probe every table and report what changed.
+ *
+ * It used to rebuild the views affected by the change, which is why it took `db` and why it consulted
+ * `viewsAffectedBy`. It no longer has anything to rebuild — a report's cost is its SQL, executed on the
+ * current data — so this is now a probe and a diff. `db` is still accepted so the call sites that pass
+ * it keep working.
  */
 export async function refresh(db) {
   const next = await probeFingerprints();
-  const nextFp = fpString(next);
-
-  // If this thread has nothing but the persisted snapshot already matches the live data, adopt it
-  // and stop — the snapshot was built elsewhere (the job thread) and there is nothing to rebuild.
-  if (MVIEW && state.built.length === 0) {
-    try {
-      const meta = await persistedMeta();
-      if (meta.fingerprint && meta.fingerprint === nextFp) {
-        const views = await loadPersisted();
-        if (Object.keys(views).length) {
-          state.views = views;
-          state.built = Object.keys(views);
-          state.version = (Number(meta.version) || 0) + 1;
-          state.fingerprints = next;
-          state.refreshedAt = Date.now();
-          state.lastRefresh = { changed: [], rebuilt: [], hydrated: true };
-          mviewProbe = { at: Date.now(), fingerprint: nextFp };
-          return state;
-        }
-      }
-    } catch {
-      // Fall through and build.
-    }
-  }
-
-  const changed = TABLES.filter((table) => !state.fingerprints || state.fingerprints[table] !== next[table]);
+  const changed = state.fingerprints
+    ? TABLES.filter((table) => state.fingerprints[table] !== next[table])
+    : [...TABLES];
   state.fingerprints = next;
   state.refreshedAt = Date.now();
-
-  const hadSnapshot = state.built.length > 0;
-  const affected = [...viewsAffectedBy(changed)];
-  const dirty = new Set(
-    hadSnapshot ? affected.filter((name) => state.views[name] !== undefined) : VIEW_ORDER
-  );
-  if (dirty.size === 0) {
-    state.lastRefresh = { changed, rebuilt: [] };
-    return state;
-  }
-
-  const toRead = baseTablesFor([...dirty]).filter((table) => state.base[table] === undefined || changed.includes(table));
-  if (toRead.length) {
-    const rows = await readTables(toRead);
-    for (const table of toRead) state.base[table] = rows[table];
-  }
-  const rebuilt = { ...state.views };
-  for (const name of VIEW_ORDER) {
-    if (!dirty.has(name)) continue;
-    rebuilt[name] = await buildOne(name, rebuilt);
-  }
-  state.views = rebuilt;
-  state.built = Object.keys(state.views);
-  state.version++;
-  state.lastRefresh = { changed, rebuilt: [...dirty] };
-  if (MVIEW) {
-    try {
-      await persistViews(fpString(next));
-    } catch {
-      // Best effort; the in-memory snapshot still serves this thread.
-    }
+  state.lastRefresh = { changed, rebuilt: [] };
+  if (changed.length) {
+    // A change invalidates the memoised fingerprint as well, so a caller that reads `fingerprint()`
+    // immediately afterwards sees the new data rather than a value from up to 1.5 s ago.
+    probe = { at: Date.now(), fingerprint: fpString(next), map: next };
+    state.build++;
   }
   return state;
-}
-
-/** Base tables a page needs, read on demand (used by the page data endpoint). */
-export async function ensureTables(tables) {
-  const missing = (tables || []).filter((table) => state.base[table] === undefined);
-  if (missing.length) {
-    const rows = await readTables(missing);
-    for (const table of missing) state.base[table] = rows[table];
-  }
-  return state;
-}
-
-export function baseTable(name) {
-  return state.base[name] || [];
 }
 
 export function status() {
-  const rows = state.built.reduce((n, name) => n + ((state.base[name] || []).length), 0);
-  const baseRows = Object.keys(state.base).reduce((n, name) => n + ((state.base[name] || []).length), 0);
   return {
-    ready: state.built.length > 0,
-    build: state.version,
+    ready: state.fingerprints !== null,
+    build: state.build,
     at: null,
     phase: "idle",
-    tables: Object.keys(state.base).length,
-    views: state.built.length,
-    rows: baseRows || rows,
-    // No `cachedReports` / `reportCacheHits` / `reportCacheMisses`. Those counted a KV result cache
-    // that belonged to the retired JavaScript engine, so with it gone they could only ever read 0 —
-    // and a counter that cannot move is worse than no counter, because a check on it fails forever
-    // and looks like a defect. What caches a report now is the composed-SQL cache in
-    // `spoolreports.js` and the rendered-page cache in the dispatcher; neither is visible from here,
-    // and both are measured by their own gates.
+    tables: state.fingerprints ? Object.keys(state.fingerprints).length : 0,
+    // No `views` / `rows` / `cachedReports` counters. They counted the retired view snapshot and the
+    // retired JavaScript report cache, so they could only ever read 0 — and a counter that cannot move
+    // is worse than none, because a check on it fails forever and looks like a defect. What caches a
+    // report now is the composed-SQL cache in `spoolreports.js` and the rendered-page cache in the
+    // dispatcher; neither is visible from here, and both have their own gates.
+    views: 0,
+    rows: 0,
     intervalMs: 0,
     fingerprints: state.fingerprints ? Object.keys(state.fingerprints).length : 0,
     refreshedAt: state.refreshedAt,

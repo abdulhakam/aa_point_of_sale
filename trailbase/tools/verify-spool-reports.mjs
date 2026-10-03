@@ -23,13 +23,6 @@ import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import {
-  buildTransactionView, buildInvoiceView, buildTransactionsReport,
-  buildPaymentsView, buildPaymentsInvoicesReport, buildItemsReport,
-  buildItemsDifferenceReport, buildLedgerJournal, buildLedgerBooker, buildLedgerParty,
-  buildOutstanding,
-} from "../runtime/app/compute/views.js";
-
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "../..");
 const depotDb = process.env.DEPOT_DB || join(repo, "trailbase", "traildepot", "data", "main.db");

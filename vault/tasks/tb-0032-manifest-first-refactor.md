@@ -229,21 +229,59 @@ a layer. It now derives the answer from the SQL, in two steps that were both wro
 | diff vs baseline | 1 line: `page profit data` `version=0` → `627931119` (the fingerprint-derived version) |
 | `guest-smoke.mjs` | every check passes |
 
-#### What is NOT yet done
+#### Done: `views.js` retired from the shipped app
 
-`app/compute/views.js` **still exists** and is still loaded by `route.ts`. Nothing in the running app
-calls it — `getViews` is now an unused import in `route-kit.js` (removed) and `A.views.*` has no
-caller. Two consumers remain, and both are verification, not application:
+`app/compute/views.js` is **deleted**. The builders moved to
+**`trailbase/tools/_src/legacy-views.js`** — moved, not deleted, because `tools/verify-prelude.mjs` is
+the only check that the prelude's CTEs still compute what the legacy arithmetic computed. Exact parity
+being waived ([[legacy-parity-checks-waived]]) is not the same claim as the SQL being unchecked, and the
+builders are a **verification fixture**, not application code. Leaving them under `runtime/` shipped a
+module nothing calls into every depot and evaluated it for no benefit.
 
-- `tools/verify-prelude.mjs` genuinely uses six builders. It is the only check that the prelude's CTEs
-  still match the arithmetic they were ported from, so deleting the builders **deletes the reference**.
-- `tools/verify-spool-reports.mjs` imports six builders and **never calls them** — a dead import left
-  from when the gate was a JS-vs-SQL differential. It can simply be deleted.
+Two consequences of the move, both caught by the gates:
 
-So the remaining step is to **move** the builders to `trailbase/tools/_src/` — where a parity fixture
-belongs, rather than shipping to the guest as application code — and repoint `verify-prelude.mjs`. Not
-delete them: `verify-prelude.mjs` still has value, and exact parity being waived
-([[legacy-parity-checks-waived]]) is not the same as the SQL being unchecked.
+- The fixture imports `format.js` and `ids.js` **from the runtime**, at
+  `../../runtime/app/compute/*.js`. Copying them into `tools/_src/` was the first attempt and was wrong:
+  a second copy of `round2` is a second answer to "what does rounding do".
+- `tools/verify-spool-reports.mjs` had a **dead import** of six builders, left from when it was a
+  JS-vs-SQL differential. Deleted.
+
+`app/lib/reports.js` shrinks from **376 lines to ~150**. What it is now: the data fingerprint, the
+31-bit `dataVersion()`, a refresh job that probes and diffs, and `status()`. Everything that existed to
+build, persist, hydrate or invalidate a *view snapshot* is gone, including the `mview` / `mview_meta`
+tables and `[mview] hydrate` / `[mview] persist` log lines.
+
+⚠️ **`TABLES` and `readTables` are imported from `app/lib/data.js`, not restated.** The first version
+hand-wrote a seventeen-table list and had already drifted — `data.js` carries `party_types`,
+`invoice_types` and `payment_types`, and notes that **there is no `categories` table at all**.
+Hand-writing it is the duplication this task exists to remove, done inside the task that removes it.
+
+`ensureTables` / `baseTable` **stay**: `needs.tables` is derived from each filter's `source` and is
+non-empty for 13 of the 14 pages, so `/p/<slug>/data` genuinely ships base-table rows in `payload.tables`.
+They now read on demand and are cleared by `invalidate()`, so a write cannot leave a stale item list.
+
+#### A check that outlived its subject
+
+`guest-smoke.mjs` asserted *"incremental refresh rebuilds the affected views"* against
+`lastRefresh.rebuilt`. `rebuilt` is now always `[]` — there is nothing to rebuild — so the suite went red
+for a **correct** implementation. This is the same mistake the check's own comment describes one layer
+back ("asserting the removed detail would keep the check red for a correct implementation"), so the
+lesson is now written into the replacement:
+
+- **"refresh is scoped to what actually changed"** — a write to `sections` must move the fingerprint and
+  must not be reported as a change to all 17 tables.
+- **"refresh publishes a fingerprint for every table it probes"** — asserted on `fingerprints` as the
+  COUNT it is. The first attempt asserted it was an array, and failed against a working refresh.
+
+#### Gate
+
+| Check | Result |
+|---|---|
+| `verify-spool-reports.mjs` | **14 passed, 0 failed**, 72 binds verified |
+| `verify-prelude.mjs` | **PASS — prelude matches the legacy builders** (the parity check still runs) |
+| `route-snapshot.mjs` | 49 routes, **0 erroring**; no `mview` hydration anywhere |
+| diff vs baseline | 1 line: `page profit data` `version=0` → the fingerprint-derived integer |
+| `guest-smoke.mjs` | every check passes |
 
 ### 4. Serve at least one page through a manifest-declared handlers directory
 

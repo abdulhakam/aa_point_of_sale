@@ -2,7 +2,7 @@
 // reading through the guest's (async) `fs` global instead of node:fs.
 //
 // A page is any folder under `pages/` with a `meta.json`; the folder path is the slug.
-// `needs.tables` is derived from `needs.views` so a page cannot under-declare its data.
+// `needs.tables` is derived from each filter's `source` so a page cannot under-declare its data.
 //
 // THE MANIFEST IS THE ONE PAGE DEFINITION. It serves both `/p/<slug>` (the JSON data endpoint the
 // browser fetches) and `/reports/<key>` (the server-rendered page), so a report cannot be defined
@@ -11,7 +11,6 @@
 // vault/issues/report-page-definitions-duplicated-and-already-divergent.md.
 
 import * as format from "../compute/format.js";
-import { viewClosure } from "../compute/views.js";
 import { join, normalize } from "./paths.js";
 
 const META = "meta.json";
@@ -119,7 +118,14 @@ export function normalizeMeta(meta) {
     // The hub tile: title/tone/icon, and which index lists it.
     hub: meta?.hub && typeof meta.hub === "object" ? meta.hub : null,
     needs: {
-      views: viewClosure(toArray(meta?.needs?.views)),
+      // `views` is GONE (2026-10-03, tb-0032 step 3). A manifest used to declare the derived views its
+      // report needed, and `needs.tables` was DERIVED from them — "a page cannot under-declare its
+      // data". Both are moot: the reports read base tables through `prelude.sql`, the view layer is gone,
+      // and the last reader (`/bench/report`) now derives a report's tables from its own SQL. Keeping the
+      // field would mean 14 manifests declaring names for a layer that no longer exists.
+      //
+      // `tables` remains, derived from each filter's `source`, because it is still the honest answer to
+      // "which base tables does this page read" for a page that is not a spooled report.
       tables: [...new Set([...toArray(meta?.needs?.tables), ...sources])],
     },
     // `compute.report` names the report this page presents. There is no `compute.useJs`: every

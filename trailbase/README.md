@@ -49,12 +49,16 @@ trailbase/
 ```
 
 ⚠️ **Layout corrected 2026-10-03.** This block previously listed `host/` (no such directory — the
-compiled engine is the three `tb-ah-*/` crates) and showed a single migration,
-`U1790208000__create_base_tables`. There are **14**: the job tables, the 2 dp money rounding, the
-invoice-entry tables, the materialised invoice documents, the categories→companies mapping, the
-document sync, the invoice lifecycle and difference party, the two status backfill repairs, the
-general document store (later dropped), the whole-paisas rounding, and the two drops that retired
-that store and the status column.
+compiled engine is the three `trailbase/tb-ah-*/` crates, and there is **no** `host/README.md`) and
+showed a single migration, `U1790208000__create_base_tables`. There are **14**: the job tables, the
+2 dp money rounding, the invoice-entry tables, the materialised invoice documents, the
+categories→companies mapping, the document sync, the invoice lifecycle and difference party, the two
+status backfill repairs, the general document store (later dropped), the whole-paisas rounding, and
+the two drops that retired that store and the status column.
+
+The report SQL is at `runtime/app/reports/sql/` — `prelude.sql` plus `reports/*.sql` — **not** at
+`reports/sql/views/`, which is what several older notes in the vault still say. `runtime/app/sql/`
+is a different directory holding `latest_business_date.sql` and `refs.sql`.
 
 The three `tb-ah-*` directories are the compiled engine (Rust -> WASM, one cargo workspace: a single
 Cargo.lock and a single `target/`, so a shared dependency is compiled once for all three; needs

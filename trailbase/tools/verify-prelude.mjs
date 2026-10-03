@@ -1,7 +1,7 @@
 // Gate the SHARED PRELUDE against the JS views, before any report is built on top of it.
 //
 // A prelude bug would otherwise surface as N unrelated report diffs, which is expensive to diagnose.
-// So this checks each prelude CTE against its `compute/views.js` counterpart first, on row count and
+// So this checks each prelude CTE against its legacy-builder counterpart first, on row count and
 // then on the money fields that matter.
 //
 // Usage: node trailbase/tools/verify-prelude.mjs
@@ -11,10 +11,13 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// The reference implementation, which is a tool fixture rather than application code since the
+// builders moved out of the shipped runtime (tb-0032 step 3). This import IS the parity check: it is
+// what stops the prelude drifting from the arithmetic it was ported from.
 import {
   buildTransactionView, buildInvoiceView, buildTransactionsReport,
   buildPaymentsView,
-} from "../runtime/app/compute/views.js";
+} from "./_src/legacy-views.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repo = resolve(here, "../..");
@@ -193,5 +196,5 @@ const paymentsView = buildPaymentsView(base, invoiceView);
 }
 
 db.close();
-console.log(`\n${problems.length ? `FAIL — ${problems.length} prelude check(s) failed` : "PASS — prelude matches compute/views.js"}`);
+console.log(`\n${problems.length ? `FAIL — ${problems.length} prelude check(s) failed` : "PASS — prelude matches the legacy builders"}`);
 process.exit(problems.length ? 1 : 0);
