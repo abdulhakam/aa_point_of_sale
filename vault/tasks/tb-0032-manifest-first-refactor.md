@@ -1,9 +1,10 @@
 ---
 title: "tb-0032 — Manifest-first: meta.json names the SQL files, and the JavaScript view layer retires"
 type: task
-status: todo
+status: done
 priority: high
 created: 2026-10-02
+updated: 2026-10-03
 tags: [trailbase, architecture, manifest, meta-json, quickjs, jinja, sql, views, cleanup, technical-debt]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[manifest-first-architecture-gap-2026-10-02]]", "[[legacy-parity-checks-waived]]", "[[sql-review-2026-10-02]]", "[[tb-0031-remove-proven-dead-code]]", "[[tb-0030-retire-the-route-ts-dispatcher]]", "[[reports-and-ledgers]]", "[[tb-0022-move-reports-to-sql]]", "[[trailbase-migration]]"]
