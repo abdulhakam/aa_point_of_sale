@@ -176,22 +176,67 @@ Side-by-side with [[runtime-js-guest-platform]]: [[route-map]].
 
 ## What the legacy app has that the guest app does not
 
-| Capability | Legacy | Guest |
-|---|---|---|
-| Invoice entry (purchase / sale / return / difference) | ✅ | ❌ (first slice only) |
-| Orders | ✅ | ❌ |
-| Cash memo: payment & receive vouchers, DA entry, expenses | ✅ | ❌ |
-| Invoice printing + print queue | ✅ | ❌ |
-| Dashboard | ✅ | ✅ |
-| Reports (11 + ledgers) | ✅ | ✅ (not `payments/areawise`) |
-| Management (7 entities) | ✅ | ✅ |
-| Storybook component workshop | ✅ | — |
+> **Rebuilt 2026-10-03.** This table previously listed eight capabilities with four ❌, and its
+> "two UI stacks for the same screens is the current state" conclusion was a generation out of date.
+> It is now built from measured evidence rather than from recollection:
+>
+> - `tools/route-snapshot.mjs` — 49 routes observed on a live server, all reports and ledgers 200
+> - `tools/verify-spool-reports.mjs` — 14/14 reports with real row counts against the depot
+> - [[guest-invoice-lifecycle]] — the invoice/cash-memo/print build
+> - [[browser-journey-sweep-2026-10-02]] — the surface-by-surface sweep
 
-Two UI stacks for the same screens is the current state; [[trailbase-migration]] covers how
-that converges.
+| Capability | Legacy | Guest | Evidence |
+|---|---|---|---|
+| Invoice entry — **purchase** | ✅ | ✅ | `/invoices/new?type=0` 200 |
+| Invoice entry — **sale** | ✅ | ✅ | `/invoices/new?type=1` 200 |
+| Invoice entry — **return** | ✅ | ❌ **not built** | no route |
+| Invoice entry — **difference** | ✅ | ❌ **not built** | no route |
+| Invoice lifecycle (draft → open → completed) | ✅ | ✅ | [[guest-invoice-lifecycle]], 21/21 over HTTP |
+| Spreadsheet line grid | ✅ | ✅ | `/invoices/{id}/grid` |
+| Invoice viewing | ✅ | ✅ | `/invoices/<id>` renders real totals |
+| Orders | ✅ | ➖ **withdrawn, not a gap** | the draft lifecycle was dropped 2026-10-02 — [[no-draft-invoices-published-on-save]] |
+| Payments (invoice-linked + standalone DA) | ✅ | ✅ | `/payments` 300 rows, `/payments/new` 200 |
+| Cash memo hub | ✅ | ✅ | `/cashmemo` 200 |
+| Payment & receive vouchers | ✅ | ✅ | `/cashmemo/vouchers` 200 |
+| DA entry | ✅ | ✅ | `/cashmemo/da` 200 |
+| Expenses | ✅ | ✅ | `/cashmemo/expenses` 89 rows, amounts populated |
+| Invoice printing + print queue | ✅ | ✅ | `/print` 200 — [[guest-invoice-lifecycle]] |
+| Inventory (live stock, item edit) | ➖ | ➕ **guest-only** | `/inventory` 208 rows |
+| Dashboard | ✅ | ✅ | master data correct; tile *content* is the open item |
+| Reports | ✅ 11 | ✅ **10** | 10 spool keys, all 200 with rows |
+| Ledgers | ✅ 4 | ✅ **4** | general/party/booker/area, all 200 |
+| `payments/areawise` | ✅ | ❌ omitted on purpose | no tile linked to it in legacy either |
+| Item transactions report | ✅ | ❌ dropped | no guest equivalent, deliberately |
+| Management (sections, areas, categories, parties, bookers, items) | ✅ 6 | ✅ **7** | guest adds `/management/companies` |
+| Mobile layout | ➖ | ➕ **guest-only** | `≤768px` on every page |
+| **Look and behaviour** | ✅ | ❌ **not the legacy look** | [[tb-0023-direct-shift-legacy-ui-to-guest]] |
+| Storybook component workshop | ✅ | — | ⚠️ **unreachable**: needs `npm run storybook` in a `frontend/` that no longer exists |
+
+### What this means
+
+Three genuine gaps remain, and they are different in kind:
+
+- **Return and difference invoice entry** are unbuilt. They are real work.
+- **The legacy look** is unachieved, and it is now harder than it was: the legacy *source* is gone, so
+  the target has to be read off [[legacy-ui-reference-captures]] and the frozen bundle's rendered
+  pages rather than off code.
+- **`/app/reports/payments/areawise`** and the item-transactions report have no guest equivalent,
+  deliberately — no legacy tile linked to the first.
+
+Everything else the legacy app can do, the guest can do, which is a much stronger position than the
+table used to claim. What has *not* changed is that the legacy app is what the shop runs today; this
+table is about **readiness**, not about what is in use. See [[cutover-is-guest-only]].
+
+⚠️ **One caution on reading this table.** It is built from *routes answering 200* and *reports
+returning rows*. Both are necessary and neither is sufficient: a screen can answer 200 and still not
+be the legacy screen. The 2026-10-02 sweep is the evidence for behaviour, and it found a defect
+(reports empty because of the draft-status filter) that no 200 could have revealed. Treat the ✅ as
+"exists and returns data", not as "done".
 
 ## Related
 
-- [[guest-frontend-feature-parity-gaps]] — the concrete list of what is missing on the new side.
-- [[route-map]] — every route in both apps.
+- [[guest-frontend-feature-parity-gaps]] — the concrete list of what is still missing on the new side.
+- [[route-map]] — every route in both apps, verified against a live server.
+- [[vault-code-drift-audit-2026-10-03]] — where this table's evidence came from, and what else was
+  wrong.
 - [[performance-and-caching]] — what the query cache and the SQL views do for speed.

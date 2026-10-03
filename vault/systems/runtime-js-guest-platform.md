@@ -52,7 +52,7 @@ screenshots in [[legacy-ui-reference-captures]] and the frozen bundle's rendered
 | `trailbase/tb-ah-run-js/` | The **compiled engine**: the Rust guest crate `tb_ah_run_js` — `trailbase-wasm` SDK + `rquickjs` (QuickJS) + `minijinja`, built for `wasm32-wasip2` into a single `*.wasm`. Changing it needs `build.bat`. Its README is `tb-ah-run-js/README.md` |
 | `trailbase/tb-ah-render-jinja/` | minijinja as its own component, behind the `aa_render` envelope |
 | `trailbase/tb-ah-query-tbdb/` | data acquisition (experimental, exists to be measured) |
-| `trailbase/runtime/` | The **editable application**: `ahscripts/routes/` (including the `_app/route.ts` dispatcher) and `app/` (views, pages, compute, lib, the report SQL). Read at request time — no rebuild |
+| `trailbase/runtime/` | The **editable application**: `ahscripts/routes/` (`_app/route.ts`, the dispatcher, and `mode/route.ts`) and `app/` (views, pages, compute, lib, plugins, public, and the report SQL under `app/reports/sql/`). Read at request time — no rebuild |
 | `trailbase/tools/` | The verification harnesses (`guest-smoke.mjs`, `route-snapshot.mjs`, …; `view-equivalence.mjs` was deleted 2026-10-02 with the legacy view layer) |
 | `trailbase/traildepot/` | **Generated** by `clear_db.bat` + `build.bat`: source copies + `wasm/*.wasm` + `data/` |
 | `guests/` | **Deleted 2026-09-28.** The throw-away **Phase 0 spike** guest (TS + Vite + `jco componentize`) that proved the platform's assumptions — S1–S8 ([[trailbase-guest-wasm-spike-results]]). Nothing loaded it once the host crate shipped, so the tree was removed; the spike findings survive in that note and in the [[trailbase-guest-aot-startup-cost]] / [[trailbase-guest-cpu-js-limits]] issues |

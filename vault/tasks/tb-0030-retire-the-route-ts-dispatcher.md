@@ -13,8 +13,9 @@ related_to: ["[[file-router-conventions-not-a-data-dag]]", "[[guest-helpers-pure
 
 ## Goal
 
-`trailbase/runtime/ahscripts/routes/_app/route.ts` (1785 lines) is deleted. Every route is a
-directory with a `route.json` manifest and handler files, following
+`trailbase/runtime/ahscripts/routes/_app/route.ts` is deleted — **2,055 lines** as of 2026-10-03
+(it was 1,785 when this note was written; step 0 took it to 1,748 and work since has grown it). Every
+route becomes a directory with a `route.json` manifest and handler files, following
 [[file-router-conventions-not-a-data-dag]].
 
 Adding a route becomes `mkdir` + write `route.json` + write a handler, with no dispatcher edit.
@@ -28,13 +29,17 @@ Each step is separately reversible and must leave the app byte-identical.
       **Correction:** `/bench/payload`, `/bench/report` and `/bench/reportkeys` are **kept** —
       `tools/split-bench.mjs` calls all three (lines 52, 58, 84, 89), so `/bench/*` is a
       `bench/` route directory in step 5, not a deletion. Verified: 45-route fingerprint unchanged.
+      ⚠️ **retest against the corrected 49-route gate.**
 - [ ] **1. Extract three JS guest helpers** into `app/lib/route-kit.js` — `write()`,
       `renderRoute()`, `refs()` — and migrate every call site.
       - [x] `refs()` — 10 sites migrated (6 two-line collapses, 3 wider-snapshot kept as-is).
-            Verified: no differences across 45 routes.
+            Verified: no differences across 45 routes. ⚠️ **retest against the corrected 49-route gate**
       - [x] `write()` — 15 of 16 sites migrated. The 16th is `/reports/refresh`'s deliberate
             `if (full) invalidate()`, which is a full drop rather than write-coupled and must stay.
             Verified: 45-route parity plus 13 write-path checks.
+            ⚠️ **The write-path half of that is still sound** — `write-paths-check.mjs` logs in
+            properly and asserts read-after-write, so it never depended on the broken snapshot gate.
+            The route-parity half is not.
             The write paths needed their own gate: `route-snapshot.mjs` only issues GETs, so it
             cannot see a regression in a helper whose entire job is to run *after* a mutation.
       - [ ] `renderRoute()` — 25 sites. One migrated (`/login`); the rest are the same shape.
@@ -87,8 +92,17 @@ cheapest honest check is a direct byte comparison of the HTML.
 `node trailbase/tools/route-snapshot.mjs --out before.json`, make the change, then
 `--out after.json` and `node trailbase/tools/route-snapshot-diff.mjs before.json after.json`.
 
-**The gate is a live-server fingerprint of 45 routes: status, row counts, title and link set per
+**The gate is a live-server fingerprint of 49 routes: status, row counts, title and link set per
 route.** Any difference is a regression to explain before the step is accepted.
+
+⚠️ **This gate did not work until 2026-10-03, and this note did not know it.** `route-snapshot.mjs`
+was omitting `redirect: 'manual'` on the TrailBase login, so it stored an empty cookie and every route
+answered `303` — it reported "45 routes, 0 erroring" while testing nothing but redirects, and every
+`Verified: no differences across 45 routes` claim in the sequence below rests on that. It also probed
+`/reports/stock`, which is not a route, so the Stock Report was never covered. Both are fixed; four
+report/ledger routes that were missing were added. **Steps 0, 1a and 1b need re-verifying against the
+corrected gate before any of them is treated as proved** — see
+[[route-snapshot-was-snapshotting-redirects]].
 
 It has a companion, because the read gate alone is not enough for `write()`:
 `node trailbase/tools/write-paths-check.mjs` drives the POST endpoints (13 checks) and asserts that
@@ -100,7 +114,7 @@ failed partway.
 
 | Tool | Purpose |
 |---|---|
-| `tools/route-snapshot.mjs` | 45-route fingerprint (status, rows, title, link set), JSON out; retries a 500 twice |
+| `tools/route-snapshot.mjs` | **49**-route fingerprint (status, rows, title, link set), JSON out; retries a 500 twice. ⚠️ broken until 2026-10-03 — see above |
 | `tools/route-snapshot-diff.mjs` | Before/after diff of two snapshots; exit 1 on any difference |
 | `tools/write-paths-check.mjs` | 13 POST checks incl. read-after-write; self-cleaning |
 | `tools/probe-cleanup.mjs` | Removes `refactor-probe-*` fixtures by row-scoped id |

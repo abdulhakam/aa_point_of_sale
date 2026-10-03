@@ -191,7 +191,7 @@ exist.
 | System | Needs |
 |---|---|
 | `trailbase` | the `trail` binary on `PATH` (`iwr https://trailbase.io/install.ps1 \| iex`) |
-| `trailbase/tb-ah-*` (guest crates) | Rust with the `wasm32-wasip2` target; `trailbase\build.bat`; Node for the tools |
+| `trailbase/tb-ah-*` (guest crates) | Rust with the `wasm32-wasip2` target; `trailbase\build.bat`; Node for the tools. The host's own documentation is `trailbase/tb-ah-run-js/README.md` — ⚠️ **not** `host/README.md`, which does not exist. The crates share one `Cargo.lock` and one `target/` at `trailbase/target/`; there is no per-crate `target/` |
 | ~~`backend`~~ | ⚠️ **cannot be built** — no source. The `pocketbase.exe` binary survives at `legacyforparity/backend/` and can still be *run* for parity comparison |
 | ~~`frontend`~~ | ⚠️ **cannot be built** — the source was deleted; only the compiled bundle at `legacyforparity/standalone/` survives |
 

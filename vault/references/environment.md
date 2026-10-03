@@ -72,7 +72,7 @@ ports and throw-away depots:
 
 | Path | Role |
 |---|---|
-| `trailbase/tb-ah-run-js/target/wasm32-wasip2/release/tb_ah_run_js.wasm` | the built host (git-ignored) |
+| `trailbase/target/wasm32-wasip2/release/tb_ah_run_js.wasm` | the built host (git-ignored). ⚠️ **Not** `tb-ah-run-js/target/` — the three `tb-ah-*` crates are one cargo workspace and share a single `target/` at `trailbase/target/` |
 | `trailbase/runtime/` | the editable app: `ahscripts/` dispatcher and `app/` (views, pages, compute, lib, SQL) the host reads. **Edit here**, then re-sync |
 | `trailbase/traildepot/runtime/` | **what `--runtime-root-fs` is actually given** — a generated copy of the above, produced by `clear_db.bat`. Editing `trailbase/runtime/` alone does nothing until that re-sync (the failure in [[plugin-directory-url-404]]) |
 | `trailbase/.tbdemo-guest/depot` | the throw-away depot `guest-smoke.mjs` creates and deletes |

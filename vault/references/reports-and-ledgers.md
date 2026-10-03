@@ -11,16 +11,31 @@ related_to: ["[[runtime-js-guest-platform]]", "[[backend]]"]
 # Report arithmetic and ledgers
 
 The reports are the reason this rewrite exists, so their arithmetic is specified rather than
-implied. On the legacy side the arithmetic is SQL, inside PocketBase views ([[backend]]). On
-the new side there are no views at all — the same arithmetic is reimplemented in JavaScript
-in `trailbase/runtime/app/compute/views.js` and `trailbase/runtime/app/compute/reports.js`,
-deliberately reproducing the old
-view SQL so that report output matches for the same rows. The mapping is documented in
-`vault/references/reports-and-ledgers.md`, which is this file.
+implied. On the legacy side the arithmetic is SQL, inside PocketBase views ([[backend]]).
+
+> **⚠️ The architecture described below is one generation behind, corrected 2026-10-03.** The
+> arithmetic in this document is still the authoritative description of the rules. The *mechanism*
+> is not: the reports now run on **SQL**, not on a JavaScript engine.
+>
+> - `app/compute/reports.js` — **deleted**. It was the report engine; `git show
+>   04cd42b:trailbase/runtime/app/compute/reports.js` still recovers it.
+> - `app/lib/spoolreports.js` — the current entry point. Its comments cite `reports.js:NN` lines and
+>   say so explicitly, so the mapping is traceable.
+> - `app/reports/sql/` — `prelude.sql` plus **11** report statements under `reports/`.
+> - `app/compute/views.js` — **still exists and is still imported**, by `lib/pages.js`
+>   (`viewClosure`), `lib/reports.js` (`buildView`, `viewClosure`, `tablesForViews`,
+>   `viewsAffectedBy`, `VIEW_ORDER`) and the two verification harnesses. The builder table below is
+>   therefore still a live inventory, not a historical one — see
+>   [[vault-code-drift-audit-2026-10-03]] §4.
 
 ## Derived "views" rebuilt in JavaScript
 
-`compute/views.js` (22,926 bytes) exports one builder per old view, plus closure helpers:
+⚠️ Still imported, so still live — but the reports do not read these any more; they were replaced by
+`app/reports/sql/reports/*.sql`. What survives is the **dependency graph** (`viewClosure`,
+`viewsAffectedBy`, `tablesForViews`, `VIEW_ORDER`), which is why deleting the file is a refactor with
+a prerequisite rather than a one-line cleanup.
+
+`compute/views.js` exports one builder per old view, plus closure helpers:
 
 | Builder | Rebuilds |
 |---|---|

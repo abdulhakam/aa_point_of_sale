@@ -19,7 +19,7 @@
 //
 // Usage: node trailbase/tools/verify-spool-reports.mjs [--filter <substr>] [--verbose]
 import { DatabaseSync } from "node:sqlite";
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -91,7 +91,15 @@ async function verifyPageColumns() {
   // Read with `node:fs` rather than through `app/lib/pages.js`: that module walks the tree with the
   // GUEST's async `fs` global, which does not exist in Node. Only the raw manifest shape is needed
   // here, and the guest's own normalisation is exercised by the page sweep instead.
-  const PAGES_DIR = "runtime/app/pages";
+  // `join(repo, ...)`, like every other path in this file. A bare relative path resolves against
+  // process.cwd(), so this only worked when you happened to `cd trailbase` first — the documented
+  // invocation (`node trailbase/tools/verify-spool-reports.mjs` from the repo root) walked every
+  // report successfully and then died on the first page lookup, which is the worst shape a gate can
+  // fail in: 14 green lines and a stack trace.
+  const PAGES_DIR = join(repo, "trailbase", "runtime", "app", "pages");
+  if (!existsSync(PAGES_DIR)) {
+    throw new Error(`page manifests not found at ${PAGES_DIR}`);
+  }
   const manifests = [];
   const walk = (dir) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
