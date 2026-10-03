@@ -4,14 +4,147 @@ type: reference
 status: active
 system: both
 created: 2026-09-26
+updated: 2026-10-03
 tags: [pos, build, run, windows, bat, scripts]
-related_to: ["[[environment]]", "[[backend]]"]
+related_to: ["[[environment]]", "[[backend]]", "[[cutover-is-guest-only]]", "[[route-snapshot-was-snapshotting-redirects]]"]
 ---
 
 # Build and run
 
-Every system in the workspace, how it is started, and what it needs first. All four run on
-Windows; the `.BAT` files are the supported entry points.## Start order```text1. backend\DEV.BAT                (development)   PocketBase :8090  +  Next.js dev :3000   — or —1. backend\RUN NEXTJS.BAT         (production)    PocketBase :8090  +  Next.js start :3000   — or —1. backend\RUN SERVE.BAT          (static)        PocketBase :8090  +  http-server :30002. trailbase\RUN.BAT                              TrailBase :4000  (serves the APIs *and* the app)```Steps 1 and 2 are independent stacks — you can run the legacy pair, the new pair, or both atonce. Ports do not collide. Port table: [[environment]]. The guest app has no separate process and**no separate port**: it is a component of the single TrailBase server, served from `:4000`([[runtime-js-guest-platform]]).## Legacy pair (production)### `backend\DEV.BAT` — development```batstart "" .\pocketbase.exe serve --devtimeout /t 1 >nulcd ../frontendstart "" npm run devtimeout /t 3 >nul```Starts PocketBase in dev mode, then Next.js dev mode. The `start` calls are non-blocking, sotwo windows appear. The `timeout` lines are the only synchronisation — PocketBase's admin UI isat `http://127.0.0.1:8090/_/`. Notes: the trailing `start "" http://127.0.0.1:3000` line iscommented out (`@REM`), so the browser is not opened automatically.### `backend\RUN NEXTJS.BAT` — production-styleSame shape, but `pocketbase.exe serve` (no `--dev`) and `npm run start` (the Next.js productionserver, which requires a prior `npm run build`). Opens `http://127.0.0.1:3000` after a 3-secondwait.### `backend\RUN SERVE.BAT` — static serve`npm run serve` → `http-server ./out/ -p 3000`, i.e. serving a **static export** rather thanthe Next.js server. This needs `out/` to exist; `next.config.js` does not set`output: 'export'`, so check that a static export is actually what you want before using it.### Frontend build commands| Command | Purpose ||---|---|| `npm run dev` | dev server || `npm run build` | production build || `npm run lint` | ESLint || `npm run build:standalone` | `next build` then three `robocopy` calls into `../standalone` — the deployable bundle || `npm run storybook` | component workshop on `:6006` |## New pair (experimental)### `trailbase\RUN.BAT````batif not defined DEPOT set "DEPOT=traildepot"if not defined ADDRESS set "ADDRESS=127.0.0.1:4000"set "ADMIN_USER=admin@localhost"set "ADMIN_PASSWORD=administrator-0ne"```What it does:1. **First run only** (when `%DEPOT%\data` does not exist): calls   `trail user change-password %ADMIN_USER% %ADMIN_PASSWORD%`. That command initialises the   depot from `config.textproto` + `migrations/`, creates the admin user **and** sets the fixed   password — all before a server starts, so nothing races initialisation. If it fails it   prints a warning with the manual command instead of dying.2. Starts the server with `start "" trail "--depot=%DEPOT%" run --address=%ADDRESS%`.3. Polls `netstat -a -n -p tcp | findstr %ADDRESS% | findstr LISTENING` up to 30 times   (~30 s), then opens `http://%ADDRESS%/_/admin/`. If nothing is listening it prints a   warning telling you to check the TrailBase console — rather than opening a tab that cannot   be reached.Environment overrides, each quoted so no trailing space is kept:```batset "DEPOT=C:\some\depot" && RUN.BATset "ADDRESS=127.0.0.1:4001" && RUN.BAT```⚠️ **Delete `traildepot\data\` before a re-scaffold** if you previously ran an older version ofthis scaffold. Refinery silently *skips* a migration whose checksum changed, so a stale depotkeeps the old schema. See [[trailbase-stale-depot-skips-migration]].First-run credentials: `admin@localhost` / `administrator-0ne`. Change them before real use:```shtrail --depot=./traildepot user change-password admin@localhost <pw>trail --depot=./traildepot user change-email   admin@localhost <email>```Other useful CLI commands:| Command | Purpose ||---|---|| `trail --depot=./traildepot run` | plain start (no credential bootstrap, no bind override) || `trail --depot=./traildepot schema items` | export a record API's JSON schema || `trail --depot=./traildepot schema invoices` | `invoices.type` is `{"type":["null","integer"]}` || `trail --depot=./traildepot user change-password …` | set a password without running the server |Installing the binary, once: `iwr https://trailbase.io/install.ps1 | iex` (Windows) or`curl -sSL https://trailbase.io/install.sh | bash` (Unix).The Node `frontend-ssr` process that used to sit here was removed on 2026-09-27([[guest-ui-is-a-direct-shift-of-legacy]]); its `RUN.BAT`, `.env` and `npm run smoke` no longerexist. The new frontend is the guest-WASM platform below.## Guest-WASM platform (the new frontend, experimental)The depot is assembled from the checked-in sources and the built component by two `.bat` files, then servedby TrailBase itself ([[runtime-js-guest-platform]]):```powershell# 1. reset traildepot/ from the checked-in sources (wipes the database)trailbase\clear_db.bat# 2. build the Rust host (Rust + wasm32-wasip2 + QuickJS via rquickjs + minijinja), copy it intrailbase\build.bat            # -> traildepot/wasm/tb-ah-run-js.wasm# 3. start the servertrailbase\RUN.BAT              # trail --depot=traildepot run --runtime-root-fs=traildepot/runtime````RUN.BAT` runs 1 and 2 automatically if the depot is not prepared (no `traildepot/config.textproto`or no wasm component).- `--runtime-root-fs=traildepot/runtime` is **load-bearing**: it is the WASI sandbox root, so the  app's `app/` and `ahscripts/` live under it. It points at the **generated copy**, not at  `trailbase/runtime/` — so after editing the app, run `clear_db.bat` (or copy the tree) or the  change does not reach the server. Keeping it a subdirectory (not the depot root) keeps the  depot's `data/` and `secrets/` out of the guest sandbox  ([[trailbase-guest-wasm-runtime-defaults]]).- `trailbase/` is the source of truth: `config.textproto`, `metadata.textproto`,  `migrations/`, `host/` = the compiled Rust crate, `runtime/` = the editable app,  `tools/` = the harnesses. `traildepot/` is generated from it.- Do **not** pass `--aot`: it doubles the size and is 2.3× slower to cold-load  ([[trailbase-guest-aot-startup-cost]]).- The Phase-0 spike guest is **gone**: `guests/` was deleted on 2026-09-28, so the port `4001` depot no  longer exists ([[runtime-js-guest-platform]]).- Ports, depot paths and the harness list are in [[environment]].### Verify**Deploying an app change to the production depot (the safe path).** `clear_db.bat` wipes`trailbase\traildepot\data` — the 60,245 imported production records — so it is **not** the way topush an edit. The server reads the *generated* copy under `traildepot\`, so sync the source acrossand restart:```powershellrobocopy trailbase\runtime    trailbase\traildepot\runtime    /MIR /NFL /NDL /NJH /NJS /NProbocopy trailbase\migrations trailbase\traildepot\migrations /MIR /NFL /NDL /NJH /NJS /NPtrail --depot=traildepot run --address=127.0.0.1:4000 --runtime-threads=4 --runtime-root-fs=traildepot\runtime```- **The restart is required for anything under `app/lib/`.** Modules are loaded once per QuickJS  context and cached on `globalThis.__AA_MODS__`, so a new export only appears after a restart —  otherwise the screen fails with `not a function` / `cannot read property … of undefined`. Edits to  `app/views/*.html`, `app/public/**` and to `ahscripts/routes/_app/route.ts` hot-reload.- Sync `migrations/` too. On 2026-09-29 the depot was found **missing** `config.textproto` and  missing one migration file, and the server refused to start at all — the repair and the diagnosis  are in [[production-depot-could-not-be-started]].- `RUN.BAT` must not be used on a prepared depot that has lost its `config.textproto`: it re-runs  `clear_db.bat`, which wipes the data.All eight harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-parity.mjs`,`perf-compare.mjs`) were deleted with `frontend-ssr`; the parity results they produced arerecorded in [[guest-app-host-port]] and can no longer be reproduced([[guest-parity-differential-not-reproducible]]).| Command | Checks | Needs a running server? ||---|---|---|| `node trailbase/tools/guest-smoke.mjs` | boots its own depot on `:4322`, seeds the smoke dataset, asserts every screen | no || `node trailbase/tools/jobs-check.mjs` | durable queue, idempotency, worker fan-out, poller (`POLLER_TEST=1`) | yes — `GUEST_BASE`, default `http://127.0.0.1:4003` || `node trailbase/tools/management-check.mjs` | management create/update/delete | yes — same default || `node trailbase/tools/invoice-check.mjs` | context + ETag, idempotent create/lines, lease, complete | yes — same default |
+How the system that runs is started, and what it needs first. Everything is Windows; the `.BAT`
+files are the supported entry points.
+
+> **Rebuilt 2026-10-03.** This document had lost every newline in its body — the whole thing was one
+> 8,629-character line. It has been re-split into blocks and re-wrapped. See
+> [[three-reference-docs-lost-their-line-structure]].
+>
+> **Corrected at the same time:**
+>
+> - **The legacy half below is historical, not runnable.** `backend/` and `frontend/` were deleted
+>   from git on 2026-09-29 (`c167d311`). The three `backend\*.BAT` scripts each `cd ../frontend` and
+>   run `npm`, so **all three are dead**; and there is no `npm` project to run them in. The scripts
+>   are kept because they document what the legacy pair did. See [[cutover-is-guest-only]].
+> - **There is one system to start, not two.** The "start order" below is really "start TrailBase".
+> - **The smoke count is no longer hard-coded here.** It used to read "The current figure is 76/76",
+>   which was already wrong when written. See [[smoke-count-is-not-a-hard-coded-number]].
+
+## Start order
+
+```text
+1. trailbase\RUN.BAT     TrailBase :4000  — serves the record APIs *and* the whole app
+```
+
+That is the entire start order. ⚠️ The legacy entry points that used to be listed here
+(`backend\DEV.BAT`, `backend\RUN NEXTJS.BAT`, `backend\RUN SERVE.BAT`) are dead — they shell into a
+`frontend/` that no longer exists.
+
+The guest app has no separate process and **no separate port**: it is a component of the single
+TrailBase server, served from `:4000` ([[runtime-js-guest-platform]]). Port table:
+[[environment]].
+
+## TrailBase — the system that runs
+
+### `trailbase\RUN.BAT`
+
+```bat
+if not defined DEPOT set "DEPOT=traildepot"
+if not defined ADDRESS set "ADDRESS=127.0.0.1:4000"
+set "ADMIN_USER=admin@localhost"
+set "ADMIN_PASSWORD=administrator-0ne"
+```
+
+What it does:
+
+1. **First run only** (when `%DEPOT%\data` does not exist): calls
+   `trail user change-password %ADMIN_USER% %ADMIN_PASSWORD%`. That command initialises the depot
+   from `config.textproto` + `migrations/`, creates the admin user **and** sets the fixed password —
+   all before a server starts, so nothing races initialisation. If it fails it prints a warning with
+   the manual command instead of dying.
+2. **Syncs `runtime\` and `migrations\` into `%DEPOT%` on every start**, with `/MIR`. This is
+   unconditional and deliberate: `RUN.BAT` used to sync only when the depot was *created*, so an edit
+   to `runtime\` was silently not served and you got the page from whenever the depot was last
+   built. `%DEPOT%\runtime` is what `--runtime-root-fs` points at, so this copy is the live app.
+3. Starts the server with `start "" trail "--depot=%DEPOT%" run --address=%ADDRESS%`.
+4. Polls `netstat -a -n -p tcp | findstr %ADDRESS% | findstr LISTENING` up to 30 times (~30 s), then
+   opens `http://%ADDRESS%/_/admin/`. If nothing is listening it prints a warning telling you to
+   check the TrailBase console — rather than opening a tab that cannot be reached.
+
+Environment overrides, each quoted so no trailing space is kept:
+
+```bat
+set "DEPOT=C:\some\depot" && RUN.BAT
+set "ADDRESS=127.0.0.1:4001" && RUN.BAT
+```
+
+⚠️ **Delete `traildepot\data\` before a re-scaffold** if you previously ran an older version of this
+scaffold. Refinery silently *skips* a migration whose checksum changed, so a stale depot keeps the
+old schema. See [[trailbase-stale-depot-skips-migration]].
+
+⚠️ **`RUN.BAT` must not be used on a prepared depot that has lost its `config.textproto`.** Its
+first branch calls `clear_db.bat`, which **wipes `traildepot\data\`** — the 60,245 imported
+production records.
+
+### Guest-WASM platform (the frontend)
+
+The depot is assembled from the checked-in sources and the built component by two `.bat` files, then
+served by TrailBase itself ([[runtime-js-guest-platform]]):
+
+```powershell
+# 1. reset traildepot/ from the checked-in sources (WIPES THE DATABASE)
+trailbase\clear_db.bat
+# 2. build the Rust host (Rust + wasm32-wasip2 + QuickJS via rquickjs + minijinja), copy it in
+trailbase\build.bat            # -> traildepot/wasm/tb-ah-run-js.wasm
+# 3. start the server
+trailbase\RUN.BAT              # trail --depot=traildepot run --runtime-root-fs=traildepot/runtime
+```
+
+- `--runtime-root-fs=traildepot/runtime` is **load-bearing**: it is the WASI sandbox root, so the
+  app's `app/` and `ahscripts/` live under it. It points at the **generated copy**, not at
+  `trailbase/runtime/` — which is why `RUN.BAT` syncs on every start. Keeping it a subdirectory (not
+  the depot root) keeps the depot's `data/` and `secrets/` out of the guest sandbox
+  ([[trailbase-guest-wasm-runtime-defaults]]).
+- `trailbase/` is the source of truth: `config.textproto`, `metadata.textproto`, `migrations/`,
+  `tb-ah-*/` = the compiled Rust crates, `runtime/` = the editable app, `tools/` = the harnesses.
+  `traildepot/` is generated from it.
+- Do **not** pass `--aot`: it doubles the size and is 2.3× slower to cold-load
+  ([[trailbase-guest-aot-startup-cost]]).
+- The Phase-0 spike guest is **gone**: `guests/` was deleted on 2026-09-28, so the port `4001` depot
+  no longer exists ([[runtime-js-guest-platform]]).
+- Ports, depot paths and the harness list are in [[environment]].
+
+### Deploying an app change to the production depot (the safe path)
+
+`clear_db.bat` wipes `trailbase\traildepot\data` — the 60,245 imported production records — so it is
+**not** the way to push an edit. Sync the source across and restart:
+
+```powershell
+robocopy trailbase\runtime    trailbase\traildepot\runtime    /MIR /NFL /NDL /NJH /NJS /NP
+robocopy trailbase\migrations trailbase\traildepot\migrations /MIR /NFL /NDL /NJH /NJS /NP
+trail --depot=traildepot run --address=127.0.0.1:4000 --runtime-threads=4 --runtime-root-fs=traildepot\runtime
+```
+
+- **The restart is required for anything under `app/lib/`.** Modules are loaded once per QuickJS
+  context and cached on `globalThis.__AA_MODS__`, so a new export only appears after a restart —
+  otherwise the screen fails with `not a function` / `cannot read property … of undefined`. Edits to
+  `app/views/*.html`, `app/public/**` and to `ahscripts/routes/_app/route.ts` hot-reload.
+- Sync `migrations/` too. On 2026-09-29 the depot was found **missing** `config.textproto` and
+  missing one migration file, and the server refused to start at all — the repair and the diagnosis
+  are in [[production-depot-could-not-be-started]].
+
+### Verify
+
+All the harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-parity.mjs`,
+`perf-compare.mjs`) were deleted with `frontend-ssr`; the parity results they produced are recorded in
+[[guest-app-host-port]] and can no longer be reproduced
+([[guest-parity-differential-not-reproducible]]).
+
+| Command | Checks | Needs a running server? |
+|---|---|---|
+| `node trailbase/tools/guest-smoke.mjs` | boots its own depot on `:4322`, seeds the smoke dataset, asserts every screen | **no** |
+| `node trailbase/tools/route-snapshot.mjs` | status + content fingerprint for **49** routes — the refactoring gate for [[tb-0030-retire-the-route-ts-dispatcher]] | yes — `--base`, `--email`, `--password` |
+| `node trailbase/tools/jobs-check.mjs` | durable queue, idempotency, worker fan-out, poller (`POLLER_TEST=1`) | yes — `GUEST_BASE`, default `http://127.0.0.1:4003` |
+| `node trailbase/tools/management-check.mjs` | management create/update/delete | yes — same default |
+| `node trailbase/tools/invoice-check.mjs` | context + ETag, idempotent create/lines, lease, complete | yes — same default |
 | `node trailbase/tools/verify-spool-report.mjs` | the ported report SQL vs `compute/`, on 6 data-derived filter cases — **the gate for the spool path** ([[spooling-report-rows-through-kv]]) | no (`DEPOT_DB`, read-only) |
 | `node trailbase/tools/verify-prelude.mjs` | the shared SQL prelude vs `compute/views.js` — run it before trusting any report statement | no (`DEPOT_DB`, read-only) |
 | `node trailbase/tools/verify-spool-reports.mjs` | **all 14 spooled reports** vs `compute/reports.js`: row count, display fields, money columns, order, the SQL totals statement, **every declared bind** (72), page-column keys, and one-sided columns | no (`DEPOT_DB`, read-only) |
@@ -21,12 +154,69 @@ Windows; the `.BAT` files are the supported entry points.## Start order```text1.
 | `node trailbase/tools/check-money-text-in-guest.mjs` | the same, evaluated **in the guest**, plus which SQL functions it has — node:sqlite and the guest disagree | yes (`:4000`) |
 | `node trailbase/tools/regen-round2.mjs` | regenerate every `round2` from the verified CAST-only template (the guest SQLite has **no** `floor()`) | writes `.sql` |
 | `node trailbase/tools/sync-manifests.mjs` | derive each report's column manifest from its statement's final SELECT | writes `spoolreports.js` |
-| `node trailbase/tools/bench-reports-baseline.mjs` | time all 14 reports through the live `compute/` path in Node | no |
+| `node trailbase/tools/report-bench.mjs` | time the reports through the spooled path | yes |
 | `pwsh -File trailbase/tools/run-spool-sweep.ps1` | spooled vs rows-through-`sqlite.all` in the real guest, **byte-identity asserted**; needs a server on `:4000` | yes |
 | `node trailbase/tools/diff-spool-html.mjs` | the first byte where two arms differ, with context; needs a server | yes |
-| `pwsh -File trailbase/tools/run-spool-bench.ps1` | the same A/B for a single report | yes |The counts in the smoke row are **not** hard-coded: the harness prints `N/N` at runtime, so achanged number here means the suite changed. The current figure is **76/76** (raised from 71 by theinvoice, payment and inventory screens; the suite had been *failing* since the categories→companiesmigration until 2026-09-29 — [[tb-0028-guest-transactional-screens-and-mobile]]).## Prerequisites| System | Needs ||---|---|| `backend` | Windows; `pocketbase.exe` is bundled (0.22.55, 44 MB, committed) || `frontend` | Node.js (Next 14 / React 18); `npm install` in `frontend/` || `trailbase` | the `trail` binary on `PATH` (`iwr https://trailbase.io/install.ps1 \| iex`) || `trailbase/host` (guest) | Rust with the `wasm32-wasip2` target; `trailbase\build.bat`; Node for the tools |## Data directories (do not commit)| Path | Status ||---|---|| `backend/pb_data/` | git-ignored — the dev/admin data directory || `backend/pb_data_bench/` | git-ignored — benchmark data || `backend/p_data/` | ⚠️ **committed** (`data.db`, `data.db-shm`, `data.db-wal`, `logs.db`, `types.d.ts`) — see [[pocketbase-data-dirs-in-git]] || `trailbase/traildepot/data`, `backups`, `uploads`, `secrets`, `wasm` | git-ignored by `trailbase/.gitignore` || `trailbase/tb-ah-run-js/target/`, `trailbase/.tbdemo-guest/` | build output and the smoke test's throw-away depot; git-ignored || `frontend/.env.local`, `.next/`, `out/` | git-ignored by the root `.gitignore` |## CredentialsThe logins each system needs are in the `credentials/` collection:| System | Environment | Document ||---|---|---|| PocketBase (`backend/`) | production | `credentials/production-pocketbase.md` || Next.js (`frontend/`) | production | `credentials/production-nextjs.md` || TrailBase (`trailbase/`) | experimental | [[trailbase]] || Guest app (`trailbase/runtime/`) | experimental | — (no separate secret; uses TrailBase auth) |They are plaintext and tracked; see `credentials/README.md` for the warning.## Related- [[environment]] — ports, env vars and credentials in one table.- [[trailbase]] — what the server actually exposes once it is up.- [[backend]] / [[frontend]] — the legacy scripts in context.- [[runtime-js-guest-platform]] — the new frontend being started.
-The guest components are named 	b-ah-run-js, 	b-ah-query-tbdb and
-	-ah-render-jinja — see [[components-are-named-tb-ah]] for the mapping from the
-older working names and why the URL spaces were left alone.
-The three components are members of one cargo workspace, so they share a
-`Cargo.lock` and one `target/` — see [[components-share-one-cargo-workspace]].
+| `pwsh -File trailbase/tools/run-spool-bench.ps1` | the same A/B for a single report | yes |
+
+⚠️ **Do not trust a harness that reports success — read what it asserted.**
+`route-snapshot.mjs` reported "45 routes, 0 erroring" for months while snapshotting login redirects
+because it omitted `redirect: 'manual'` on the login call. See
+[[route-snapshot-was-snapshotting-redirects]] and
+[[smoke-count-is-not-a-hard-coded-number]].
+
+⚠️ **`route-snapshot.mjs` cannot currently be pointed at the production depot.** Its default
+password is the `RUN.BAT` development default, and the production depot's admin password is not that
+value (a login returns `400`). Point it at a throw-away depot, or supply `--password`. Details and a
+working invocation in [[route-snapshot-was-snapshotting-redirects]].
+
+### Other useful CLI commands
+
+| Command | Purpose |
+|---|---|
+| `trail --depot=./traildepot run` | plain start (no credential bootstrap, no bind override) |
+| `trail --depot=./traildepot schema items` | export a record API's JSON schema |
+| `trail --depot=./traildepot schema invoices` | `invoices.type` is `{"type":["null","integer"]}` |
+| `trail --depot=./traildepot user change-password …` | set a password without running the server |
+
+Installing the binary, once: `iwr https://trailbase.io/install.ps1 | iex` (Windows) or
+`curl -sSL https://trailbase.io/install.sh | bash` (Unix).
+
+The Node `frontend-ssr` process that used to sit here was removed on 2026-09-27
+([[guest-ui-is-a-direct-shift-of-legacy]]); its `RUN.BAT`, `.env` and `npm run smoke` no longer
+exist.
+
+## Prerequisites
+
+| System | Needs |
+|---|---|
+| `trailbase` | the `trail` binary on `PATH` (`iwr https://trailbase.io/install.ps1 \| iex`) |
+| `trailbase/tb-ah-*` (guest crates) | Rust with the `wasm32-wasip2` target; `trailbase\build.bat`; Node for the tools |
+| ~~`backend`~~ | ⚠️ **cannot be built** — no source. The `pocketbase.exe` binary survives at `legacyforparity/backend/` and can still be *run* for parity comparison |
+| ~~`frontend`~~ | ⚠️ **cannot be built** — the source was deleted; only the compiled bundle at `legacyforparity/standalone/` survives |
+
+## Data directories (do not commit)
+
+| Path | Status |
+|---|---|
+| `legacyforparity/` | ⚠️ **git-ignored, untracked, and the only copy in existence** — the parity oracle and the legacy databases. See [[cutover-is-guest-only]] |
+| `legacyforparity/backend/p_data/` | ⚠️ was **tracked in git history** (`c167d311^`) and is **not** purged — see [[pocketbase-data-dirs-in-git]] |
+| `legacyforparity/backend/pb_data/` | untracked; `data.db` ≈ 18 MB, the larger of the two legacy databases |
+| `trailbase/traildepot/data`, `backups`, `uploads`, `secrets`, `wasm` | git-ignored by `trailbase/.gitignore` |
+| `trailbase/target/`, `trailbase/.tbdemo-guest/` | build output and the smoke test's throw-away depot; git-ignored |
+| ~~`frontend/.env.local`, `.next/`, `out/`~~ | ⚠️ **no longer ignored** — the root `.gitignore` rules for `/frontend/...` were replaced by `/legacyforparity/` on 2026-09-29. Nothing under `frontend/` exists, so this is inert, but a restored tree would be untracked-and-unignored |
+
+## Credentials
+
+⚠️ **`vault/credentials/` is currently empty** — it has no documents, and the logins it was meant to
+hold are therefore not recorded anywhere in this vault. The only credential this document states is
+the TrailBase **development** default set by `RUN.BAT` on first run
+(`admin@localhost` / `administrator-0ne`), which is documented as such and is **not** the production
+depot's password. See [[environment]] § *Credentials*.
+
+## Related
+
+- [[environment]] — ports, env vars and credentials in one table.
+- [[trailbase]] — what the server actually exposes once it is up.
+- [[runtime-js-guest-platform]] — the frontend being started.
+- [[cutover-is-guest-only]] — why the legacy entries above are historical rather than live.

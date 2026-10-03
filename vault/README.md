@@ -12,29 +12,33 @@ tags: [meta, index, pos, erp]
 A local-first, file-first knowledgebase (opinionated vault) for the
 `aa_point_of_sale` trade & distribution ERP/POS workspace.
 
-The workspace holds **four systems**, in two states of maturity, plus the guest-WASM
-app platform that now carries the new frontend. This vault exists so that questions about any of
-them are answered from these documents instead of by re-reading source.
+The workspace holds **two live systems** and one **frozen parity oracle**. This vault exists so
+that questions about any of them are answered from these documents instead of by re-reading source.
+
+> **The "four systems, legacy is production" framing is superseded.** This table previously listed
+> `backend/` and `frontend/` as `Legacy / production` and said in bold that "the legacy pair is what
+> is actually running in production". That was true when written and stopped being true on
+> **2026-09-29**, when commit `c167d311` deleted both directories from git. They now live only as
+> `legacyforparity/` — untracked, git-ignored, and (for the frontend) **compiled with no `src/`**.
+> See [[cutover-is-guest-only]].
 
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs, validated against a running server |
-| [[runtime-js-guest-platform]] | `trailbase/` | **New / experimental** | WebAssembly app host: the new frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management |
-| [[backend]] | `backend/` | **Legacy / production** | PocketBase 0.22.55 serving the live POS |
-| [[frontend]] | `frontend/` | **Legacy / production** | Next.js 14 + Mantine SPA talking to PocketBase |
+| [[runtime-js-guest-platform]] | `trailbase/` | **New / the product** | WebAssembly app host: the frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management / invoicing |
+| [[backend]] | `legacyforparity/backend/` | **Legacy / frozen** | PocketBase 0.22.55 — runnable as a parity oracle, never edited, no git copy |
+| [[frontend]] | `legacyforparity/standalone/` | **Legacy / frozen** | compiled Next.js 14 + Mantine bundle — runnable as a parity oracle, **no source**, never edited |
 
-**The legacy pair is what is actually running in production.** The new pair is the
-replacement under construction: the TrailBase schema and APIs are done and verified, and the
-guest frontend covers dashboard, reports and management. The production import **has been run once**
-through the guest `import-from-v1` plugin (60,245 records, 0 errors) and the reports were timed on
-it ([[new-system-report-timings]], [[report-performance-baseline]]). **The depot was rebuilt and
-re-imported on 2026-09-29 and is currently loaded** — 60,245 records, 0 failures, run through the
-browser UI, with per-table money and quantity sums verified equal to PocketBase
+**The guest is the only frontend.** There is no legacy pair in production to shift onto it: the
+legacy source was deleted, and what is left is a compiled artefact. The production import **has been
+run** through the guest `import-from-v1` plugin (60,245 records, 0 errors) and the reports were timed
+on it ([[new-system-report-timings]], [[report-performance-baseline]]). The depot was rebuilt and
+re-imported on 2026-09-29 and is loaded — 60,245 records, 0 failures, run through the browser UI,
+with per-table money and quantity sums verified equal to PocketBase
 ([[reports-parity-and-e2e-2026-09-29]]). An earlier revision of this paragraph said the depot was
 reset and "no production data is currently loaded"; that was stale and is corrected here and in
-[[aa-point-of-sale]], [[system-status-overview]] and [[trailbase-migration]]. The legacy Next.js app
-still does not talk to TrailBase. The guest platform is the
-chosen replacement frontend and the legacy UI is to be shifted onto it screen-for-screen
+[[aa-point-of-sale]], [[system-status-overview]] and [[trailbase-migration]]. The guest platform is
+the chosen frontend and the legacy UI is to be shifted onto it screen-for-screen
 ([[guest-ui-is-a-direct-shift-of-legacy]]); the intermediate Node `frontend-ssr` experiment was
 removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and
 [[trailbase-migration]] for the active workstream.
@@ -65,16 +69,16 @@ removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and
 ## Reading order for a newcomer
 
 1. [[aa-point-of-sale]] — the business context, the systems, and which one is live.
-2. [[trailbase]] and [[runtime-js-guest-platform]] — the replacement pair.
-3. [[backend]] and [[frontend]] — what production runs today.
+2. [[trailbase]] and [[runtime-js-guest-platform]] — the replacement pair, and the product.
+3. [[backend]] and [[frontend]] — the frozen parity oracle, and what of it still exists.
 4. [[data-model]] — the 17 tables, the enumeration codes, and the PocketBase → TrailBase value translation.
 5. [[reports-and-ledgers]] — the report arithmetic, and why it lives in JavaScript at runtime.
-6. [[build-and-run]] and [[environment]] — how to start each system, and the credentials each
+6. [[build-and-run]] and [[environment]] — how to start the new system, and the credentials it
    needs (the local-only `credentials/` collection, e.g. `credentials/experimental-trailbase.md`).
 
 Since 2026-10-02 the new system is served on **all interfaces** (`0.0.0.0:4000`) so other devices
 on the LAN can use it, behind a Private-profile Windows firewall rule —
-[[serve-the-app-on-all-interfaces]]. The legacy pair is still loopback-only.
+[[serve-the-app-on-all-interfaces]]. The legacy stack is still loopback-only, and frozen.
 
 ## Status at a glance
 
@@ -83,7 +87,9 @@ on the LAN can use it, behind a Private-profile Windows firewall rule —
   declarative page folders under `trailbase/runtime/app/pages/`).
 - The guest serves the same app without Node: smoke **71/71**, differential **14/14**
   (`trailbase/tools/`), plus a first verified invoice-entry slice.
-- Legacy Next.js app still points at PocketBase (`NEXT_PUBLIC_PB_URL`), and PocketBase still holds the production data.
+- Legacy Next.js app **no longer has source** — deleted from git 2026-09-29; what remains in
+  `legacyforparity/` is a compiled bundle plus the PocketBase data directories, untracked. There is
+  no legacy app pointing at PocketBase any more, because there is no legacy app.
 - Parity target restated: the guest frontend is a direct shift of the legacy UI, same look
   ([[guest-ui-is-a-direct-shift-of-legacy]]); the remaining gaps are in
   [[guest-frontend-feature-parity-gaps]].

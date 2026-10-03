@@ -1,15 +1,25 @@
 ---
 title: POS-0028 Decide the cutover shape
 type: task
-status: todo
+status: done
 priority: critical
 created: 2026-09-26
 tags: [decision, cutover, strategy, blocking, migration]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[keep-legacy-stack-in-production]]", "[[guest-frontend-feature-parity-gaps]]"]
+related_to: ["[[keep-legacy-stack-in-production]]", "[[guest-frontend-feature-parity-gaps]]", "[[cutover-is-guest-only]]"]
 ---
 
 # POS-0028 Decide the cutover shape
+
+> **CLOSED 2026-10-03 by [[cutover-is-guest-only]] — shape B, guest only.** The two shapes below are
+> preserved as the record of the question. One of them is no longer *available*: `frontend/` and
+> `backend/` were deleted from git on 2026-09-29 (`c167d311`), so shape A would have to edit files
+> that no longer exist. The decision note records the evidence and what it costs.
+>
+> Subtasks 1, 2 and 3 are answered by the *unavailability* of shape A rather than by an estimate:
+> there is nothing left to enumerate, nothing left to run without a static export, and nothing left
+> to size. Subtask 5 — "supersede whichever task the decision makes unnecessary" — was not merely
+> done, it became mandatory.
 
 One decision gates the rest of the migration: **is the legacy Next.js UI repointed at TrailBase, or
 retired in favour of expanding [[runtime-js-guest-platform]]?**
@@ -75,18 +85,27 @@ Build the missing screens on [[runtime-js-guest-platform]] and delete `frontend/
 
 ## Subtasks
 
-- [ ] Enumerate anything that calls PocketBase besides `frontend/` (scripts, exports, other tools,
-      external integrators)
-- [ ] Establish whether the legacy app can run without a static export — i.e. whether a hybrid (shape 1
-      with `npm run start`) is acceptable operationally
-- [ ] Estimate shape B honestly: invoice entry × 4 types, orders, printing, print queue, cash memo × 5
-      screens
-- [ ] Decide, and write the answer as a new decision note in `decisions/` (do not edit
-      [[keep-legacy-stack-in-production]] — it says the cutover is a separate decision)
-- [ ] Supersede or delete whichever of [[tb-0012-wire-nextjs-frontend-to-trailbase]] /
-      [[tb-0013-rework-report-screens-without-views]] the decision makes unnecessary
-- [ ] Record the rollback plan and the point at which PocketBase stops being writable
-- [ ] Update [[trailbase-migration]], [[system-status-overview]] and [[route-map]] to match
+- [x] Enumerate anything that calls PocketBase besides `frontend/` (scripts, exports, other tools,
+      external integrators) — **answered by unavailability**: `legacyforparity/` holds only
+      `backend/` and a compiled `standalone/` bundle, neither with a callable integration surface
+- [x] Establish whether the legacy app can run without a static export — i.e. whether a hybrid (shape 1
+      with `npm run start`) is acceptable operationally — **moot**: no `package.json` script set and
+      no `src/` survive, so there is no `npm run start` to run
+- [x] Estimate shape B honestly: invoice entry × 4 types, orders, printing, print queue, cash memo × 5
+      screens — carried by [[guest-frontend-feature-parity-gaps]], and since largely built by
+      [[guest-invoice-lifecycle]]
+- [x] Decide, and write the answer as a new decision note in `decisions/` (do not edit
+      [[keep-legacy-stack-in-production]] — it says the cutover is a separate decision) —
+      [[cutover-is-guest-only]]
+- [x] Supersede or delete whichever of [[tb-0012-wire-nextjs-frontend-to-trailbase]] /
+      [[tb-0013-rework-report-screens-without-views]] the decision makes unnecessary — **both**, marked
+      `blocked` with the reason; their checklists left unticked
+- [x] Record the rollback plan and the point at which PocketBase stops being writable — recorded in
+      [[cutover-is-guest-only]]: rollback is the frozen compiled bundle plus
+      `legacyforparity/backend/p{_b,}data/`, not a rebuild, and there is no git copy
+- [x] Update [[trailbase-migration]], [[system-status-overview]] and [[route-map]] to match — done
+      2026-10-03. [[route-map]] was the worst offender: it still listed all 15 invoice and cash-memo
+      routes as "❌ not built" and put the guest on `:4003`.
 
 ## Why this is the critical-path task
 

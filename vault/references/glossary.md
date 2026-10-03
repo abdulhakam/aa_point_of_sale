@@ -34,7 +34,7 @@ Domain and code vocabulary, including the deliberate misspellings that must not 
 | **Discount 1 / Discount 2** | Two **multiplicative** percentage discounts, applied in sequence, on both `transactions` and `invoices`. |
 | **`discount_rs`** | A flat rupee amount, subtracted **after** the two percentages. |
 | **Dated / due date** | `invoices.dated` (the document date, falling back to `created`) and `invoices.duedate`. |
-| **Cash memo** | The legacy module holding the payment vouchers, receive vouchers, DA entry and expenses screens. No guest equivalent. |
+| **Cash memo** | The module holding the payment vouchers, receive vouchers, DA entry and expenses screens. ⚠️ Corrected 2026-10-03: this row said "The legacy module … **No guest equivalent**". The guest has all of it — `/cashmemo`, `/cashmemo/vouchers`, `/cashmemo/da`, `/cashmemo/expenses` all answer 200 ([[guest-invoice-lifecycle]], [[route-map]]). |
 | **DA entry** | "Daily allowance"-style expense entry inside the cash-memo module. |
 | **Ledger** | A running statement: party, booker, area or general. |
 | **Outstanding** | What a party still owes or is owed — `outstanding_summary`. |
@@ -79,7 +79,7 @@ logic all used that spelling". A future cleanup must change all of them at once,
 | **`_user`** | TrailBase's hidden built-in user table; can be targeted by a foreign key but never expanded. |
 | **Scroll / cursor pagination** | TrailBase's list paging: `?limit=` + the response `cursor`. Not PocketBase's page/perPage. |
 | **`getFullList` / `getList`** | PocketBase SDK helpers: fetch everything / fetch one page. Legacy code mixes both; see [[frontend]]. |
-| **Standalone build** | `npm run build:standalone` in `frontend/` — the Next.js standalone output copied to `../standalone`. |
+| **Standalone build** | ⚠️ **Historical.** `npm run build:standalone` in `frontend/` produced the Next.js standalone output copied to `../standalone`. That command is gone with `frontend/`; the compiled result survives only at `legacyforparity/standalone/` and **cannot be rebuilt** — see [[cutover-is-guest-only]]. |
 
 ## Reporting vocabulary
 

@@ -48,15 +48,22 @@ const ROUTES = [
   ['reports ledgers', '/reports/ledgers', 'GET'],
   ['report profit', '/reports/profit', 'GET'],
   ['report dailysale', '/reports/dailysale', 'GET'],
-  ['report stock', '/reports/stock', 'GET'],
+  // The route is `stockreport`, matching the legacy `/app/reports/stockreport`. It used to be
+  // probed as `/reports/stock`, which is not a route at all — so the snapshot reported a confident
+  // `404` for "report stock" and the one report the plan's gate names was never actually covered.
+  ['report stock', '/reports/stockreport', 'GET'],
   ['report payments', '/reports/payments', 'GET'],
   ['report outstanding', '/reports/outstanding', 'GET'],
   ['report difference', '/reports/difference', 'GET'],
   ['report itemsales', '/reports/itemsales', 'GET'],
   ['report paymentsbycompany', '/reports/paymentsbycompany', 'GET'],
   ['report salesreport', '/reports/salesreport', 'GET'],
+  ['report productsale', '/reports/productsale', 'GET'],
   ['report unknown', '/reports/does-not-exist', 'GET'],
   ['ledger general', '/reports/ledgers/general', 'GET'],
+  ['ledger area', '/reports/ledgers/area', 'GET'],
+  ['ledger booker', '/reports/ledgers/booker', 'GET'],
+  ['ledger party', '/reports/ledgers/party', 'GET'],
   ['management index', '/management', 'GET'],
   ['management parties', '/management/parties', 'GET'],
   ['management items', '/management/items', 'GET'],
@@ -167,13 +174,27 @@ const login = await fetch(`${BASE}/api/auth/v1/login`, {
   headers: { 'content-type': 'application/x-www-form-urlencoded' },
   // TrailBase's field is `email_or_username`; `identity` is rejected with 400.
   body: new URLSearchParams({ email_or_username: EMAIL, password: PASSWORD }),
+  // `redirect: 'manual'` is load-bearing. TrailBase answers the login with a 303 to /login; if
+  // fetch follows it, `res` becomes the *login page* — an HTML response with no Set-Cookie — so
+  // `remember` stores an empty cookie, every later route 303s to /login, and the snapshot records
+  // "45 routes, 0 erroring" having tested nothing but redirects. That is a silent false pass:
+  // `login.ok` was still true, so the "logged in" line printed either way. Only the manual
+  // response carries the Set-Cookie headers. guest-smoke.mjs passes this for the same reason.
+  redirect: 'manual',
 });
-if (!login.ok) {
+// TrailBase answers a *successful* login with a 303 to /login (the tokens ride in Set-Cookie), so
+// `login.ok` is false for the case that worked. Bad credentials come back 401.
+if (login.status !== 303 && login.status !== 200) {
   console.error(`login failed: ${login.status}`);
   process.exit(1);
 }
 remember(login);
-console.log(`logged in as ${EMAIL}\n`);
+// A login that set no cookie must fail loudly rather than snapshot 45 redirects.
+if (!cookie) {
+  console.error(`login returned ${login.status} but set no auth cookie — every route would snapshot a redirect`);
+  process.exit(1);
+}
+console.log(`logged in as ${EMAIL} (${login.status}, cookie set)\n`);
 
 for (const [name, path, method] of ROUTES) await probe(name, path, method);
 

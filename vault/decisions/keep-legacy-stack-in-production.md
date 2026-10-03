@@ -1,15 +1,34 @@
 ---
 title: Keep the legacy stack live until the new pair reaches parity
 type: decision
-status: accepted
+status: superseded
 decided_on: 2026-09-26
 created: 2026-09-26
+superseded_on: 2026-10-03
+superseded_by: "[[cutover-is-guest-only]]"
 tags: [strategy, migration, legacy, production, risk]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[backend]]", "[[frontend]]", "[[pos-0028-decide-cutover-plan]]"]
+related_to: ["[[backend]]", "[[frontend]]", "[[pos-0028-decide-cutover-plan]]", "[[cutover-is-guest-only]]"]
 ---
 
 # Keep the legacy stack live until the new pair reaches parity
+
+> **SUPERSEDED 2026-10-03 by [[cutover-is-guest-only]].** The body below is preserved unchanged as
+> the record of what was decided on 2026-09-26 and why. Two of its three premises are now false:
+>
+> 1. **"Two complete stacks in this workspace"** — the legacy one is no longer complete. `backend/`
+>    and `frontend/` were deleted from git on 2026-09-29 (`c167d311`). What survives is
+>    `legacyforparity/`: a PocketBase directory and a **compiled** Next.js standalone bundle with no
+>    `src/`. It is untracked, git-ignored, and unbuildable.
+> 2. **"Do not modify `backend/pb_migrations/`"** and **"do not repoint `frontend/.env.local`"** —
+>    both paths no longer exist, so the guardrails have nothing to guard. They are restated in
+>    [[cutover-is-guest-only]] as a single rule: `legacyforparity/` is never edited.
+> 3. Premise 3 — "the old stack is the only executable specification of the report arithmetic" —
+>    survives **narrowed**. The frozen bundle can still be *run*, so it remains an oracle to compare
+>    against, but it cannot be *changed*, and there is no git copy of it.
+>
+> The cutover this note deferred to [[pos-0028-decide-cutover-plan]] has now been made: shape B,
+> guest only.
 
 ## Context
 
@@ -76,14 +95,16 @@ The cutover itself is a **separate, explicit decision** with its own note:
 
 ## Evidence
 
-- `backend/pb_migrations/1789890189_add_performance_indexes.js`,
+- `legacyforparity/backend/pb_migrations/1789890189_add_performance_indexes.js`,
   `1789890300_ledger_party_window_function.js`, `1789890310_payments_summary_view.js` — the
   performance programme, on the legacy side, after the TrailBase rewrite had begun. Dated
   epoch-`1789890xxx` (2026), i.e. contemporaneous with, not before, the new work.
+  ⚠️ **Path corrected 2026-10-03**: these were at `backend/pb_migrations/`, which `c167d311` removed
+  from git; they are readable at `legacyforparity/backend/pb_migrations/`.
 - `trailbase/config.textproto` — the comment contrasting PocketBase's `""` rules with TrailBase's
   authenticated-only default.
-- `backend/DEV.BAT`, `RUN NEXTJS.BAT`, `RUN SERVE.BAT` — the legacy pair is still scripted and
-  runnable ([[build-and-run]]).
+- `legacyforparity/backend/DEV.BAT`, `RUN NEXTJS.BAT`, `RUN SERVE.BAT` — the legacy pair is still
+  scripted, though the Next.js half can no longer build ([[build-and-run]]).
 - The former Node frontend's `frontend-ssr/README.md` § *Known gaps* (removed 2026-09-27,
   [[guest-app-host-port]]) — "Invoices, cash memo, expenses and printing are **out of scope** by
   request." The guest's current gap list is [[guest-frontend-feature-parity-gaps]].

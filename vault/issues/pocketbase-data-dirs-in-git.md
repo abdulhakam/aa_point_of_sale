@@ -1,20 +1,65 @@
 ---
 title: A live PocketBase data directory is committed to git
 type: issue
-status: resolved
+status: open
 severity: high
 created: 2026-09-26
+updated: 2026-10-03
 tags: [git, pocketbase, hygiene, secrets, backend]
-related_to: ["[[backend]]", "[[build-and-run]]"]
+related_to: ["[[backend]]", "[[build-and-run]]", "[[cutover-is-guest-only]]"]
 ---
 
 
-## RESOLVED 2026-10-01
+## RESOLVED 2026-10-01 — **REOPENED AND CORRECTED 2026-10-03, see below**
 
 The user deleted the PocketBase data directories from this branch; there is no PocketBase on it
 anymore. Nothing to commit, and the risk is gone rather than mitigated.
 
+> ⚠️ **The banner above is wrong.** See *REOPENED 2026-10-03* below for the correction and the
+> evidence. The short version: the data was not deleted, it was **moved** to `legacyforparity/`, and
+> an 11,182,080-byte `p_data/data.db` blob is still in this repository's history.
+
 # A live PocketBase data directory is committed to git
+
+## REOPENED 2026-10-03 — the "RESOLVED 2026-10-01" banner was wrong
+
+**What it claimed.** *"The user deleted the PocketBase data directories from this branch; there is no
+PocketBase on it anymore. Nothing to commit, and the risk is gone rather than mitigated."*
+
+**Why that was wrong, on all three counts.**
+
+1. **The data is not gone — it moved.** `backend/` was deleted from git on 2026-09-29 (`c167d311`),
+   and the directory is now `legacyforparity/backend/`. Both data directories are present on disk
+   today:
+
+   | Path | Present? | Size |
+   |---|---|---|
+   | `legacyforparity/backend/pb_data/data.db` | yes | 17,960,960 bytes |
+   | `legacyforparity/backend/p_data/data.db` | yes | 745,472 bytes |
+   | `legacyforparity/backend/p_data/logs.db` | yes | 40,960 bytes |
+
+2. **"Nothing to commit" was never true of the history.** Untracking stops *new* commits; it does
+   not remove existing blobs. `git cat-file -s c167d311^:backend/p_data/data.db` returns
+   **`11182080`** — an 11,182,080-byte database, plus `logs.db`, `data.db-wal`, `data.db-shm` and
+   `types.d.ts`, are still in this repository's history.
+
+3. **The untracked surface got broader, not narrower.** `p_data/` was the one *tracked* directory.
+   Since 2026-09-29 the **entire** legacy tree is git-ignored (`/legacyforparity/`), so `pb_data/` —
+   the *larger* 18 MB database — is untracked too. The bytes moved from "in git" to "on one
+   untracked disk folder".
+
+### The risk that is actually open
+
+- ⚠️ **The 11 MB `p_data/data.db` blob is still in git history.** Step 4 of *What to do* — purge from
+  history — has never been done. That is a history rewrite on a repository with a remote, so it
+  remains an owner decision rather than a drive-by commit.
+- ⚠️ **The parity oracle depends on one unignored folder surviving.** `legacyforparity/` has no git
+  copy. See [[cutover-is-guest-only]] — it is both the rollback artefact and the only copy of the
+  legacy data.
+- Whether `p_data/data.db` or `pb_data/data.db` held *real* business data is still unestablished;
+  `pb_data` is the larger of the two and the more likely candidate.
+
+The original issue body below is unchanged.
 
 ## What is wrong
 

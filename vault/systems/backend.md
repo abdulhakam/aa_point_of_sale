@@ -1,38 +1,54 @@
 ---
 title: backend (PocketBase)
 type: system
-status: production
+status: frozen
 maturity: legacy
-locator: backend/
+locator: legacyforparity/backend/
 runtime: PocketBase 0.22.55 (pocketbase.exe)
 created: 2026-09-26
+updated: 2026-10-03
 tags: [pos, backend, pocketbase, legacy, production]
-related_to: ["[[frontend]]", "[[trailbase]]"]
+related_to: ["[[frontend]]", "[[trailbase]]", "[[cutover-is-guest-only]]"]
 ---
 
 # backend (PocketBase)
 
-**Legacy / production.** `backend/` is the PocketBase server that currently serves the live
-point-of-sale data. It is the system [[trailbase]] is being built to replace, and the
-system [[frontend]] (the production UI) talks to.
+> **CORRECTED 2026-10-03.** This note previously read `locator: backend/`, `status: production`, and
+> opened with "**Legacy / production.** `backend/` is the PocketBase server that currently serves the
+> live point-of-sale data … Nothing in this directory is experimental: changing it changes production
+> behaviour."
+>
+> **None of that is true now.** `backend/` was deleted from git on 2026-09-29 (`c167d311`) and the
+> directory is now `legacyforparity/backend/` — untracked and git-ignored. It is a **frozen parity
+> oracle**: never edited, never a cutover target, not source. See [[cutover-is-guest-only]].
+> "Changing it changes production behaviour" understated it — changing it changes nothing, because
+> nothing reads it.
 
-Nothing in this directory is experimental: changing it changes production behaviour.
+**Legacy / frozen.** `legacyforparity/backend/` is the PocketBase server the POS used to run on. It
+is the system [[trailbase]] replaced, and the system the legacy UI ([[frontend]]) talked to.
+
+It can still be **run**, which is the only reason it exists: it is the oracle that answers "what did
+the old screen compute?" ([[reports-and-ledgers]]). It cannot be **built, edited or repointed**.
 
 ## What is in the directory
 
 | Entry | What it is |
 |---|---|
-| `pocketbase.exe` | PocketBase **0.22.55**, 44,842,496 bytes, committed to git |
+| `pocketbase.exe` | PocketBase **0.22.55**, 44,842,496 bytes |
 | `pb_migrations/` | 23 JavaScript migrations — collections and **SQL views** |
-| `pb_data/` | the live development/admin data directory (git-ignored) |
-| `pb_data_bench/` | a benchmark data directory (git-ignored) |
-| `p_data/` | another data directory — ⚠️ **committed to git** (see [[pocketbase-data-dirs-in-git]]) |
-| `DEV.BAT` | PocketBase `serve --dev` + `npm run dev` in `../frontend` |
-| `RUN NEXTJS.BAT` | PocketBase `serve` + `npm run start` (production Next server) + open `:3000` |
-| `RUN SERVE.BAT` | PocketBase `serve` + `npm run serve` (static `out/` via http-server on `:3000`) |
+| `pb_data/` | a data directory, 17,960,960-byte `data.db` — ⚠️ **untracked, no git copy** |
+| `p_data/` | another data directory — ⚠️ **was tracked in git history**, now untracked; see [[pocketbase-data-dirs-in-git]] |
+| `DEV.BAT` | PocketBase `serve --dev` + `npm run dev` in `../frontend` — ⚠️ **broken**: `../frontend` no longer exists |
+| `RUN NEXTJS.BAT` | PocketBase `serve` + `npm run start` — ⚠️ **broken**: no `frontend/` and no `package.json` |
+| `RUN SERVE.BAT` | PocketBase `serve` + `npm run serve` — ⚠️ **broken**, same reason |
+| `TAURI BUILD.BAT`, `TAURI DEV.BAT`, `TAURI RUN.BAT` | Tauri desktop wrappers — also reference the missing `frontend/` |
 
-PocketBase listens on `127.0.0.1:8090`, which is what `frontend/.env.local`'s
-`NEXT_PUBLIC_PB_URL` points at.
+⚠️ **Every script here is dead.** They all invoke `npm` inside `../frontend`, which was deleted. Only
+`pocketbase.exe serve` against an existing data directory still works, and only for parity
+comparison.
+
+PocketBase listens on `127.0.0.1:8090`, which is what the deleted `frontend/.env.local`'s
+`NEXT_PUBLIC_PB_URL` pointed at.
 
 ## Migrations: collections **and** views
 
@@ -85,10 +101,12 @@ PocketBase's view parser accepts.
 `transactions_report`, `items_report`, `items_difference_report`, `net_price`,
 `outstanding_summary`, `counts_for_row_numbers`.
 
-Every one of them appears as a *record type* in `frontend/src/app/api/pocketbase-types.ts`
-(`PaymentsViewRecord`, `InvoiceViewRecord`, `LedgerPartyRecord`, …), which is why removing
-the views on the TrailBase side is a frontend-visible change rather than an internal one.
-Their arithmetic is reimplemented in `trailbase/runtime/app/compute/views.js` and
+Every one of them appeared as a *record type* in `frontend/src/app/api/pocketbase-types.ts`
+(`PaymentsViewRecord`, `InvoiceViewRecord`, `LedgerPartyRecord`, …) — ⚠️ **that file was deleted from
+git on 2026-09-29** and is not recoverable from the working tree, only from history. That is why
+removing the views on the TrailBase side was a frontend-visible change, and it is also why
+[[tb-0013-rework-report-screens-without-views]] is now blocked rather than merely unfinished. Their
+arithmetic is reimplemented in `trailbase/runtime/app/compute/views.js` and
 `compute/reports.js`, documented in [[reports-and-ledgers]], and preserved verbatim as SQL
 in the parent-directory artefacts described in [[stale-schema-sql-paths]].
 
@@ -96,8 +114,9 @@ in the parent-directory artefacts described in [[stale-schema-sql-paths]].
 
 The PocketBase collection API rules were `""` for every collection — i.e.
 world-accessible. [[trailbase]] deliberately does not inherit that: everything there
-requires authentication. See [[keep-legacy-stack-in-production]] for why the legacy rules
-have not simply been tightened in place.
+requires authentication. The reason the legacy rules were never tightened in place is recorded in
+[[keep-legacy-stack-in-production]] — **superseded** by [[cutover-is-guest-only]], since the legacy
+server is now frozen and no longer reachable from any application.
 
 ## Relationship to the new backend
 

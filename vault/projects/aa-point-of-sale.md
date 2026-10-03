@@ -19,33 +19,36 @@ the workspace: `trade-and-distribution-management-system-specification.html` and
 
 ## The systems, and which one is live
 
+> **Corrected 2026-10-03.** The two `Legacy / production` rows below previously read `backend/` and
+> `frontend/`, and the diagram showed the legacy pair as the live product. `c167d311` deleted both
+> from git on 2026-09-29; they are now `legacyforparity/` — frozen and untracked. The guest is the
+> only live application. See [[cutover-is-guest-only]].
+
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs |
-| [[runtime-js-guest-platform]] | `trailbase/` | **New / experimental** | TrailBase guest-WASM app host: the new frontend (dashboard, reports, management) |
-| [[backend]] | `backend/` | **Legacy / production** | PocketBase 0.22.55 — holds the production data |
-| [[frontend]] | `frontend/` | **Legacy / production** | Next.js 14 POS — what staff use |
+| [[runtime-js-guest-platform]] | `trailbase/` | **New / the product** | TrailBase guest-WASM app host: dashboard, reports, management, invoicing |
+| [[backend]] | `legacyforparity/backend/` | **Legacy / frozen** | PocketBase 0.22.55 — runnable parity oracle, never edited, no git copy |
+| [[frontend]] | `legacyforparity/standalone/` | **Legacy / frozen** | compiled Next.js 14 bundle — **no source**, runnable parity oracle only |
 
 ```text
-PRODUCTION (live)                      IN PROGRESS (replacement)
-┌───────────────────┐                  ┌───────────────────┐
-│ frontend/         │  PocketBase SDK  │ trailbase/        │
-│ Next.js 14 +      │ ───────────────▶ │ guest-WASM:       │ ───────────────▶ ┌────────────┐
-│ Mantine           │                  │ Rust + QuickJS +  │                  │ trailbase/ │
-└───────────────────┘                  │ minijinja         │                  │ 17 tables  │
-        (the whole product:            └───────────────────┘                  │ record APIs│
-         invoices, printing,                          ▲                        └────────────┘
-          cash memo, reports)                          │ production data IS loaded
-┌───────────────────┐                                 │ (60,245 records, 2026-09-29);
-│ backend/          │  ◀── the data to re-import ─────┘ no legacy client yet
-│ backend/          │  ◀── the data to re-import ─────┘
-│ PocketBase 0.22.55│
-└───────────────────┘
+LIVE (the product)                        FROZEN (parity oracle only, untracked)
+┌───────────────────┐                  ┌──────────────────────────────┐
+│ trailbase/        │                  │ legacyforparity/standalone/  │
+│ guest-WASM:       │                  │  compiled Next.js 14 bundle  │
+│ Rust + QuickJS +  │                  │  no src/, no build, no edit  │
+│ minijinja         │                  ├──────────────────────────────┤
+└───────────────────┘                  │ legacyforparity/backend/     │
+        ▲                              │  PocketBase 0.22.55          │
+        │ production data IS loaded    │  pb_migrations/ + p*_data/  │
+        │ (60,245 records, 2026-09-29) └──────────────────────────────┘
+        │                                       ▲
+        └─────────── imported from ─────────────┘
 ```
 
-The two stacks do **not** share a database. They are parallel implementations of the same
-domain, which is why [[data-model]] documents the value translation between them. The
-intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
+The legacy pair and the new one do **not** share a database — they never did. [[data-model]]
+documents the value translation between them, and that translation is what
+`import-from-v1` performs. The intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 ([[guest-ui-is-a-direct-shift-of-legacy]]).
 
 ## Where the project stands
@@ -71,7 +74,7 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 - **Production data IS loaded.** The `import-from-v1` plugin was run through the **browser UI** at
   `/plugins/import-from-v1/` on 2026-09-29 — **60,245 / 60,245 records, 0 failures** — and per
   collection `read == created`. Per-table money and quantity sums were then compared directly in
-  SQL against `backend/p_data/data.db` and **all match**; payments agree to the cent (recieving
+  SQL against `legacyforparity/backend/p_data/data.db` and **all match**; payments agree to the cent (recieving
   25,907,041.11, sending 22,657,296.66). Verified again 2026-09-29 against the live depot on
   `:4000`: 8,927 invoices, 23,413 transactions, 26,526 payments, 88 expenses.
   See [[reports-parity-and-e2e-2026-09-29]]. An earlier revision of this note said the depot had
@@ -79,16 +82,16 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
   Outstanding: the guest's `created` is the import timestamp, not the business date
   ([[guest-depot-created-is-import-time]]), and 8,927 `invoice_maker` references are dropped
   ([[import-from-v1-drops-invoice-maker]]).
-- The legacy Next.js app still reads and writes PocketBase; nothing points it at TrailBase.
-- Invoicing, cash memo, expenses and printing have no guest equivalent yet
-  ([[guest-frontend-feature-parity-gaps]]).
+- ⚠️ **The legacy app is gone, not merely unrepointed.** `frontend/` was deleted from git on
+  2026-09-29; `legacyforparity/standalone/` is a compiled bundle with no `src/`. There is nothing
+  left to point at TrailBase ([[cutover-is-guest-only]]).
 - The guest UI is not yet visually identical to the legacy UI
   ([[tb-0023-direct-shift-legacy-ui-to-guest]]).
 
-**Open decisions** — see [[pos-0028-decide-cutover-plan]] for the one that gates everything
-else: whether the legacy Next.js UI is repointed at TrailBase, or retired in favour of the
-guest frontend rebuilt as a direct shift of it
-([[guest-ui-is-a-direct-shift-of-legacy]]).
+**Open decisions** — the one that gated everything else is
+**closed**: [[cutover-is-guest-only]] records shape B, guest only, decided 2026-10-03. Shape A
+(repointing the legacy UI) was never available, because its source was deleted before the question
+was answered.
 
 ## Why the rewrite
 
@@ -111,9 +114,16 @@ frameworks. Concretely:
 
 ## Constraints that shape the design
 
-- **The business runs on the legacy stack today.** Production data lives in PocketBase and
-  staff use the Next.js app, so nothing may be broken in place: the migration must be
-  additive until a cutover is decided. See [[keep-legacy-stack-in-production]].
+- **The business runs on the guest stack.** ⚠️ **Corrected 2026-10-03.** This constraint previously
+  read "The business runs on the legacy stack today. Production data lives in PocketBase and staff
+  use the Next.js app, so nothing may be broken in place … See
+  [[keep-legacy-stack-in-production]]." That ended on 2026-09-29 when the legacy source was deleted
+  from git. What remains in force:
+  - The production data is **imported into the guest depot** (60,245 records), so the guest is the
+    system of record going forward.
+  - `legacyforparity/` is **never edited** — it is the parity oracle, not a rollback target
+    ([[cutover-is-guest-only]], superseding [[keep-legacy-stack-in-production]]).
+  - The oracle has **no git copy**, so treating it as disposable is now the wrong instinct.
 - **Offline/local deployment is a requirement** — the deployment target is a local machine,
   which is why both backends are single-file SQLite servers and the frontends are
   self-hosted. See [[offline-local-deployment]].

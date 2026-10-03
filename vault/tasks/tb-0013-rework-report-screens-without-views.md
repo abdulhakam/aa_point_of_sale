@@ -1,15 +1,27 @@
 ---
 title: TB-0013 Rework or retire the report screens that depend on dropped views
 type: task
-status: todo
+status: blocked
 priority: medium
 created: 2026-09-26
 tags: [reports, views, pocketbase-types, cleanup, migration]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[trailbase-drop-sql-views]]", "[[reports-and-ledgers]]"]
+related_to: ["[[trailbase-drop-sql-views]]", "[[reports-and-ledgers]]", "[[cutover-is-guest-only]]"]
 ---
 
 # TB-0013 Rework or retire the report screens that depend on dropped views
+
+> **BLOCKED — superseded by [[cutover-is-guest-only]] (2026-10-03).** This task was going to choose
+> per screen between "rework onto base tables" and "retire in favour of the guest equivalent". Both
+> options edit `frontend/src/app/api/pocketbase-types.ts` and `frontend/src/app/reports/**`, and
+> `frontend/` was deleted from git on 2026-09-29 (`c167d311`). There is no third option, so the
+> question it posed cannot be answered and its checklists are left unticked — unstarted, not
+> finished.
+>
+> **What survives this task.** The two possibilities collapse to one: every screen is retired in
+> favour of its guest equivalent, which is why the **inventory table below is still worth keeping**
+> — it is the list of views whose arithmetic the guest engine had to reimplement, and therefore the
+> parity checklist for [[reports-and-ledgers]].
 
 The legacy frontend reads PocketBase **views** as if they were collections. TrailBase has no views
 ([[trailbase-drop-sql-views]]), so every one of those reads is a dead end the moment the client is

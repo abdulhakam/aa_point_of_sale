@@ -13,15 +13,21 @@ One screen: what exists, what is verified, what is not, and what could go wrong.
 
 ## State of the systems
 
+> **Corrected 2026-10-03.** This table previously listed `[[backend]]` and `[[frontend]]` as
+> `Legacy / production` at `backend/` and `frontend/`, and the sentence below it said "Nothing routes
+> production traffic to the new pair. The two stacks are independent." Both were true on 2026-09-27
+> and neither is now: `c167d311` deleted both directories from git. See [[cutover-is-guest-only]].
+
 | System | Directory | State | Verified how |
 | --- | --- | --- | --- |
 | [[trailbase]] | `trailbase/` | New / experimental | Migration applies clean to an empty depot; 17/17 record APIs resolve; behaviour exercised over HTTP on a seeded depot on `v0.33.15` and re-verified on `v0.33.22` |
-| [[runtime-js-guest-platform]] | `trailbase/` | New / experimental | Guest smoke **71/71** and differential **14/14** on a throw-away depot; management CRUD, fingerprint refresh, job queue and a first invoice-entry slice verified (`trailbase/tools/`) |
-| [[backend]] | `backend/` | **Legacy / production** | Holds the production data; 23 migrations; PocketBase 0.22.55 |
-| [[frontend]] | `frontend/` | **Legacy / production** | The application staff use daily, including invoicing and printing |
+| [[runtime-js-guest-platform]] | `trailbase/` | New / **the product** | Guest smoke and differential (see [[build-and-run]] for the current count) on a throw-away depot; management CRUD, fingerprint refresh, job queue and invoice entry verified (`trailbase/tools/`) |
+| [[backend]] | `legacyforparity/backend/` | **Legacy / frozen** | 23 migrations; PocketBase 0.22.55; runnable as a parity oracle. Untracked, no git copy |
+| [[frontend]] | `legacyforparity/standalone/` | **Legacy / frozen** | A **compiled** Next.js bundle — **no `src/`**, no build, no edit. Source survives only in git history at `c167d311^` |
 
-Nothing routes production traffic to the new pair. The two stacks are independent. The
-intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
+There is no longer a second stack to route around. The guest is the only application; the legacy
+pair is an untracked frozen artefact used solely to answer parity questions. The intermediate Node
+`frontend-ssr` experiment was removed on 2026-09-27
 ([[guest-ui-is-a-direct-shift-of-legacy]]).
 
 ## Coverage
@@ -72,13 +78,15 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 | Every report page now answers in 91–504 ms warm | The ledger being restored did **not** make them slow — measured, not assumed. An earlier "12.2 s" figure for `paymentsbycompany` was the **cold JSON API**, not the page; the page is 126 ms. Two SQL changes took a cold load down 20% | [[paymentsbycompany-performance-2026-10-02]] |
 | Invoices are published on save and editable afterwards | **Accepted 2026-10-02.** The draft phase and append-only rule are both withdrawn, with ORDERS gone. A report you already ran can change under you, and there is no edit trail yet | [[no-draft-invoices-published-on-save]] |
 | TrailBase subscriptions return 403 | No realtime push exists, so every "latest data" requirement is met by ETag polling, not a stream | [[trailbase-subscribe-endpoint-forbidden]] |
-| Cutover shape undecided | Determines whether the legacy Next.js UI is repointed or retired; blocks two other tasks | [[pos-0028-decide-cutover-plan]] |
+| Cutover shape undecided | **RESOLVED 2026-10-03 — guest only.** The legacy Next.js UI was deleted from git on 2026-09-29, so "repoint it" was never available; shape B is recorded as the decision | [[cutover-is-guest-only]] |
+| The legacy pair has no git copy | **NEW 2026-10-03.** `legacyforparity/` is untracked and git-ignored, so it is simultaneously the only rollback artefact and the only copy of the legacy data. Losing it is unrecoverable | [[cutover-is-guest-only]], [[pocketbase-data-dirs-in-git]] |
+| Dropped views break legacy screens | **MOOT 2026-10-03** — there are no legacy screens left to break; `pocketbase-types.ts` was deleted with `frontend/` | [[tb-0013-rework-report-screens-without-views]] |
 | The money screens are all present, but the product is not finished | Every screen the parity-gap list named as missing now answers 200, and a sweep of all 58 routes found no dead links. What remains is that the guest UI is **not yet the legacy look** | [[tb-0023-direct-shift-legacy-ui-to-guest]] |
 | Four reports used to fail the 20 s deadline | **STALE 2026-10-01.** `profit`, `itemsales`, `paymentsbycompany` and `ledgers/general` all return 200 in 100–165 ms on the production depot. The SQL spool and the server render are what fixed it. An uncapped `payments` (26,108 rows, 10 MB) is 2.8 s warm, 7.5 s cold — slow, but inside the deadline | [[heavy-report-blocks-runtime-threads]] |
 | The production depot could not be started | **RESOLVED 2026-10-01.** The generated depot was missing its config and one migration | [[production-depot-could-not-be-started]] |
 | The persisted snapshot can be stamped current while holding empty views, and `?full=1` cannot recover it | **REPRODUCED LIVE 2026-10-01.** `persistViews` stamps the fingerprint with no guard on an empty view, and a `full` refresh re-hydrates from the empty snapshot instead of rebuilding. Reports are SQL over base tables now, so the reads survive it — but the recovery path is dead | [[persisted-snapshot-can-be-stamped-current-while-empty]] |
 | Incremental rebuild can miss a change | The fingerprint probes `COUNT(*)` and `MAX(updated)`; `invoices.updated` has only **two** distinct values, so a create and a delete that cancel in count would leave the views stale | [[guest-depot-created-is-import-time]] |
-| Dropped views break legacy screens | `pocketbase-types.ts` and several report screens depend on view endpoints that do not exist on TrailBase | [[tb-0013-rework-report-screens-without-views]] |
+| Dropped views break legacy screens | **MOOT 2026-10-03** — there are no legacy screens left to break; `pocketbase-types.ts` was deleted with `frontend/` | [[tb-0013-rework-report-screens-without-views]] |
 | Id/encoding asymmetry | Reads give base64, relation writes need canonical UUID text — a silent `400` waiting to happen | [[api-contract-trailbase]] |
 | Stale depot silently keeps an old schema | Refinery skips a migration whose checksum changed | [[trailbase-stale-depot-skips-migration]] |
 | Two SQL artefacts referenced by a wrong path | The READMEs' `../full_database_schema.sql` does not resolve, so the preserved view SQL looks missing | [[stale-schema-sql-paths]] |
@@ -98,7 +106,8 @@ intermediate Node `frontend-ssr` experiment was removed on 2026-09-27
 [[trailbase-drop-sql-views]] · [[trailbase-encode-enums-as-integer-codes]] ·
 [[trailbase-link-tables-over-json]] · [[trailbase-pocketbase-data-compatibility]] ·
 [[trailbase-declarative-page-host]] · [[trailbase-incremental-report-refresh]] ·
-[[trailbase-client-side-migration-plugin]] · [[keep-legacy-stack-in-production]] ·
+[[trailbase-client-side-migration-plugin]] ·
+[[cutover-is-guest-only]] (supersedes [[keep-legacy-stack-in-production]], 2026-10-03) ·
 [[offline-local-deployment]] · [[trailbase-guest-wasm-runtime-defaults]] ·
 [[guest-ui-is-a-direct-shift-of-legacy]] · [[compiled-artifacts-are-generic-capabilities]] ·
 [[rendered-page-cache]]

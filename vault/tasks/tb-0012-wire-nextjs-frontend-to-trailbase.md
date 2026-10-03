@@ -1,15 +1,25 @@
 ---
 title: TB-0012 Wire a client to TrailBase
 type: task
-status: todo
+status: blocked
 priority: high
 created: 2026-09-26
 tags: [trailbase, frontend, client, migration, api]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[trailbase-client-side-migration-plugin]]", "[[api-contract-trailbase]]"]
+related_to: ["[[trailbase-client-side-migration-plugin]]", "[[api-contract-trailbase]]", "[[cutover-is-guest-only]]"]
 ---
 
 # TB-0012 Wire a client to TrailBase
+
+> **BLOCKED — superseded by [[cutover-is-guest-only]] (2026-10-03).** Not unfinished: **impossible**.
+> `frontend/` was deleted from git on 2026-09-29 (`c167d311`), and
+> `legacyforparity/standalone/` is a compiled bundle with no `src/`. Every file this task says to
+> edit — `src/app/api/useAPI.ts`, `pocketbase-types.ts`, `.env.local`, `next.config.js` — no longer
+> exists. Its checklists are left unticked because they are unstarted, not finished.
+>
+> **What survives this task.** The PocketBase↔TrailBase mismatch table below is the API contract for
+> any *future* client, and it is still the right reference — but the guest needs no record-API client
+> at all, because it reads the depot's SQLite directly ([[runtime-js-guest-platform]]).
 
 Give one of the two UIs a TrailBase data layer, so the new backend stops being reachable only from
 the guest frontend ([[runtime-js-guest-platform]]).

@@ -1,25 +1,42 @@
 ---
 title: frontend (Next.js POS)
 type: system
-status: production
+status: frozen
 maturity: legacy
-locator: frontend/
-runtime: Next.js 14.0.4, React 18, Mantine 7, PocketBase JS SDK 0.20.1
+locator: legacyforparity/standalone/
+runtime: Next.js 14.0.4, React 18, Mantine 7, PocketBase JS SDK 0.20.1 — compiled, source deleted
 created: 2026-09-26
+updated: 2026-10-03
 tags: [pos, frontend, nextjs, mantine, pocketbase, legacy, production]
-related_to: ["[[backend]]", "[[runtime-js-guest-platform]]", "[[guest-ui-is-a-direct-shift-of-legacy]]"]
+related_to: ["[[backend]]", "[[runtime-js-guest-platform]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[cutover-is-guest-only]]"]
 ---
 
 # frontend (Next.js POS)
 
-**Legacy / production.** `frontend/` is the Next.js application that staff actually use
-today. It is the complete product: invoicing, cash memo, payments, printing, management and
-reports. It talks to PocketBase ([[backend]]) through the official JS SDK.
+> **CORRECTED 2026-10-03 — this system no longer has source.** This note previously read
+> `locator: frontend/`, `status: production`, and opened with "**Legacy / production.** `frontend/` is
+> the Next.js application that staff actually use today."
+>
+> **That ended on 2026-09-29.** Commit `c167d311` ("deleted frontend/backend") removed `frontend/`
+> from git. What survives on disk is `legacyforparity/standalone/` — a **compiled** Next.js
+> standalone bundle (`server.js`, `.next/`, `node_modules/`, `public/`, `package.json`) with **no
+> `src/`**. It is untracked, git-ignored, unbuildable and uneditable. See [[cutover-is-guest-only]].
+>
+> **How to read the rest of this note.** Every table below that names a file under `frontend/` —
+> `package.json`, `next.config.js`, `tsconfig.json`, `src/app/api/*`, `.env.local` — describes what
+> that file contained *at revision `c167d311^`*, recovered from git history. They are **not** paths
+> that exist. The file inventory is kept deliberately: it is the only surviving record of the
+> product's shape, and [[tb-0014-point-company-fields-at-companies]] and
+> [[tb-0012-wire-nextjs-frontend-to-trailbase]] still need it as their spec.
 
-The guest-WASM frontend ([[runtime-js-guest-platform]]) is the replacement, but it only covers
-dashboard / reports / management so far — so this app cannot be retired until invoicing,
-printing and the cash-memo screens are either rebuilt or deliberately dropped, and until the
-guest UI matches this one screen for screen ([[guest-ui-is-a-direct-shift-of-legacy]]).
+**Legacy / frozen.** `frontend/` was the Next.js application staff used. It was the complete
+product: invoicing, cash memo, payments, printing, management and reports, talking to PocketBase
+([[backend]]) through the official JS SDK.
+
+It cannot be retired *by rebuilding it*, but it has been retired by **deletion of its source**. The
+guest-WASM frontend ([[runtime-js-guest-platform]]) is the product. What this app still contributes
+is a runnable **oracle**: the compiled bundle can be started and compared against, but every gap
+recorded below now has to be closed *in the guest* ([[guest-frontend-feature-parity-gaps]]).
 
 ## Stack
 
