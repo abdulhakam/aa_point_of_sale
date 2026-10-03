@@ -9,12 +9,6 @@
     "hub": "reports",
     "order": 7
   },
-  "needs": {
-    "views": [
-      "itemsDifferenceReport",
-      "refs"
-    ]
-  },
   "compute": {
     "report": "difference"
   },

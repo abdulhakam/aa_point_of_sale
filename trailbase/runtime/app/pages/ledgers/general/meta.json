@@ -2,7 +2,9 @@
   "title": "General Ledger",
   "template": "page.html",
   "view": "reports/ledgers/general.html",
-  "openings": true,
+  "handlers": [
+    "handlers/openings.js"
+  ],
   "hub": {
     "title": "General",
     "target": "ledgers/general",
@@ -10,11 +12,6 @@
     "icon": "report-money",
     "hub": "ledgers",
     "order": 2
-  },
-  "needs": {
-    "views": [
-      "ledgerJournal"
-    ]
   },
   "compute": {
     "report": "ledgers/general"
@@ -145,5 +142,6 @@
       "label": "Cash",
       "key": "cash"
     }
-  ]
+  ],
+  "openings": true
 }

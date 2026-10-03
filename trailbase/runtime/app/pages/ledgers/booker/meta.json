@@ -9,13 +9,6 @@
     "hub": "ledgers",
     "order": 1
   },
-  "needs": {
-    "views": [
-      "ledgerBooker",
-      "invoiceView",
-      "refs"
-    ]
-  },
   "compute": {
     "report": "ledgers/booker"
   },

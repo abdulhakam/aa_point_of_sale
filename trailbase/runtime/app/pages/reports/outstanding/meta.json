@@ -9,11 +9,6 @@
     "hub": "reports",
     "order": 8
   },
-  "needs": {
-    "views": [
-      "outstanding"
-    ]
-  },
   "compute": {
     "report": "outstanding"
   },

@@ -9,13 +9,6 @@
     "hub": "ledgers",
     "order": 3
   },
-  "needs": {
-    "views": [
-      "ledgerParty",
-      "invoiceView",
-      "refs"
-    ]
-  },
   "compute": {
     "report": "ledgers/party"
   },

@@ -9,12 +9,6 @@
     "hub": "reports",
     "order": 1
   },
-  "needs": {
-    "views": [
-      "transactionsReport",
-      "refs"
-    ]
-  },
   "compute": {
     "report": "itemsales"
   },

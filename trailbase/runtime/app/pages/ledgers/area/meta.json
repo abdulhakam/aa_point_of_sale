@@ -9,12 +9,6 @@
     "hub": "ledgers",
     "order": 0
   },
-  "needs": {
-    "views": [
-      "paymentsView",
-      "refs"
-    ]
-  },
   "compute": {
     "report": "ledgers/area"
   },

@@ -373,6 +373,38 @@ const DEFAULT_REPORT_VIEW = "reports/report.html";
 // ------------------------------------------------------------------ the report page
 //
 // Render a report from its manifest, server-side. Shared by `/reports/<key>` and `/p/<slug>`, so
+/**
+ * Load the JavaScript a page declares in its manifest's `handlers`, merged into one object.
+ *
+ * This is the manifest-first handlers workflow (tb-0032 step 4), and it exists to remove a coupling
+ * rather than to add a feature: the dispatcher used to carry a branch per page — "is this the general
+ * ledger? then build its opening-balance row" — and one shared module per bespoke behaviour. A page that
+ * needs its own code now says so in data, and the dispatcher loads exactly that.
+ *
+ * Returns null when the page declares none, so a caller can test it directly. `loadModule` memoises by
+ * path, so a handler is compiled once per runtime context however many times its page renders.
+ *
+ * A handler that fails to load is the page's problem to announce, not a reason to 500 silently: the
+ * error is logged and the page renders without it, because a broken handler should cost one page's
+ * bespoke behaviour rather than the whole report.
+ */
+async function loadPageHandlers(A: any, pageDef: any): Promise<any | null> {
+  const declared: string[] = (pageDef && pageDef.handlers) || [];
+  if (!declared.length) return null;
+  const dir = `${PAGES_DIR}/${String(pageDef.slug || "")}`;
+  const merged: Record<string, unknown> = {};
+  let loaded = 0;
+  for (const rel of declared) {
+    try {
+      Object.assign(merged, await loadModule(`${dir}/${rel}`));
+      loaded++;
+    } catch (e) {
+      console.log(`[handlers] ${pageDef.slug}: ${rel} failed to load — ${(e as any)?.message || String(e)}`);
+    }
+  }
+  return loaded ? merged : null;
+}
+
 // the two routes are the same page: the rows arrive as a KV handle and are spliced into the
 // template in Rust, so no row is ever materialised in QuickJS and the browser receives finished
 // HTML. Before this, `/p` shipped the manifest to `public/js/runtime/page.js`, which rebuilt the
@@ -387,6 +419,14 @@ async function renderReportPage(
   // default from the query, so a bare GET computed all-time figures —
   // vault/issues/report-routes-ignore-date-defaults.md.)
   const filters = await filtersFor(A, pageDef, query);
+
+  // Page handlers, resolved relative to the page's own directory. `normalizeMeta` has already rejected
+  // absolute paths and `..`, so this cannot escape `app/pages/`.
+  //
+  // The merged exports of every declared handler, or null when the page declares none. Loading is
+  // per-page and memoised by `loadModule`, so a page with no handlers — thirteen of the fourteen —
+  // pays nothing, and a page with handlers does not make the dispatcher know what they are.
+  const pageHandlers = await loadPageHandlers(A, pageDef);
 
   const showAll = String(query.all || "") === "1";
   const requestedMax = Number(query.maxRows || 0);
@@ -469,9 +509,14 @@ async function renderReportPage(
           : await latestPeriod(A, pageDef.filters.find((f: any) => f.dateSource)?.dateSource),
     },
     totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], totals),
-      // The general ledger's opening row is an echo of three filter inputs, not a query result, so
-      // there is nothing for SQL to add.
-    opening: pageDef.openings ? A.reportPages.openingRow(filters) : null,
+    // Page handlers. The general ledger's opening row is an echo of three filter inputs, not a query
+    // result, so there is nothing for SQL to add — which is the case a handler is for. It used to be
+    // `pageDef.openings ? A.reportPages.openingRow(filters) : null`: the dispatcher knowing which page
+    // needed which bespoke logic. Now the page declares it (`"handlers": ["handlers/openings.js"]`) and
+    // the dispatcher loads only what this page asked for.
+    opening: pageHandlers && typeof pageHandlers.openingRow === "function"
+      ? pageHandlers.openingRow(filters)
+      : null,
     meta: {},
   }, spools);
   if (cacheKey) await pageCachePut(db, cacheKey, page);
@@ -2007,6 +2052,28 @@ async function filtersFor(A: any, def: any, query: Record<string, any>): Promise
     const raw = query[field.name];
     const value = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
     filters[field.name] = field.type === "check" ? (value === "on" ? "on" : "") : value || field.value;
+  }
+
+  // The general ledger's opening balances are DECLARED by `spool.totals.openings` rather than by
+  // `filters`, because they are binds that feed the totals statement, not query inputs with a default.
+  //
+  // ⚠️ They used to be unreachable. `filtersFor` looped `def.filters` only, and the general ledger
+  // declares `from` and `to` — so `openingRecievables`, `openingPayables` and `openingCash` were never
+  // placed in `filters`, which means BOTH the page's opening row AND the totals statement's `:openR` /
+  // `:openP` / `:openC` binds always received "". The ledger rendered
+  // `Opening Balance — Recievables: 0.00 · Payables: 0.00 · Cash: 0.00` for every input, and the
+  // totals silently omitted them. Nothing in the UI shows these three, so there was no visible symptom
+  // to notice; the declaration was in the manifest the whole time, read by nobody.
+  //
+  // They are taken from the query string only, and only when the manifest declares them. That keeps the
+  // page's filter row unchanged — these are ledger inputs carried on a link, not on-screen controls.
+  const openings = (def.spool && def.spool.totals && def.spool.totals.openings) || {};
+  for (const spec of Object.values(openings)) {
+    const key = String(spec).replace(/^:/, "");
+    if (!(key in filters) && query[key] !== undefined) {
+      const raw = query[key];
+      filters[key] = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
+    }
   }
 // A date filter whose manifest named a `source` takes its default from the DATA, not from
   // `monthStart()`/`today()` — those are `new Date()` inside the guest, so on 2026-10-02 every report

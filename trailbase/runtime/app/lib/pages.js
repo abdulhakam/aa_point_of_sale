@@ -135,6 +135,21 @@ export function normalizeMeta(meta) {
       ? { report: String(meta.compute.report ?? "") }
       : null,
     requires: toArray(meta?.requires),
+    // `handlers` names JavaScript this page needs, resolved relative to the page's own directory and
+    // loaded only for it. It is the workflow the manifest-first design called for and that had never been
+    // wired up: the dispatcher used to load twenty-two modules globally and grow a branch per page
+    // ("is this page the general ledger? then build its opening row"), which is the coupling handlers
+    // exist to remove. A path is validated here, not at load, so a malformed declaration is a manifest
+    // problem rather than a 500 at request time.
+    handlers: toArray(meta?.handlers)
+      .map((h) => String(h).replace(/\\/g, "/"))
+      .filter((h) => h && !h.startsWith("/") && !h.includes("..") && !h.includes("\0")),
+    // `spool` is exposed so the page's SQL declaration is reachable from here, not only from
+    // `spoolreports.js`. It is what makes `spool.totals.openings` usable as a DECLARATION: without it
+    // the only reader was the report loader, and the three opening-balance names were declared in
+    // every manifest but consumed nowhere — which is how the general ledger's opening balances came to
+    // render as 0.00 for every input.
+    spool: meta?.spool && typeof meta.spool === "object" ? meta.spool : null,
     filters,
     // `fields` is the server-rendered report template's name for the same list; both are exposed so
     // neither template has to know which host is asking.

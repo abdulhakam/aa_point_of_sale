@@ -283,7 +283,81 @@ lesson is now written into the replacement:
 | diff vs baseline | 1 line: `page profit data` `version=0` → the fingerprint-derived integer |
 | `guest-smoke.mjs` | every check passes |
 
-### 4. Serve at least one page through a manifest-declared handlers directory
+### 4. Serve at least one page through a manifest-declared handlers directory — **done 2026-10-03**
+
+The handlers workflow now exists. A page that needs its own JavaScript declares it:
+
+```json
+"handlers": ["handlers/openings.js"]
+```
+
+`normalizeMeta` validates the paths (rejecting absolute paths, `..` and NUL) so a malformed declaration is
+a manifest problem rather than a 500. `route.ts`'s `loadPageHandlers()` resolves them relative to the
+page's own directory and merges their exports; a page declaring none returns `null` and pays nothing.
+
+**The page chosen was not arbitrary.** No other report page has page-specific code — the template comes
+from the manifest, the SQL from `spool`, and the column and totals rendering is shared. The **general
+ledger's opening balances** are this ledger's own logic, and they were split across two shared places:
+the row builder in `app/lib/report-pages.js` (loaded by every report page) and an
+`pageDef.openings ? … : null` branch in the dispatcher. That branch is the coupling handlers exist to
+remove: the dispatcher knowing which page needed which bespoke behaviour.
+
+They moved to `app/pages/ledgers/general/handlers/openings.js`. The row shape is byte-identical to what
+it replaced. What makes it a genuine handler case rather than a ceremony: **the three figures are the
+filter's, not the data's**, so there is nothing SQLite can supply — which is exactly what a handler is
+for. The part that *is* a statement concern (binding them into the totals as `:openR` / `:openP` /
+`:openC`) stays in `spool.totals.openings`.
+
+### The defect wiring it exposed
+
+With the handler loading but the row still reading `0.00`, the cause was not the handler:
+
+> **The general ledger's opening balances have never worked.** `filtersFor()` looped `def.filters` only,
+> and the general ledger declares `from` and `to`. So `openingRecievables`, `openingPayables` and
+> `openingCash` were never placed in `filters`, which means **both** the opening row **and** the totals
+> statement's binds always received `""`. The ledger rendered
+> `Opening Balance — Recievables: 0.00 · Payables: 0.00 · Cash: 0.00` for every input, and the totals
+> silently omitted the opening figures.
+
+Two things hid it: the three inputs are not shown on the page, so there was no control to move and no
+visible symptom; and the names **were** declared in every manifest — under `spool.totals.openings` —
+but `normalizeMeta` did not expose `spool`, so the declaration was read by the report loader and by
+nobody else.
+
+The fix is two lines of plumbing rather than a new input path:
+
+- `normalizeMeta` now exposes `spool`, so a page's SQL declaration is reachable from the page layer.
+- `filtersFor` honours `spool.totals.openings`: each declared name is read from the query string when
+  present. Query-string only, and only when declared — the page's filter row is unchanged, because
+  these are ledger inputs carried on a link, not on-screen controls.
+
+Verified:
+
+```text
+/reports/ledgers/general?openingRecievables=1000&openingPayables=250.5&openingCash=7
+  opening row: Opening Balance — Recievables: 1000.00 · Payables: 250.50 · Cash: 7.00
+  totals: 1,000.00 present, 250.50 present
+```
+
+⚠️ This is one input of [[guest-frontend-feature-parity-gaps]] §4 — the ledger still cannot reproduce a
+*historical* balance, because the openings are not persisted. Feeding them by hand now works; carrying
+them forward is still the open decision.
+
+#### Also removed
+
+`needs.views` is gone from all **14** manifests. The field named derived views; the layer is gone,
+`normalizeMeta` stopped reading it, and leaving it would mean every manifest declaring names for
+something unresolvable. An empty `needs` was dropped too, leaving `needs` able to hold only `tables`.
+
+#### Gate
+
+| Check | Result |
+|---|---|
+| `verify-spool-reports.mjs` | **14 passed, 0 failed**, 72 binds verified |
+| `verify-prelude.mjs` | **PASS — prelude matches the legacy builders** |
+| `route-snapshot.mjs` | 49 routes, **0 erroring** |
+| diff vs baseline | 1 line: `page profit data` `version` (the fingerprint-derived integer) |
+| `guest-smoke.mjs` | every check passes |
 
 ## Risks, named
 

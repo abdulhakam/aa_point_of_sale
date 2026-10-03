@@ -9,13 +9,6 @@
     "hub": "reports",
     "order": 3
   },
-  "needs": {
-    "views": [
-      "paymentsInvoicesReport",
-      "invoiceView",
-      "refs"
-    ]
-  },
   "compute": {
     "report": "paymentsbycompany"
   },
