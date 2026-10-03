@@ -1599,53 +1599,84 @@ if (path === "/login" && method === "GET") {
     return redirect("/invoices/" + created.id);
   }
 
-  const invoiceNewRoute = /^\/invoices\/([^\/]+)\/(header|line|complete)$/.exec(path);
-  const invoiceLineDelete = /^\/invoices\/([^\/]+)\/line\/([^\/]+)\/delete$/.exec(path);
-  if ((invoiceNewRoute || invoiceLineDelete) && method === "POST") {
-    const invoiceId = invoiceNewRoute ? invoiceNewRoute[1] : invoiceLineDelete[1];
-    const hex = A.routeKit.b64ToHex(String(invoiceId));
+  // Three POST routes, previously one (`/invoices/{id}/(header|line|complete)`). Split in place
+  // (tb-0030 step 3) while this dispatcher is still the reference, so each can become its own route
+  // directory in step 5 without carrying the others' form fields with it.
+  //
+  // What that buys: the header took 6 fields, the line 9, the complete 1, and the shared branch had to
+  // mention all three — so a reader of `/complete` was reading a `discount_2` default. They also
+  // shared one `write()` and one redirect, which meant a change to any of them changed all three.
+  //
+  // What is unchanged, deliberately: the lease. Each route still takes the invoice lock, wraps its one
+  // write in `routeKit.write()` (so the fingerprint is invalidated) and redirects to the same place.
+  // Two users editing one invoice is still two users racing for one lock.
+  const invoiceHeader = /^\/invoices\/([^\/]+)\/header$/.exec(path);
+  if (invoiceHeader && method === "POST") {
+    const hex = A.routeKit.b64ToHex(String(invoiceHeader[1]));
     if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
     await A.routeKit.write(async () => {
-      if (invoiceLineDelete) {
-        await A.invoicing.deleteLine(db, A.routeKit.b64ToHex(String(invoiceLineDelete[2])));
-      } else if (invoiceNewRoute[2] === "header") {
-        await A.invoicing.patchHeader(db, hex, {
-          party: String(form.party || ""),
-          booker: String(form.booker || ""),
-          dated: String(form.dated || ""),
-          description: String(form.description || ""),
-          discount_1: String(form.discount_1 || ""),
-          discount_rs: String(form.discount_rs || ""),
-        });
-      } else if (invoiceNewRoute[2] === "line") {
-        // An empty price or cost falls back to the item's own, so the mobile form can be short.
-        const itemId = String(form.item || "");
-        const item = await db.all(
-          'SELECT "cost_price", "sale_price" FROM items WHERE "id" = unhex(?)',
-          [A.routeKit.b64ToHex(itemId)]
-        );
-        const cost = item && item.length ? Number(item[0][0]) || 0 : 0;
-        const price = item && item.length ? Number(item[0][1]) || 0 : 0;
-        await A.invoicing.addLine(
-          db,
-          hex,
-          {
-            item: itemId,
-            qty: String(form.qty || "0"),
-            price: form.price === undefined || form.price === "" ? String(price) : String(form.price),
-            cost_price: form.cost_price === undefined || form.cost_price === "" ? String(cost) : String(form.cost_price),
-            discount_1: String(form.discount_1 || "0"),
-            discount_2: String(form.discount_2 || "0"),
-            discount_rs: String(form.discount_rs || "0"),
-            scheme: String(form.scheme || "0"),
-          },
-          String(form.opKey || "")
-        );
-      } else if (invoiceNewRoute[2] === "complete") {
-        await A.invoicing.completeInvoice(db, hex, userHex, form.complete === "1");
-      }
+      await A.invoicing.patchHeader(db, hex, {
+        party: String(form.party || ""),
+        booker: String(form.booker || ""),
+        dated: String(form.dated || ""),
+        description: String(form.description || ""),
+        discount_1: String(form.discount_1 || ""),
+        discount_rs: String(form.discount_rs || ""),
+      });
     });
-    return redirect("/invoices/" + invoiceId + "?status=ok");
+    return redirect("/invoices/" + invoiceHeader[1] + "?status=ok");
+  }
+
+  const invoiceComplete = /^\/invoices\/([^\/]+)\/complete$/.exec(path);
+  if (invoiceComplete && method === "POST") {
+    const hex = A.routeKit.b64ToHex(String(invoiceComplete[1]));
+    if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
+    await A.routeKit.write(async () => {
+      await A.invoicing.completeInvoice(db, hex, userHex, form.complete === "1");
+    });
+    return redirect("/invoices/" + invoiceComplete[1] + "?status=ok");
+  }
+
+  const invoiceLine = /^\/invoices\/([^\/]+)\/line$/.exec(path);
+  if (invoiceLine && method === "POST") {
+    const hex = A.routeKit.b64ToHex(String(invoiceLine[1]));
+    if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
+    await A.routeKit.write(async () => {
+      // An empty price or cost falls back to the item's own, so the mobile form can be short.
+      const itemId = String(form.item || "");
+      const item = await db.all(
+        'SELECT "cost_price", "sale_price" FROM items WHERE "id" = unhex(?)',
+        [A.routeKit.b64ToHex(itemId)]
+      );
+      const cost = item && item.length ? Number(item[0][0]) || 0 : 0;
+      const price = item && item.length ? Number(item[0][1]) || 0 : 0;
+      await A.invoicing.addLine(
+        db,
+        hex,
+        {
+          item: itemId,
+          qty: String(form.qty || "0"),
+          price: form.price === undefined || form.price === "" ? String(price) : String(form.price),
+          cost_price: form.cost_price === undefined || form.cost_price === "" ? String(cost) : String(form.cost_price),
+          discount_1: String(form.discount_1 || "0"),
+          discount_2: String(form.discount_2 || "0"),
+          discount_rs: String(form.discount_rs || "0"),
+          scheme: String(form.scheme || "0"),
+        },
+        String(form.opKey || "")
+      );
+    });
+    return redirect("/invoices/" + invoiceLine[1] + "?status=ok");
+  }
+
+  const invoiceLineDelete = /^\/invoices\/([^\/]+)\/line\/([^\/]+)\/delete$/.exec(path);
+  if (invoiceLineDelete && method === "POST") {
+    const hex = A.routeKit.b64ToHex(String(invoiceLineDelete[1]));
+    if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
+    await A.routeKit.write(async () => {
+      await A.invoicing.deleteLine(db, A.routeKit.b64ToHex(String(invoiceLineDelete[2])));
+    });
+    return redirect("/invoices/" + invoiceLineDelete[1] + "?status=ok");
   }
 
   const invoicePage = /^\/invoices\/([^\/]+)$/.exec(path);

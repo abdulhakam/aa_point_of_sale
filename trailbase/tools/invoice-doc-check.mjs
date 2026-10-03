@@ -318,6 +318,11 @@ if (LIVE) {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: `email_or_username=${encodeURIComponent(EMAIL)}&password=${encodeURIComponent(PASSWORD)}`,
+      // `redirect: 'manual'` is load-bearing. TrailBase answers a successful login with a 303 to
+      // /login and puts the tokens in `Set-Cookie` on THAT response; following it returns the login
+      // page, whose headers carry no cookie, so the live-depot checks all ran unauthenticated.
+      // See vault/issues/route-snapshot-was-snapshotting-redirects.md.
+      redirect: "manual",
     });
     cookie = (res.headers.getSetCookie ? res.headers.getSetCookie() : []).map((c) => c.split(";")[0]).join("; ");
     check("login", Boolean(cookie), BASE);

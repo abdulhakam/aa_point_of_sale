@@ -86,6 +86,12 @@ if (process.argv.includes('--compare')) {
       email_or_username: process.env.EMAIL ?? 'admin@localhost',
       password: process.env.PASSWORD ?? 'administrator-0ne',
     }),
+        // `redirect: 'manual'` is load-bearing. TrailBase answers a successful login with a 303 to
+        // /login and puts the tokens in `Set-Cookie` on THAT response; following it returns the login
+        // page, whose headers carry no cookie, so every later request goes out unauthenticated and is
+        // bounced to `/login?next=…` — which reads as a redirect bug rather than a harness bug.
+        // See vault/issues/route-snapshot-was-snapshotting-redirects.md.
+        redirect: "manual",
   });
   const cookie = (login.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).join('; ');
   const probe = await fetch(`${BASE}/__idcodec`, { headers: { cookie } });

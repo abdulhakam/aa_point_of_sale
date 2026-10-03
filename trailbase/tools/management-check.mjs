@@ -51,6 +51,13 @@ const check = (label, ok, extra = "") => {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: `email_or_username=${encodeURIComponent(EMAIL)}&password=${encodeURIComponent(PASSWORD)}`,
+    // `redirect: 'manual'` is load-bearing. TrailBase answers a successful login with a 303 to /login
+    // and puts the tokens in `Set-Cookie` on THAT response; following it returns the login page, whose
+    // headers carry no cookie — so `cookie` came back empty and every check below ran unauthenticated.
+    // The `check("login", Boolean(cookie))` line did report it, but as a failing *check* rather than as
+    // a broken harness, which is why it survived. See
+    // vault/issues/route-snapshot-was-snapshotting-redirects.md.
+    redirect: "manual",
   });
   const setCookie = typeof res.headers.getSetCookie === "function" ? res.headers.getSetCookie() : [];
   cookie = setCookie.map((c) => c.split(";")[0]).join("; ");

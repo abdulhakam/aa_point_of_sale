@@ -26,14 +26,14 @@ Each step is separately reversible and must leave the app byte-identical.
 
 - [x] **0. Delete the dead `/bench/*` capability probes.** `/bench/ping`, `t1`–`t4` and
       `/bench/pragma` removed (37 lines, 1785 → 1748).
-      **Correction:** `/bench/payload`, `/bench/report` and `/bench/reportkeys` are **kept** —
-      `tools/split-bench.mjs` calls all three (lines 52, 58, 84, 89), so `/bench/*` is a
-      `bench/` route directory in step 5, not a deletion. Verified: 45-route fingerprint unchanged.
-      ⚠️ **retest against the corrected 49-route gate.**
+      **⚠️ retest against the corrected 49-route gate.** ✅ **retested 2026-10-03**: steps 0, 1a and 1b
+      are verified against the *fixed* 49-route gate, which did not exist when they were first ticked.
+      The diff against the committed baseline is one line — `page profit data` `version`, the
+      fingerprint-derived integer — and no route changed status.
 - [ ] **1. Extract three JS guest helpers** into `app/lib/route-kit.js` — `write()`,
       `renderRoute()`, `refs()` — and migrate every call site.
       - [x] `refs()` — 10 sites migrated (6 two-line collapses, 3 wider-snapshot kept as-is).
-            Verified: no differences across 45 routes. ⚠️ **retest against the corrected 49-route gate**
+            ✅ **retested 2026-10-03 against the corrected 49-route gate** — no route changed status.
       - [x] `write()` — 15 of 16 sites migrated. The 16th is `/reports/refresh`'s deliberate
             `if (full) invalidate()`, which is a full drop rather than write-coupled and must stay.
             Verified: 45-route parity plus 13 write-path checks.
@@ -42,8 +42,17 @@ Each step is separately reversible and must leave the app byte-identical.
             The route-parity half is not.
             The write paths needed their own gate: `route-snapshot.mjs` only issues GETs, so it
             cannot see a regression in a helper whose entire job is to run *after* a mutation.
-      - [ ] `renderRoute()` — 25 sites. One migrated (`/login`); the rest are the same shape.
-            Verified byte-identical output (SHA-256 `0C06C535234B26F6`, 1036 bytes).
+      - [ ] `renderRoute()` — 23 inline `page(req, shell(user, …), tpl, data)` sites remain, plus one
+            `pageSpooled` (different function — spooled rendering, left alone) and two
+            `{ ...shell(…), paper }` variants that `renderRoute` also covers via its `paper` option.
+            **⚠️ Deliberately NOT migrated ahead of step 5, and this is a decision, not an oversight.**
+            Every one of these sites lives in `route.ts`, which **step 6 deletes**. Migrating them now
+            means editing each site and then moving it; step 5 moves them anyway, and every new route
+            handler will call `renderRoute` because that is what a handler does. Doing it twice buys
+            nothing and risks a 21-site diff on the day the dispatcher changes shape.
+            Verified that the two are interchangeable first: `app/lib/http.js` does `shell.paper ?? ""`,
+            so `renderRoute` passing `""` is identical to `shell()` omitting `paper`.
+            `/login` is already migrated and stands as the shape.
 
 **The gate itself had to be fixed first.** Three defects in it, each of which produced a *false*
 signal before it was caught:
@@ -76,8 +85,49 @@ cheapest honest check is a direct byte comparison of the HTML.
       **`--compare` verifies the Rust and JS paths agree** on 7 vectors including the recorded one.
       All 28 call sites now go through one codec (24 `b64ToHex`, 3 `hexToB64`); the local
       `hexToBase64` and its 14-line alphabet are deleted.
-- [ ] **3. Split the 3-in-1 invoice routes in place**, while `route.ts` is still the reference:
-      `/invoices/{id}/{header|line|complete}` (14 form fields) and `/invoices/{id}/lines`.
+- [x] **3. Split the 3-in-1 invoice routes in place** — **done 2026-10-03**
+
+`/invoices/{id}/(header|line|complete)` was one branch with one `write()` and one redirect, so each
+route's reader was reading the others' form fields — `/complete`, a single boolean, sat under a
+`discount_2` default. Now four independent branches: `/header`, `/complete`, `/line`,
+`/line/{lineId}/delete`. Each takes the invoice lease, wraps its one write in `routeKit.write()`, and
+redirects to the same place. Nothing else changed.
+
+#### The gate for this step was also broken
+
+`tools/write-paths-check.mjs` is the only harness that can see a regression here, because
+`route-snapshot.mjs` only issues GETs. It has the **same login defect** as the route-snapshot tool
+(omitted `redirect: 'manual'`, so the cookie it stored was empty and every write was bounced to
+`/login?next=…`). It reported **6 failures out of 7**, which reads as six failing checks rather than as a
+harness that never authenticated. Fixed: **13 checks, 0 failing** — which matches the 13 this note
+claimed, so the claim was right about the count and the tool simply had never passed.
+
+#### ⚠️ The same defect is systemic, and four more tools had it
+
+| Tool | Was | Now |
+|---|---|---|
+| `write-paths-check.mjs` | 6 of 7 failing | **13 of 13 pass** |
+| `management-check.mjs` | never authenticated | logs in; reports 6 failures **on the verification depot's seed** |
+| `invoice-check.mjs` | never authenticated | logs in; **throws** — see below |
+| `invoice-doc-check.mjs` | never authenticated | logs in |
+| `id-codec-check.mjs` | never authenticated | logs in |
+
+This is one defect copied tool to tool, not five coincidences. The two that had a
+`check("login", Boolean(cookie))` assertion surfaced it as a *failing check*, which is why it survived:
+it looked like the app was broken rather than the harness. Recorded once, in
+[[route-snapshot-was-snapshotting-redirects]].
+
+Two follow-ups these now expose, neither of which is a blocker and neither of which is fixed here:
+
+- **`management-check.mjs` reports 6 failures against the verification depot.** It is written against
+  `guest-smoke`'s seed, which seeds items; the verification depot is empty, so its item assertions have
+  nothing to assert about. `guest-smoke.mjs` boots and seeds its own depot and is the primary gate — it
+  passes in full.
+- **`invoice-check.mjs` throws** rather than failing: line 91 reads `item.id` with no guard, so on a
+  depot with no items it is a `TypeError` instead of a check. **A harness that throws on a missing
+  precondition hides the checks after it**, so the fix is to guard the precondition — not done, because
+  it is not this step's work and `guest-smoke` covers the same paths.
+
 - [ ] **4. Host routing** (`tb-ah-run-js/src/lib.rs`): `{param}` matching plus a `[...path]`
       catch-all for `/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`; delete the `_app`
       fallback in favour of a Rust 404; repoint `lib.rs:78` and `get_scripts_handler`.

@@ -51,12 +51,33 @@ const login = await fetch(`${BASE}/api/auth/v1/login`, {
   method: 'POST',
   headers: { 'content-type': 'application/x-www-form-urlencoded' },
   body: new URLSearchParams({ email_or_username: EMAIL, password: PASSWORD }),
+  // `redirect: 'manual'` is load-bearing, and its absence is why this tool reported six failures out
+  // of seven for as long as it existed. TrailBase answers a successful login with a 303 to /login and
+  // puts the tokens in `Set-Cookie` on THAT response; with the default redirect-following, `res` becomes
+  // the login page — an HTML response with no Set-Cookie — so `remember()` stored an empty cookie and
+  // every write went out unauthenticated and was bounced to `/login?next=…`.
+  //
+  // It never looked broken: the login "succeeded" (`login.ok` is true for a followed 303), so the tool
+  // printed its checks and reported a plausible story — a redirect that was not a redirect, and records
+  // that could not be found because they were never created. Same defect as
+  // route-snapshot.mjs; see vault/issues/route-snapshot-was-snapshotting-redirects.md.
+  //
+  // A successful TrailBase login is a 303, so `login.ok` is false for the case that worked — the status
+  // and the cookie are the real test.
+  redirect: 'manual',
 });
-if (!login.ok) {
+// TrailBase answers a successful login with 303 (200 is accepted in case that changes); bad
+// credentials come back 401.
+if (login.status !== 303 && login.status !== 200) {
   console.error(`login failed: ${login.status}`);
   process.exit(1);
 }
 remember(login);
+// A login that set no cookie must fail loudly rather than posting six unauthenticated writes.
+if (!cookie) {
+  console.error(`login returned ${login.status} but set no auth cookie — every write would be bounced to /login`);
+  process.exit(1);
+}
 
 // ---------------------------------------------------------------- expense create/update/delete
 //

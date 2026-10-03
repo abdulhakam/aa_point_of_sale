@@ -4,6 +4,7 @@ type: issue
 status: fixed
 severity: high
 created: 2026-10-03
+updated: 2026-10-03
 tags: [harness, verification, auth, route-snapshot, false-pass, trailbase]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[tb-0030-retire-the-route-ts-dispatcher]]", "[[tb-0032-manifest-first-refactor]]", "[[build-and-run]]", "[[settle-structural-claims-with-the-owning-artifact]]"]
@@ -11,8 +12,21 @@ related_to: ["[[tb-0030-retire-the-route-ts-dispatcher]]", "[[tb-0032-manifest-f
 
 # route-snapshot.mjs was snapshotting redirects, not routes
 
-**Found and fixed 2026-10-03.** The route-parity gate — the one [[tb-0030-retire-the-route-ts-dispatcher]]
-and [[tb-0032-manifest-first-refactor]] are supposed to be gated on — could not fail. It reported
+**Found and fixed 2026-10-03. Systemic — five tools had it, not one.**
+
+> **Update, later the same day.** The same defect was then found in
+> **`tools/write-paths-check.mjs`** (reported 6 failures out of 7; now **13 of 13** pass) and in
+> **`management-check.mjs`**, **`invoice-check.mjs`**, **`invoice-doc-check.mjs`** and
+> **`id-codec-check.mjs`** — none of which had ever authenticated either. All five fixed. It is one
+> defect copied tool to tool, so what follows is the general case rather than a story about one file.
+>
+> The two tools that carried a `check("login", Boolean(cookie))` assertion reported it as a *failing
+> check*, which reads as "the app is broken" rather than "this harness never logged in". That is why it
+> survived, and it is the more general lesson: **a harness defect that presents as an application defect
+> will be investigated as an application defect.**
+
+The route-parity gate — the one [[tb-0030-retire-the-route-ts-dispatcher]] and
+[[tb-0032-manifest-first-refactor]] are gated on — could not fail. It reported
 **"45 routes, 0 erroring"** while testing nothing but redirects to `/login`.
 
 ## The defect
