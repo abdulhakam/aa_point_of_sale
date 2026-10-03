@@ -18,6 +18,39 @@
   "compute": {
     "report": "profit"
   },
+  "spool": {
+    "sql": "transactions.sql",
+    "row": [
+      "id",
+      "date",
+      "type",
+      "booker",
+      "invoiceNo",
+      "invoiceId",
+      "party",
+      "company",
+      "area",
+      "section",
+      "item",
+      "itemId",
+      "price",
+      "qty",
+      "qtyText",
+      "scheme",
+      "net_amount",
+      "net_amountText",
+      "final_amount",
+      "final_amountText",
+      "profit",
+      "profitText",
+      "type_code"
+    ],
+    "totals": {
+      "cents": {
+        "profit": "CASE WHEN type_code = 1 THEN profit ELSE -profit END"
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

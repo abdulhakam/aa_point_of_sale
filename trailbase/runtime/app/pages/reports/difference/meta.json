@@ -18,6 +18,27 @@
   "compute": {
     "report": "difference"
   },
+  "spool": {
+    "sql": "items.sql",
+    "row": [
+      "id",
+      "company",
+      "name",
+      "cost_price",
+      "sale_price",
+      "qty",
+      "box_size_qty",
+      "qtyText",
+      "costText",
+      "stock_amount",
+      "stockAmountText",
+      "tone"
+    ],
+    "totals": {},
+    "binds": {
+      "agg": "difference"
+    }
+  },
   "filters": [
     {
       "name": "company",

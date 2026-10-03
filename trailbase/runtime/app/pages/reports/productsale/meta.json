@@ -18,6 +18,24 @@
   "compute": {
     "report": "productsale"
   },
+  "spool": {
+    "sql": "productsale.sql",
+    "row": [
+      "id",
+      "name",
+      "units",
+      "amount",
+      "box_size_qty",
+      "box",
+      "amountText",
+      "qtyText"
+    ],
+    "totals": {
+      "cents": {
+        "amount": "amount"
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

@@ -36,6 +36,7 @@
 
 const DIR = "/app/reports/sql/reports";
 const PRELUDE = "/app/reports/sql/prelude.sql";
+const PAGES_DIR = "/app/pages";
 
 /* ------------------------------------------------------------------ the money rule */
 
@@ -96,228 +97,154 @@ const money = (e) => `printf('%.2f', ${e})`;
  * `paymentsTotals` (compute/reports.js:63-67) buckets on the RAW row fields, which is why
  * `payments.sql` carries `paid`, `type_code` and `party_type` alongside the display columns.
  */
-const PAY = {
-  recieving:        "CASE WHEN type_code = 1 AND paid = 0 THEN amount ELSE 0 END",
-  recieved:         "CASE WHEN type_code = 1 AND paid = 1 THEN amount ELSE 0 END",
-  sending:          "CASE WHEN type_code = 0 AND paid = 0 THEN amount ELSE 0 END",
-  sent:             "CASE WHEN type_code = 0 AND paid = 1 THEN amount ELSE 0 END",
-  recievingReturns: "CASE WHEN type_code = 2 THEN (CASE WHEN party_type = 0 THEN amount ELSE 0 END) ELSE 0 END",
-  sendingReturns:   "CASE WHEN type_code = 2 THEN (CASE WHEN party_type = 0 THEN 0 ELSE amount END) ELSE 0 END",
-  invoiceTotal:     "CASE WHEN paid = 1 THEN 0 ELSE amount END",
-  totalPaid:        "CASE WHEN paid = 1 THEN amount ELSE 0 END",
-};
-/** `salesTotals` (reports.js:86-89) does NOT gate returns on the party type — a different rule. */
-const SALES = {
-  recieving:        "CASE WHEN type_code = 1 AND paid = 0 THEN amount ELSE 0 END",
-  recieved:         "CASE WHEN type_code = 1 AND paid = 1 THEN amount ELSE 0 END",
-  recievingReturns: "CASE WHEN type_code = 2 THEN amount ELSE 0 END",
-};
-/** `reportPaymentsByCompany` (reports.js:185-188) buckets on the LABEL, i.e. `type_code = 2`. */
-const BYCOMPANY = {
-  invoiceTotal:     "CASE WHEN paid = 1 OR type_code = 2 THEN 0 ELSE amount END",
-  totalPaid:        "CASE WHEN paid = 1 THEN amount ELSE 0 END",
-  recievingReturns: "CASE WHEN type_code = 2 THEN amount ELSE 0 END",
-};
-/** `reportItemSales` (reports.js:267-268): the label is "sale" for exactly `type_code = 1`. */
-const ITEMSALES = {
-  sale:    "CASE WHEN type_code = 1 THEN final_amount ELSE 0 END",
-  returns: "CASE WHEN type_code = 1 THEN 0 ELSE final_amount END",
-};
+/**
+ * The report registry — built from the page manifests, not written out here.
+ *
+ * Every report page's `meta.json` now carries a `spool` block:
+ *
+ *   ```json
+ *   "compute": { "report": "paymentsbycompany" },
+ *   "spool": {
+ *     "sql":   "payments_by_company.sql",              // under reports/sql/reports/
+ *     "binds": { "salesOnly": "1" },                  // report CONSTANTS, not user filters
+ *     "row":   ["id", "date", ...],                   // SELECT order — a contract with the host
+ *     "totals": { "cents": { ... }, "derived": { ... } }
+ *   }
+ *   ```
+ *
+ * `row` is required, not optional: `trailbase_wasm::db::query` returns positional
+ * `Vec<Vec<Value>>` with no column metadata, so these names are the contract the host asserts
+ * against the row width. A drifted manifest is a loud error, never a mislabelled row.
+ *
+ * The field names below are the ones the rest of this file already used (`cols` for `row`,
+ * `salesOnly` promoted out of `binds`), so nothing downstream had to change.
+ *
+ * The shared SQL fragments that used to live here as `PAY`/`SALES`/`BYCOMPANY`/`ITEMSALES`
+ * constants are gone: each manifest now carries its own `totals.cents`, already spread. That is the
+ * duplication this task exists to remove — four reports shared `payments.sql`, and three of them
+ * shared its totals buckets, which is exactly the sort of fact that drifts when it lives in two places.
+ */
+let REPORTS = {};
+let LOADED = false;
+
+/** `spool` block -> the registry entry, or null when the page is not a spooled report. */
+function registryEntry(key, meta) {
+  const spool = meta && meta.spool;
+  if (!spool) return null;
+  if (!spool.sql || !Array.isArray(spool.row)) {
+    throw new Error(`manifest "${key}" declares compute.report but its spool block needs sql and row`);
+  }
+  return {
+    sql: spool.sql,
+    cols: spool.row,
+    totals: spool.totals,
+    // Report CONSTANTS the statement binds but the caller never sends. They describe the report, not
+    // the user's query. `salesOnly` is `salesreport`'s "unpaid recieving/return only"; `agg` is how
+    // `stockreport` and `difference` share one statement and still differ — omitting it leaves the
+    // statement unrestricted so only the ROW COUNT changes, which reads as a data defect rather than a
+    // missing bind. That is exactly how `difference` broke when this loader was written without it.
+    salesOnly: spool.binds && spool.binds.salesOnly,
+    agg: spool.binds && spool.binds.agg,
+  };
+}
 
 /**
- * Column manifests, in the exact SELECT order of the statement.
+ * Build the registry from the page manifests.
  *
- * Kept adjacent to the SQL rather than parsed out of it: `query` returns no column names, and
- * parsing a SELECT list reliably (comments, dotted fields, aliases, subqueries) is far more
- * fragile than stating the order once. The host rejects a width mismatch, so a forgotten column
- * fails loudly instead of silently shifting every value.
+ * This module reads the manifests itself, through the host `fs` global it already uses for the `.sql`
+ * files, rather than being handed them. Injecting them looked tidier — `route.ts` already had a
+ * `reportPages()` to hand — and it is **wrong**: it put a load-order requirement between two modules
+ * for no benefit, and the failure mode when the order is wrong is total (every route 500s at module
+ * load, with the real cause 20 lines away in a 200,000-line server log).
  *
- * `totals` is the per-report aggregate over the statement's own output — see `totalsSql`. It is
- * expressed as a spec rather than a second SQL file so the totals cannot drift from the rows they
- * summarise: they are computed over the very same statement.
- *
- * A totals spec has two shapes:
- *
- *   `cents` + `derived` — the normal one. `cents` is a map of per-row expressions, each producing a
- *     **2 dp amount**; the builder sums them as integer **paisas** and never as floats. `derived` is a
- *     map of functions over those paisa sums, which is how `total` is defined without repeating
- *     `invoiceTotal - totalPaid` and without a nested rounding of a nested rounding. A `consts` entry
- *     is a literal paisa amount.
- *
- *   `order` + `pick` — for the one report whose total is a ROW rather than a sum. See `ledgers/party`.
+ * `fs` is injected the same way in Node: `tools/verify-spool-reports.mjs` sets `globalThis.fs` before
+ * importing this file, so the gate still runs the shipping loader rather than a copy.
  */
-const REPORTS = {
-  "ledgers/booker": {
-    sql: "ledger_booker.sql",
-    cols: ["id", "date", "entry", "credit", "creditText", "debit", "debitText", "party", "booker", "invoice", "invoiceId"],
-    totals: {
-      // reportLedgerBooker (reports.js:361-363): credit and debit are each round2'd, and the balance is
-      // round2 OF THOSE ROUNDED VALUES. In paisas that is just `credit - debit` — the two roundings
-      // were correcting a float sum, and there is no float sum left to correct. The nesting the float
-      // form needed (`round2(round2(a) - round2(b))`) collapses to one subtraction of integers.
-      cents: { credit: "credit", debit: "debit" },
-      derived: { balance: { op: "-", terms: ["credit", "debit"] } },
-    },
-  },
-  // profit and itemsales consume the SAME rows (`transactionsRows`, reports.js:247) and differ only
-  // in their totals, so they share one statement. `type_code` is carried so each report's totals
-  // CASE reads the raw invoice type rather than re-parsing the display label.
-  profit: {
-    sql: "transactions.sql",
-    cols: ["id", "date", "type", "booker", "invoiceNo", "invoiceId", "party", "company", "area",
-      "section", "item", "itemId", "price", "qty", "qtyText", "scheme", "net_amount",
-      "net_amountText", "final_amount", "final_amountText", "profit", "profitText", "type_code"],
-    // reportProfit (reports.js:259-261): `type === "sale" ? profit : -profit`. `toCents` rounds half
-    // the half-up rule like any other value.
-    totals: { cents: { profit: "CASE WHEN type_code = 1 THEN profit ELSE -profit END" } },
-  },
-  itemsales: {
-    sql: "transactions.sql",
-    cols: ["id", "date", "type", "booker", "invoiceNo", "invoiceId", "party", "company", "area",
-      "section", "item", "itemId", "price", "qty", "qtyText", "scheme", "net_amount",
-      "net_amountText", "final_amount", "final_amountText", "profit", "profitText", "type_code"],
-    totals: {
-      cents: { sale: ITEMSALES.sale, returns: ITEMSALES.returns },
-      // `round2(sale - returns)` over the two ROUNDED sub-totals (reports.js:271) — one subtraction
-      // of paisa sums.
-      derived: { total: { op: "-", terms: ["sale", "returns"] } },
-    },
-  },
-  // payments and salesreport share one statement; `:salesOnly` selects the sales restriction
-  // (reports.js:146). One file, so their row sets cannot drift.
-  payments: {
-    sql: "payments.sql",
-    cols: ["id", "date", "type", "invoice", "invoiceId", "area", "section", "party", "booker",
-      "amount", "amountText", "description", "paid", "type_code", "party_type"],
-    totals: {
-      cents: { ...PAY },
-      // The three NET figures are `num(a - b - c).toFixed(2)` in the JS (reports.js:77-79). Over paisa
-      // sums that is plain integer subtraction, with no rounding left to do.
-      derived: {
-        totalRecieving: { op: "-", terms: ["recieving", "recieved", "recievingReturns"] },
-        totalSending:   { op: "-", terms: ["sending", "sent", "sendingReturns"] },
-        total:          { op: "-", terms: ["invoiceTotal", "totalPaid"] },
-      },
-    },
-  },
-  salesreport: {
-    sql: "payments.sql",
-    // "unpaid recieving/return only" — reports.js:146. A report CONSTANT, not a user filter: the
-    // page never sends it, and omitting it leaves the statement unrestricted so only the row count
-    // differs, which reads as a real defect rather than a missing bind.
-    salesOnly: "1",
-    cols: ["id", "date", "type", "invoice", "invoiceId", "area", "section", "party", "booker",
-      "amount", "amountText", "description", "paid", "type_code", "party_type"],
-    totals: {
-      cents: { ...SALES },
-      derived: {
-        totalRecieving: { op: "-", terms: ["recieving", "recieved", "recievingReturns"] },
-        total:          { op: "-", terms: ["recieving", "recieved", "recievingReturns"] },
-      },
-    },
-  },
-  // stockreport and difference share one statement; `:agg` picks the quantity aggregate.
-  stockreport: {
-    sql: "items.sql",
-    cols: ["id", "company", "name", "cost_price", "sale_price", "qty", "box_size_qty", "qtyText", "costText", "stock_amount", "stockAmountText", "tone"],
-    // Which quantity aggregate the shared `items.sql` reads: the signed stock movement.
-    agg: "stock",
-    totals: { cents: { stockAmount: "stock_amount" } },
-  },
-  difference: {
-    sql: "items.sql",
-    // …and the difference-party aggregate. Same file, one aggregate apart.
-    agg: "difference",
-    cols: ["id", "company", "name", "cost_price", "sale_price", "qty", "box_size_qty", "qtyText", "costText", "stock_amount", "stockAmountText", "tone"],
-    // `totals: () => []` in the page metadata: the report has NO totals, only the row count.
-    totals: {},
-  },
-  "ledgers/party": {
-    sql: "ledger_party.sql",
-    // `paymentDate` is carried for the totals alone: the report's single total is the LAST row's
-    // balance, and the row order is `date`, then `payment_date ASC, id DESC` (ledger_party.sql).
-    // `date` alone cannot express it — every row shares one import date on this depot — so the
-    // payment date has to be visible to the ORDER BY that picks the row.
-    cols: ["id", "date", "entry", "credit", "creditText", "debit", "debitText", "balance",
-      "balanceText", "party", "booker", "invoice", "invoiceId", "paymentDate"],
-    totals: {
-      // The LAST row in the report's own order, so every key is reversed: `ORDER BY … ASC LIMIT 1`
-      // would return the FIRST row — 4750.00 against the JS 2460.00, with every per-row value
-      // correct. `id ASC` is what pairs with `payment_date DESC`: the report's order is
-      // `payment_date ASC, id DESC`, so its last row is the greatest payment date and, among those,
-      // the SMALLEST id.
-      //
-      // This is the ONE total that is a row rather than a sum, so it is read straight from the row's
-      // own `balance` column — already 2 dp by the money rule, so there is nothing to accumulate and
-      // nothing to convert.
-      order: "date DESC, paymentDate DESC, id ASC",
-      pick: { balance: "balance" },
-    },
-  },
-  "ledgers/area": {
-    sql: "ledger_area.sql",
-    cols: ["id", "party", "credit", "debit", "balance", "creditText", "debitText", "balanceText", "credit_raw", "debit_raw"],
-    // reportLedgerArea (reports.js:395-399) sums the ROUNDED per-row values, in row order. Summing
-    // the ROUNDED values is exactly summing their paisas.
-    totals: { cents: { credit: "credit", debit: "debit", balance: "balance" } },
-  },
-  productsale: {
-    sql: "productsale.sql",
-    cols: ["id", "name", "units", "amount", "box_size_qty", "box", "amountText", "qtyText"],
-    totals: { cents: { amount: "amount" } },
-  },
-  outstanding: {
-    sql: "outstanding.sql",
-    cols: ["id", "party_name", "invoice_nos", "invoice_total", "paid_total", "balance", "invoice_totalText", "paid_totalText", "balanceText", "booker_id", "area_id", "section_id", "invoice_raw", "paid_raw", "return_raw"],
-    totals: { cents: { invoice: "invoice_total", paid: "paid_total", balance: "balance" } },
-  },
-  dailysale: {
-    sql: "dailysale.sql",
-    cols: ["id", "invoiceNo", "party", "area", "booker", "total", "totalText", "party_id", "area_id", "booker_id"],
-    totals: { cents: { total: "total" } },
-  },
-  "ledgers/general": {
-    sql: "ledger_general.sql",
-    cols: ["id", "date", "invoiceNo", "description", "transactionType", "accountType",
-      "recievable", "recievableText", "payable", "payableText", "cash", "cashText",
-      "stock", "stockText", "tone"],
-    totals: {
-      // The opening figures are the FILTER's, not the data's (reports.js:404-407), so they are
-      // converted from the bound text into paisas and added to the sum in the SAME unit.
-      //
-      // Their bind POSITION is load-bearing. A bound parameter's index is the order it appears in the
-      // SQL TEXT, so they must sit in a clause that comes AFTER the report's own parameters — which
-      // is why the builder puts them in a second SELECT layer over the materialised report rows, not
-      // in the outer SELECT list. Written in the outer list they would take the low indices and shift
-      // every filter bind by three, and nothing would say so.
-      openings: { openR: ":openingRecievables", openP: ":openingPayables", openC: ":openingCash" },
-      cents: { recievable: "recievable", payable: "payable", cash: "cash" },
-      derived: {
-        recievable: { op: "+", terms: ["recievable", "openR"] },
-        payable:    { op: "+", terms: ["payable", "openP"] },
-        cash:       { op: "+", terms: ["cash", "openC"] },
-      },
-      // reports.js:458: the journal's `stock` column is structurally always zero (prelude.sql), so
-      // this total is a CONSTANT in the JS and stays one here. Zero PAISAS, not zero rupees: the
-      // builder divides by 100 on the way out.
-      consts: { stock: "0" },
-    },
-  },
-  paymentsbycompany: {
-    sql: "payments_by_company.sql",
-    cols: ["id", "date", "type", "invoice", "originalInvoice", "area", "section", "company",
-      "party", "booker", "amount", "amountText", "paid", "description", "type_code"],
-    totals: {
-      cents: { ...BYCOMPANY },
-      // `round2(invoiceTotal - totalPaid - recievingReturns)` (reports.js:188) over three ROUNDED
-      // sub-totals. Three paisa sums, subtracted.
-      derived: {
-        total: { op: "-", terms: ["invoiceTotal", "totalPaid", "recievingReturns"] },
-      },
-    },
-  },
-};
+async function loadRegistry() {
+  const out = {};
+  const walk = async (dir) => {
+    let entries;
+    try {
+      entries = await fs.readdir(dir);
+    } catch {
+      return; // unreadable, or not a directory — a stray file under pages/ must not abort the walk
+    }
+    for (const name of entries) {
+      if (name.startsWith(".")) continue;
+      await walk(dir + "/" + name);
+      let raw;
+      try {
+        raw = await fs.readFile(dir + "/" + name + "/meta.json");
+      } catch {
+        continue; // not a page
+      }
+      let meta;
+      try {
+        meta = JSON.parse(raw);
+      } catch {
+        continue; // a malformed manifest is reported by the page route, not here
+      }
+      const key = meta && meta.compute && meta.compute.report;
+      if (!key) continue;
+      const entry = registryEntry(key, meta);
+      if (entry) out[key] = entry;
+    }
+  };
+  await walk(PAGES_DIR);
+  return out;
+}
 
+/**
+ * The registry, loaded on first use and then held.
+ *
+ * Manifests are not re-read per request: the guest caches loaded modules on `globalThis`, so a change
+ * to a `meta.json` needs the same server restart every other `app/` edit needs anyway.
+ */
+async function registry() {
+  if (!LOADED) {
+    REPORTS = await loadRegistry();
+    LOADED = true;
+    if (!Object.keys(REPORTS).length) {
+      throw new Error(
+        `no report manifests under ${PAGES_DIR} — the registry is empty and every report would 404`
+      );
+    }
+  }
+  return REPORTS;
+}
+
+/**
+ * Adopt a registry directly, bypassing the manifest walk. For tests that want a specific registry.
+ */
+export function bindManifests(pagesByReportKey) {
+  const next = {};
+  for (const [key, meta] of Object.entries(pagesByReportKey || {})) {
+    const entry = registryEntry(key, meta);
+    if (entry) next[key] = entry;
+  }
+  if (!Object.keys(next).length) {
+    throw new Error("bindManifests received no report manifests — the registry would be empty");
+  }
+  REPORTS = next;
+  LOADED = true;
+  return next;
+}
+
+
+/**
+ * The registry entry for a report.
+ *
+ * "Not loaded yet" cannot be distinguished from "no such report" synchronously, so every caller
+ * awaits `registry()` first and this only has to reject the second case — a missing `spool` block,
+ * which is a real authoring mistake and must be loud rather than a silent 404.
+ */
+function specFor(name) {
+  const spec = REPORTS[name];
+  if (!spec) {
+    throw new Error(`no spool block for report "${name}" — its meta.json needs a spool block`);
+  }
+  return spec;
+}
 
 /* ----------------------------------------------------------------------- totals */
 
@@ -541,7 +468,8 @@ async function prelude() {
 
 /** The composed statement for a report: the shared prelude plus the report's own body. */
 async function sqlFor(name) {
-  const spec = REPORTS[name];
+  await registry();
+  const spec = specFor(name);
   if (!spec) throw new Error(`No spooled report: ${name}`);
   if (!sqlCache.has(name)) {
     const body = String(await fs.readFile(`${DIR}/${spec.sql}`)).trim();
@@ -565,7 +493,8 @@ async function sqlFor(name) {
 
 /** The report's OWN body (not the prelude) — enough to discover its named parameters. */
 async function sqlText(name) {
-  const spec = REPORTS[name];
+  await registry();
+  const spec = specFor(name);
   return String(await fs.readFile(`${DIR}/${spec.sql}`));
 }
 
@@ -594,10 +523,11 @@ export function invalidate() {
  * bind.
  */
 async function params(name, filters) {
+  await registry();
   const f = filters || {};
   const text = (v) => (v === undefined || v === null ? "" : String(v));
   const id = (v) => (v === undefined || v === null || v === "" ? "" : `blob:${v}`);
-  const spec = REPORTS[name];
+  const spec = specFor(name);
 
   const values = {
     booker: id(f.booker),
@@ -647,7 +577,8 @@ async function params(name, filters) {
  * permute the values the first time a report declared its filters in a different order.
  */
 async function unboundParams(name) {
-  const spec = REPORTS[name];
+  await registry();
+  const spec = specFor(name);
   if (!spec) throw new Error(`No spooled report: ${name}`);
   const body = await sqlText(name);
   // Comments are stripped first: prose that mentions something like `api::value_to_json` would
@@ -728,8 +659,9 @@ export async function jsonPayload(name, filters, payload, totals, meta, onTiming
   return render.json(next, [{ field: "result.rows", key: handle.key }]);
 }
 
-export function names() {
-  return Object.keys(REPORTS);
+/** The report keys, sorted. Async because the registry is built from the manifests on first use. */
+export async function names() {
+  return Object.keys(await registry()).sort();
 }
 
 /**
@@ -775,8 +707,9 @@ export async function totalsParameters(name) {
  * already has — `sum(Math.round(x * 100)) / 100` in integer JS arithmetic. That makes the gate able to
  * say which side of a difference is right, instead of only that they differ.
  */
-export function totalsSpec(name) {
-  const spec = REPORTS[name];
+export async function totalsSpec(name) {
+  await registry();
+  const spec = specFor(name);
   if (!spec) throw new Error(`No spooled report: ${name}`);
   return spec.totals || {};
 }

@@ -35,14 +35,15 @@ const repo = resolve(here, "../..");
 const depotDb = process.env.DEPOT_DB || join(repo, "trailbase", "traildepot", "data", "main.db");
 const sqlDir = join(repo, "trailbase", "runtime", "app", "reports", "sql");
 
-// `app/lib/spoolreports.js` is the SHIPPING loader, so the gate runs the SQL the host runs rather
-// than a copy of it. It reads the statements through the guest's `fs` global (see `api/fs.rs`), so
-// the only thing standing between it and Node is that one global — injected here, and only here.
+// `app/lib/spoolreports.js` is the SHIPPING loader, so the gate runs the SQL the host runs rather than
+// a copy of it. It reads both the `.sql` files and the page manifests through the guest's `fs` global
+// (see `api/fs.rs`), so the only thing standing between it and Node is that one global — injected here,
+// and only here. `readdir` is needed too, since the report registry is now built by walking
+// `app/pages/**/meta.json` (tb-0032) instead of reading a literal out of the module.
+const asHostPath = (p) => join(repo, "trailbase", "runtime", String(p).replace(/^\//, "").replace(/\//g, "\\"));
 globalThis.fs = {
-  readFile: async (p) => {
-    const rel = String(p).replace(/^\/app\//, "");
-    return readFileSync(join(repo, "trailbase", "runtime", "app", rel.replace(/\//g, "\\")));
-  },
+  readFile: async (p) => readFileSync(asHostPath(p)),
+  readdir: async (p) => readdirSync(asHostPath(p)),
 };
 const spool = await import("../runtime/app/lib/spoolreports.js");
 
@@ -65,7 +66,7 @@ const r2 = (v) => Math.round((Number(v ?? 0) + Number.EPSILON) * 100) / 100;
  * there is one registry, and the gate reads the same one the host does.
  */
 const REGISTRY = {};
-for (const name of spool.names()) {
+for (const name of await spool.names()) {
   const parts = await spool.parts(name, {});
   if (!parts.cols.length) throw new Error(`registry entry ${name} has an empty cols manifest`);
   REGISTRY[name] = { sql: parts.file, cols: parts.cols };

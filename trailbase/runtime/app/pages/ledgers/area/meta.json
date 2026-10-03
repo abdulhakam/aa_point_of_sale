@@ -18,6 +18,28 @@
   "compute": {
     "report": "ledgers/area"
   },
+  "spool": {
+    "sql": "ledger_area.sql",
+    "row": [
+      "id",
+      "party",
+      "credit",
+      "debit",
+      "balance",
+      "creditText",
+      "debitText",
+      "balanceText",
+      "credit_raw",
+      "debit_raw"
+    ],
+    "totals": {
+      "cents": {
+        "credit": "credit",
+        "debit": "debit",
+        "balance": "balance"
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

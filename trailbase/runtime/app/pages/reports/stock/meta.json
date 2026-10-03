@@ -18,6 +18,31 @@
   "compute": {
     "report": "stockreport"
   },
+  "spool": {
+    "sql": "items.sql",
+    "row": [
+      "id",
+      "company",
+      "name",
+      "cost_price",
+      "sale_price",
+      "qty",
+      "box_size_qty",
+      "qtyText",
+      "costText",
+      "stock_amount",
+      "stockAmountText",
+      "tone"
+    ],
+    "totals": {
+      "cents": {
+        "stockAmount": "stock_amount"
+      }
+    },
+    "binds": {
+      "agg": "stock"
+    }
+  },
   "filters": [
     {
       "name": "company",

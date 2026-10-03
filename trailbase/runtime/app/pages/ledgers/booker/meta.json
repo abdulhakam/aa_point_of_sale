@@ -19,6 +19,37 @@
   "compute": {
     "report": "ledgers/booker"
   },
+  "spool": {
+    "sql": "ledger_booker.sql",
+    "row": [
+      "id",
+      "date",
+      "entry",
+      "credit",
+      "creditText",
+      "debit",
+      "debitText",
+      "party",
+      "booker",
+      "invoice",
+      "invoiceId"
+    ],
+    "totals": {
+      "cents": {
+        "credit": "credit",
+        "debit": "debit"
+      },
+      "derived": {
+        "balance": {
+          "op": "-",
+          "terms": [
+            "credit",
+            "debit"
+          ]
+        }
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

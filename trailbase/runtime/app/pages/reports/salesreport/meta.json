@@ -19,6 +19,54 @@
   "compute": {
     "report": "salesreport"
   },
+  "spool": {
+    "sql": "payments.sql",
+    "binds": {
+      "salesOnly": "1"
+    },
+    "row": [
+      "id",
+      "date",
+      "type",
+      "invoice",
+      "invoiceId",
+      "area",
+      "section",
+      "party",
+      "booker",
+      "amount",
+      "amountText",
+      "description",
+      "paid",
+      "type_code",
+      "party_type"
+    ],
+    "totals": {
+      "cents": {
+        "recieving": "CASE WHEN type_code = 1 AND paid = 0 THEN amount ELSE 0 END",
+        "recieved": "CASE WHEN type_code = 1 AND paid = 1 THEN amount ELSE 0 END",
+        "recievingReturns": "CASE WHEN type_code = 2 THEN amount ELSE 0 END"
+      },
+      "derived": {
+        "totalRecieving": {
+          "op": "-",
+          "terms": [
+            "recieving",
+            "recieved",
+            "recievingReturns"
+          ]
+        },
+        "total": {
+          "op": "-",
+          "terms": [
+            "recieving",
+            "recieved",
+            "recievingReturns"
+          ]
+        }
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

@@ -17,6 +17,33 @@
   "compute": {
     "report": "outstanding"
   },
+  "spool": {
+    "sql": "outstanding.sql",
+    "row": [
+      "id",
+      "party_name",
+      "invoice_nos",
+      "invoice_total",
+      "paid_total",
+      "balance",
+      "invoice_totalText",
+      "paid_totalText",
+      "balanceText",
+      "booker_id",
+      "area_id",
+      "section_id",
+      "invoice_raw",
+      "paid_raw",
+      "return_raw"
+    ],
+    "totals": {
+      "cents": {
+        "invoice": "invoice_total",
+        "paid": "paid_total",
+        "balance": "balance"
+      }
+    }
+  },
   "filters": [
     {
       "name": "booker",

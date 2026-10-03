@@ -19,6 +19,63 @@
   "compute": {
     "report": "payments"
   },
+  "spool": {
+    "sql": "payments.sql",
+    "row": [
+      "id",
+      "date",
+      "type",
+      "invoice",
+      "invoiceId",
+      "area",
+      "section",
+      "party",
+      "booker",
+      "amount",
+      "amountText",
+      "description",
+      "paid",
+      "type_code",
+      "party_type"
+    ],
+    "totals": {
+      "cents": {
+        "recieving": "CASE WHEN type_code = 1 AND paid = 0 THEN amount ELSE 0 END",
+        "recieved": "CASE WHEN type_code = 1 AND paid = 1 THEN amount ELSE 0 END",
+        "sending": "CASE WHEN type_code = 0 AND paid = 0 THEN amount ELSE 0 END",
+        "sent": "CASE WHEN type_code = 0 AND paid = 1 THEN amount ELSE 0 END",
+        "recievingReturns": "CASE WHEN type_code = 2 THEN (CASE WHEN party_type = 0 THEN amount ELSE 0 END) ELSE 0 END",
+        "sendingReturns": "CASE WHEN type_code = 2 THEN (CASE WHEN party_type = 0 THEN 0 ELSE amount END) ELSE 0 END",
+        "invoiceTotal": "CASE WHEN paid = 1 THEN 0 ELSE amount END",
+        "totalPaid": "CASE WHEN paid = 1 THEN amount ELSE 0 END"
+      },
+      "derived": {
+        "totalRecieving": {
+          "op": "-",
+          "terms": [
+            "recieving",
+            "recieved",
+            "recievingReturns"
+          ]
+        },
+        "totalSending": {
+          "op": "-",
+          "terms": [
+            "sending",
+            "sent",
+            "sendingReturns"
+          ]
+        },
+        "total": {
+          "op": "-",
+          "terms": [
+            "invoiceTotal",
+            "totalPaid"
+          ]
+        }
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

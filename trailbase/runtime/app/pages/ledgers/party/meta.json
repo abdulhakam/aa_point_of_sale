@@ -19,6 +19,31 @@
   "compute": {
     "report": "ledgers/party"
   },
+  "spool": {
+    "sql": "ledger_party.sql",
+    "row": [
+      "id",
+      "date",
+      "entry",
+      "credit",
+      "creditText",
+      "debit",
+      "debitText",
+      "balance",
+      "balanceText",
+      "party",
+      "booker",
+      "invoice",
+      "invoiceId",
+      "paymentDate"
+    ],
+    "totals": {
+      "order": "date DESC, paymentDate DESC, id ASC",
+      "pick": {
+        "balance": "balance"
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

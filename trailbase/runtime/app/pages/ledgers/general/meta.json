@@ -19,6 +19,64 @@
   "compute": {
     "report": "ledgers/general"
   },
+  "spool": {
+    "sql": "ledger_general.sql",
+    "row": [
+      "id",
+      "date",
+      "invoiceNo",
+      "description",
+      "transactionType",
+      "accountType",
+      "recievable",
+      "recievableText",
+      "payable",
+      "payableText",
+      "cash",
+      "cashText",
+      "stock",
+      "stockText",
+      "tone"
+    ],
+    "totals": {
+      "openings": {
+        "openR": ":openingRecievables",
+        "openP": ":openingPayables",
+        "openC": ":openingCash"
+      },
+      "cents": {
+        "recievable": "recievable",
+        "payable": "payable",
+        "cash": "cash"
+      },
+      "derived": {
+        "recievable": {
+          "op": "+",
+          "terms": [
+            "recievable",
+            "openR"
+          ]
+        },
+        "payable": {
+          "op": "+",
+          "terms": [
+            "payable",
+            "openP"
+          ]
+        },
+        "cash": {
+          "op": "+",
+          "terms": [
+            "cash",
+            "openC"
+          ]
+        }
+      },
+      "consts": {
+        "stock": "0"
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

@@ -492,7 +492,7 @@ async function dispatch(req: any): Promise<any> {
 // The report keys the sweep should cover, taken from the app's own registry so the bench cannot
   // drift from the reports that actually exist.
   if (path === "/bench/reportkeys" && method === "GET") {
-    return { keys: A.spooled.names().slice().sort() };
+    return { keys: (await A.spooled.names()).slice().sort() };
   }
 
     // Per-report acquisition A/B, for the all-reports sweep.
@@ -790,7 +790,7 @@ async function dispatch(req: any): Promise<any> {
 
     // Unknown report names must fail loudly. A silently-defaulted name would benchmark one report
     // under another's label, which is how a bench table ends up quietly wrong.
-    const known = spooled.names();
+    const known = await spooled.names();
     if (!known.includes(reportName)) {
       return { error: `unknown report: ${reportName}`, known } as any;
     }
@@ -995,7 +995,7 @@ if (path === "/login" && method === "GET") {
     // vault/issues/report-page-definitions-duplicated-and-already-divergent.md.
     const pageDef = (await A.pages.reportPages(PAGES_DIR))[key];
     // The spool registry decides what exists: the SQL is what a report IS.
-    if (!pageDef || !A.spooled.names().includes(key)) return text("Not found", 404);
+    if (!pageDef || !(await A.spooled.names()).includes(key)) return text("Not found", 404);
     return renderReportPage(A, db, req, user, path, query, key, pageDef);
   }
 
@@ -1939,7 +1939,7 @@ if (path === "/login" && method === "GET") {
     //
     // The JSON endpoint stays, uncapped, as an API for a programmatic consumer. The BROWSER does
     // not use it any more.
-    if (def.compute && typeof def.compute.report === "string" && A.spooled.names().includes(def.compute.report)) {
+    if (def.compute && typeof def.compute.report === "string" && (await A.spooled.names()).includes(def.compute.report)) {
       return renderReportPage(A, db, req, user, path, query, def.compute.report, def);
     }
 

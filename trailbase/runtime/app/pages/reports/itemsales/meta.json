@@ -18,6 +18,49 @@
   "compute": {
     "report": "itemsales"
   },
+  "spool": {
+    "sql": "transactions.sql",
+    "row": [
+      "id",
+      "date",
+      "type",
+      "booker",
+      "invoiceNo",
+      "invoiceId",
+      "party",
+      "company",
+      "area",
+      "section",
+      "item",
+      "itemId",
+      "price",
+      "qty",
+      "qtyText",
+      "scheme",
+      "net_amount",
+      "net_amountText",
+      "final_amount",
+      "final_amountText",
+      "profit",
+      "profitText",
+      "type_code"
+    ],
+    "totals": {
+      "cents": {
+        "sale": "CASE WHEN type_code = 1 THEN final_amount ELSE 0 END",
+        "returns": "CASE WHEN type_code = 1 THEN 0 ELSE final_amount END"
+      },
+      "derived": {
+        "total": {
+          "op": "-",
+          "terms": [
+            "sale",
+            "returns"
+          ]
+        }
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

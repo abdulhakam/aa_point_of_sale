@@ -106,7 +106,62 @@ Observed flakiness, recorded so the next session does not chase it: the check
 next, with no change between. Independently verified on the production server that the mechanism is
 sound — `/p/reports/profit/data` answers `200`, then `304`, then `304` on `If-None-Match`.
 
-### 2. Move the SQL registry into the manifests
+### 2. Move the SQL registry into the manifests — **done 2026-10-03**
+
+Every report page's `meta.json` now carries a `spool` block, and `app/lib/spoolreports.js` no longer
+contains a hand-written table of reports:
+
+```json
+"compute": { "report": "paymentsbycompany" },
+"spool": {
+  "sql":    "payments_by_company.sql",
+  "binds":  { "agg": "difference" },
+  "row":    ["id", "date", "type", ...],
+  "totals": { "cents": { ... }, "derived": { ... } }
+}
+```
+
+The 14 entries were **extracted from the registry by script**, not retyped, so the manifest cannot
+disagree with the code that was running. Four shared SQL fragments — `PAY`, `SALES`, `BYCOMPANY`,
+`ITEMSALES` — are gone entirely: each manifest carries its own `totals.cents`, already spread. Those
+constants were the duplication this task exists to remove, since three reports shared
+`payments.sql` *and* its totals buckets.
+
+The module is now a **loader**: it walks `app/pages/**/meta.json` through the same host `fs` global it
+already used for the `.sql` files, and caches the result. `names()` and `totalsSpec()` became async
+because the registry is built on first use; the four `names()` call sites in `route.ts` now await it.
+
+⚠️ **The first design was wrong and the failure mode was total.** The registry was initially built from
+manifests *injected* by `route.ts` at module load. That put a load-order requirement between two
+modules for no benefit, and when it did not hold, **every route 500'd** — including `/healthz` — with
+the real cause 20 lines away in a 200,000-line server log. A module that reads its own input has no
+ordering to get wrong. Recorded because the instinct (inject for testability) is wrong specifically when
+the consumer can already reach the source, and the cost is not proportional to the mistake.
+
+#### The field the migration dropped
+
+The first fidelity check compared a **hand-picked** field list (`sql`, `row`, `salesOnly`, `totals`) and
+printed **IDENTICAL** — while `agg` was absent from every manifest. `stockreport` and `difference` share
+`items.sql` and differ **only** by that bind, so `params()` bound the empty string and the statement ran
+unrestricted: **`difference` silently rendered the wrong rows.** Caught by the smoke check *"difference
+report counts only difference invoices"*, and confirmed real rather than the documented flake by
+restoring `HEAD` (78/78) and re-applying the change (77/78, same check, three runs).
+
+The check now compares the **union of every field any entry used** — `agg`, `cols`, `salesOnly`, `sql`,
+`totals` — in both directions, so a field cannot be dropped without it appearing as missing. A
+hand-picked list is a list that will miss the next field.
+
+#### Gate
+
+| Check | Result |
+|---|---|
+| `verify-spool-reports.mjs` | **14 passed, 0 failed, 0 not ported**, 72 binds verified |
+| `route-snapshot.mjs` | 49 routes, **0 erroring**; all 14 report and ledger pages 200 |
+| diff vs the pre-change snapshot | **1 difference**: `page profit data` `version=0` → `1`, same keys. The rendered-page cache keys on the code revision (`f50d0554`), so a code change bumping it is the feature working |
+| `guest-smoke.mjs` | **every check passes** — see [[smoke-count-is-not-a-hard-coded-number]] rather than a figure |
+| migration fidelity | 14/14 entries identical on all five fields |
+
+### 3. Delete the JavaScript view layer
 
 ## Risks, named
 

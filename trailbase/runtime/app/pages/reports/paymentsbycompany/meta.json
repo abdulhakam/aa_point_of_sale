@@ -19,6 +19,43 @@
   "compute": {
     "report": "paymentsbycompany"
   },
+  "spool": {
+    "sql": "payments_by_company.sql",
+    "row": [
+      "id",
+      "date",
+      "type",
+      "invoice",
+      "originalInvoice",
+      "area",
+      "section",
+      "company",
+      "party",
+      "booker",
+      "amount",
+      "amountText",
+      "paid",
+      "description",
+      "type_code"
+    ],
+    "totals": {
+      "cents": {
+        "invoiceTotal": "CASE WHEN paid = 1 OR type_code = 2 THEN 0 ELSE amount END",
+        "totalPaid": "CASE WHEN paid = 1 THEN amount ELSE 0 END",
+        "recievingReturns": "CASE WHEN type_code = 2 THEN amount ELSE 0 END"
+      },
+      "derived": {
+        "total": {
+          "op": "-",
+          "terms": [
+            "invoiceTotal",
+            "totalPaid",
+            "recievingReturns"
+          ]
+        }
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",

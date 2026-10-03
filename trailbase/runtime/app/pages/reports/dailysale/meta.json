@@ -18,6 +18,26 @@
   "compute": {
     "report": "dailysale"
   },
+  "spool": {
+    "sql": "dailysale.sql",
+    "row": [
+      "id",
+      "invoiceNo",
+      "party",
+      "area",
+      "booker",
+      "total",
+      "totalText",
+      "party_id",
+      "area_id",
+      "booker_id"
+    ],
+    "totals": {
+      "cents": {
+        "total": "total"
+      }
+    }
+  },
   "filters": [
     {
       "name": "from",
