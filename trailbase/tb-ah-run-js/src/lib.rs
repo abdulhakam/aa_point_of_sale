@@ -362,10 +362,28 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
           match fallback {
               Some(p) => p,
               None => {
-                  return Err(HttpError::message(
-                      StatusCode::NOT_FOUND,
-                      format!("No route folder for {}", clean_path),
-                  ));
+                  // A DISTINCTIVE body, deliberately. The guest's own 404 is `text("Not found", 404)`
+                  // in six places, which is byte-identical to what TrailBase renders for an
+                  // `HttpError::message(NOT_FOUND, …)`. So a 404 could not be told apart from "this
+                  // path has no route folder", and `tools/route-coverage.mjs` had to guess — which is
+                  // how it would have reported a moved route as still-working, or a live route as
+                  // gone, on a status code that carries no information.
+                  //
+                  // It also says something useful to whoever hits it: the difference between "the app
+                  // answered 404" and "nothing is mounted here" is exactly what a reader of a 404
+                  // cannot currently see.
+                  let body = serde_json::json!({
+                      "error": "no_route_folder",
+                      "path": clean_path,
+                      "hint": "no route folder under /ahscripts/routes matches this path",
+                  })
+                  .to_string();
+                  let mut response = body.into_response();
+                  *response.status_mut() = StatusCode::NOT_FOUND;
+                  if let Ok(value) = HeaderValue::from_str("application/json; charset=utf-8") {
+                      response.headers_mut().insert(header::CONTENT_TYPE, value);
+                  }
+                  return Ok(response);
               }
           }
       }

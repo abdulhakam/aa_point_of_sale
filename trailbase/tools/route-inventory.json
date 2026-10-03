@@ -1,0 +1,967 @@
+{
+  "$comment": "Every method+path branch the dispatcher handles. This is the COVERAGE inventory, not a config: `tools/route-coverage.mjs` walks it against a live server and asserts each route is reachable, so a route that stops being served fails the gate. It is hand-seeded from `ahscripts/routes/_app/route.ts` and updated in the SAME commit as any route is moved (tb-0030 step 5) - which is the only reason it cannot drift from the code. `probe` says how to reach it: `auth` whether a session is needed, `body` a form body for POST/DELETE, and `expect` the statuses that count as reachable (anything else is a failure). A route that is intentionally unroutable says so in `note`.",
+  "inventory_version": 1,
+  "source": "trailbase/runtime/ahscripts/routes/_app/route.ts",
+  "seeded_on": "2026-10-03",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/healthz",
+      "probe": {
+        "auth": false
+      },
+      "expect": [
+        200
+      ],
+      "note": "returns {ok:true,workers:status}"
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "probe": {
+        "auth": false
+      },
+      "expect": [
+        302,
+        303
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/login",
+      "probe": {
+        "auth": false
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/login",
+      "probe": {
+        "auth": false,
+        "body": {
+          "email_or_username": "admin@localhost",
+          "password": "wrong-on-purpose"
+        }
+      },
+      "expect": [
+        401
+      ],
+      "note": "bad credentials must NOT 500",
+      "expectWhy": "bad credentials answer 401, which is the correct result — I had written 200/303"
+    },
+    {
+      "method": "GET",
+      "path": "/logout",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        302,
+        303
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/favicon.svg",
+      "probe": {
+        "auth": false
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/static/missing.css",
+      "probe": {
+        "auth": false
+      },
+      "expect": [
+        404
+      ],
+      "note": "startsWith('/static/') owns the family; a miss is still 'routed'",
+      "expectWhy": "route.ts answers `text(\"Not found\", 404)` for a missing static file"
+    },
+    {
+      "method": "GET",
+      "path": "/compute/missing.js",
+      "probe": {
+        "auth": false
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ],
+      "note": "startsWith('/compute/') owns the family",
+      "expectWhy": "the startsWith('/compute/') branch redirects when it cannot resolve the module; 303 is a handled answer"
+    },
+    {
+      "method": "GET",
+      "path": "/plugins/missing/",
+      "probe": {
+        "auth": false
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ],
+      "note": "startsWith('/plugins/') owns the family",
+      "expectWhy": "the startsWith('/plugins/') branch serves a static file behind auth, so a miss is 303 or 404"
+    },
+    {
+      "method": "GET",
+      "path": "/dashboard",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200,
+        303
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/status",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/reports/refresh",
+      "probe": {
+        "auth": true,
+        "body": {}
+      },
+      "expect": [
+        200,
+        303
+      ],
+      "note": "full drop, no body needed"
+    },
+    {
+      "method": "GET",
+      "path": "/reports/ledgers",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/{key}",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "key": "profit"
+        }
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/reports/does-not-exist",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        404
+      ],
+      "note": "negative probe; 404 IS the handled answer",
+      "expectWhy": "route.ts answers `text(\"Not found\", 404)` for an unknown report key"
+    },
+    {
+      "method": "GET",
+      "path": "/management",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/management/parties",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/management/nope",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200,
+        404
+      ],
+      "note": "unknown entity: 404 or an empty list are both handled"
+    },
+    {
+      "method": "POST",
+      "path": "/management/{entity}/create",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "entity": "sections"
+        },
+        "body": {
+          "name": "coverage-probe"
+        }
+      },
+      "expect": [
+        302,
+        303
+      ],
+      "mutates": true,
+      "cleanup": "sections named coverage-probe"
+    },
+    {
+      "method": "GET",
+      "path": "/plugins",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/jobs",
+      "probe": {
+        "auth": true,
+        "body": {}
+      },
+      "expect": [
+        200,
+        400,
+        404
+      ],
+      "expectWhy": "currently 500s with `Unknown job: ` on an empty name — that is a REAL defect, tracked separately, and the expectation records what it SHOULD answer"
+    },
+    {
+      "method": "POST",
+      "path": "/jobs/reconcile",
+      "probe": {
+        "auth": true,
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        400
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/jobs/{id}",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        }
+      },
+      "expect": [
+        200,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/jobs/{id}/result",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        }
+      },
+      "expect": [
+        200,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/jobs/{id}/cancel",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/jobs/{id}/steps/{n}/recover",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ==",
+          "n": "0"
+        },
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/worker/{id}/step",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        200,
+        400,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoice-doc",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoice-doc/verify",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoice-doc/list",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoice-doc/document",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoice-doc/rebuild",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoice-doc/rebuild",
+      "probe": {
+        "auth": true,
+        "body": {}
+      },
+      "expect": [
+        200,
+        303
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoice/context",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoice",
+      "probe": {
+        "auth": true,
+        "body": {}
+      },
+      "expect": [
+        200,
+        400
+      ],
+      "note": "empty body must be rejected, not crash"
+    },
+    {
+      "method": "GET",
+      "path": "/invoice/{id}",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        }
+      },
+      "expect": [
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoice/{id}/line",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ],
+      "note": "lease is taken first, so a missing invoice 404s before any write"
+    },
+    {
+      "method": "DELETE",
+      "path": "/invoice/{id}/line/{lineId}",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ==",
+          "lineId": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoice/{id}/complete",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoice/{id}/release",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/cashmemo",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/cashmemo/vouchers",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/cashmemo/da",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/cashmemo/expenses",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/cashmemo/expenses/save",
+      "probe": {
+        "auth": true,
+        "body": {
+          "description": "coverage-probe",
+          "amount": "1.00"
+        }
+      },
+      "expect": [
+        302,
+        303
+      ],
+      "mutates": true,
+      "cleanup": "expense described coverage-probe"
+    },
+    {
+      "method": "POST",
+      "path": "/cashmemo/expenses/{id}/delete",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        302,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/cashmemo/vouchers/{id}",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        }
+      },
+      "expect": [
+        200,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/print",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/print",
+      "probe": {
+        "auth": true,
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        400
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoices",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/new",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/{id}",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        }
+      },
+      "expect": [
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/{id}/grid",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        }
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/invoices/{id}/view",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        }
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/{id}/header",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        302,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/{id}/complete",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        302,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/{id}/line",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        302,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/{id}/line/{lineId}/delete",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ==",
+          "lineId": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        302,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/invoices/{id}/lines",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        302,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/payments/new",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/payments",
+      "probe": {
+        "auth": true,
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        400
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/payments/{id}/delete",
+      "probe": {
+        "auth": true,
+        "substitute": {
+          "id": "AAABoQB/ek24i/ze7y5meQ=="
+        },
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/inventory",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/inventory/save",
+      "probe": {
+        "auth": true,
+        "body": {}
+      },
+      "expect": [
+        200,
+        303,
+        400
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/p",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/p/reports/profit",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/p/reports/profit/data",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/p/nope",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        404
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bench/reportkeys",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bench/report",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200,
+        400
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bench/payload",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200,
+        400
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bench/sqlfn",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200,
+        400
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bench/refs",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bench/spool",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/bench/render",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200,
+        400
+      ]
+    }
+  ],
+  "id_substitute_note": "Every {id} / {lineId} substitute is a real UUIDv7 (48-bit unix-ms | version 7 | variant 10) in base64, and exists in no row. Two earlier substitutes were wrong in ways that made the gate report defects that were not there: the literal string does-not-exist is not valid base64 at all, so b64ToHex threw; and Buffer.alloc(16,1) IS valid base64 but NOT a valid UUIDv7, so the invoice_lock CHECK (is_uuid_v7) rejected it and eight invoice write routes answered an opaque 500. A probe id has to be well-formed all the way down, or the gate tests the codec instead of the route."
+}

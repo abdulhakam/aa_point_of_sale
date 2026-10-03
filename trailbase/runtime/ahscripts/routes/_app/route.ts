@@ -1088,6 +1088,14 @@ if (path === "/login" && method === "GET") {
     if (!entity) return text("Unknown entity", 404);
     const action = writeMatch[2];
     const idHex = writeMatch[3] ? A.routeKit.b64ToHex(writeMatch[3]) : null;
+    // A create or update that omits a required field is refused as a 400, before the write. The entity
+    // spec has declared `required` all along and nothing read it, so `POST /management/items/create`
+    // with an empty body inserted `name = ''` and redirected `303 ?status=ok`. See
+    // `app/lib/management.js` `missingRequired`.
+    if (action === "create" || action.endsWith("update")) {
+      const missing = A.management.missingRequired(entity, form);
+      if (missing.length) return { error: "missing required fields", entity: entityKey, fields: missing };
+    }
     await A.routeKit.write(async () => {
       if (action === "create") {
         const newHex = await A.management.createRow(db, entity, form);
@@ -1113,7 +1121,16 @@ if (path === "/login" && method === "GET") {
   // Jobs: durable queue API.
   if (path === "/jobs" && method === "POST") {
     const body = jsonBody(req);
-    const jobHex = await A.jobs.enqueue(db, String(body.name || ""), body.input || {});
+    // Validate before enqueueing. `queue.enqueue` throws `Unknown job: <name>` for a name it does not
+    // not know, which reached the client as an opaque `500 Guest error: Unknown job: ` — so a request
+    // with a typo in the job name, or with no body at all, looked like a server fault. It is a bad
+    // request and it is now answered as one. Found by `tools/route-coverage.mjs`, which asserted the
+    // route was reachable and got a 500.
+    const name = String(body.name || "");
+    if (!A.jobs.isKnown(name)) {
+      return { error: "unknown job", name, known: A.jobs.known() };
+    }
+    const jobHex = await A.jobs.enqueue(db, name, body.input || {});
     await A.jobs.reconcile(db);
     const view = await A.jobs.jobView(db, jobHex);
     return { id: view.id, state: view.state };
@@ -1284,8 +1301,20 @@ if (path === "/login" && method === "GET") {
 
   if (path === "/invoice" && method === "POST") {
     const body = jsonBody(req);
+    // Validate `type` before calling in. `createInvoice` does `String(Number(type))`, so a missing or
+    // non-numeric type reached the INSERT as the literal string "NaN" and tripped the invoices CHECK
+    // constraint — surfacing as an opaque `500`. It is a bad request. Found by
+    // `tools/route-coverage.mjs`.
+    //
+    // 0 purchase, 1 sale, 2 return, 3 difference ([[data-model]]). The entry screens offer 0 and 1;
+    // return and difference have no guest screen yet ([[guest-frontend-feature-parity-gaps]]), so they
+    // are accepted but not reachable from the UI.
+    const type = Number(body.type);
+    if (!Number.isInteger(type) || type < 0 || type > 3) {
+      return { error: "invalid invoice type", type: body.type ?? null, allowed: [0, 1, 2, 3] };
+    }
     const created = await A.routeKit.write(() =>
-      A.invoicing.createInvoice(db, { type: body.type, key: body.key, userHex, device: body.device })
+      A.invoicing.createInvoice(db, { type, key: body.key, userHex, device: body.device })
     );
     return created;
   }
@@ -1965,6 +1994,13 @@ if (path === "/login" && method === "GET") {
   }
 
   if (path === "/inventory/save" && method === "POST") {
+    // Reject a body that omits a required field BEFORE the write. Without this an empty POST inserted
+    // an item with `name = ''` and redirected `303 ?status=ok` — the table's
+    // `name TEXT NOT NULL DEFAULT ''` was satisfied, and the junk item then showed up in the
+    // inventory, the stock report and the difference report. `createRow` now also enforces this, so
+    // the check here is what turns the refusal into a 400 rather than an unhandled 500.
+    const missing = A.management.missingRequired(A.entities.ENTITIES.items, form);
+    if (missing.length) return { error: "missing required fields", fields: missing };
     await A.routeKit.write(() =>
         String(form.id || "")
           ? A.inventory.updateItem(db, "items", String(form.id), form)

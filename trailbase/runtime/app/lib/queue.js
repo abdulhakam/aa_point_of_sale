@@ -116,8 +116,20 @@
     },
   };
 
+  /** Whether `enqueue` would accept this name. Lets a route answer 400 instead of throwing. */
+  function isKnown(name) {
+    return Boolean(JOBS[String(name || "")]);
+  }
+
+  /** The job names `enqueue` accepts. Included in the 400 so a caller can fix the request. */
+  function known() {
+    return Object.keys(JOBS).sort();
+  }
+
   async function enqueue(db, name, input) {
     const spec = JOBS[name];
+    // Still throws, deliberately: this is the programmer-error path now that callers can check
+    // `isKnown` first, and silently queueing nothing would be worse than a loud failure.
     if (!spec) throw new Error(`Unknown job: ${name}`);
     const jobHex = await uuidHex(db);
     await db.execute('INSERT INTO "job" ("id", "name", "input") VALUES (unhex(?), ?, ?)', [
@@ -316,6 +328,8 @@
 
   globalThis.__AA_QUEUE__ = {
     JOBS,
+    isKnown,
+    known,
     enqueue,
     reconcile,
     executeStep,

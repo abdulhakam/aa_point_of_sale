@@ -198,6 +198,65 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
 | resolver probe | 5 required shapes 200, 2 correctly-absent shapes 404 |
 
 - [ ] **5. Split the ~78 method+path pairs into ~30 route directories** with `route.json`.
+
+  #### Prerequisite built first: a POST coverage gate
+
+  Step 5 moves ~60 branches, **24 of them POST or DELETE**, and the gate that would have protected it
+  issued **GETs only**. `write-paths-check.mjs` covered 13 checks on three write paths. So the invoice
+  header/line/complete/release routes, the management CRUD trio, payments, expenses, the print queue and
+  job cancel/recover had **no automated coverage at all** — and they are the routes that touch money.
+
+  `tools/route-coverage.mjs` + `tools/route-inventory.json` now close that. **77 routes — every
+  method+path branch in the dispatcher — probed against a live server, 77 reachable, 0 failing.**
+
+  Two design points, both of which were wrong in the first version:
+
+  - **The inventory is a checked-in JSON file, hand-seeded, not a parse of `route.ts`.** A regex scrape
+    of a 2,167-line dispatcher is a second source of truth that silently loses branches — the exact
+    failure the tool exists to prevent. It is updated in the same commit as any route is moved, so gate
+    and refactor cannot drift.
+  - **It cleans up after itself.** The first version created a section and an expense and exited, so the
+    next `route-snapshot` run reported **seven "differences" that were the gate's own rows** (row counts
+    2 → 6 across expenses, inventory, the general ledger, items, difference and stock). `guest-smoke`
+    passed throughout, which is what identified the cause. Fixtures are now removed by marker, and a
+    cleanup failure fails the tool rather than being reported as advice.
+
+  #### Four real defects it found, all in write routes, all fixed
+
+  Every one is "malformed input produces an opaque 500 or, worse, a silent write":
+
+  | Route | Was | Now |
+  |---|---|---|
+  | `POST /jobs` | 500 `Unknown job: ` on an empty body | `{error:"unknown job", known:[…]}` — `queue.js` gained `isKnown`/`known` |
+  | `POST /invoice` | `String(Number(undefined))` → `"NaN"` → tripped the invoices CHECK → 500 | `{error:"invalid invoice type", allowed:[0,1,2,3]}` |
+  | `POST /inventory/save` | **silently created an item with `name = ''`** and redirected `303 ?status=ok` | `{error:"missing required fields", fields:["name"]}` |
+  | `POST /management/items/create` | same | same, for every entity |
+
+  The third is the one that mattered. `items.name` has been declared `required: true` in the entity
+  spec from the start and **nothing read it**; the table's `name TEXT NOT NULL DEFAULT ''` satisfied the
+  insert. So a double-submit or a truncated request created a junk item that then appeared in the
+  inventory, the **stock report** and the **difference report** — a wrong stock figure from an empty
+  POST body. `management.js` now enforces `required` in `createRow`/`updateRow`, and the two call sites
+  check first so the refusal is a 400 rather than an unhandled 500.
+
+  #### Three of my own mistakes, caught by the gate
+
+  Worth recording because each produced failures that looked like application defects:
+
+  1. **The gate could not tell a routed 404 from an unrouted one.** Both were the body `Not found` —
+     TrailBase renders `HttpError::message(NOT_FOUND, …)` as that, and `route.ts` returns
+     `text("Not found", 404)` in six places. So it reported two live routes as UNROUTED. Fixed at the
+     source: the host now answers `{"error":"no_route_folder","path":…}`, which is also what a reader
+     of a 404 needs to see.
+  2. **The `{id}` substitute was not valid base64.** `does-not-exist` made `b64ToHex` throw, so nine
+     routes reported `QuickJS library created a unknown error` — the gate was testing the id decoder.
+  3. **Then it was valid base64 but not a valid UUIDv7.** `Buffer.alloc(16,1)` passes the decoder and
+     fails the `invoice_lock` CHECK (`is_uuid_v7`), so eight invoice write routes still 500'd. A probe
+     id must be well-formed all the way down, or the gate tests the codec instead of the route. It is
+     now a real UUIDv7 in base64.
+
+  A gate that asserts the wrong thing is worse than no gate: it reports defects that are not there, and
+  the real ones get lost among them. All three of these would have been filed against the application.
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page

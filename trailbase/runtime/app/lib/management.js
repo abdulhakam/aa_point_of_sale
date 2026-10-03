@@ -207,8 +207,40 @@ function columnSpec(entity, form) {
 }
 
 /** INSERT a record with a server-generated uuid_v7 id; returns the new id's hex. */
+/**
+ * Reject a create or update that omits a field the entity declares `required: true`.
+ *
+ * The entity spec has said `required: true` all along — `items.name` is the only one today — and
+ * nothing read it, so an empty POST to `/inventory/save` or `/management/items/create` inserted a row
+ * with `name = ''` and redirected `303 ?status=ok`. The table has `name TEXT NOT NULL DEFAULT ''`, so
+ * the database was happy; the junk item then appeared in the inventory, the stock report and the
+ * difference report, which is how a stray double-submit becomes a wrong stock figure.
+ *
+ * Found by `tools/route-coverage.mjs`, which probes every write route with an empty body and asserts it
+ * is rejected rather than served.
+ *
+ * Throws rather than returning a flag, because every caller is already inside a request handler and an
+ * unhandled throw becomes a 500 — which is what we are avoiding. So callers that want a 400 must check
+ * first; see `A.management.missingRequired(entity, form)` for the non-throwing form.
+ */
+export function missingRequired(entity, form) {
+  const fields = Array.isArray(entity?.fields) ? entity.fields : [];
+  return fields
+    .filter((f) => f.required)
+    .filter((f) => String((form || {})[f.name] ?? "").trim() === "")
+    .map((f) => f.name);
+}
+
+function requireFields(entity, form) {
+  const missing = missingRequired(entity, form);
+  if (missing.length) {
+    throw new Error(`${entity.label ?? entity.api}: ${missing.join(", ")} required`);
+  }
+}
+
 export async function createRow(db, entity, form) {
   const spec = columnSpec(entity, form);
+  requireFields(entity, form);
   const idHex = await freshUuidHex(db);
   const names = ['"id"', ...spec.map((c) => `"${c.name}"`)];
   const exprs = ["unhex(?)", ...spec.map((c) => c.expr)];

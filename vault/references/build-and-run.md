@@ -176,6 +176,8 @@ All the harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-
 |---|---|---|
 | `node trailbase/tools/guest-smoke.mjs` | boots its own depot on `:4322`, seeds the smoke dataset, asserts every screen | **no** |
 | `node trailbase/tools/route-snapshot.mjs` | status + content fingerprint for **49** routes — the refactoring gate for [[tb-0030-retire-the-route-ts-dispatcher]] | yes — `--base`, `--email`, `--password` |
+| `node trailbase/tools/route-coverage.mjs` | **every** method+path branch — **77**, GET and POST — probed for reachability against `route-inventory.json`. Cleans up its own fixtures; a cleanup failure fails the run | yes — `BASE`, `EMAIL`, `PASSWORD` |
+| `node trailbase/tools/write-paths-check.mjs` | a conditional write, an unconditional write and a delete, each **read back after** — `route-snapshot` issues GETs only, so this is the only gate that can see a helper whose whole job is to run *after* a mutation | yes — `BASE`, `EMAIL`, `PASSWORD` |
 | `node trailbase/tools/jobs-check.mjs` | durable queue, idempotency, worker fan-out, poller (`POLLER_TEST=1`) | yes — `GUEST_BASE`, default `http://127.0.0.1:4003` |
 | `node trailbase/tools/management-check.mjs` | management create/update/delete | yes — same default |
 | `node trailbase/tools/invoice-check.mjs` | context + ETag, idempotent create/lines, lease, complete | yes — same default |
