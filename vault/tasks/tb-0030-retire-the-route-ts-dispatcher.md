@@ -128,9 +128,75 @@ Two follow-ups these now expose, neither of which is a blocker and neither of wh
   precondition hides the checks after it**, so the fix is to guard the precondition — not done, because
   it is not this step's work and `guest-smoke` covers the same paths.
 
-- [ ] **4. Host routing** (`tb-ah-run-js/src/lib.rs`): `{param}` matching plus a `[...path]`
-      catch-all for `/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`; delete the `_app`
-      fallback in favour of a Rust 404; repoint `lib.rs:78` and `get_scripts_handler`.
+- [x] **4. Host routing** — **{param} and [...rest] done; the rest is step 6's** — 2026-10-03
+
+`tb-ah-run-js/src/lib.rs` gains `resolve_route_file()`, a filesystem walk that replaces the
+exact-path `exists()` probe. At each segment: **literal, then `{param}`, then `[...rest]`** — in that
+order, because a literal directory must win over a `{param}` one or a future
+`routes/reports/profit/` would be shadowed by `routes/reports/{key}/` the moment both existed.
+
+**Not memoised, deliberately.** The alternative is a cached route tree that can go stale against a
+runtime directory the app is meant to edit without restarting, and a stale route table is a 404 that
+only reproduces sometimes.
+
+Proven with throwaway route folders in the verification depot (removed afterwards; the source tree was
+never touched):
+
+```text
+200  /probe/abc                   {param} one segment
+200  /probe/nested/42/fixed       {param} mid-path, literal tail
+200  /probe/rest/a/b/c/d.txt      [...rest] four segments
+200  /probe/static/css/app.css    [...rest], the /static/* shape step 4 was written for
+200  /probe/static/a/b/c/d.js     [...rest] five segments
+404  /probe/rest                  [...rest] with NOTHING to absorb — CORRECT, see below
+404  /probe/rest/                 same
+```
+
+A `[...rest]` does not match its own parent path. That is the convention, not a gap: a catch-all absorbs
+a *remainder*, so `/static` alone is not its match, and matching it needs an optional `[[...rest]]`.
+Recorded so it is not "fixed" later by someone reading the 404 as a defect.
+
+#### Two bugs the first build had, both found by probing rather than by reading
+
+1. **`is_last` on the catch-all.** I gated `[...rest]` on being the final request segment, which is
+   backwards — the whole point is absorbing the remainder, so `/static/css/app.css` needs it to match
+   at the `css` level, not at `app.css`. Symptom: every multi-segment catch-all 404'd while `{param}`
+   worked in the same build, which reads as "catch-all unsupported" rather than "guard wrong".
+2. **The walk did not stop after a catch-all matched.** It kept descending for the remaining segments,
+   walked into `[...path]`, looked for a directory named `a`, found only `route.ts`, and fell through to
+   the dispatcher. **The route was resolved and then discarded.** This is the worst shape the bug could
+   take, and it is invisible without a diagnostic: the failure looks identical to "no route folder".
+
+That second one is why the build carries a comment saying so. A resolver that finds the right file and
+then throws it away is indistinguishable, from the outside, from one that never found it.
+
+#### ⚠️ Step 4 cannot be completed as written, and the reason is the SDK
+
+Two of the four items are **not implementable in the host**:
+
+- **"delete the `_app` fallback in favour of a Rust 404"** — cannot happen until steps 5 and 6: the
+  dispatcher *is* the application today. It is step 6's work by construction.
+- **repointing `lib.rs:78` and `get_scripts_handler`** — `lib.rs:104` discovers jobs with
+  `fs::read_dir("/traildepot/ahscripts")`, which is a **different preopen root** from the
+  `/ahscripts` the routes live under, and `trailbase-wasm` 0.6.1 exposes exactly one filesystem call:
+  `read_file`. There is no host-side `read_dir` or `metadata` in the SDK.
+
+`std::fs::read_dir` *does* work in this component — verified, it lists `["mode", "probe", "_app"]` —
+so directory walking is possible today, but it is `std`, not the SDK, and that is a thing to know before
+relying on it rather than after.
+
+The `/_app` fallback is still in place, which is correct: it is the whole URL space until step 6.
+
+#### Gate
+
+| Check | Result |
+|---|---|
+| `cargo build --offline --release --target wasm32-wasip2` | clean, no new warnings |
+| `route-snapshot.mjs` | 49 routes, **0 erroring**; the 5 negative probes still 404 |
+| diff vs baseline | 1 line: `page profit data` `version` |
+| `guest-smoke.mjs` | every check passes |
+| resolver probe | 5 required shapes 200, 2 correctly-absent shapes 404 |
+
 - [ ] **5. Split the ~78 method+path pairs into ~30 route directories** with `route.json`.
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.

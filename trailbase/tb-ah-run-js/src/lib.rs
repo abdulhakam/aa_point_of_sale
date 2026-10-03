@@ -231,6 +231,101 @@ fn apply_extra_headers(response: &mut Response, json: &serde_json::Value) {
 }
 
 
+/// The file-router conventions, in the order a request is matched against them.
+///
+/// - `/reports/profit`                 → `routes/reports/profit/route.{js,ts}`   (literal)
+/// - `/invoices/{id}/header`           → `routes/invoices/{id}/header/route.{js,ts}`
+/// - `/static/css/app.css`             → `routes/static/[...path]/route.{js,ts}`
+///
+/// Precedence at each segment is **literal, then `{param}`, then `[...rest]`**, and `[...rest]` is
+/// only honoured as the LAST segment. That order matters and is the reason it is written down rather
+/// than left to the walk: a literal directory must win over a `{param}` one, or a future
+/// `routes/reports/profit/` would be shadowed by `routes/reports/{key}/` the moment both existed.
+///
+/// Why this is here at all: the host previously did an exact-path `exists()` and then handed
+/// everything else to a single catch-all dispatcher, which is why dynamic paths only worked because
+/// `route.ts` grew a branch per URL. See vault/tasks/tb-0030-retire-the-route-ts-dispatcher.md.
+///
+/// The match is a filesystem walk per request. It is not memoised deliberately: the alternative is a
+/// cache of the route tree that can go stale against a runtime directory the app is meant to edit
+/// without restarting, and a stale route table is a 404 that only reproduces sometimes.
+fn resolve_route_file(clean_path: &str) -> Option<std::path::PathBuf> {
+    const ROOT: &str = "/ahscripts/routes";
+
+
+    let segments: Vec<&str> = clean_path
+        .split('/')
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    // A first segment that is itself a catch-all owns everything below it: `/static/[...path]`.
+    let mut dir = std::path::PathBuf::from(ROOT);
+
+    for segment in segments.iter() {
+        let mut next: Option<std::path::PathBuf> = None;
+        let mut caught_all = false;
+
+        // 1. literal
+        let literal = dir.join(segment);
+        if literal.is_dir() {
+            next = Some(literal);
+        }
+
+        // 2. `{param}` — any single segment
+        if next.is_none() {
+            if let Ok(entries) = fs::read_dir(&dir) {
+                for entry in entries.flatten() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if name.starts_with('{') && name.ends_with('}') && entry.path().is_dir() {
+                        next = Some(entry.path());
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. `[...rest]` — every remaining segment, as ONE match.
+        //
+        // Not gated on being the last request segment: a catch-all's job is to ABSORB the remainder,
+        // so `/static/css/app.css` needs `[...path]` to match at the `css` level, not at `app.css`.
+        // The first version required `is_last` here, so `/probe/rest/a/b/c/d.txt` fell through to the
+        // dispatcher and returned 404 — and it looked like `[...rest]` was unsupported rather than
+        // like the guard was wrong, because `{param}` worked in the same build.
+        if next.is_none() {
+            if let Ok(entries) = fs::read_dir(&dir) {
+                for entry in entries.flatten() {
+                    let name = entry.file_name().to_string_lossy().to_string();
+                    if name.starts_with("[...") && name.ends_with(']') && entry.path().is_dir() {
+                        next = Some(entry.path());
+                        caught_all = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        dir = next?;
+        // A catch-all has ABSORBED the rest of the path, so the walk ends here. Without this the loop
+        // kept descending for the remaining segments and the match died on the next iteration — the
+        // diagnostic showed it had already found
+        // `/ahscripts/routes/probe/rest/[...path]` with `is_dir=true`, then walked into it looking for
+        // a directory named `a`, found only `route.ts`, and fell through to the dispatcher. So the
+        // route WAS resolved and then discarded, which is the worst shape this bug could take.
+        if caught_all {
+            break;
+        }
+    }
+
+    for ext in ["ts", "js"] {
+        let candidate = dir.join(format!("route.{}", ext));
+        if candidate.is_file() {
+            return Some(candidate);
+        }
+    }
+    None
+}
+
+
 async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
   let path = req.url().path().to_string();
   // Remove trailing slash if present to avoid double slashes, though /serve//route.js often works.
@@ -241,7 +336,7 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
   };
 
   println!("Path: {}", clean_path);
-  
+
   // Ensure /ahscripts/routes exists
   if !std::path::Path::new("/ahscripts").exists() {
       let _ = fs::create_dir("/ahscripts");
@@ -250,29 +345,32 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
       let _ = fs::create_dir("/ahscripts/routes");
   }
 
-  let mut file_path = format!("/ahscripts/routes{}/route.js", clean_path);
-  
-  if !std::path::Path::new(&file_path).exists() {
-      let ts_path = format!("/ahscripts/routes{}/route.ts", clean_path);
-      if std::path::Path::new(&ts_path).exists() {
-          file_path = ts_path;
+  let mut file_path = match resolve_route_file(clean_path) {
+      Some(p) => p,
+      None => {
+          // No route folder owns this path. In `dispatcher` mode the single app dispatcher still takes
+          // it — that is the whole URL space today, and `route.ts` is still the reference until
+          // tb-0030 step 6 deletes it. In `crawler` mode there is no catch-all by design: the host
+          // serves whatever folders it finds and holds no opinion about the app, so a path with no
+          // folder of its own is a 404. See config.rs.
+          let mut fallback: Option<std::path::PathBuf> = None;
+          if let Some(dispatcher) = config::dispatcher() {
+              if std::path::Path::new(dispatcher).exists() {
+                  fallback = Some(std::path::PathBuf::from(dispatcher));
+              }
+          }
+          match fallback {
+              Some(p) => p,
+              None => {
+                  return Err(HttpError::message(
+                      StatusCode::NOT_FOUND,
+                      format!("No route folder for {}", clean_path),
+                  ));
+              }
+          }
       }
-  }
+  };
 
-  // Fallback: a single app dispatcher handles every path that has no route folder of its
-  // own (dynamic routes like /reports/<key>, /management/<entity>, /p/<slug>).
-  // Only in `dispatcher` mode. In `crawler` mode there IS no catch-all: a path with no route folder
-  // of its own is a 404, which is the point - the host serves whatever folders it finds and holds
-  // no opinion about the app. The per-URL folder resolution above is tried first either way, so a
-  // route folder always wins over the dispatcher. See config.rs.
-  if !std::path::Path::new(&file_path).exists() {
-    if let Some(dispatcher) = config::dispatcher() {
-      if std::path::Path::new(dispatcher).exists() {
-        file_path = dispatcher.to_string();
-      }
-    }
-  }
-  
   if std::path::Path::new(&file_path).exists() {
       let method = req.method().to_string().to_uppercase();
       
@@ -315,7 +413,7 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
           "user": user_json
       });
 
-      match runtime::run_route(&file_path, &method, req_obj).await {
+      match runtime::run_route(file_path.to_string_lossy().as_ref(), &method, req_obj).await {
           Ok(json) => {
               // Response shapes a route may return:
               //   { redirect: "/path", status? } -> 303 (or status) with Location, empty body
