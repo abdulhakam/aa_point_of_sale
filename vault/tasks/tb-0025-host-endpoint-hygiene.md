@@ -47,7 +47,9 @@ Item 1 should not wait for the others — it is the only one reachable by an una
       [[runtime-js-guest-platform]]; point at the job queue as the real deferral mechanism
 - [ ] Make `readFile({encoding:"binary"})` return bytes or reject; route `exists`/`readdir`/
       `writeFile` through the same bridge as `readFile`, or state why not
-- [ ] `cmd /c trailbase\build.bat` then `node trailbase/tools/guest-smoke.mjs` — expect **71/71**
+- [ ] `cmd /c trailbase\build.bat` then `node trailbase/tools/guest-smoke.mjs` — expect every check to pass (⚠️ this note used to say
+  "expect 71/71"; the harness prints `N/N` at runtime, so no figure can be predicted from the
+  vault — see [[smoke-count-is-not-a-hard-coded-number]])
 - [ ] Refresh [[guest-parity-differential-not-reproducible]]'s status if item 2's removal changes
       any harness result
 

@@ -13,22 +13,26 @@ related_to: ["[[frontend]]", "[[trailbase]]", "[[cutover-is-guest-only]]"]
 
 # backend (PocketBase)
 
-> **CORRECTED 2026-10-03.** This note previously read `locator: backend/`, `status: production`, and
-> opened with "**Legacy / production.** `backend/` is the PocketBase server that currently serves the
-> live point-of-sale data … Nothing in this directory is experimental: changing it changes production
-> behaviour."
+> **CORRECTED 2026-10-03.** The `locator` was wrong: `backend/` was deleted from git on 2026-09-29
+> (`c167d311`) and the directory is now `legacyforparity/backend/` — untracked and git-ignored.
+> `status: production` was **right** and is restored: this is the server the shop runs on.
 >
-> **None of that is true now.** `backend/` was deleted from git on 2026-09-29 (`c167d311`) and the
-> directory is now `legacyforparity/backend/` — untracked and git-ignored. It is a **frozen parity
-> oracle**: never edited, never a cutover target, not source. See [[cutover-is-guest-only]].
-> "Changing it changes production behaviour" understated it — changing it changes nothing, because
-> nothing reads it.
+> The part that was wrong is the *open* of the old body — "Nothing in this directory is experimental:
+> changing it changes production behaviour." The real position is sharper than that: it is **frozen**,
+> so changing it changes nothing, because there is nothing to change and no copy if you break it.
+> See [[cutover-is-guest-only]].
+>
+> ⚠️ An earlier correction in this session read "no source" as "out of use" and called this an oracle
+> "used solely to answer parity questions". That was wrong; `RUN MINI.BAT` starts it.
 
-**Legacy / frozen.** `legacyforparity/backend/` is the PocketBase server the POS used to run on. It
-is the system [[trailbase]] replaced, and the system the legacy UI ([[frontend]]) talked to.
+**Legacy / production, and frozen.** `legacyforparity/backend/` is the PocketBase server **the shop
+runs on today** — `legacyforparity/RUN MINI.BAT` starts it before the UI. It is the system
+[[trailbase]] is replacing, and the system the legacy UI ([[frontend]]) talks to.
 
-It can still be **run**, which is the only reason it exists: it is the oracle that answers "what did
-the old screen compute?" ([[reports-and-ledgers]]). It cannot be **built, edited or repointed**.
+Being **run** is not the same as being **maintainable**, and the difference is the risk: it can be run,
+which is why it is also the oracle that answers "what did the old screen compute?"
+([[reports-and-ledgers]]). It cannot be **built, edited or repointed**. A defect in the running POS
+therefore cannot be fixed in the running POS.
 
 ## What is in the directory
 

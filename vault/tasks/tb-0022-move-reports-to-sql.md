@@ -163,7 +163,7 @@ with `sql+js` for columns SQL cannot express (the `company` array).
   (`import { rows as x }` generated `{x: rows}`), which silently broke `sqlviews` until corrected.
 - **Enabled after enforcing the 2 dp money rule** ([[money-is-2dp-everywhere]]): with money at 2 dp
   the float flake disappears. Verified **14/14 on three consecutive differential runs** with the SQL
-  path on, plus smoke 71/71 and management-check.
+  path on, plus the smoke suite and management-check.
 
 **Correction (2026-09-28):** `USE_SQL_VIEWS` is **off** in the shipped code. `5ccebd8` (invoice
 entry) reversed the enablement because the SQL base views diverge on fresh invoices with an empty

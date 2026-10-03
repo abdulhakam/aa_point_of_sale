@@ -13,14 +13,15 @@ related_to: ["[[backend]]", "[[runtime-js-guest-platform]]", "[[guest-ui-is-a-di
 
 # frontend (Next.js POS)
 
-> **CORRECTED 2026-10-03 — this system no longer has source.** This note previously read
-> `locator: frontend/`, `status: production`, and opened with "**Legacy / production.** `frontend/` is
-> the Next.js application that staff actually use today."
+> **CORRECTED 2026-10-03 — this system no longer has source.** `locator` was wrong: commit
+> `c167d311` ("deleted frontend/backend") removed `frontend/` from git on 2026-09-29. What survives on
+> disk is `legacyforparity/standalone/` — a **compiled** Next.js standalone bundle (`server.js`,
+> `.next/`, `node_modules/`, `public/`, `package.json`) with **no `src/`**. It is untracked,
+> git-ignored, unbuildable and uneditable. See [[cutover-is-guest-only]].
 >
-> **That ended on 2026-09-29.** Commit `c167d311` ("deleted frontend/backend") removed `frontend/`
-> from git. What survives on disk is `legacyforparity/standalone/` — a **compiled** Next.js
-> standalone bundle (`server.js`, `.next/`, `node_modules/`, `public/`, `package.json`) with **no
-> `src/`**. It is untracked, git-ignored, unbuildable and uneditable. See [[cutover-is-guest-only]].
+> ⚠️ `status: production` was **correct and is kept**: `legacyforparity/RUN MINI.BAT` runs this bundle
+> and it is what staff use. An earlier correction in this session wrongly inferred "no source" ⇒
+> "not in use". The accurate statement is **"in production, and unmaintainable"**.
 >
 > **How to read the rest of this note.** Every table below that names a file under `frontend/` —
 > `package.json`, `next.config.js`, `tsconfig.json`, `src/app/api/*`, `.env.local` — describes what
@@ -29,14 +30,15 @@ related_to: ["[[backend]]", "[[runtime-js-guest-platform]]", "[[guest-ui-is-a-di
 > product's shape, and [[tb-0014-point-company-fields-at-companies]] and
 > [[tb-0012-wire-nextjs-frontend-to-trailbase]] still need it as their spec.
 
-**Legacy / frozen.** `frontend/` was the Next.js application staff used. It was the complete
-product: invoicing, cash memo, payments, printing, management and reports, talking to PocketBase
-([[backend]]) through the official JS SDK.
+**Legacy / production, and frozen.** `frontend/` was the Next.js application staff used, and the
+compiled bundle of it is **what staff use now**: `legacyforparity/RUN MINI.BAT` runs it on `:3000`.
+It was the complete product — invoicing, cash memo, payments, printing, management and reports —
+talking to PocketBase ([[backend]]) through the official JS SDK.
 
-It cannot be retired *by rebuilding it*, but it has been retired by **deletion of its source**. The
-guest-WASM frontend ([[runtime-js-guest-platform]]) is the product. What this app still contributes
-is a runnable **oracle**: the compiled bundle can be started and compared against, but every gap
-recorded below now has to be closed *in the guest* ([[guest-frontend-feature-parity-gaps]]).
+What changed on 2026-09-29 is not that it was retired but that it **lost its source**. It cannot be
+rebuilt or edited; it can only be run. The replacement ([[runtime-js-guest-platform]]) is under
+construction, so every gap recorded below has to be closed *in the guest* before the cutover
+([[guest-frontend-feature-parity-gaps]], [[cutover-is-guest-only]]).
 
 ## Stack
 

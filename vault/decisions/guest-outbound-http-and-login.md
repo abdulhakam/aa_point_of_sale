@@ -58,7 +58,8 @@ module has no `login` (only `require_admin`), and its `fetch` returns **only the
 - `trailbase/tb-ah-run-js/src/lib.rs` — `{html}` honours `status`; `headers` may be a list.
 - `trailbase/runtime/ahscripts/routes/_app/route.ts` — the `/login` POST.
 - Verified by hand (401 + error page; 303 + both cookies; dashboard 200) and by the guest smoke:
-  **71/71 checks pass** (69/69 when this was written; the suite has since grown).
+  every check passes (69/69 when this was written; the suite has since grown — see
+[[smoke-count-is-not-a-hard-coded-number]]).
 
 ## Related
 

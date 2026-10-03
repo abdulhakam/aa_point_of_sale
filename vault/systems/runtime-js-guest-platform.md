@@ -1,7 +1,7 @@
 ---
 title: runtime-js guest platform (WebAssembly app host)
 type: system
-status: production
+status: experimental
 maturity: new
 locator: trailbase/tb-ah-run-js
 platform: TrailBase 0.33.22 + wasmtime guest, Rust + QuickJS (rquickjs) + minijinja
@@ -20,10 +20,11 @@ related_to: ["[[trailbase]]", "[[frontend]]", "[[guest-app-host-port]]", "[[trai
 > **Three claims corrected at the same time**, because the collapse had made the document hard to
 > audit and all three were stale:
 >
-> 1. **"not wired to production; the legacy pair is still what runs the shop"** — **false since
->    2026-09-29.** `backend/` and `frontend/` were deleted from git. This host is the only frontend,
->    and the decision recording that is [[cutover-is-guest-only]]. Frontmatter `status` moved from
->    `experimental` to `production` for the same reason.
+> 1. **"not wired to production; the legacy pair is still what runs the shop"** — that was
+>    **correct**, and I first "corrected" it in the wrong direction. `backend/` and `frontend/` were
+>    deleted from git on 2026-09-29, but the shop still runs the compiled bundle from
+>    `legacyforparity/`. So this host is **not** in production. Frontmatter `status` is restored to
+>    `experimental`, and the decision that fixes the *end state* is [[cutover-is-guest-only]].
 > 2. **"not currently holding production data … that depot has since been reset"** — **false.**
 >    `trailbase/traildepot/` holds the imported ledger: 60,245 records, `main.db` ≈ 175 MB
 >    ([[reports-parity-and-e2e-2026-09-29]]).
@@ -31,7 +32,8 @@ related_to: ["[[trailbase]]", "[[frontend]]", "[[guest-app-host-port]]", "[[trai
 >     engine is the three `trailbase/tb-ah-*/` crates, and the host's README is
 >     `trailbase/tb-ah-run-js/README.md`. ⚠️ Task notes that say "`host/README.md`" mean that file.
 
-**The product.** The whole app runs as **TrailBase guest-WASM components** on the server's own
+**The replacement, under construction.** The whole app runs as **TrailBase guest-WASM components**
+on the server's own
 wasmtime, with no separate Node process. The architecture is compiled once; pages, templates and
 report logic are files under an `app/` directory, read and evaluated **at runtime** — adding a report
 or a page means editing files, not rebuilding a component. The intermediate Node `frontend-ssr`
@@ -150,6 +152,7 @@ implementation" ([[legacy-parity-checks-waived]]).
 
 - [[guest-app-host-port]] — the port itself and what is verified.
 - [[trail-runtime-js-reference]] — the adopted host and its measurements.
-- [[cutover-is-guest-only]] — why this system is the product and the legacy pair is a frozen oracle.
+- [[cutover-is-guest-only]] — why this system is the end state, and why that does not make it
+  production today.
 - [[guest-ui-is-a-direct-shift-of-legacy]] — the look-and-behaviour mandate.
 - [[build-and-run]] / [[environment]] — how to start it.

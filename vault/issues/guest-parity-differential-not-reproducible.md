@@ -78,7 +78,8 @@ respect to the legacy behaviour, and the vault's own wording invites exactly tha
    `verify-legacy-views.mjs` already do for SQL (both deleted 2026-10-02 with the legacy view
    layer).
 2. **Accept it as historical.** Mark 14/14 explicitly as "measured 2026-09-27, not reproducible
-   since", in every doc that states it, and record the current baseline instead (guest smoke 71/71
+   since", in every doc that states it, and record the current baseline instead (the guest smoke suite
+   passes in full — see [[smoke-count-is-not-a-hard-coded-number]] rather than a hard-coded figure
    + `view-equivalence` on a current depot; both harnesses deleted 2026-10-02 with the legacy
      view layer, so that baseline no longer exists — see [[legacy-parity-checks-waived]]).
 3. **Re-add a differential harness** for the one path that ships, comparing the guest's 14 screens

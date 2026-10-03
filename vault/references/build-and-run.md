@@ -165,7 +165,7 @@ because it omitted `redirect: 'manual'` on the login call. See
 [[route-snapshot-was-snapshotting-redirects]] and
 [[smoke-count-is-not-a-hard-coded-number]].
 
-⚠️ **`route-snapshot.mjs` cannot currently be pointed at the production depot.** Its default
+⚠️ **`route-snapshot.mjs` cannot currently be pointed at the development depot.** Its default
 password is the `RUN.BAT` development default, and the production depot's admin password is not that
 value (a login returns `400`). Point it at a throw-away depot, or supply `--password`. Details and a
 working invocation in [[route-snapshot-was-snapshotting-redirects]].

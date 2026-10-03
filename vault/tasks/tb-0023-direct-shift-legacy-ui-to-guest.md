@@ -24,7 +24,7 @@ reference ([[legacy-ui-reference-captures]]).
       captured legacy look: layout, navigation, tiles, table styling, filters. Done 2026-09-27 —
       AppShell port (52px header + 80px Tabler icon rail, active chip), gray-0 hub cards with
       white 10em tiles, black-bordered report tables, Mantine inputs/buttons, legacy login Paper.
-      Verified `guest-smoke` **71/71**.
+      Verified `guest-smoke` in full.
 - [ ] Build the missing transactional screens ([[guest-frontend-feature-parity-gaps]] §1,
       [[tb-0021-invoices-cashmemos-printing]]): invoice entry for four types, orders, printing +
       print queue, standalone invoice view, and the cash-memo surfaces.

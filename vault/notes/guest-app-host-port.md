@@ -94,12 +94,12 @@ Writes are direct SQL through a new `db.execute` bridge, with BLOBs bound as `un
 numbers/enums as `CAST(? AS …)`, and ids emitted as URL-safe base64
 ([[guest-writes-via-sql]]). Management list cells are resolved (names, enums, relations, multi).
 
-## Verified: guest smoke (71/71)
+## Verified: guest smoke (passes in full)
 
 `trailbase/tools/guest-smoke.mjs` boots a throw-away depot with the guest component, seeds the
 **same** dataset the former Node smoke used (`frontend-ssr/scripts/smoke.js`, removed 2026-09-27),
 logs in **through the app's own `/login`**
-(bad password → 401, good → 303 + cookies) and exercises every screen. **71/71 checks pass**,
+(bad password → 401, good → 303 + cookies) and exercises every screen. **Every check passes**,
 including the pinned totals (`profit 91.00`, item sales `731.00/591.00`, stock `4510.00`, payments
 `800.00/150.00`, payments-by-company `500.00/300.00`, `403.85/161.54`), the page-data payload shape
 and ETag revalidation, relation/enum edit-form preselection, management create, fingerprint
@@ -115,7 +115,9 @@ points at the single port rather than a separate frontend process.
 rebuilds only the affected **materialised** views; a `full` invalidate rebuilds everything so the
 snapshot is ready. `/reports/status` exposes `fingerprints`, `refreshedAt` and
 `lastRefresh:{changed,rebuilt}` ([[guest-fingerprint-refresh]]). The smoke asserts that after a
-management write, `changed` includes `sections` and `rebuilt` includes `refs` — **67/67 pass**.
+management write, `changed` includes `sections` and `rebuilt` includes `refs` — the whole set passes.
+   ⚠️ The `67/67` figure quoted here was a *different, smaller suite* at a different denominator, which is
+   exactly why [[smoke-count-is-not-a-hard-coded-number]] exists.
 
 ## Verified: job queue
 

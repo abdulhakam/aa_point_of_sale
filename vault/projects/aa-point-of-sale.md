@@ -19,20 +19,21 @@ the workspace: `trade-and-distribution-management-system-specification.html` and
 
 ## The systems, and which one is live
 
-> **Corrected 2026-10-03.** The two `Legacy / production` rows below previously read `backend/` and
-> `frontend/`, and the diagram showed the legacy pair as the live product. `c167d311` deleted both
-> from git on 2026-09-29; they are now `legacyforparity/` — frozen and untracked. The guest is the
-> only live application. See [[cutover-is-guest-only]].
+> **Corrected 2026-10-03.** The `Legacy / production` rows previously read `backend/` and
+> `frontend/`. `c167d311` deleted both from git on 2026-09-29; they are now `legacyforparity/` —
+> untracked and git-ignored. **They are still what the shop runs on** (`legacyforparity/RUN MINI.BAT`
+> starts PocketBase, then the compiled bundle, then opens `:3000`); what they lost is their *source*.
+> See [[cutover-is-guest-only]].
 
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs |
-| [[runtime-js-guest-platform]] | `trailbase/` | **New / the product** | TrailBase guest-WASM app host: dashboard, reports, management, invoicing |
-| [[backend]] | `legacyforparity/backend/` | **Legacy / frozen** | PocketBase 0.22.55 — runnable parity oracle, never edited, no git copy |
-| [[frontend]] | `legacyforparity/standalone/` | **Legacy / frozen** | compiled Next.js 14 bundle — **no source**, runnable parity oracle only |
+| [[runtime-js-guest-platform]] | `trailbase/` | **New / experimental** | TrailBase guest-WASM app host: dashboard, reports, management, invoicing |
+| [[backend]] | `legacyforparity/backend/` | **Legacy / production** | PocketBase 0.22.55 — **what the shop runs on**; never edited, no git copy |
+| [[frontend]] | `legacyforparity/standalone/` | **Legacy / production** | compiled Next.js 14 bundle — **what staff use**; **no source** |
 
 ```text
-LIVE (the product)                        FROZEN (parity oracle only, untracked)
+PRODUCTION (the shop runs this)           REPLACEMENT (under construction)
 ┌───────────────────┐                  ┌──────────────────────────────┐
 │ trailbase/        │                  │ legacyforparity/standalone/  │
 │ guest-WASM:       │                  │  compiled Next.js 14 bundle  │
@@ -65,7 +66,8 @@ documents the value translation between them, and that translation is what
   unique index on `barcode`, duplicate link-pair rejection, `0`/`1` booleans.
 - The guest frontend: dashboard, 10 reports + 4 ledgers, 7 management entities, a declarative
   page host, a plugin hub, login, fingerprint refresh, KV report cache and a durable job
-  queue; `trailbase/tools/guest-smoke.mjs` at 71/71.
+  queue; `trailbase/tools/guest-smoke.mjs` passing in full (see
+  [[smoke-count-is-not-a-hard-coded-number]]).
 - Guest report arithmetic cross-checked against the preserved PocketBase view SQL
   with hand-computed amounts — see [[reports-and-ledgers]].
 

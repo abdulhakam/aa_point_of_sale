@@ -25,12 +25,13 @@ that questions about any of them are answered from these documents instead of by
 | System | Directory | State | Role today |
 |---|---|---|---|
 | [[trailbase]] | `trailbase/` | **New / experimental** | TrailBase SQLite server: 17-table schema + record APIs, validated against a running server |
-| [[runtime-js-guest-platform]] | `trailbase/` | **New / the product** | WebAssembly app host: the frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management / invoicing |
-| [[backend]] | `legacyforparity/backend/` | **Legacy / frozen** | PocketBase 0.22.55 — runnable as a parity oracle, never edited, no git copy |
-| [[frontend]] | `legacyforparity/standalone/` | **Legacy / frozen** | compiled Next.js 14 + Mantine bundle — runnable as a parity oracle, **no source**, never edited |
+| [[runtime-js-guest-platform]] | `trailbase/` | **New / experimental** | WebAssembly app host: the frontend as TrailBase guest components (Rust + QuickJS + minijinja), serving dashboard / reports / management / invoicing |
+| [[backend]] | `legacyforparity/backend/` | **Legacy / production** | PocketBase 0.22.55 — **what the shop runs on**; never edited, no git copy |
+| [[frontend]] | `legacyforparity/standalone/` | **Legacy / production** | compiled Next.js 14 + Mantine bundle — **what staff use**; runnable, **no source**, never edited |
 
-**The guest is the only frontend.** There is no legacy pair in production to shift onto it: the
-legacy source was deleted, and what is left is a compiled artefact. The production import **has been
+**The legacy pair is production; the guest is the replacement.** The legacy source was deleted, so
+shape A (repointing the Next.js UI) was never available — but the frozen compiled bundle is still
+what the shop runs on via `legacyforparity/RUN MINI.BAT`. The production import **has been
 run** through the guest `import-from-v1` plugin (60,245 records, 0 errors) and the reports were timed
 on it ([[new-system-report-timings]], [[report-performance-baseline]]). The depot was rebuilt and
 re-imported on 2026-09-29 and is loaded — 60,245 records, 0 failures, run through the browser UI,
@@ -69,8 +70,8 @@ removed on 2026-09-27. See [[aa-point-of-sale]] for the programme view and
 ## Reading order for a newcomer
 
 1. [[aa-point-of-sale]] — the business context, the systems, and which one is live.
-2. [[trailbase]] and [[runtime-js-guest-platform]] — the replacement pair, and the product.
-3. [[backend]] and [[frontend]] — the frozen parity oracle, and what of it still exists.
+2. [[backend]] and [[frontend]] — **what production runs today**, and why it cannot be edited.
+3. [[trailbase]] and [[runtime-js-guest-platform]] — the replacement pair.
 4. [[data-model]] — the 17 tables, the enumeration codes, and the PocketBase → TrailBase value translation.
 5. [[reports-and-ledgers]] — the report arithmetic, and why it lives in JavaScript at runtime.
 6. [[build-and-run]] and [[environment]] — how to start the new system, and the credentials it
@@ -85,11 +86,11 @@ on the LAN can use it, behind a Private-profile Windows firewall rule —
 - 17 of 17 TrailBase tables exposed as record APIs; migration applies clean on an empty depot.
 - 10 reports + 4 ledgers (14 entries in `trailbase/runtime/app/compute/reports.js`, and 14
   declarative page folders under `trailbase/runtime/app/pages/`).
-- The guest serves the same app without Node: smoke **71/71**, differential **14/14**
+- The guest serves the same app without Node: the smoke suite passes in full, differential **14/14**
   (`trailbase/tools/`), plus a first verified invoice-entry slice.
-- Legacy Next.js app **no longer has source** — deleted from git 2026-09-29; what remains in
-  `legacyforparity/` is a compiled bundle plus the PocketBase data directories, untracked. There is
-  no legacy app pointing at PocketBase any more, because there is no legacy app.
+- **The legacy stack is production and has no source** — deleted from git 2026-09-29; it runs from
+  `legacyforparity/` as a compiled bundle plus the PocketBase data directories, all untracked. It is
+  the running system, so a defect in it cannot be fixed in it.
 - Parity target restated: the guest frontend is a direct shift of the legacy UI, same look
   ([[guest-ui-is-a-direct-shift-of-legacy]]); the remaining gaps are in
   [[guest-frontend-feature-parity-gaps]].

@@ -153,10 +153,15 @@ Neither `.env` file nor `config.textproto` holds a production secret in this rep
 TrailBase admin password in `RUN.BAT` **is** a fixed development default and is documented as such;
 it only applies to a freshly created depot and is never re-applied to one you have already changed.
 
-### ⚠️ The production depot's admin password is not the documented default
+### ⚠️ The development depot's admin password is not the documented default
 
-**Verified 2026-10-03.** `trailbase/traildepot/` is the production depot (`main.db` ≈ 175 MB, 60,245
-imported records). A login to it as `admin@localhost` / `administrator-0ne` returns **400**, so:
+**Verified 2026-10-03.** `trailbase/traildepot/` is the **development** depot — `main.db` ≈ 175 MB,
+holding an imported *copy* of the production ledger (measured: 8,930 invoices, 26,526 payments, 23,415
+transactions, 943 parties). ⚠️ Older notes in this vault call it "the production depot"; they mean
+*this* depot, and "production" describes the **data** in it, not that it is the production system —
+the production system is [[backend]] + [[frontend]] running from `legacyforparity/`.
+
+A login as `admin@localhost` / `administrator-0ne` returns **400**, so:
 
 - **`route-snapshot.mjs` cannot currently be pointed at `:4000`.** Its default `--password` is that
   value. This is why the gates in [[tb-0032-manifest-first-refactor]] and

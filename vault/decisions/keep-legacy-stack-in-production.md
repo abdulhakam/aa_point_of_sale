@@ -1,11 +1,10 @@
 ---
 title: Keep the legacy stack live until the new pair reaches parity
 type: decision
-status: superseded
+status: accepted
 decided_on: 2026-09-26
 created: 2026-09-26
-superseded_on: 2026-10-03
-superseded_by: "[[cutover-is-guest-only]]"
+updated: 2026-10-03
 tags: [strategy, migration, legacy, production, risk]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[backend]]", "[[frontend]]", "[[pos-0028-decide-cutover-plan]]", "[[cutover-is-guest-only]]"]
@@ -13,22 +12,26 @@ related_to: ["[[backend]]", "[[frontend]]", "[[pos-0028-decide-cutover-plan]]", 
 
 # Keep the legacy stack live until the new pair reaches parity
 
-> **SUPERSEDED 2026-10-03 by [[cutover-is-guest-only]].** The body below is preserved unchanged as
-> the record of what was decided on 2026-09-26 and why. Two of its three premises are now false:
+> **PARTLY OBLIGATED 2026-10-03 by [[cutover-is-guest-only]].** This note stays **accepted** — its
+> core policy is what is happening: the legacy stack runs in production until the guest reaches
+> parity. Two things change:
 >
-> 1. **"Two complete stacks in this workspace"** — the legacy one is no longer complete. `backend/`
->    and `frontend/` were deleted from git on 2026-09-29 (`c167d311`). What survives is
->    `legacyforparity/`: a PocketBase directory and a **compiled** Next.js standalone bundle with no
->    `src/`. It is untracked, git-ignored, and unbuildable.
-> 2. **"Do not modify `backend/pb_migrations/`"** and **"do not repoint `frontend/.env.local`"** —
->    both paths no longer exist, so the guardrails have nothing to guard. They are restated in
->    [[cutover-is-guest-only]] as a single rule: `legacyforparity/` is never edited.
-> 3. Premise 3 — "the old stack is the only executable specification of the report arithmetic" —
->    survives **narrowed**. The frozen bundle can still be *run*, so it remains an oracle to compare
->    against, but it cannot be *changed*, and there is no git copy of it.
+> 1. **The clause "until a cutover is explicitly decided" is spent.** The cutover *has* been decided,
+>    and it decided shape B (guest only). The end state is settled; the waiting is not.
+> 2. **Its guardrails name paths that no longer exist.** `backend/` and `frontend/` were deleted from
+>    git on 2026-09-29 (`c167d311`) and now live at `legacyforparity/`. The rules restate as: never
+>    edit `legacyforparity/` — it is frozen.
 >
-> The cutover this note deferred to [[pos-0028-decide-cutover-plan]] has now been made: shape B,
-> guest only.
+> ⚠️ **It is NOT superseded, and marking it superseded would be wrong.** An earlier correction in this
+> session (commit `dfc2ec98`) set it to `superseded` on the reasoning that the legacy stack was "not in
+> production use". That was incorrect: `legacyforparity/RUN MINI.BAT` launches it and the owner
+> confirms the shop runs on it. Only the *end state* moved; the *interim policy* stands.
+>
+> Premise 3 below — "the old stack is the only executable specification of the report arithmetic" —
+> survives **narrowed**: the frozen bundle can still be *run*, so it remains an oracle, but it cannot
+> be *changed*, and there is no git copy of it.
+
+The body below is preserved as the record of what was decided on 2026-09-26 and why.
 
 ## Context
 

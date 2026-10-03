@@ -48,8 +48,9 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
   entry are unbuilt. Orders were **withdrawn, not deferred** ([[no-draft-invoices-published-on-save]]).
 - Step 3 was **resolved differently than planned** on 2026-10-03. The plan assumed the legacy stack
   would stay live until parity and then be retired by a cutover. Instead its source was deleted, so
-  there was nothing to retire: the guest is the product and `legacyforparity/` is a frozen, untracked
-  oracle. See [[cutover-is-guest-only]].
+  there was nothing to retire: the legacy stack keeps running from `legacyforparity/` as the frozen,
+  untracked **production** system, and the guest is what it becomes at the cutover. See
+  [[cutover-is-guest-only]].
 
 ## Sequence
 
@@ -187,7 +188,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | Pages are declarative manifests | [[trailbase-declarative-page-host]] |
 | Reports refresh incrementally from a warm snapshot | [[trailbase-incremental-report-refresh]] |
 | Data migration is a browser-side plugin | [[trailbase-client-side-migration-plugin]] |
-| ~~The legacy stack stays live until parity~~ → **superseded**; the guest is the product | [[cutover-is-guest-only]] |
+| The legacy stack stays live until parity — **still accepted**; its "until a cutover is explicitly decided" clause is spent | [[keep-legacy-stack-in-production]], [[cutover-is-guest-only]] |
 | The app platform is TrailBase guest-WASM, business JS evaluated at runtime | [[trailbase-guest-wasm-runtime-defaults]] |
 | The app host is the runtime-js QuickJS component; rendering is folded in | [[runtime-js-single-host]] |
 | Guest reads by SQL ordered `-id` and sorts with `compareText` | [[deterministic-sort-and-sql-reads-in-guest]] |
@@ -310,7 +311,7 @@ template change serves stale HTML until the data fingerprint moves — though
 - [[reports-and-ledgers]] — the arithmetic and its inherited quirks.
 - [[build-and-run]] — starting the system.
 - [[route-map]] — every route, verified against a live server 2026-10-03.
-- [[cutover-is-guest-only]] — why the guest is the product.
+- [[cutover-is-guest-only]] — why the guest is the end state.
 - [[smoke-count-is-not-a-hard-coded-number]] — why no harness count is quoted in this note.
 - [[trailbase-guest-wasm-spike-results]] — Phase 0 spike evidence.
 - [[trail-runtime-js-reference]] — the existing Rust+QuickJS runtime-JS guest this was built on.

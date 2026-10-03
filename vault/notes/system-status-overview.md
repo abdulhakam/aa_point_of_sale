@@ -21,12 +21,14 @@ One screen: what exists, what is verified, what is not, and what could go wrong.
 | System | Directory | State | Verified how |
 | --- | --- | --- | --- |
 | [[trailbase]] | `trailbase/` | New / experimental | Migration applies clean to an empty depot; 17/17 record APIs resolve; behaviour exercised over HTTP on a seeded depot on `v0.33.15` and re-verified on `v0.33.22` |
-| [[runtime-js-guest-platform]] | `trailbase/` | New / **the product** | Guest smoke and differential (see [[build-and-run]] for the current count) on a throw-away depot; management CRUD, fingerprint refresh, job queue and invoice entry verified (`trailbase/tools/`) |
-| [[backend]] | `legacyforparity/backend/` | **Legacy / frozen** | 23 migrations; PocketBase 0.22.55; runnable as a parity oracle. Untracked, no git copy |
-| [[frontend]] | `legacyforparity/standalone/` | **Legacy / frozen** | A **compiled** Next.js bundle — **no `src/`**, no build, no edit. Source survives only in git history at `c167d311^` |
+| [[runtime-js-guest-platform]] | `trailbase/` | New / experimental | Guest smoke and differential (see [[build-and-run]] for the current count) on a throw-away depot; management CRUD, fingerprint refresh, job queue and invoice entry verified (`trailbase/tools/`) |
+| [[backend]] | `legacyforparity/backend/` | **Legacy / production** | 23 migrations; PocketBase 0.22.55; **what the shop runs on**. Untracked, no git copy |
+| [[frontend]] | `legacyforparity/standalone/` | **Legacy / production** | A **compiled** Next.js bundle — **no `src/`**, no build, no edit. Source survives only in git history at `c167d311^` |
 
-There is no longer a second stack to route around. The guest is the only application; the legacy
-pair is an untracked frozen artefact used solely to answer parity questions. The intermediate Node
+**The two stacks coexist and are independent**, as they were. The legacy pair is production and
+runs from `legacyforparity/`; the guest is the replacement under construction. What changed on
+2026-09-29 is not that the legacy stopped being used, but that it **lost its source** — so it can be
+run but not repaired, and shape A became impossible. The intermediate Node
 `frontend-ssr` experiment was removed on 2026-09-27
 ([[guest-ui-is-a-direct-shift-of-legacy]]).
 
@@ -57,7 +59,7 @@ pair is an untracked frozen artefact used solely to answer parity questions. The
 - `trail --depot=./traildepot schema invoices` reports `invoices.type` as `{"type":["null","integer"]}`, i.e. the nullable-integer enum shape is really what is exposed.
 - Report arithmetic matches the preserved view SQL on the smoke seed — the six pinned values are in [[reports-and-ledgers]].
 - TrailBase guest-WASM Phase 0 (S1–S8) all pass on `v0.33.22`: runtime `eval` works, `app/` is readable through `--runtime-root-fs`, a single component serves requests in parallel, guest `fetch` reaches itself, and `UPDATE … RETURNING` claims atomically. Evidence in [[trailbase-guest-wasm-spike-results]].
-- The guest app-host serves the same reports as the legacy-preserved arithmetic: the smoke suite passes **76/76** (same seed and pinned totals) and the differential matched **14/14** report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work ([[guest-app-host-port]], [[tb-0028-guest-transactional-screens-and-mobile]]).
+- The guest app-host serves the same reports as the legacy-preserved arithmetic: the smoke suite passes in full (same seed and pinned totals; the figure is printed at runtime — see [[smoke-count-is-not-a-hard-coded-number]]) and the differential matched **14/14** report/ledger pages; the app's own login, management CRUD, fingerprint-based incremental refresh, a KV report cache, and a durable, idempotent job queue with a worker fan-out work ([[guest-app-host-port]], [[tb-0028-guest-transactional-screens-and-mobile]]).
 - A first **invoice-entry slice** runs on the guest and passes `trailbase/tools/invoice-check.mjs`: context endpoint with ETag/304, server-side invoice numbering, an edit lease, idempotent create and line add, and complete ([[tb-0021-invoices-cashmemos-printing]]).
 - The guest is now **operable end to end on a phone**: `/invoices` (sale + purchase entry), `/payments` (invoice-linked and standalone DA) and `/inventory` (live stock, item edit), with every page given a `≤768px` layout. Totals on the new screens were checked against the legacy formula on the production depot — an invoice of 180 900.00 over 36 lines, and recieving 25 907 041.11 / sending 22 657 296.66, which are the figures the import recorded ([[tb-0028-guest-transactional-screens-and-mobile]], [[mobile-layout-is-additive-to-the-legacy-look]]).
 - Money is **2 dp everywhere** — report data, guest writes, and a backfill migration ([[money-is-2dp-everywhere]]).
@@ -73,13 +75,13 @@ pair is an untracked frozen artefact used solely to answer parity questions. The
 
 | Risk | Why it matters | Where |
 | --- | --- | --- |
-| **Reports filter on the business date, verified** | **Fixed 2026-10-02.** Nine statements filtered on `created` — insert time — so on the imported ledger "September sales" was empty because everything was typed in on 1 October. Every window used during verification happened to include that date, which is why it hid. The smoke suite is now 78/78 | [[reports-filter-on-created-not-the-business-date]] |
+| **Reports filter on the business date, verified** | **Fixed 2026-10-02.** Nine statements filtered on `created` — insert time — so on the imported ledger "September sales" was empty because everything was typed in on 1 October. Every window used during verification happened to include that date, which is why it hid. The suite passes in full | [[reports-filter-on-created-not-the-business-date]] |
 | **8,648 of 26,526 payments carry no `payment_date`** | An import defect, not a code one: they fall back to the import timestamp, so the sales report only answers windows that include 1 Oct 2026. Belongs with the v1 import | [[reports-filter-on-created-not-the-business-date]] |
 | Every report page now answers in 91–504 ms warm | The ledger being restored did **not** make them slow — measured, not assumed. An earlier "12.2 s" figure for `paymentsbycompany` was the **cold JSON API**, not the page; the page is 126 ms. Two SQL changes took a cold load down 20% | [[paymentsbycompany-performance-2026-10-02]] |
 | Invoices are published on save and editable afterwards | **Accepted 2026-10-02.** The draft phase and append-only rule are both withdrawn, with ORDERS gone. A report you already ran can change under you, and there is no edit trail yet | [[no-draft-invoices-published-on-save]] |
 | TrailBase subscriptions return 403 | No realtime push exists, so every "latest data" requirement is met by ETag polling, not a stream | [[trailbase-subscribe-endpoint-forbidden]] |
 | Cutover shape undecided | **RESOLVED 2026-10-03 — guest only.** The legacy Next.js UI was deleted from git on 2026-09-29, so "repoint it" was never available; shape B is recorded as the decision | [[cutover-is-guest-only]] |
-| The legacy pair has no git copy | **NEW 2026-10-03.** `legacyforparity/` is untracked and git-ignored, so it is simultaneously the only rollback artefact and the only copy of the legacy data. Losing it is unrecoverable | [[cutover-is-guest-only]], [[pocketbase-data-dirs-in-git]] |
+| **The production stack cannot be repaired** | **NEW 2026-10-03.** The shop runs on `legacyforparity/`, whose source was deleted from git on 2026-09-29. A bug in the running POS cannot be fixed in the running POS — only lived with, or fixed forward in the guest. There is also no git copy of `legacyforparity/`, so it is simultaneously the only copy of itself | [[cutover-is-guest-only]], [[pocketbase-data-dirs-in-git]] |
 | Dropped views break legacy screens | **MOOT 2026-10-03** — there are no legacy screens left to break; `pocketbase-types.ts` was deleted with `frontend/` | [[tb-0013-rework-report-screens-without-views]] |
 | The money screens are all present, but the product is not finished | Every screen the parity-gap list named as missing now answers 200, and a sweep of all 58 routes found no dead links. What remains is that the guest UI is **not yet the legacy look** | [[tb-0023-direct-shift-legacy-ui-to-guest]] |
 | Four reports used to fail the 20 s deadline | **STALE 2026-10-01.** `profit`, `itemsales`, `paymentsbycompany` and `ledgers/general` all return 200 in 100–165 ms on the production depot. The SQL spool and the server render are what fixed it. An uncapped `payments` (26,108 rows, 10 MB) is 2.8 s warm, 7.5 s cold — slow, but inside the deadline | [[heavy-report-blocks-runtime-threads]] |
@@ -106,8 +108,8 @@ pair is an untracked frozen artefact used solely to answer parity questions. The
 [[trailbase-drop-sql-views]] · [[trailbase-encode-enums-as-integer-codes]] ·
 [[trailbase-link-tables-over-json]] · [[trailbase-pocketbase-data-compatibility]] ·
 [[trailbase-declarative-page-host]] · [[trailbase-incremental-report-refresh]] ·
-[[trailbase-client-side-migration-plugin]] ·
-[[cutover-is-guest-only]] (supersedes [[keep-legacy-stack-in-production]], 2026-10-03) ·
+[[trailbase-client-side-migration-plugin]] · [[keep-legacy-stack-in-production]] ·
+[[cutover-is-guest-only]] (spends its "until a cutover is explicitly decided" clause) ·
 [[offline-local-deployment]] · [[trailbase-guest-wasm-runtime-defaults]] ·
 [[guest-ui-is-a-direct-shift-of-legacy]] · [[compiled-artifacts-are-generic-capabilities]] ·
 [[rendered-page-cache]]

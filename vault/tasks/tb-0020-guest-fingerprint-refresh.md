@@ -37,7 +37,8 @@ detection.
 
 ## Outcome
 
-See [[guest-fingerprint-refresh]]. The guest smoke was **67/67** at the time and is **71/71** now.
+See [[guest-fingerprint-refresh]]. The guest smoke was **67/67** at the time and passes in full now — see
+  [[smoke-count-is-not-a-hard-coded-number]] for why no figure is quoted.
 
 > **Status corrected 2026-09-28: `done` -> `todo`.** The incremental refresh itself shipped and is
 > verified, but three boxes above are open and one of them is now blocked by a host defect. A

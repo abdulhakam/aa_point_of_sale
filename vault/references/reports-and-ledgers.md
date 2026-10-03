@@ -106,7 +106,7 @@ The 4 ledger pages are reached at `/reports/ledgers/{area,booker,general,party}`
 ## Inherited quirks, kept on purpose
 
 These are wrong but deliberate — they are in the old SQL too, and reproducing them is what
-makes the `71/71` comparisons meaningful:
+makes the full-green smoke comparisons meaningful:
 
 1. **`transaction_view.profit` is total cost, not margin.** The old SQL misnamed it. The
    `Profit Report` therefore uses `transactions_report.profit`, which *is* the real margin.

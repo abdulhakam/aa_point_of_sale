@@ -88,7 +88,7 @@ The ±0.02 is the intended 2 dp money backfill: the legacy view has two rows who
 more than two decimals, and the depot's values were rounded ([[money-is-2dp-everywhere]]); the sum
 moves by exactly that residue. It is not a calculation error.
 
-`trailbase/tools/guest-smoke.mjs` still passes **71/71**, including
+`trailbase/tools/guest-smoke.mjs` still passes in full, including
 `payments payable amount is 800.00` and `payments recivable amount is 150.00`.
 
 ## Evidence

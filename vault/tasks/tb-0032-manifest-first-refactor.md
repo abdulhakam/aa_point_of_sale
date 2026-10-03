@@ -88,7 +88,7 @@ Verified:
 | `/bench/refs` before the swap | `identical: true` — 9/9 keys, same counts, same first and last ids |
 | Every page with a dropdown (23 of them) | all `200`, every populated `<select>` has options: parties 944, bookers 5, areas 71, items 207 |
 | `verify-spool-reports.mjs` | 14 passed, 0 failed, 72 binds verified |
-| `guest-smoke.mjs` | **71/78**, and the 7 failures are the documented pre-existing money set ([[guest-smoke-report-total-checks-fail-on-pristine-checkout]]) |
+| `guest-smoke.mjs` | **every check passes** ⚠️ — this note previously gated on "71/78, 7 known money failures". Those failures were the draft-invoice defect and are fixed; the suite now passes in full. Do not reintroduce a count ([[smoke-count-is-not-a-hard-coded-number]]) |
 
 `/bench/refs` no longer compares against JavaScript — that is gone — so it now guards the failure
 mode that actually matters: **a dropdown that silently renders empty**. It asserts every key present,

@@ -49,7 +49,7 @@ verified in `trailbase/migrations/main`.
   expensive scans/joins), JS for the report-level derivations (the policy)** —
   [[convert-base-views-not-derivations]]. **Enabled (2026-09-27)** once the owner's **2 dp money
   rule** ([[money-is-2dp-everywhere]]) removed the float flake: differential **14/14 on three
-  consecutive runs** with the SQL path on, smoke 71/71. Measured: profit cold 16.6 → **13.9 s**,
+  consecutive runs** with the SQL path on, and the smoke suite passing in full. Measured: profit cold 16.6 → **13.9 s**,
   dashboard cold 2.3 s → **0.26 s**, `/p` data 2.7 → 2.4 s; warm profit unchanged (~4 s — the
   JS↔Rust payload, which option 3 targets). Task: [[tb-0022-move-reports-to-sql]].
 
