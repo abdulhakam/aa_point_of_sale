@@ -1,0 +1,15 @@
+{
+  "$comment": "Extension to Content-Type, for `readStatic`. GENERATED from route.ts on 2026-10-03 and read back by it, so there is one declaration. This is pure data - a MIME table has no behaviour in it - which is exactly the kind of thing that belongs in a manifest rather than in the dispatcher. Adding a type is editing this file, not code.",
+  "$generated_from": "ahscripts/routes/_app/route.ts",
+  "byExtension": {
+    ".css": "text/css; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".mjs": "text/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".html": "text/html; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".txt": "text/plain; charset=utf-8",
+    ".map": "application/json; charset=utf-8",
+    ".woff2": "font/woff2"
+  }
+}

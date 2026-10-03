@@ -1,116 +1,69 @@
 /**
- * Management-screen entity definitions: which TrailBase record API backs each
- * screen, which fields the form edits, and how list columns render.
+ * Management-screen entity definitions.
  *
- * `deleted` is a soft-delete flag on most tables; the ones that lack the column
- * are hard-deleted instead (see `softDelete`).
+ * The table itself is DATA and lives in `/app/manifests/entities.json` — generated from this module on
+ * 2026-10-03 and read back by it, so there is exactly one declaration of an entity. This file exists to
+ * keep two things working:
+ *
+ *  - `ENTITIES` stays a **plain object**, because `inventory.js` imports it synchronously and reads it
+ *    lazily inside a function. Making it a promise would push an `await` through every consumer for a
+ *    table that is read once at start-up.
+ *  - `install()` is how the manifest gets in. It runs from `app()` in the dispatcher, which is async.
+ *
+ * `Object.assign` rather than reassignment, because `inventory.js` holds a reference to `ENTITIES`
+ * captured when it was imported — reassigning the binding would leave it pointing at the empty object.
  */
 
-export const ENTITIES = {
-  sections: {
-    api: "sections",
-    label: "Sections",
-    singular: "Section",
-    softDelete: false,
-    sort: "+name",
-    fields: [{ name: "name", label: "Name", type: "text", required: true }],
-    columns: [{ key: "name", label: "Name" }],
-  },
-  areas: {
-    api: "areas",
-    label: "Areas",
-    singular: "Area",
-    softDelete: true,
-    sort: "+name",
-    fields: [
-      { name: "name", label: "Name", type: "text", required: true },
-      { name: "section", label: "Section", type: "relation", source: "sections" },
-    ],
-    columns: [
-      { key: "name", label: "Name" },
-      { key: "section", label: "Section", resolve: "sections" },
-    ],
-  },
-  // There is no separate "Item Companies" entity. The legacy `categories` collection
-  // maps onto `companies`, and this screen used to sit directly beside the identical
-  // "Companies" screen one row apart -- two screens, one list of business names.
-  companies: {
-    api: "companies",
-    label: "Companies",
-    singular: "Company",
-    softDelete: true,
-    sort: "+name",
-    fields: [{ name: "name", label: "Name", type: "text", required: true }],
-    columns: [{ key: "name", label: "Name" }],
-  },
-  parties: {
-    api: "parties",
-    label: "Parties",
-    singular: "Party",
-    softDelete: true,
-    sort: "+name",
-    fields: [
-      { name: "name", label: "Name", type: "text", required: true },
-      { name: "type", label: "Type", type: "enum", source: "party_types" },
-      { name: "phone", label: "Phone", type: "text" },
-      { name: "address", label: "Address", type: "text" },
-      { name: "area", label: "Area", type: "relation", source: "areas" },
-      { name: "company", label: "Companies", type: "multi", link: "party_companies", field: "party", other: "company", source: "companies" },
-    ],
-    columns: [
-      { key: "name", label: "Name" },
-      { key: "type", label: "Type", enumSource: "party_types" },
-      { key: "area", label: "Area", resolve: "areas" },
-      // `via` is the row's FK column, `viaSource` the ref list to look it up in, and
-      // `viaKey` the FK column on that record — e.g. a party's section via its area.
-      { key: "section", label: "Section", via: "area", viaSource: "areas", viaKey: "section", resolve: "sections" },
-      { key: "phone", label: "Phone" },
-      { key: "address", label: "Address" },
-    ],
-  },
-  bookers: {
-    api: "order_bookers",
-    label: "Order Bookers",
-    singular: "Order Booker",
-    softDelete: true,
-    sort: "+name",
-    fields: [
-      { name: "name", label: "Name", type: "text", required: true },
-      { name: "phone", label: "Phone", type: "text" },
-      { name: "company", label: "Companies", type: "multi", link: "order_booker_companies", field: "order_booker", other: "company", source: "companies" },
-    ],
-    columns: [
-      { key: "name", label: "Name" },
-      { key: "phone", label: "Phone" },
-      { key: "company", label: "Companies", multi: true, resolve: "companies" },
-    ],
-  },
-  items: {
-    api: "items",
-    label: "Items",
-    singular: "Item",
-    softDelete: false,
-    sort: "+name",
-    fields: [
-      { name: "name", label: "Name", type: "text", required: true },
-      { name: "category", label: "Company", type: "relation", source: "companies" },
-      { name: "barcode", label: "Barcode", type: "text" },
-      { name: "display_id", label: "Display ID", type: "text" },
-      { name: "cost_price", label: "Cost Price", type: "number" },
-      { name: "sale_price", label: "Sale Price", type: "number" },
-      { name: "box_size_qty", label: "Carton Size", type: "number" },
-    ],
-    columns: [
-      { key: "name", label: "Name" },
-      { key: "category", label: "Company", resolve: "companies" },
-      { key: "display_id", label: "Display ID" },
-      { key: "barcode", label: "Barcode" },
-      { key: "cost_price", label: "CP", align: "right" },
-      { key: "sale_price", label: "SP", align: "right" },
-      { key: "box_size_qty", label: "Carton Size", align: "right" },
-    ],
-  },
-};
+export const ENTITIES = {};
 
-/** Natural display order in the management hub. */
-export const ENTITY_ORDER = ["items", "parties", "bookers", "companies", "areas", "sections"];
+/**
+ * Natural display order in the management hub. From the manifest, beside the table it belongs to.
+ *
+ * A FUNCTION, and this is not a style choice. The guest's ESM shim (`transformEsm`) builds the export
+ * object with `__exports[n] = typeof n !== "undefined" ? n : undefined` — a **snapshot of the value at
+ * load time**. So an `export let` reassigned by `install()` would leave `exports.ENTITY_ORDER` pointing
+ * at the empty array it was initialised with, and the management hub would render with no entities while
+ * every entity screen worked. A function reads the live value and is the only shape the shim supports
+ * for "set after load".
+ *
+ * Caught by loading the hub after the manifest move: `/management/items` rendered correctly from the
+ * manifest while `/management` listed nothing at all.
+ */
+let entityOrder = [];
+
+/** The hub's display order. */
+export function order() {
+  return entityOrder;
+}
+
+/**
+ * Adopt the manifest. Called once, from the dispatcher's `app()`.
+ *
+ * Throws rather than leaving the object empty: an un-populated `ENTITIES` does not crash — a management
+ * screen renders with no fields and a save writes nothing, which is the worst shape this could take.
+ */
+export function install(manifest) {
+  if (!manifest || typeof manifest !== "object" || !manifest.entities) {
+    throw new Error("entities manifest is missing or malformed");
+  }
+  const names = Object.keys(manifest.entities);
+  if (!names.length) throw new Error("entities manifest declares no entities");
+
+  Object.assign(ENTITIES, manifest.entities);
+  entityOrder = manifest.order || names;
+
+  const missing = entityOrder.filter((k) => !ENTITIES[k]);
+  if (missing.length) {
+    throw new Error(`entities manifest: order names an entity that does not exist: ${missing.join(", ")}`);
+  }
+  const unlisted = names.filter((k) => !entityOrder.includes(k));
+  if (unlisted.length) {
+    throw new Error(`entities manifest: entity is not in the hub order: ${unlisted.join(", ")}`);
+  }
+  return ENTITIES;
+}
+
+/** True once `install()` has run — so a caller can fail loudly rather than read an empty table. */
+export function ready() {
+  return Object.keys(ENTITIES).length > 0;
+}

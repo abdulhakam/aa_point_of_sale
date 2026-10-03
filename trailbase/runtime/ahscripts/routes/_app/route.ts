@@ -61,6 +61,9 @@ async function app(): Promise<any> {
     format: await loadModule("/app/compute/format.js"),
     ids: await loadModule("/app/compute/ids.js"),
     entities: await loadModule("/app/lib/entities.js"),
+    // Populated from `/app/manifests/entities.json` by `app()` below, which is async. Kept a plain
+    // object because `inventory.js` imports it synchronously.
+    manifests: null as any,
     data: await loadModule("/app/lib/data.js"),
     pages: await loadModule("/app/lib/pages.js"),
     plugins: await loadModule("/app/lib/plugins.js"),
@@ -110,6 +113,14 @@ async function app(): Promise<any> {
     (0, eval)(invoiceDocSource);
   }
   modules.invoiceDoc = g.__AA_INVDOC__;
+  // Manifests. The tables that used to be hand-written JavaScript — the entity definitions first — are
+  // data now, in `/app/manifests/*.json`, read once here.
+  //
+  // `entities.install()` rather than `modules.entities.ENTITIES = …`, because `inventory.js` captured a
+  // reference to `ENTITIES` when it was imported; reassigning the binding would leave it pointing at the
+  // empty object, and `Object.assign` mutates what it already holds.
+  modules.manifests = await loadModule("/app/manifests/index.js");
+  modules.entities.install(await modules.manifests.entities());
   g.__AA_APP__ = modules;
   return modules;
 }
@@ -165,17 +176,22 @@ function jsonBody(req: any): any {
   }
 }
 
-const CONTENT_TYPES: Record<string, string> = {
-  ".css": "text/css; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".mjs": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".html": "text/html; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".txt": "text/plain; charset=utf-8",
-  ".map": "application/json; charset=utf-8",
-  ".woff2": "font/woff2",
-};
+/**
+ * Extension to Content-Type, from `/app/manifests/content-types.json`.
+ *
+ * A MIME table is data with no behaviour in it, so it is not declared here.
+ *
+ * It reads `__AA_APP__` rather than closing over the bundle, because `readStatic` is module-level and the
+ * bundle is built inside `app()`. `__AA_APP__` is published by that function, so this is the same object
+ * — and it keeps `readStatic` callable from a module that has no app bundle, which is how a route folder
+ * will use it.
+ */
+async function contentTypeFor(fsPath: string): Promise<string | null> {
+  const app: any = (globalThis as any).__AA_APP__;
+  if (!app || !app.manifests) return null;
+  const table = (await app.manifests.contentTypes()).byExtension;
+  return table[extOf(fsPath)] ?? null;
+}
 
 function extOf(p: string): string {
   const i = p.lastIndexOf(".");
@@ -223,7 +239,9 @@ async function pageCachePut(db: any, cacheKey: string, page: string): Promise<vo
 async function readStatic(fsPath: string): Promise<any> {
   try {
     const body: string = await fs.readFile(fsPath);
-    return { body, contentType: CONTENT_TYPES[extOf(fsPath)] || "application/octet-stream" };
+    // `contentTypeFor` reads `__AA_APP__` rather than closing over the bundle, so `readStatic` stays
+    // callable from a module with no app bundle — which is how a route folder will use it.
+    return { body, contentType: (await contentTypeFor(fsPath)) || "application/octet-stream" };
   } catch {
     return text("Not found", 404);
   }
@@ -961,7 +979,9 @@ if (path === "/login" && method === "GET") {
 
 
   if (path === "/management") {
-    const entities = A.entities.ENTITY_ORDER.map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
+    // `order()` not `ENTITY_ORDER`: the ESM shim snapshots exports at load time, so a value that is set
+    // after the module is loaded (`install()`, from the manifest) is only visible through a function.
+    const entities = A.entities.order().map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
     return html(await A.http.page(req, shell(user, "management", "Management"), "management/index.html", { entities }));
   }
   const mgmtMatch = /^\/management\/([^/]+)$/.exec(path);

@@ -141,6 +141,53 @@ target does not exist **unless** the containing sentence is dated or the note is
 the path is inside a "supersedes"/"retired" construction. The triage above is exactly the rule set it
 would need; automating it is what stops the next rename from taking 31 citations with it.
 
+## Verdict on "move the tables to manifests"
+
+Asked directly, mid-session: **reduce the number of JS/TS files and put declarations in
+`meta.json` wherever possible.** Applied to every hand-written table found:
+
+| Table | Was | Now |
+|---|---|---|
+| `ENTITIES` — 6 screens, 20 fields, 20 columns | `app/lib/entities.js`, 116 lines of near-pure data | **`app/manifests/entities.json`**, generated from the module and read back by it |
+| `ENTITY_ORDER` — the hub's display order | a second literal in the same file | **inside the manifest**, beside the table it orders |
+| `CONTENT_TYPES` — a MIME table | a literal in `route.ts` | **`app/manifests/content-types.json`** |
+| `JOBS` — three jobs | `app/lib/queue.js` | **left alone, deliberately** — see below |
+
+`app/manifests/index.js` reads them once at start-up and caches. `app/lib/entities.js` shrank from
+116 lines of data to a 60-line installer that keeps `ENTITIES` a plain object.
+
+### Why `JOBS` did not move
+
+Each of the three jobs is a `steps()` function plus handlers — `demo.count` computes its step list
+from its input, `invdoc.rebuild` calls the invoice-document module, `print.run` fans out over invoice
+ids. That is **behaviour**, not data, and putting it in a manifest would be a category error: the
+manifest would need code in it to mean anything, which is the thing the direction is moving away from.
+
+The split that *would* help, when someone wants it: the job **metadata** (label, whether its steps are
+idempotent, a retry ceiling) is data and belongs in `jobs.json`; the `steps()` bodies stay in
+`queue.js`. Nothing needed it yet, so nothing was split.
+
+### The shim limitation this exposed, and it is worth knowing
+
+`export let` **cannot be reassigned after load.** The ESM shim builds the export object with
+`__exports[n] = typeof n !== "undefined" ? n : undefined` — a snapshot of the value at load time — so
+a module-level `let` that `install()` updates leaves `exports.X` pointing at its initial value.
+
+The symptom was quiet and the gate missed it: `install()` set the order, every entity **screen**
+rendered correctly from the manifest, and `route-coverage` still reported **77/77** — while
+`/management` listed **no entities at all**. Found by loading the hub and looking at the HTML.
+
+The fix is `order()` returning the live value, which is the only shape the shim supports for "set
+after load". **Any manifest-backed value that is installed rather than declared must be reached through
+a function.**
+
+### The other thing this cost
+
+The manifest is **generated from the module and read back by it**, not retyped. That is what makes
+"there is one declaration" true rather than aspirational — and it is why `ENTITY_ORDER` moved into the
+manifest: as two separate literals in one file they were already free to drift, and `install()` now
+rejects a manifest whose order names a missing entity or omits one.
+
 ## Related
 
 - [[cutover-is-guest-only]] — the premise correction that started this.
