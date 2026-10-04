@@ -51,6 +51,34 @@ have been, because four of the five unknowns are now answered and the fifth is c
    own global *before* the bundle is assembled — and route-kit has to load **first**, ahead of the
    twenty other modules.
 
+## SOLVED 2026-10-04: route files share ONE scope
+
+**The blocker is fixed and diagnosed.** `run_route()` evaluates the prelude and each route's code in one
+`new Function`, so a top-level name in a route file can collide with any other route's — including the
+dispatcher's. Both `redeclaration` failures were this: the first against the dispatcher's own `kit`, the
+second against *the four management files colliding with each other*.
+
+A one-name-per-request probe found it in a minute:
+
+```text
+TAKEN  routeKit  routeApp  routeScreens  routeContext   <- my own files' names
+FREE   kit  app  screens  ctx  req  res  code  loadModule  transformEsm
+FREE   rout  routeway  routes  route_  Route  XrouteKit  aRoute
+```
+
+Not a prefix rule — exactly the names my files used. **The fix is that every route file is an IIFE**, so
+its names are private. Full account: [[route-files-share-one-scope]].
+
+## The piece still missing
+
+**`__AA_APP__` is built by `app()`, which lives in the dispatcher** — a route folder never calls it, so it
+cannot assume the module bundle exists. `__AA_LOAD__`, `__AA_APP__` and `__AA_KIT__` were all confirmed
+present in a route's scope, and `routeScreens()` and `entityList()` both work when called from a probe
+with a real entity. The remaining work is therefore the shared-context extraction: move `app()` (and the
+helpers it closes over) into `app/lib/`, loaded through `__AA_LOAD__` like every other module. That is
+the `ctx.js` extraction reverted on 2026-10-04 — blocked then by the ESM/SWC composition, which the
+loader-in-the-host change resolved.
+
 ## The one that stopped it
 
 **`redeclaration of 'kit'`,** on a file that declares `kit` exactly once — verified by reading it.
