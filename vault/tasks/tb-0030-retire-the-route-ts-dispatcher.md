@@ -275,7 +275,23 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   This is also the shape step 5 wants, given the direction of **fewer JS files and more manifests**: a
   route that needs one helper calls `__AA_LOAD__("/app/lib/x.js")`, and most routes need none.
 
-  Two findings from the extraction attempt stand on their own:
+  #### An attempt at the first route folder — established the pattern, reverted 2026-10-04
+
+  /management/<entity> was moved to hscripts/routes/management/{entity}/route.ts with generic
+  handlers in pp/lib/screens/management.js, then **reverted**: the tree is back to the last green
+  commit. Four of the five unknowns are now answered and the fifth is cheap — **{param} matching is
+  real and the folder is reached**, a route file needs no import and no local loader, the write
+  routes work, and the entity table genuinely needs no per-screen code.
+
+  What it cost, recorded so the next attempt does not pay it again: URLSearchParams does not exist in
+  the guest; the host matches folders by **exact path shape** so the three writes need three folders; a
+  route file gets the **host's** eq, not the dispatcher's; and __AA_APP__ is not available while
+  pp() is still building it. It stopped on `redeclaration of 'kit'` in a file declaring kit once,
+  which points at the prelude and the route file sharing a scope — **a hypothesis I could not confirm**,
+  because moving 	ransformEsm into the Rust prelude took away the local probe that made the class
+  visible. Full detail and what to do differently: [[serving-a-route-from-a-route-folder]].
+
+  Two findings from the earlier extraction attempt stand on their own:
 
   - **`route.ts` has a collapsed line** — `parsePairs` has two statements on one physical line, the
     same defect the vault documents had ([[three-reference-docs-lost-their-line-structure]]).
