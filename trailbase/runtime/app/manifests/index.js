@@ -16,6 +16,9 @@ const DIR = "/app/manifests";
 
 const cache = new Map();
 
+/** Every manifest this directory must hold. Named so a missing one fails at start-up, not at first use. */
+const REQUIRED = ["entities", "schema", "content-types"];
+
 async function read(name) {
   if (cache.has(name)) return cache.get(name);
   const raw = await fs.readFile(`${DIR}/${name}.json`);
@@ -35,10 +38,20 @@ export const entities = () => read("entities");
 export const jobs = () => read("jobs");
 export const contentTypes = () => read("content-types");
 
+/** The schema contract: tables, foreign-key columns, boolean columns. Read by `app/lib/data.js`. */
+export const schema = () => read("schema");
+
 /** Everything, for a caller that wants it in one read. */
 export async function all() {
-  const [e, j, c] = await Promise.all([entities(), jobs(), contentTypes()]);
-  return { entities: e, jobs: j, contentTypes: c };
+  const [e, s, c, j] = await Promise.all([entities(), schema(), contentTypes(), jobs()]);
+  return { entities: e, schema: s, contentTypes: c, jobs: j };
+}
+
+/** Read every required manifest once, so a missing file is a start-up failure and not a first-use one. */
+export async function loadAll() {
+  const out = {};
+  for (const name of REQUIRED) out[name] = await read(name);
+  return out;
 }
 
 /** Drop the cache, so a manifest edit is picked up without a restart. Used by the harnesses. */

@@ -6,57 +6,67 @@
 //
 // NOTE: `id`/FK columns are BLOB uuid_v7; the bridge base64-encodes them, so every id in
 // this app is a base64 string and all cross-references stay consistent.
+//
+// The schema contract itself — `TABLES`, `RELATIONS`, `BOOLEANS` — is `/app/manifests/schema.json`,
+// generated from this module on 2026-10-03 and read back by `install()` below. It is data about the
+// schema, like `app/sql/` and `migrations/`, and it was three literals in a module that has behaviour
+// in it. `app()` installs it once; the exports are plain objects so `normalizeRow` stays synchronous.
+
+let schema = { tables: [], relations: {}, booleans: {} };
+
+/**
+ * Adopt the schema manifest. Called once, from the dispatcher's `app()`.
+ *
+ * Throws rather than leaving the exports empty: with no schema, `readTable` returns nothing and every
+ * management screen renders empty, which is not a shape worth debugging. The checks are here so a
+ * manifest that names a table which does not exist is rejected at start-up rather than silently
+ * producing empty relation and boolean sets for it.
+ */
+export function install(manifest) {
+  if (!manifest || !Array.isArray(manifest.tables) || !manifest.tables.length) {
+    throw new Error("schema manifest is missing or declares no tables");
+  }
+  const tables = manifest.tables;
+  for (const [label, group] of [["relations", manifest.relations], ["booleans", manifest.booleans]]) {
+    for (const table of Object.keys(group || {})) {
+      if (!tables.includes(table)) {
+        throw new Error(`schema manifest: ${label} names a table that is not declared: ${table}`);
+      }
+    }
+  }
+  TABLES.length = 0;
+  TABLES.push(...tables);
+  schema = { tables, relations: manifest.relations || {}, booleans: manifest.booleans || {} };
+  return schema;
+}
+
+/** True once `install()` has run. */
+export function ready() {
+  return schema.tables.length > 0;
+}
+
+/** The relation (foreign-key) columns of a table, base64 by the bridge. */
+export function relationsOf(table) {
+  return schema.relations[table] || [];
+}
+
+/** The 0/1 boolean columns of a table. */
+export function booleansOf(table) {
+  return schema.booleans[table] || [];
+}
 
 import { relId } from "../compute/ids.js";
 
-export const TABLES = [
-  "party_types",
-  "invoice_types",
-  "payment_types",
-  "sections",
-  // The legacy `categories` collection IS the company list and maps onto `companies`
-  // directly. There is no separate categories table -- see
-  // migrations/main/U1790300400__map_pocketbase_categories_to_companies.sql.
-  "companies",
-  "areas",
-  "parties",
-  "order_bookers",
-  "items",
-  "expenses",
-  "party_companies",
-  "order_booker_companies",
-  "invoices",
-  "invoices_return_reference",
-  "transactions",
-  "payments",
-];
-
-const RELATIONS = {
-  areas: ["section"],
-  parties: ["type", "area"],
-  items: ["category"],
-  invoices: ["type", "party", "booker", "invoice_maker"],
-  invoices_return_reference: ["original_invoices"],
-  transactions: ["invoice", "item"],
-  payments: ["invoice", "party", "paid_to", "type"],
-  party_companies: ["party", "company"],
-  order_booker_companies: ["order_booker", "company"],
-};
-
-const BOOLEANS = {
-  companies: ["deleted"],
-  areas: ["deleted"],
-  parties: ["deleted"],
-  order_bookers: ["deleted"],
-  invoices: ["completed", "deleted"],
-  transactions: ["deleted"],
-  payments: ["paid"],
-};
+// The legacy `categories` collection IS the company list and maps onto `companies` directly. There is no
+// separate categories table -- see migrations/main/U1790300400__map_pocketbase_categories_to_companies.sql.
+// Populated by `install()` from `/app/manifests/schema.json`; kept as a mutable array so consumers that
+// captured this binding keep working once the manifest is installed.
+export const TABLES = [];
 
 export function normalizeRow(table, row) {
   const out = { ...row };
-  for (const col of RELATIONS[table] ?? []) out[col] = relId(row[col]);
-  for (const col of BOOLEANS[table] ?? []) out[col] = row[col] === true || row[col] === 1 ? 1 : 0;
+  for (const col of relationsOf(table)) out[col] = relId(row[col]);
+  for (const col of booleansOf(table)) out[col] = row[col] === true || row[col] === 1 ? 1 : 0;
   return out;
 }
 

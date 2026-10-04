@@ -120,7 +120,18 @@ async function app(): Promise<any> {
   // reference to `ENTITIES` when it was imported; reassigning the binding would leave it pointing at the
   // empty object, and `Object.assign` mutates what it already holds.
   modules.manifests = await loadModule("/app/manifests/index.js");
-  modules.entities.install(await modules.manifests.entities());
+  // `loadAll()` rather than three reads, so a MISSING manifest fails at start-up with its name instead of
+  // at the first request that happens to need it — which is the difference between a clear error and a
+  // screen that renders empty.
+  const manifests: any = await modules.manifests.loadAll();
+  modules.entities.install(manifests.entities);
+  // The schema contract: which tables exist, which columns are foreign keys, which are 0/1 booleans.
+  //
+  // `TABLES` is MUTATED (`length = 0; push(…)`) rather than reassigned, because `reports.js` captures a
+  // reference to it by destructuring at import time. Reassigning the module-local binding would leave
+  // `reports.js` holding an empty array and every fingerprint probe would silently cover zero tables —
+  // which reads as "the data never changes" rather than as a bug.
+  modules.data.install(manifests.schema);
   g.__AA_APP__ = modules;
   return modules;
 }

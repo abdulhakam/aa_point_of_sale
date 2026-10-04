@@ -1,0 +1,85 @@
+{
+  "$comment": "The schema contract as data: which tables exist, which of their columns are foreign keys (base64 by the bridge), and which are 0/1 booleans. GENERATED from app/lib/data.js on 2026-10-03 and read back by it, so there is one declaration of each. It lives here rather than in the module because it is data about the schema, not code, and `app/sql/` and `migrations/` are data too.",
+  "$generated_from": "app/lib/data.js",
+  "tables": [
+    "party_types",
+    "invoice_types",
+    "payment_types",
+    "sections",
+    "companies",
+    "areas",
+    "parties",
+    "order_bookers",
+    "items",
+    "expenses",
+    "party_companies",
+    "order_booker_companies",
+    "invoices",
+    "invoices_return_reference",
+    "transactions",
+    "payments"
+  ],
+  "relations": {
+    "areas": [
+      "section"
+    ],
+    "parties": [
+      "type",
+      "area"
+    ],
+    "items": [
+      "category"
+    ],
+    "invoices": [
+      "type",
+      "party",
+      "booker",
+      "invoice_maker"
+    ],
+    "invoices_return_reference": [
+      "original_invoices"
+    ],
+    "transactions": [
+      "invoice",
+      "item"
+    ],
+    "payments": [
+      "invoice",
+      "party",
+      "paid_to",
+      "type"
+    ],
+    "party_companies": [
+      "party",
+      "company"
+    ],
+    "order_booker_companies": [
+      "order_booker",
+      "company"
+    ]
+  },
+  "booleans": {
+    "companies": [
+      "deleted"
+    ],
+    "areas": [
+      "deleted"
+    ],
+    "parties": [
+      "deleted"
+    ],
+    "order_bookers": [
+      "deleted"
+    ],
+    "invoices": [
+      "completed",
+      "deleted"
+    ],
+    "transactions": [
+      "deleted"
+    ],
+    "payments": [
+      "paid"
+    ]
+  }
+}

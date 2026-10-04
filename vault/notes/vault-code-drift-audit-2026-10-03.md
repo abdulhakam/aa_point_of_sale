@@ -188,6 +188,65 @@ The manifest is **generated from the module and read back by it**, not retyped. 
 manifest: as two separate literals in one file they were already free to drift, and `install()` now
 rejects a manifest whose order names a missing entity or omits one.
 
+### The second sweep: the schema contract, and a gate that left debris
+
+| Table | Was | Now |
+|---|---|---|
+| `TABLES` — 16 base tables | a literal in `app/lib/data.js` | **`app/manifests/schema.json`** |
+| `RELATIONS` — 19 foreign-key columns across 9 tables | same module | same manifest |
+| `BOOLEANS` — 8 columns across 7 tables | same module | same manifest |
+
+`data.js` keeps `normalizeRow()` — which reads the second and third — and gains `install()`,
+`ready()`, `relationsOf()` and `booleansOf()`. `TABLES` is **mutated** (`length = 0; push(…)`), not
+reassigned, because `reports.js` captures a reference by destructuring at import time; reassigning
+would leave it holding an empty array and every fingerprint probe would cover zero tables — which reads
+as "the data never changes" rather than as a bug. Verified: `/reports/status` reports **16**
+fingerprints, matching the manifest exactly.
+
+`app/manifests/index.js` gained `loadAll()`, so a **missing** manifest fails at start-up with its name
+rather than at the first request that needs it.
+
+#### The gate left seven junk items, and nothing noticed for hours
+
+`route-coverage.mjs` created **seven items with an empty name** across seven early runs — before
+`/inventory/save` learned to reject a body with no `name`. Its `mutates` flags only covered the two
+routes that declared them, and its cleanup only removed sections and expenses.
+
+The visible symptom was a `route-snapshot` diff reporting **"5 differences"** that were the gate's own
+rows: the items page quietly grew from 2 rows to 8, which showed up in `/inventory`, `/management/items`,
+`/reports/difference` and `/reports/stock`. **`guest-smoke` passed throughout** — it seeds its own
+depot, so it cannot be the thing that changed, and that is what identified the cause rather than the
+diff.
+
+Two lessons, one of them about the gate rather than the vault:
+
+1. **A gate that leaves debris poisons the next gate.** The diff was reporting real differences; they
+   were just not about the code.
+2. **The fix is in the tool, not in the notes.** `route-coverage` now checks its own aftermath — it
+   re-reads `/management/items` and fails if any row has an empty name or the `coverage-probe` marker.
+   It does not trust the inventory's `mutates` flags, because those are the thing that was incomplete.
+   It is called "aftermath" and it says so when it fires:
+
+   ```text
+   LEFTOVER: 7 item(s) with an empty name and 0 "coverage-probe" row(s) in the depot. A create
+   route accepted a request it should have rejected, or cleanup missed a table. This WILL show
+   up as phantom differences in the next route-snapshot diff.
+   ```
+
+An empty-name row is the exact shape of *"a create route accepted a request it should have
+rejected"*, which is why it is the thing asserted on rather than a count of markers.
+
+**A separate slip worth recording:** the seven rows were first "cleaned" in a *copy* of the depot file
+rather than the depot, and the aftermath check caught it immediately. I had been reading the copy to
+count rows all session and confused it with the live one at the moment it mattered.
+
+#### What was surveyed and deliberately left alone
+
+`JOBS` (behaviour), and the remaining `const` in every module: path constants, SQL fragments, column
+lists that belong to a specific statement, and the `named()`/`money()`/`uuidHex()` helpers. The
+criterion applied throughout: **a manifest entry may not need code to mean anything.** `JOBS` fails
+that test; `SCHEMA`, `ENTITIES` and `CONTENT_TYPES` pass it.
+
 ## Related
 
 - [[cutover-is-guest-only]] — the premise correction that started this.

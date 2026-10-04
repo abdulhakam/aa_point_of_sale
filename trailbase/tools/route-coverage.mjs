@@ -211,6 +211,34 @@ if (mutatingEntries.length) {
 console.log(`\n${inventory.routes.length} routes in the inventory — ${ok} reachable, ${failures.length} failing`);
 console.log(`${mutatingEntries.length} entries wrote to the depot; ${cleaned} fixture(s) removed, ${cleanupFailed} failed`);
 if (cleanupFailed) console.log("  ^ leftovers will make the NEXT route-snapshot diff report this tool's own rows");
+
+// --- did this run leave anything behind? ------------------------------------------------------
+//
+// A gate that leaves debris poisons the NEXT gate. `route-coverage` created seven items with an empty
+// name across seven early runs — before `/inventory/save` learned to reject a body with no `name` — and
+// nothing noticed for hours: the items page quietly grew from 2 rows to 8, and a `route-snapshot` diff
+// reported "5 differences" that were this tool's own rows. `guest-smoke` passing throughout is what
+// finally identified it, because smoke seeds its own depot and cannot be the thing that changed.
+//
+// So the run now checks its own aftermath rather than trusting the inventory's `mutates` flags, which
+// only covered the two routes that declared it. An empty-name row is the exact shape of "a create
+// route accepted a request it should have rejected", so it is the thing worth asserting on.
+{
+  const items = await (await fetch(BASE + "/management/items", { headers: { cookie } })).text();
+  const blank = [...items.matchAll(/<td[^>]*data-lead[^>]*>\s*(?:<[^>]*>\s*)*<\/td>/g)].length;
+  const marker = (items.match(new RegExp(MARKER, "g")) || []).length;
+  if (blank || marker) {
+    cleanupFailed++;
+    console.log(
+      `LEFTOVER: ${blank} item(s) with an empty name and ${marker} "${MARKER}" row(s) in the depot. ` +
+        `A create route accepted a request it should have rejected, or cleanup missed a table. ` +
+        `This WILL show up as phantom differences in the next route-snapshot diff.`
+    );
+  } else {
+    console.log("aftermath: depot is clean — no fixture rows left behind");
+  }
+}
+
 if (failures.length) {
   console.log("\nfailures:");
   for (const f of failures) console.log("  " + f);
