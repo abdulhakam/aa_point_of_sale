@@ -17,7 +17,7 @@ const DIR = "/app/manifests";
 const cache = new Map();
 
 /** Every manifest this directory must hold. Named so a missing one fails at start-up, not at first use. */
-const REQUIRED = ["entities", "schema", "content-types"];
+const REQUIRED = ["entities", "schema", "content-types", "static-mounts"];
 
 async function read(name) {
   if (cache.has(name)) return cache.get(name);
@@ -41,10 +41,19 @@ export const contentTypes = () => read("content-types");
 /** The schema contract: tables, foreign-key columns, boolean columns. Read by `app/lib/data.js`. */
 export const schema = () => read("schema");
 
+/** Which URL prefixes serve which directories under `/app`. Read by `routeKit.resolveMount`. */
+export const staticMounts = () => read("static-mounts");
+
 /** Everything, for a caller that wants it in one read. */
 export async function all() {
-  const [e, s, c, j] = await Promise.all([entities(), schema(), contentTypes(), jobs()]);
-  return { entities: e, schema: s, contentTypes: c, jobs: j };
+  const [e, s, c, j, m] = await Promise.all([
+    entities(),
+    schema(),
+    contentTypes(),
+    jobs(),
+    staticMounts(),
+  ]);
+  return { entities: e, schema: s, contentTypes: c, jobs: j, staticMounts: m };
 }
 
 /** Read every required manifest once, so a missing file is a start-up failure and not a first-use one. */

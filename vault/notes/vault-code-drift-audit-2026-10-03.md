@@ -247,6 +247,52 @@ lists that belong to a specific statement, and the `named()`/`money()`/`uuidHex(
 criterion applied throughout: **a manifest entry may not need code to mean anything.** `JOBS` fails
 that test; `SCHEMA`, `ENTITIES` and `CONTENT_TYPES` pass it.
 
+### Third sweep: static mounts, and a corrupted comment
+
+| Table | Was | Now |
+|---|---|---|
+| Static mounts — 3 prefixes, 3 directories, 1 index fallback | three near-identical branches in `route.ts` | **`app/manifests/static-mounts.json`** |
+
+`route.ts` lost three branches and two constants (`PUBLIC_DIR`, `COMPUTE_DIR`); `PLUGINS_DIR` stays
+because the `/plugins` **index** walks the directory, which is code. `routeKit.resolveMount()` decides
+*where from*; the caller still reads.
+
+**Why the `..` refusal mattered enough to centralise.** Three branches each repeated
+`if (!rel || rel.includes("..")) return text("Not found", 404);` — and a guard written three times is a
+guard that ends up present twice and absent once. Refusing `..` is a security property, not a per-route
+detail: a mount that does not refuse it serves the whole depot to anyone who asks for
+`/static/../../data/main.db`. It is in one place now.
+
+Verified **authenticated**, which is the case that matters — unauthenticated traversal is caught by the
+auth gate and never reaches the mount, which is a better outcome but a weaker test:
+
+```text
+404  /static/../../data/main.db          404  /compute/../manifests/schema.json
+404  /static/../lib/refs.js              404  /plugins/../app/public/css/app.css
+200  /compute/format.js                  200  /static/css/app.css
+```
+
+#### A third damaged file, found by reading rather than by a gate
+
+`app/lib/route-kit.js` line 1 read:
+
+```js
+// Guest route helpersABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_
+```
+
+**The base64 alphabet, pasted onto the end of a comment.** Harmless at runtime and invisible to every
+check, because it is a comment — and notably the same file's own "ID ENCODING" note is *about* that
+alphabet, so the text was available to be pasted by accident.
+
+That is the third damaged-file instance in this session: `route.ts`'s collapsed `parsePairs` line, and
+the two vault documents whose bodies had collapsed to one line. **Same family every time** — an edit
+that went somewhere unintended, with nothing watching — and in this project **no check catches any of
+them.** They are found by reading a file and noticing that it says something odd.
+
+The generalisable gate would be trivial and does not exist: a maximum line length, or a check that a
+comment does not contain a long unbroken run of identifier characters. Worth recording as the same
+recommendation as the missing `paths.mjs` — the tooling records what a human noticed.
+
 ## Related
 
 - [[cutover-is-guest-only]] — the premise correction that started this.

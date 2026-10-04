@@ -11,9 +11,10 @@
 
 (function () {
 const PAGES_DIR = "/app/pages";
-const PUBLIC_DIR = "/app/public";
+// `PLUGINS_DIR` is still needed here — for the `/plugins` INDEX, which lists the plugin pages. What
+// moved to the manifest is which URL prefix serves which directory; this is the code that walks the
+// directory. `PUBLIC_DIR` and `COMPUTE_DIR` are gone: nothing referenced them but the mount branches.
 const PLUGINS_DIR = "/app/plugins";
-const COMPUTE_DIR = "/app/compute";
 
 // ------------------------------------------------------------------ module loading
 
@@ -835,12 +836,24 @@ async function dispatch(req: any): Promise<any> {
     if (!/^[0-9A-F]+$/.test(stepId)) return text("bad step id", 400);
     return await A.jobs.executeStep(db, stepId);
   }
-  if (path.startsWith("/static/")) {
-    const rel = path.slice("/static/".length);
-    if (!rel || rel.includes("..")) return text("Not found", 404);
-    return readStatic(PUBLIC_DIR + "/" + rel);
+  // Static mounts, declared in `/app/manifests/static-mounts.json` and resolved by
+  // `routeKit.resolveMount`. Three near-identical branches used to live here, each repeating the
+  // `..` guard — which is how a guard ends up present twice and absent once. The guard is now in one
+  // place, in `route-kit.js`, because refusing `..` is a security property and not a per-route detail.
+  const mount = A.routeKit.resolveMount(await A.manifests.staticMounts(), path);
+  if (mount) {
+    if (mount.refused) return text("Not found", 404);
+    if (mount.single) return readStatic(mount.rel);
+    if (mount.indexFallback) {
+      // Directory-style plugin URL -> its index.html. `path` arrives with the trailing slash
+      // normalised away, so treat any extension-less rel as a directory (not as a file).
+      if (mount.rel.endsWith("/") || mount.rel.indexOf(".") < 0) {
+        const res = await readStatic(mount.dir + "/" + mount.rel.replace(/\/$/, "") + "/index.html");
+        if (res && res.status !== 404) return res;
+      }
+    }
+    return readStatic(mount.dir + "/" + mount.rel);
   }
-  if (path === "/favicon.svg") return readStatic(PUBLIC_DIR + "/favicon.svg");
 
 if (path === "/login" && method === "GET") {
     return A.routeKit.renderRoute(req, { user, active: "", title: "Log in", template: "auth/login.html" }, {
@@ -892,24 +905,6 @@ if (path === "/login" && method === "GET") {
   if (!user) {
     const next = encodeURIComponent(path + (req.query ? "?" + req.query : ""));
     return redirect("/login?next=" + next);
-  }
-
-  // Static assets the browser runtime needs.
-  if (path.startsWith("/compute/")) {
-    const rel = path.slice("/compute/".length);
-    if (!rel || rel.includes("..")) return text("Not found", 404);
-    return readStatic(COMPUTE_DIR + "/" + rel);
-  }
-  if (path.startsWith("/plugins/")) {
-    const rel = path.slice("/plugins/".length);
-    if (!rel || rel.includes("..")) return text("Not found", 404);
-    // Directory-style plugin URL -> its index.html. `path` arrives with the trailing slash
-    // normalised away, so treat any extension-less rel as a directory (not as a file).
-    if (rel.endsWith("/") || rel.indexOf(".") < 0) {
-      const res = await readStatic(PLUGINS_DIR + "/" + rel.replace(/\/$/, "") + "/index.html");
-      if (res && res.status !== 404) return res;
-    }
-    return readStatic(PLUGINS_DIR + "/" + rel);
   }
 
   if (path === "/dashboard") {

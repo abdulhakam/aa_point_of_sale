@@ -1,4 +1,10 @@
-// Guest route helpersABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_
+// Guest route helpers
+//
+// ⚠️ CORRECTED 2026-10-04. This line read `// Guest route helpersABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghij…-_`
+// — the base64 alphabet pasted onto the end of the comment. Harmless to the runtime, and invisible to
+// every check, because it is a comment. It is the same family as the collapsed lines in `route.ts`
+// and the vault documents: an edit that went somewhere unintended, with nothing watching. Third
+// instance today; see vault/notes/vault-code-drift-audit-2026-10-03.md.
 //
 // These exist because the same four things were written by hand at ~80 call sites, and two of
 // them were correctness rules rather than conveniences:
@@ -20,6 +26,31 @@
 // is 22 characters plus "=". Verified: 01A0EBFD3E2176D294C5C5797E90A6E5 -> AaDr_T4hdtKUxcV5fpCm5Q
 
 import { invalidate, fingerprint } from "./reports.js";
+
+/**
+ * Resolve a static mount from `/app/manifests/static-mounts.json`.
+ *
+ * Returns `{ dir, rel, indexFallback }` for the mount that owns `path`, `{ single: true, rel }` for a
+ * declared single file, `{ refused: true }` for an attempt to escape, or null. The caller does the
+ * reading; this only decides *where from*.
+ *
+ * The `..` refusal lives here rather than at each call site because it is a security property, not a
+ * per-route detail: a mount that does not reject `..` serves the whole depot to anyone who asks for
+ * `/static/../../data/main.db`. The dispatcher had three branches that each repeated the guard, which is
+ * exactly how a guard ends up present twice and absent once.
+ */
+export function resolveMount(manifest, path) {
+  const mounts = (manifest && manifest.mounts) || [];
+  for (const mount of mounts) {
+    if (!String(path).startsWith(mount.prefix)) continue;
+    const rel = String(path).slice(mount.prefix.length);
+    if (!rel || rel.includes("..")) return { refused: true };
+    return { dir: mount.dir, rel, indexFallback: Boolean(mount.indexFallback) };
+  }
+  const single = ((manifest && manifest.singleFiles) || []).find((f) => f.path === path);
+  if (single) return { rel: single.file, single: true };
+  return null;
+}
 import * as refsModule from "./refs.js";
 import { page } from "./http.js";
 
