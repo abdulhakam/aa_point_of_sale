@@ -363,9 +363,28 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   `typeOptions` moved to `route-kit` for the same reason as `normalizePath`. `guest-smoke.mjs` **99/99**,
   with `/plugins` and `/healthz` now covered.
 
-  **Next within step 5:** the remaining families, one at a time (`/invoices/new`, `/payments/new`, the
-  `cashmemo`, `print`, `invoice`/`invoice-doc` and `jobs` families, the report-page family, `/p`); then
-  the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`).
+  **Then the report-page family** (2026-10-05), which needed its renderer extracted first. `renderReportPage`
+  and its helpers (`filtersFor`, `latestPeriod`, `loadPageHandlers`, the page cache, `RENDER_MAX_ROWS`/
+  `DEFAULT_REPORT_VIEW`) moved out of the dispatcher into **`app/lib/report-render.js`**, reached as
+  `A.reportRender` — the same pattern as `app/lib/context.js`, and the block that unblocks every remaining
+  report route. The family then moved to folders: `reports/{key}/route.ts` for a single-segment key and
+  `reports/ledgers/{page}/route.ts` for a ledger page, because a report key can contain a slash
+  (`ledgers/area` is one) and the `{key}` folder sits at the `reports/` level and cannot match it — the
+  host commits to the literal `ledgers` folder and never consults `{key}`. `reports/status/route.ts` and
+  `reports/refresh/route.ts` are literal folders that win over `{key}`. The dispatcher's `/reports/*`
+  branches are deleted. `guest-smoke.mjs` **99/99**.
+
+  ⚠️ **`tools/brace-check.mjs` now reports `route.ts` as unbalanced, and it is a false positive.** The tool
+  blanks strings/comments/regexes before counting, but its blanking is imperfect: with the current file it
+  over-blanks from ~line 653 onward, and the residual count is off by one `{`. The file is valid — the host
+  compiles it and `guest-smoke.mjs` runs every route to **99/99**. The tool was already a heuristic
+  ("not a parser"); treat a lone-brace report against a passing smoke as a tool artifact, not a syntax
+  error, and fix the blanking before trusting it again.
+
+  **Next within step 5:** the remaining families, one at a time (`/invoices/new` and `/invoices/<id>/…`,
+  `/payments/new`, the POST and `<id>/delete`, `cashmemo`, `print`, the `invoice`/`invoice-doc` API
+  families, `/jobs`, `/p`); then the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`,
+  `/plugins/*`, `/favicon.svg`); then auth (`/login`, `/logout`, `/`).
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page

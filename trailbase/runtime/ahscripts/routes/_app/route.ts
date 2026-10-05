@@ -139,22 +139,8 @@ function redirect(location: string, status?: number): any {
 // false negatives during the manifest migration, and [[tb-0032-manifest-first-refactor]] is five
 // phases of editing exactly these files. `paths.runtimeRevision()` is a content hash of the whole
 // app tree, computed once per process, which `RUN.BAT` always pairs with a restart.
-async function pageCacheGet(db: any, cacheKey: string): Promise<string | null> {
-  try {
-    const rows = await db.all("SELECT html FROM pagecache WHERE key = ?", [cacheKey]);
-    return rows && rows.length ? String(rows[0][0]) : null;
-  } catch {
-    return null;
-  }
-}
-async function pageCachePut(db: any, cacheKey: string, page: string): Promise<void> {
-  try {
-    await db.execute("CREATE TABLE IF NOT EXISTS pagecache (key TEXT PRIMARY KEY, html TEXT)");
-    await db.execute("INSERT OR REPLACE INTO pagecache(key,html) VALUES(?,?)", [cacheKey, page]);
-  } catch {
-    // Cache is best effort; the page was already rendered.
-  }
-}
+// The rendered-page cache (`pageCacheGet`/`pageCachePut`) moved with the report renderer to
+// `app/lib/report-render.js` (tb-0030 step 5).
 
 async function readStatic(fsPath: string): Promise<any> {
   try {
@@ -204,175 +190,9 @@ function shell(user: any, active: string, title: string): any {
 
 // ------------------------------------------------------------------ routing
 
-// Rows a report page renders by default. The guest's minijinja render of tens of thousands of rows
-// is the dominant cold cost (and can cross the ~20 s call deadline), so a page renders the first
-// `RENDER_MAX_ROWS` rows with a "show all" link; `?all=1` renders everything, `?maxRows=N` overrides.
-// Totals are always computed over every row — only the table body is capped.
-const RENDER_MAX_ROWS = 1000;
-
-// The shared server-rendered report template. A manifest may override it with `view` (the general
-// ledger does), which is how a report gets a bespoke layout without its own route.
-const DEFAULT_REPORT_VIEW = "reports/report.html";
-
-// ------------------------------------------------------------------ the report page
-//
-// Render a report from its manifest, server-side. Shared by `/reports/<key>` and `/p/<slug>`, so
-/**
- * Load the JavaScript a page declares in its manifest's `handlers`, merged into one object.
- *
- * This is the manifest-first handlers workflow (tb-0032 step 4), and it exists to remove a coupling
- * rather than to add a feature: the dispatcher used to carry a branch per page — "is this the general
- * ledger? then build its opening-balance row" — and one shared module per bespoke behaviour. A page that
- * needs its own code now says so in data, and the dispatcher loads exactly that.
- *
- * Returns null when the page declares none, so a caller can test it directly. `loadModule` memoises by
- * path, so a handler is compiled once per runtime context however many times its page renders.
- *
- * A handler that fails to load is the page's problem to announce, not a reason to 500 silently: the
- * error is logged and the page renders without it, because a broken handler should cost one page's
- * bespoke behaviour rather than the whole report.
- */
-async function loadPageHandlers(A: any, pageDef: any): Promise<any | null> {
-  const declared: string[] = (pageDef && pageDef.handlers) || [];
-  if (!declared.length) return null;
-  const dir = `${PAGES_DIR}/${String(pageDef.slug || "")}`;
-  const merged: Record<string, unknown> = {};
-  let loaded = 0;
-  for (const rel of declared) {
-    try {
-      Object.assign(merged, await loadModule(`${dir}/${rel}`));
-      loaded++;
-    } catch (e) {
-      console.log(`[handlers] ${pageDef.slug}: ${rel} failed to load — ${(e as any)?.message || String(e)}`);
-    }
-  }
-  return loaded ? merged : null;
-}
-
-// the two routes are the same page: the rows arrive as a KV handle and are spliced into the
-// template in Rust, so no row is ever materialised in QuickJS and the browser receives finished
-// HTML. Before this, `/p` shipped the manifest to `public/js/runtime/page.js`, which rebuilt the
-// table in the DOM from a multi-megabyte JSON payload - 171 lines of client JavaScript and an
-// 8 MB response for the same report `/reports` returns in 465 KB.
-async function renderReportPage(
-  A: any, db: any, req: any, user: any, path: string, query: Record<string, any>,
-  key: string, pageDef: any
-): Promise<any> {
-  // `filtersFor` honours the manifest's declared defaults when the query does not carry the
-  // field, which is what the report page always wants. (The old `parseFilters` overwrote every
-  // default from the query, so a bare GET computed all-time figures —
-  // vault/issues/report-routes-ignore-date-defaults.md.)
-  const filters = await filtersFor(A, pageDef, query);
-
-  // Page handlers, resolved relative to the page's own directory. `normalizeMeta` has already rejected
-  // absolute paths and `..`, so this cannot escape `app/pages/`.
-  //
-  // The merged exports of every declared handler, or null when the page declares none. Loading is
-  // per-page and memoised by `loadModule`, so a page with no handlers — thirteen of the fourteen —
-  // pays nothing, and a page with handlers does not make the dispatcher know what they are.
-  const pageHandlers = await loadPageHandlers(A, pageDef);
-
-  const showAll = String(query.all || "") === "1";
-  const requestedMax = Number(query.maxRows || 0);
-  // -1 means "no cap", which is what a `LIMIT`-less statement wants; the page renders everything
-  // rather than slicing in JS.
-  const maxRows = showAll ? -1 : requestedMax > 0 ? requestedMax : RENDER_MAX_ROWS;
-
-  // Rendered-page cache lookup. The fingerprint is the live data version, so any write misses.
-  let cacheKey: string | null = null;
-  try {
-    const fp = await A.service.fingerprint();
-    const rev = await A.paths.runtimeRevision();
-    cacheKey = JSON.stringify([rev, fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax]);
-    const cached = await pageCacheGet(db, cacheKey);
-    if (cached !== null) return html(cached);
-  } catch {
-    cacheKey = null;
-  }
-
-  const snap = await A.refs.refs(await A.service.fingerprint());
-  const options = A.reportPages.filterOptions(snap, pageDef.fields);
-  const missing = (pageDef.requires || []).filter((name: string) => !filters[name]);
-  const rawQuery = String(req.query || "");
-  const allHref = `${path}?${rawQuery ? rawQuery + "&" : ""}all=1`;
-  const appliedLabels = pageDef.fields
-    .filter((field: any) => filters[field.name])
-    .map((field: any) => {
-      const raw = String(filters[field.name]);
-      if (field.type === "select") {
-        const hit = (options[field.source] || []).find((o: any) => o.value === raw);
-        return { label: field.label, value: hit ? hit.label : raw };
-      }
-      if (field.type === "check") return null;
-      return { label: field.label, value: raw };
-    })
-    .filter(Boolean);
-  // Everything the page renders apart from the rows, which the host splices in by KV key.
-  const frame = {
-    def: pageDef,
-    // Mobile layout is additive: a narrow report turns into labelled cards, a wide one keeps its
-    // grid and scrolls sideways. The first column is the row's identity and reads as a heading
-    // inside a card, so it is marked `lead` and drops its own label
-    // ([[mobile-layout-is-additive-to-the-legacy-look]]).
-    columns: pageDef.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
-    mobile: pageDef.columns.length <= 6 ? "cards" : "scroll",
-    basePath: path,
-    // The print link carries the filters that are on screen, so a sheet is the report the
-    // operator was looking at rather than an unfiltered default.
-    rawQuery,
-    filters,
-    options,
-    appliedLabels,
-    missing,
-    // The legacy report's period line, `11-Apr-2026`, on the right of the title row. There was no
-    // `meta` on the frame — the old meta line below the filters was rendering `appliedLabels`, so the
-    // period was never shown in the legacy's own form. See `app/lib/dates.js::legacyDate`.
-    period: {
-      from: A.dates.legacyDate(filters.from),
-      to: A.dates.legacyDate(filters.to),
-    },
-  };
-  const view = pageDef.view || DEFAULT_REPORT_VIEW;
-
-  // The spool path. Two statements: the rows, and a one-row totals aggregate over the SAME
-  // statement. Neither brings a row into QuickJS — the totals row is read back through the same
-  // KV handoff and lands here as a small object of formatted strings.
-  const totals = missing.length ? { rowCount: 0 } : await A.spooled.totalsFor(key, filters);
-  const total = Number(totals.rowCount || 0);
-  const shown = maxRows < 0 ? total : Math.min(total, maxRows);
-  const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows)).key }];
-  const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
-    ...frame,
-    // `latest` is only resolved when the window is empty, and it is what lets the page say WHICH
-    // period has data instead of only that this one does not. The probe is fingerprint-cached, so
-    // the empty case costs one indexed read.
-    rowInfo: {
-      shown,
-      total,
-      truncated: shown < total,
-      allHref,
-      // Resolved only when the window is empty, and it is what lets the page say WHICH period has data
-      // instead of only that this one does not. One fingerprint-cached probe, so the cost is on the
-      // empty path alone.
-      latest:
-        missing.length || total > 0
-          ? null
-          : await latestPeriod(A, pageDef.filters.find((f: any) => f.dateSource)?.dateSource),
-    },
-    totalsGroups: A.pages.bindTotalsGroups(pageDef.totals || [], totals),
-    // Page handlers. The general ledger's opening row is an echo of three filter inputs, not a query
-    // result, so there is nothing for SQL to add — which is the case a handler is for. It used to be
-    // `pageDef.openings ? A.reportPages.openingRow(filters) : null`: the dispatcher knowing which page
-    // needed which bespoke logic. Now the page declares it (`"handlers": ["handlers/openings.js"]`) and
-    // the dispatcher loads only what this page asked for.
-    opening: pageHandlers && typeof pageHandlers.openingRow === "function"
-      ? pageHandlers.openingRow(filters)
-      : null,
-    meta: {},
-  }, spools);
-  if (cacheKey) await pageCachePut(db, cacheKey, page);
-  return html(page);
-}
+// The report-page renderer (`renderReportPage`, its `RENDER_MAX_ROWS`/`DEFAULT_REPORT_VIEW`
+// constants and `loadPageHandlers`) moved to `app/lib/report-render.js` (tb-0030 step 5), so
+// `/reports/<key>` can be a route folder. Reached as `A.reportRender`.
 
 async function dispatch(req: any): Promise<any> {
   const A = await app();
@@ -821,41 +641,9 @@ if (path === "/login" && method === "GET") {
   // /dashboard moved to the route folder `ahscripts/routes/dashboard/route.ts` (tb-0030 step 5). The
   // host's folder resolver matches it before this dispatcher, so the branch here would be dead.
 
-  // /reports (the hub) and /reports/ledgers moved to route folders (tb-0030 step 5):
-  // `ahscripts/routes/reports/route.ts` and `.../reports/ledgers/route.ts`. `/reports/<key>`,
-  // `/reports/status` and `/reports/refresh` still fall through to the dispatcher.
-  if (path === "/reports/status") return A.service.status();
-  if (path === "/reports/refresh" && method === "POST") {
-    const full = query.full === "1" || query.full === "on" || form.full === "1" || form.full === "on";
-    // `full` also drops the composed-SQL cache, or an edited `.sql` file would keep serving the
-    // text that was composed when the process first read it.
-    if (full) {
-      await A.service.invalidate();
-      A.spooled.invalidate();
-    }
-    await A.service.refresh(db);
-    const accept = String((req.headers && req.headers.accept) || "");
-    if (accept.includes("application/json")) return A.service.status();
-    const referer = String((req.headers && req.headers.referer) || "");
-    const back = referer ? referer.replace(/^https?:\/\/[^/]+/, "") : "/dashboard";
-    return redirect(back || "/dashboard");
-  }
-  // /reports/ledgers moved to `ahscripts/routes/reports/ledgers/route.ts` (see the /reports note above).
-
-  const reportMatch = /^\/reports\/(.+)$/.exec(path);
-  if (reportMatch && method === "GET") {
-    const key = reportMatch[1];
-    // The manifest is the ONE page definition: `/reports/<key>` and `/p/<slug>` both read it, so a
-    // report cannot be defined twice and drift. `REPORT_PAGES` in app/lib/report-pages.js used to be
-    // the second copy, and it had already diverged - see
-    // vault/issues/report-page-definitions-duplicated-and-already-divergent.md.
-    const pageDef = (await A.pages.reportPages(PAGES_DIR))[key];
-    // The spool registry decides what exists: the SQL is what a report IS.
-    if (!pageDef || !(await A.spooled.names()).includes(key)) return text("Not found", 404);
-    return renderReportPage(A, db, req, user, path, query, key, pageDef);
-  }
-
-
+  // The `/reports` hub and its `ledgers`, `status` and `refresh` siblings all moved to route folders
+  // (tb-0030 step 5), and the report-page family with `reports/{key}/route.ts`. Nothing for
+  // `/reports/*` renders in this dispatcher any more.
   if (path === "/management") {
     // `order()` not `ENTITY_ORDER`: the ESM shim snapshots exports at load time, so a value that is set
     // after the module is loaded (`install()`, from the manifest) is only visible through a function.
@@ -1762,7 +1550,7 @@ if (path === "/login" && method === "GET") {
     const slug = dataMatch[1];
     const def = await A.pages.readPage(PAGES_DIR, slug);
     if (!def) return text("No such page", 404);
-    const filters = await filtersFor(A, def, query);
+    const filters = await A.reportRender.filtersFor(A, def, query);
     // The ETag keys on the DATA fingerprint, not on a snapshot version counter. The rows come from
     // `spooled.jsonPayload`, which reads base tables through the prelude — nothing here used the view
     // snapshot except for its version, so hydrating the declared views was pure cost. And the fingerprint
@@ -1809,7 +1597,7 @@ if (path === "/login" && method === "GET") {
     // The JSON endpoint stays, uncapped, as an API for a programmatic consumer. The BROWSER does
     // not use it any more.
     if (def.compute && typeof def.compute.report === "string" && (await A.spooled.names()).includes(def.compute.report)) {
-      return renderReportPage(A, db, req, user, path, query, def.compute.report, def);
+      return A.reportRender.renderReportPage(A, db, req, user, path, query, def.compute.report, def);
     }
 
     // A page with no report behind it is still a page: filters and an empty table, rendered
@@ -1818,7 +1606,7 @@ if (path === "/login" && method === "GET") {
     return html(
       await A.http.page(req, shell(user, "pages", def.title), `${def.slug}/${def.template}`, {
         meta: def,
-        filters: await filtersFor(A, def, query),
+        filters: await A.reportRender.filtersFor(A, def, query),
         options,
         // The rows are the host's business; a page with no statement behind it has none.
         columns: def.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
@@ -1836,94 +1624,10 @@ if (path === "/login" && method === "GET") {
  * answer — an empty depot, or the probe failing — so the notice degrades to a plain statement that
  * the period is empty rather than to a broken link.
  */
-async function latestPeriod(A: any, source?: string): Promise<{ from: string; to: string } | null> {
-  try {
-    const period = await A.dates.defaultPeriod(await A.service.fingerprint(), source);
-    return period.from ? period : null;
-  } catch {
-    return null;
-  }
-}
+// `latestPeriod` and `filtersFor` moved to `app/lib/report-render.js` (tb-0030 step 5). The
+// `/p/<slug>/data` endpoint below calls `A.reportRender.filtersFor`.
 
-/**
- * Resolve only declared filter fields; a manifest controls the compute input.
- *
- * Async because a page's `from`/`to` default is not always the manifest's: when a report declares
- * both date fields and the URL carries neither, the window comes from the DATA instead — the month
- * the newest entered business date falls in (`app/lib/dates.js`). `monthStart()`/`today()` are
- * `new Date()` inside the guest, so on 2026-10-02 they opened every report on a window whose only
- * rows were the dateless imported payments falling back to their insert time. An explicit `?from=`
- * or `?to=` always wins; the manifest default is the last resort, and a ledger with no entered date
- * at all still gets it.
- */
-async function filtersFor(A: any, def: any, query: Record<string, any>): Promise<Record<string, any>> {
-  const filters: Record<string, any> = {};
-  for (const field of def.filters) {
-    const raw = query[field.name];
-    const value = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
-    filters[field.name] = field.type === "check" ? (value === "on" ? "on" : "") : value || field.value;
-  }
-
-  // The general ledger's opening balances are DECLARED by `spool.totals.openings` rather than by
-  // `filters`, because they are binds that feed the totals statement, not query inputs with a default.
-  //
-  // ⚠️ They used to be unreachable. `filtersFor` looped `def.filters` only, and the general ledger
-  // declares `from` and `to` — so `openingRecievables`, `openingPayables` and `openingCash` were never
-  // placed in `filters`, which means BOTH the page's opening row AND the totals statement's `:openR` /
-  // `:openP` / `:openC` binds always received "". The ledger rendered
-  // `Opening Balance — Recievables: 0.00 · Payables: 0.00 · Cash: 0.00` for every input, and the
-  // totals silently omitted them. Nothing in the UI shows these three, so there was no visible symptom
-  // to notice; the declaration was in the manifest the whole time, read by nobody.
-  //
-  // They are taken from the query string only, and only when the manifest declares them. That keeps the
-  // page's filter row unchanged — these are ledger inputs carried on a link, not on-screen controls.
-  const openings = (def.spool && def.spool.totals && def.spool.totals.openings) || {};
-  for (const spec of Object.values(openings)) {
-    const key = String(spec).replace(/^:/, "");
-    if (!(key in filters) && query[key] !== undefined) {
-      const raw = query[key];
-      filters[key] = Array.isArray(raw) ? String(raw[0] ?? "") : String(raw ?? "");
-    }
-  }
-// A date filter whose manifest named a `source` takes its default from the DATA, not from
-  // `monthStart()`/`today()` — those are `new Date()` inside the guest, so on 2026-10-02 every report
-  // opened on 2026-10-01 → 2026-10-02 and the only rows on screen were the dateless imported payments
-  // falling back to their insert time. The source is per filter, not global: this depot's newest
-  // entered PAYMENT date is 2026-04-11 while an invoice is dated 2026-10-02, so one global maximum
-  // is right for one report and empty for the other.
-  //
-  // An explicit `?from=`/`?to=` always wins, and a filter that declares no source keeps its manifest
-  // default. `app/lib/dates.js` is fingerprint-cached, so this costs one indexed read per request at
-  // most and none at all after the first.
-  const wanted = def.filters.filter((f: any) => f.dateSource && !query[f.name]);
-  if (wanted.length) {
-    try {
-      const fp = await A.service.fingerprint();
-      for (const field of wanted) {
-        const period = await A.dates.defaultPeriod(fp, field.dateSource);
-        if (!period.from) continue;
-        if (field.name === "from" || field.name === "to") filters[field.name] = period[field.name as "from" | "to"];
-        else if (!(field.name in query)) filters[field.name] = period.to;
-      }
-    } catch (e: any) {
-      // A probe failure must not take the report down — the manifest default is a usable window —
-      // but it must be VISIBLE, because the symptom otherwise is a page quietly opening on the wrong
-      // month again, which is the defect this replaced.
-      console.error("[dates] default period probe failed: " + String(e && e.message ? e.message : e));
-    }
-  }
-  // The value stays a STRING. It used to be coerced to a Number here, and that silently broke the
-  // Payment Type select: the template marks an option selected with
-  // `filters[field.name] == o.value`, and `o.value` is a string, so `Number(2) == "2"` is false in
-  // minijinja and no option came back selected — an applied filter that looked unapplied.
-  //
-  // Nothing downstream needs the number. The statement casts it itself
-  // (`AND (:type = '' OR pv.type = CAST(:type AS INTEGER))`), and the totals spec reads the same
-  // string. Coercing here bought nothing and cost the UI its feedback.
-  return filters;
-}
-
-// ------------------------------------------------------------------ entry points
+// ------------------------------------------------------------------ entry points// ------------------------------------------------------------------ entry points
 
 async function handle(req: any): Promise<any> {
   try {

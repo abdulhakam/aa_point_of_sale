@@ -91,6 +91,9 @@ export async function app() {
     // The idioms every handler repeated: invalidate-on-commit, the refs snapshot, the page shell,
     // and the hex<->base64 pair. See app/lib/route-kit.js for why each exists.
     routeKit: await loadModule("/app/lib/route-kit.js"),
+    // The report-page renderer, extracted from the dispatcher so `/reports/<key>` can be a route
+    // folder (tb-0030 step 5). Reached as `A.reportRender`.
+    reportRender: await loadModule("/app/lib/report-render.js"),
   };
   // The queue engine is a plain script so the scheduler's fresh runtime can load it too.
   if (!g.__AA_QUEUE__) {
