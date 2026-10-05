@@ -191,6 +191,31 @@ All the harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-
 | `node trailbase/tools/regen-round2.mjs` | regenerate every `round2` from the verified CAST-only template (the guest SQLite has **no** `floor()`) | writes `.sql` |
 | `node trailbase/tools/sync-manifests.mjs` | derive each report's column manifest from its statement's final SELECT | writes `spoolreports.js` |
 | `node trailbase/tools/report-bench.mjs` | time the reports through the spooled path | yes |
+| `node trailbase/tools/db-digest.mjs` | **whole-database digest**: per-table row counts and money/quantity sums, legacy `pb_data` against the depot — **added 2026-10-04**. Money is compared at whole paisas *per value*, which is the only comparison the two schemas' 2 dp rule makes meaningful | no (reads both `data.db` files read-only) |
+| `node trailbase/tools/report-sweep.mjs` | **whole-database report sweep**, both systems, one date range: `--guest` times each report page and its `/p/<slug>/data`; `--legacy` replays each compiled bundle's `fullList` calls page by page. `--repeat N` for the best of N | yes — `--guest-base`, `--pb-base` |
+| `node trailbase/tools/report-sql-time.mjs` | the same composed statements run **directly against SQLite**, so a report that 500s at the 20 s deadline can still be measured. `--repeat` matters: a cold run on a fresh import is 2–3× the warm cost | no (`DEPOT_DB`, read-only) |
+| `node trailbase/tools/report-sql-provenance.mjs` | **proves the report path is SQLite.** Fetches each page's `/data` and runs the same statement against `main.db`, comparing row for row, in order, every column — 10 of 14 pages byte-identical. Exits non-zero on a real difference | no — needs the guest up **and** read access to `main.db` |
+| `node trailbase/tools/feature-parity.mjs` | every screen the legacy bundle can serve, against the guest's routes. Has **no `MISSING` verdict** on purpose — the apps name the same screen differently, so an unmatched screen is `candidate`/`unmapped` for a human to decide | no — reads the bundle and the dispatcher, makes no requests |
+| `node trailbase/tools/hotkey-check.mjs` | **drives the keyboard layer with real keystrokes** in headless Chrome over CDP, and asserts the three rules it promises. 34 checks. Needs Chrome; pass `--chrome <path>` if it is not in the default place | yes |
+| `node trailbase/tools/grid-preview-check.mjs` | the invoice grid's live preview: a line edit moves the line and the total, an invoice Discount % moves every line, a Discount Rs moves only the total, and **the browser's total equals the server's** (by loading once with scripting disabled). 14 checks | yes |
+| `node trailbase/tools/client-cost.mjs` | **per-keystroke cost on the real database** — the table filter, the `<select>` filter, the grid recalculation and the row cursor. A measurement rather than a pass/fail, and re-runnable to compare against [[minimise-client-side-calculation]] | yes |
+
+⚠️ `report-sql-provenance.mjs` needs the **depot's** `main.db`, so stop the server first or accept that
+the read-only connection sees committed data only. It is the one tool here that must not be run against a
+`p_data` stub — see below.
+
+⚠️ **Never run `--guest` and `--legacy` sweeps at the same time.** The legacy arm saturates the machine
+for about an hour, and a contended guest run inflated its own statements by 4× (`salesreport` 4.6 s →
+150 s) on 2026-10-04 — enough to make every number in the note wrong. See
+[[report-cost-on-a-whole-database]].
+
+⚠️ **The legacy oracle is `legacyforparity/backend/pb_data/`, not `p_data/`.** The working-tree
+`p_data/data.db` is a 745,472-byte stub with every business table empty, so any comparison naming it
+is against nothing and **cannot fail**. The full data is in `pb_data` and in the git blob
+`c167d311^:backend/p_data/data.db`. See [[fresh-import-and-whole-database-digest-2026-10-04]].
+
+⚠️ **The legacy app's URLs are prefixed `/app`** — `/app/reports/payments`, not `/reports/payments`.
+The latter is a confident 404.
 | `pwsh -File trailbase/tools/run-spool-sweep.ps1` | spooled vs rows-through-`sqlite.all` in the real guest, **byte-identity asserted**; needs a server on `:4000` | yes |
 | `node trailbase/tools/diff-spool-html.mjs` | the first byte where two arms differ, with context; needs a server | yes |
 | `pwsh -File trailbase/tools/run-spool-bench.ps1` | the same A/B for a single report | yes |
