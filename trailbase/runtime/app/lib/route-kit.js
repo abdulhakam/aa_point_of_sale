@@ -264,3 +264,14 @@ export function loginRedirect(req, path) {
   const next = encodeURIComponent(path + (req && req.query ? "?" + req.query : ""));
   return { redirect: "/login?next=" + next, status: 303 };
 }
+
+/** A query value with its empty-value fallback — the dispatcher's `pick`. */
+export const pick = (value, fallback) =>
+  value === undefined || value === null || value === "" ? fallback : value;
+
+/** The dispatcher's checkbox coercion: the truthy spellings become `"on"`, everything else `""`. */
+export const flag = (value) => (value === "1" || value === "on" || value === "true" ? "on" : "");
+
+/** `{0:"Purchase",…}` -> `[{code:0,label:"Purchase"},…]`, the shape the type selects render. */
+export const typeOptions = (map) =>
+  Object.keys(map).map((code) => ({ code: Number(code), label: map[code] }));

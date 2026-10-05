@@ -262,6 +262,10 @@ async function main() {
     const anonWrite = await postForm(cookies, "/management/sections/create", { name: "Anonymous" });
     check("anonymous management write redirects to /login", (anonWrite.status === 302 || anonWrite.status === 303) && String(anonWrite.location).startsWith("/login"), `${anonWrite.status} ${anonWrite.location}`);
 
+    // /healthz is deliberately ungated, so it answers an anonymous request too.
+    const healthz = await get(cookies, "/healthz");
+    check("/healthz reports ok", healthz.status === 200 && healthz.body.includes('"ok"'), `${healthz.status} ${healthz.body.slice(0, 60)}`);
+
     const badLogin = await postForm(cookies, "/login", { email: trail.email, password: "wrong-password" });
     check("login with a bad password is rejected", badLogin.status === 401, `${badLogin.status}`);
 
@@ -286,6 +290,7 @@ async function main() {
       ["/payments", "Payments"],
       ["/payments/new", "New Payment"],
       ["/inventory", "Inventory"],
+      ["/plugins", "Plugins"],
       ["/reports/payments", "Unified Payments Report"],
       ["/reports/salesreport", "Sales Report"],
       ["/reports/paymentsbycompany", "Payments By Company"],

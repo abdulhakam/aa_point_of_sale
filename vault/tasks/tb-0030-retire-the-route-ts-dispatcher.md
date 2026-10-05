@@ -357,10 +357,15 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   `{param}` one, so a future `reports/{key}` folder cannot shadow `reports/ledgers`. `guest-smoke.mjs`
   still **97/97**.
 
-  **Next within step 5:** the remaining families, one at a time (`/plugins`, `/invoices`, `/payments`,
-  `/inventory`, `/cashmemo`, `/print`, the report-page and `/p` families, the `invoice`/`invoice-doc`
-  API families, `/jobs`); then the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`,
-  `/plugins/*`, `/favicon.svg`).
+  **Then `/plugins`, `/healthz` and the three list screens** `/invoices`, `/payments`, `/inventory`
+  (2026-10-05): each a GET-only folder that applies the auth gate, their dispatcher branches deleted;
+  `/healthz` is deliberately ungated (it answered before the gate). The query helpers `pick`, `flag` and
+  `typeOptions` moved to `route-kit` for the same reason as `normalizePath`. `guest-smoke.mjs` **99/99**,
+  with `/plugins` and `/healthz` now covered.
+
+  **Next within step 5:** the remaining families, one at a time (`/invoices/new`, `/payments/new`, the
+  `cashmemo`, `print`, `invoice`/`invoice-doc` and `jobs` families, the report-page family, `/p`); then
+  the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`).
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page

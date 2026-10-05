@@ -11,10 +11,7 @@
 
 (function () {
 const PAGES_DIR = "/app/pages";
-// `PLUGINS_DIR` is still needed here — for the `/plugins` INDEX, which lists the plugin pages. What
-// moved to the manifest is which URL prefix serves which directory; this is the code that walks the
-// directory. `PUBLIC_DIR` and `COMPUTE_DIR` are gone: nothing referenced them but the mount branches.
-const PLUGINS_DIR = "/app/plugins";
+// `PLUGINS_DIR` moved with the `/plugins` index to `ahscripts/routes/plugins/route.ts` (tb-0030 step 5).
 
 // ------------------------------------------------------------------ module loading
 
@@ -389,7 +386,7 @@ async function dispatch(req: any): Promise<any> {
   const form = contentType.includes("application/x-www-form-urlencoded") ? parsePairs(String(req.body || "")) : {};
 
 // Public surfaces.
-  if (path === "/healthz") return { ok: true, workers: A.service.status() };
+  // /healthz moved to the route folder `ahscripts/routes/healthz/route.ts` (tb-0030 step 5).
 
 // The report keys the sweep should cover, taken from the app's own registry so the bench cannot
   // drift from the reports that actually exist.
@@ -872,10 +869,7 @@ if (path === "/login" && method === "GET") {
   // implementation that can drift. `/management` (the index) still renders here.
 
 
-  if (path === "/plugins") {
-    const plugins = await A.plugins.loadPlugins(PLUGINS_DIR);
-    return html(await A.http.page(req, shell(user, "plugins", "Plugins"), "plugins/index.html", { plugins }));
-  }
+  // /plugins moved to the route folder `ahscripts/routes/plugins/route.ts` (tb-0030 step 5).
 
   // Jobs: durable queue API.
   if (path === "/jobs" && method === "POST") {
@@ -1151,7 +1145,6 @@ if (path === "/login" && method === "GET") {
   // those modules ([[money-is-2dp-everywhere]]).
 
   const typeOptions = (map) => Object.keys(map).map((code) => ({ code: Number(code), label: map[code] }));
-  const invoiceTypes = typeOptions(A.invoices.INVOICE_TYPES);
   const paymentTypes = typeOptions(A.payments.PAYMENT_TYPES);
   const round2to = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
   const pick = (value, fallback) => (value === undefined || value === null || value === "" ? fallback : value);
@@ -1345,28 +1338,8 @@ if (path === "/login" && method === "GET") {
     return redirect("/print?status=queued&job=" + A.routeKit.hexToB64(String(jobHex)));
   }
 
-  if (path === "/invoices" && method === "GET") {
-    const refs = await A.routeKit.refs();
-    const filters = {
-      type: pick(query.type, ""),
-      from: pick(query.from, ""),
-      to: pick(query.to, ""),
-      party: pick(query.party, ""),
-      unpaid: flag(query.unpaid),
-    };
-    const rows = await A.invoices.listInvoices(db, filters);
-    const totals = await A.invoices.sumInvoices(db, filters);
-    return html(
-      await A.http.page(req, shell(user, "invoices", "Invoices"), "invoices/index.html", {
-        rows,
-        filters,
-        types: invoiceTypes,
-        selectedType: Number(filters.type || -1),
-        parties: refs.parties ?? [],
-        totals,
-      })
-    );
-  }
+  // GET /invoices (the list) moved to `ahscripts/routes/invoices/route.ts` (tb-0030 step 5).
+  // `/invoices/new` and `/invoices/<id>/…` still fall through to this dispatcher.
 
   if (path === "/invoices/new") {
     const type = pick(query.type, "1") === "0" ? 0 : 1;
@@ -1712,29 +1685,8 @@ if (path === "/login" && method === "GET") {
     );
   }
 
-  if (path === "/payments" && method === "GET") {
-    const refs = await A.routeKit.refs();
-    const filters = {
-      type: pick(query.type, ""),
-      from: pick(query.from, ""),
-      to: pick(query.to, ""),
-      party: pick(query.party, ""),
-      standalone: flag(query.standalone),
-      open: flag(query.open),
-    };
-    const rows = await A.payments.listPayments(db, filters);
-    const totals = await A.payments.sumPayments(db, filters);
-    return html(
-      await A.http.page(req, shell(user, "payments", "Payments"), "payments/index.html", {
-        rows,
-        filters,
-        types: paymentTypes,
-        selectedType: Number(filters.type || -1),
-        parties: refs.parties ?? [],
-        totals,
-      })
-    );
-  }
+  // GET /payments (the list) moved to `ahscripts/routes/payments/route.ts` (tb-0030 step 5).
+  // `/payments/new`, the POST and `/payments/<id>/delete` still fall through to this dispatcher.
 
   if (path === "/payments/new" && method === "GET") {
     const refs = await A.routeKit.refs();
@@ -1781,20 +1733,8 @@ if (path === "/login" && method === "GET") {
     return redirect("/payments?status=ok");
   }
 
-    if (path === "/inventory" && method === "GET") {
-      const refs = await A.routeKit.refs();
-      const rows = A.inventory.stockRows(await A.baseviews.itemsReport(), refs, pick(query.q, ""));
-    const editId = String(query.edit || "");
-    return html(
-      await A.http.page(req, shell(user, "inventory", "Inventory"), "inventory/index.html", {
-        rows,
-        query: pick(query.q, ""),
-        summary: A.inventory.stockSummary(rows),
-        editRow: editId ? rows.find((r: any) => String(r.id) === editId) ?? null : null,
-        companies: (refs.companies ?? []).map((c: any) => ({ id: c.id, name: c.name })),
-      })
-    );
-  }
+  // GET /inventory moved to `ahscripts/routes/inventory/route.ts` (tb-0030 step 5). `/inventory/save`
+  // still falls through to this dispatcher.
 
   if (path === "/inventory/save" && method === "POST") {
     // Reject a body that omits a required field BEFORE the write. Without this an empty POST inserted
