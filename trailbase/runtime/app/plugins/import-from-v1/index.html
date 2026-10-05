@@ -51,6 +51,7 @@
       <label class="field"><span>Admin password</span>
         <input id="pb-password" type="password" autocomplete="off">
       </label>
+      <p class="report-opening" style="margin-top:0.75rem">Leave both blank if the source collections are world-readable — the import only reads, so a token is optional.</p>
     </section>
 
     <section class="card">
@@ -450,7 +451,7 @@
     var pbIdentity = el("pb-identity").value.trim(), pbPassword = el("pb-password").value;
     var tbIdentity = el("tb-identity").value.trim(), tbPassword = el("tb-password").value;
     var wipeFirst = el("opt-wipe").checked, dryRun = el("opt-dry").checked;
-    if (!pbUrl || !pbIdentity || !pbPassword) return flash("error", "PocketBase URL, identity and password are required.");
+    if (!pbUrl) return flash("error", "PocketBase URL is required.");
     if (!tbUrl || !tbIdentity || !tbPassword) return flash("error", "TrailBase URL, user email and password are required.");
 
     state = { status: "running", phase: "starting", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, droppedMakers: 0, stop: false };
@@ -459,11 +460,15 @@
 
     try {
       var pb = pocketBase(pbUrl), tb = trailBase(tbUrl);
-      log("info", "Signing in to PocketBase at " + pb.base() + " ...");
-      await pb.login(pbIdentity, pbPassword);
+      if (pbIdentity && pbPassword) {
+        log("info", "Signing in to PocketBase at " + pb.base() + " ...");
+        await pb.login(pbIdentity, pbPassword);
+      } else {
+        log("info", "No PocketBase credentials given - reading " + pb.base() + " unauthenticated. This import only reads from the source, so a token is optional, but every collection must be world-readable: the first one that is not answers 403 and the run stops.");
+      }
       log("info", "Signing in to TrailBase at " + tb.base() + " ...");
       await tb.login(tbIdentity, tbPassword);
-      log("info", "Signed in to both servers.");
+      log("info", "Signed in to TrailBase.");
 
       var totals = {}, absent = {};
       state.summary = {};

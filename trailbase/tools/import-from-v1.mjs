@@ -10,6 +10,13 @@
  *     --pb-identity <superuser> --pb-password <password> --tb-identity admin@localhost \
  *     --tb-password <local dev password>
  *
+ * `--no-auth` runs the same import with **no PocketBase token at all**, for a server whose
+ * collections are world-readable (`rules: ""`, which is how the legacy collections are defined). It
+ * probes one collection first and refuses unless the probe answers 200, so the failure mode of a
+ * locked-down PocketBase is a clear message here rather than a 403 partway through 60,000 records.
+ * The import only ever *reads* from PocketBase — `count()` and `iterate()` are its whole surface —
+ * so a token that changes nothing is not worth storing a superuser password to obtain.
+ *
  * The PocketBase superuser is read from `PB_ADMIN_IDENTITY` / `PB_ADMIN_PASSWORD` or from explicit
  * flags, with **no default**: those credentials are recorded in the vault's local-only
  * `vault/credentials/` collection, which is git-ignored precisely so they are not published, and
@@ -43,15 +50,41 @@ const CFG = {
   "tb-password": arg("--tb-password", "administrator-0ne"),
 };
 
+const NO_AUTH = process.argv.includes("--no-auth");
+
+// Without a token, the plugin's `login()` throws and the whole run aborts. Probing first turns that
+// into a message about the server's rules instead of a failed import, and it is the difference
+// between learning the collections are locked at second 0 and at record 40,000.
+async function probeWorldReadable() {
+  const url = `${CFG["pb-url"]}/api/collections/invoices/records?page=1&perPage=1`;
+  try {
+    const res = await fetch(url);
+    return res.status;
+  } catch (e) {
+    return `unreachable (${e.message})`;
+  }
+}
+
 // The plugin's own `run()` validates these and flashes an error; this is a headless wrapper, so it
 // fails with a clear message instead of waiting for that.
-for (const required of ["pb-identity", "pb-password"]) {
-  if (!CFG[required]) {
+if (!NO_AUTH) {
+  for (const required of ["pb-identity", "pb-password"]) {
+    if (!CFG[required]) {
+      console.error(
+        `missing ${required}: pass --${required} or set ${required === "pb-identity" ? "PB_ADMIN_IDENTITY" : "PB_ADMIN_PASSWORD"}, or pass --no-auth if the collections are world-readable`
+      );
+      process.exit(2);
+    }
+  }
+} else {
+  const status = await probeWorldReadable();
+  if (status !== 200) {
     console.error(
-      `missing ${required}: pass --${required} or set ${required === "pb-identity" ? "PB_ADMIN_IDENTITY" : "PB_ADMIN_PASSWORD"}`
+      `--no-auth: GET /api/collections/invoices/records answered ${status}, so this PocketBase does not serve its records unauthenticated. Re-run with --pb-identity/--pb-password.`
     );
     process.exit(2);
   }
+  console.log("no-auth: the server serves records without a token; importing without logging in");
 }
 
 /* --------------------------------------------------------------- DOM stub */
