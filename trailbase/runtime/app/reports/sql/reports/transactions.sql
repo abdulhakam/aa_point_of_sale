@@ -119,6 +119,10 @@ SELECT
   id,
   date,
   type,
+  -- The invoice TYPE letter (`S`/`R`/`P`/`D`), the prefix legacy renders before the number in the
+  -- invoice column (`S 8606`). Derived from the already-projected lowercase `type`, so it cannot
+  -- disagree with the Type column it prefixes.
+  upper(substr(type, 1, 1)) AS typeLetter,
   booker,
   invoiceNo,
   invoiceId,

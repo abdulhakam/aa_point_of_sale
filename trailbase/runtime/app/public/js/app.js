@@ -311,6 +311,7 @@
         },
         amountCell: row.querySelector("[data-amount]"),
         qtyCell: row.querySelector("[data-qty-display]"),
+        priceBaseline: row.querySelector("[data-price-baseline]"),
         net: 0,
       };
     });
@@ -355,6 +356,20 @@
      * which is the worst shape an accounting screen can take. Looked up on the document, not the grid.
      */
     var sumCell = document.querySelector("[data-sum]");
+
+    /**
+     * The item's own sale price, shown beside the editable price so an operator who types over the
+     * cell still sees the number they adjusted away from ("was 8.33, sold 8.00"). It is the SAME
+     * `data-price` value that fills the price on selection, so the baseline and the fill can never
+     * disagree. Read-only; the operator's number always wins.
+     */
+    function updateBaseline(entry) {
+      if (!entry.priceBaseline) return;
+      var select = entry.cells.item;
+      var option = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+      var price = option && option.dataset.price !== undefined && option.dataset.price !== "" ? option.dataset.price : "";
+      entry.priceBaseline.textContent = price ? "list " + Number(price).toFixed(2) : "";
+    }
 
     function lineOf(entry) {
       var c = entry.cells;
@@ -452,6 +467,7 @@
               if (!price.value || Number(price.value) === 0) price.value = option.dataset.price;
               if (cost && !cost.value) cost.value = option.dataset.cost || "";
             }
+            updateBaseline(entry);
             recalcLine(entry);
           });
         }
@@ -466,7 +482,48 @@
       });
       if (headerDrs) headerDrs.addEventListener("input", recalcTotals);
     }
+    rows.forEach(updateBaseline);
     recalcAll();
+  }
+
+  /**
+   * Sortable management tables: click a column header to sort, click again to reverse. The header
+   * carries a `data-sort-dir` marker the stylesheet turns into an arrow. Sorts the rows in place —
+   * a row is still the same element, so the client-side filter (which toggles `hidden` on the same
+   * nodes) keeps working, and only visible rows are reordered.
+   */
+  function enhanceTableSort() {
+    var cellText = function (row, index) {
+      var cell = row.cells && row.cells[index];
+      return cell ? (cell.textContent || "").replace(/\s+/g, " ").trim() : "";
+    };
+    var compare = function (a, b) {
+      var na = parseFloat(String(a).replace(/[,\u20ac\u00a3\u20b9\s]/g, ""));
+      var nb = parseFloat(String(b).replace(/[,\u20ac\u00a3\u20b9\s]/g, ""));
+      if (isFinite(na) && isFinite(nb) && a !== "" && b !== "") return na - nb;
+      return a < b ? -1 : a > b ? 1 : 0;
+    };
+    document.querySelectorAll("table[data-sortable]").forEach(function (table) {
+      var headers = Array.prototype.slice.call(table.querySelectorAll("th[data-sort]"));
+      if (!headers.length || !table.tBodies.length) return;
+      var tbody = table.tBodies[0];
+      headers.forEach(function (th, colIndex) {
+        var button = th.querySelector(".th-sort");
+        if (!button) return;
+        button.addEventListener("click", function () {
+          var dir = th.getAttribute("data-sort-dir") === "asc" ? "desc" : "asc";
+          headers.forEach(function (h) { h.removeAttribute("data-sort-dir"); });
+          th.setAttribute("data-sort-dir", dir);
+          var rows = Array.prototype.slice.call(tbody.rows).filter(function (r) {
+            return !r.querySelector("td.empty");
+          });
+          rows.sort(function (a, b) {
+            return compare(cellText(a, colIndex), cellText(b, colIndex)) * (dir === "asc" ? 1 : -1);
+          });
+          rows.forEach(function (r) { tbody.appendChild(r); });
+        });
+      });
+    });
   }
 
   function init() {
@@ -477,6 +534,7 @@
     enhanceConfirm();
     enhanceSelects();
     enhanceTableFilter();
+    enhanceTableSort();
     enhanceLineEditor();
     enhanceGrid();
   }

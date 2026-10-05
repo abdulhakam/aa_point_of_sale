@@ -116,6 +116,28 @@ h1, h2, h3 { font-weight: 700; }
 .nav-link.active, .nav-link.active:hover { background: var(--blue-0); color: var(--blue-9); }
 .nav-link .ti { display: block; }
 
+/* The "more" menu the rail's utility items (Pages, Plugins, refresh) collapse behind. It opens as a
+   popover to the right of the rail, so the rail itself stays a single column of destinations. */
+.nav-more { position: relative; display: flex; }
+.nav-more > summary { list-style: none; }
+.nav-more > summary::-webkit-details-marker { display: none; }
+.nav-more > summary::marker { content: ""; }
+.nav-more-menu {
+  position: absolute;
+  left: 58px;
+  bottom: 0;
+  background: #ffffff;
+  border: 1px solid var(--gray-3);
+  border-radius: var(--radius);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  z-index: 40;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
 .main { flex: 1; min-width: 0; padding: 16px; background: #ffffff; }
 .main-anon { padding: 0; }
 
@@ -287,6 +309,21 @@ table.data tr.pos td, table.data tr.info td { color: var(--blue-7); }
 .row-actions .icon-del { color: var(--danger); }
 .row-actions form { display: inline; margin: 0; }
 
+/* Sortable management-table headers: the label is a button, and the sort direction is an arrow on
+   the cell, so a click is both the affordance and the state. */
+th[data-sort] { padding: 0; }
+.th-sort {
+  border: 0; background: none; cursor: pointer; padding: 7px 12px;
+  font: inherit; font-weight: 700; color: inherit; width: 100%; text-align: inherit;
+}
+.th-sort:hover { color: var(--blue-7); }
+th[data-sort][data-sort-dir="asc"]::after { content: " ↑"; }
+th[data-sort][data-sort-dir="desc"]::after { content: " ↓"; }
+
+/* The report's invoice column as a link (type letter + number -> the invoice document). */
+.report-link { color: var(--blue-7); text-decoration: none; }
+.report-link:hover { text-decoration: underline; }
+
 .totals { display: flex; gap: 16px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
 .totals-table { border-collapse: collapse; min-width: 15rem; background: #fff; font-size: 0.75rem; }
 .totals-table th, .totals-table td { border: 1px solid #000; padding: 2px 6px; }
@@ -358,6 +395,8 @@ table.grid { min-width: 60rem; }
 table.grid th, table.grid td { white-space: nowrap; }
 table.grid td[data-qty-display] { text-align: left; }
 table.grid input[type="number"] { width: 5.5rem; }
+/* The item's list price shown beside the editable price, so a per-line adjustment stays legible. */
+.price-baseline { display: block; font-size: 0.72rem; color: var(--gray-6); white-space: nowrap; margin-top: 2px; }
 table.grid select { min-width: 12rem; }
 .card > form[data-grid] > .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
@@ -403,6 +442,8 @@ table.grid select { min-width: 12rem; }
     z-index: 40;
   }
   .navbar-bottom .nav-link { width: 34px; height: 34px; }
+  /* The "more" menu opens downward from the header group rather than to the right of a rail. */
+  .nav-more-menu { left: auto; right: 0; top: 100%; bottom: auto; }
   /* The header carries that fixed group, so it has to stay put while the page scrolls. */
   .header { position: sticky; top: 0; z-index: 30; background: #fff; }
   /* The clock would collide with that group on a 360px screen, and the phone's own status bar

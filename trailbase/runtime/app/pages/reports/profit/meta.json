@@ -18,6 +18,7 @@
       "id",
       "date",
       "type",
+      "typeLetter",
       "booker",
       "invoiceNo",
       "invoiceId",
@@ -119,7 +120,8 @@
     },
     {
       "key": "invoiceNo",
-      "label": "Invoice"
+      "label": "Invoice",
+      "link": "invoice"
     },
     {
       "key": "party",

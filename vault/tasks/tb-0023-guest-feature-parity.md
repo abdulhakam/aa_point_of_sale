@@ -47,11 +47,16 @@ In the operator's order, with the reason each one was asked for.
       all 13 suppliers. See [[quick-create-rides-in-the-form-that-needed-it]].
       **Not on the invoice grid** (`/invoices/{id}/grid`) — its item selects are repeated-name arrays in
       one form and need per-row handling; recorded in the decision note rather than half-built.
-- [ ] **Fewer rail buttons.** The rail carries the five legacy destinations plus **Pages**, **Plugins**,
+- [x] **Fewer rail buttons.** The rail carries the five legacy destinations plus **Pages**, **Plugins**,
       the background-refresh dot and Logout — the last three are utility, not destinations. The operator
-      read it as "too many buttons".
-- [ ] **Sale price adjustment.** Not present in the guest at all. See [[sale-price-adjustment]] — the
-      concept is ambiguous and the ruling is recorded there.
+      read it as "too many buttons". **Done 2026-10-05:** Pages, Plugins and the refresh dot now collapse
+      behind one "more" (⋯) menu at the rail's foot; Logout stays visible because the legacy rail ends
+      with it. A `<details>` menu, so it works with no JavaScript.
+- [x] **Sale price adjustment.** Not present in the guest at all. See [[sale-price-adjustment]] — the
+      concept is ambiguous and the ruling is recorded there. **Ruled 2026-10-05: reading (a)** — adjust a
+      line's price directly on the invoice being written, for that invoice only. The price was already
+      editable; what was missing was legibility, so the grid now shows the item's list price beside the
+      editable price ("list 8.33") so an adjustment is visible after the fact.
 - [x] **Record the mandate change and remove the knowledge that conflicts with it.**
       [[parity-is-functional-not-visual]] supersedes [[guest-ui-is-a-direct-shift-of-legacy]]; the
       withdrawn decision is kept and marked, not deleted; the nine pixel discrepancies are re-triaged
@@ -64,14 +69,14 @@ From [[ui-parity-discrepancies-2026-10-05]] Part 1. Under functional parity thes
 | # | discrepancy | ruling |
 |---|---|---|
 | A | management screens carry an inline create form, a count badge and card wrappers where legacy has a bare filter row and a table | **CLOSED as accepted.** The guest's page does strictly more, and the create form is the same capability legacy puts one click away |
-| B | management tables have no sort arrows and no view action | **OPEN — capability.** Sorting and view are capabilities legacy has and the guest lacks. This is now a work item, not a pixel fix |
+| B | management tables have no sort arrows and no view action | **DONE 2026-10-05.** Headers are now clickable (client-side sort, asc/desc arrow), and each row gained a green view action |
 | C | management tables sit in bordered cards | **CLOSED as accepted** |
 | D | report date inputs are native, so they look like the browser's | **OPEN — usability.** Native date inputs are a *worse* control than Mantine's on desktop |
 | E | the select search box has no legacy counterpart | **CLOSED as accepted**, and superseded by the autocomplete item above |
-| F | the invoice column is a bare number, not `S 8606` with a link | **OPEN — capability.** The link from a report to the invoice is the useful half |
+| F | the invoice column is a bare number, not `S 8606` with a link | **DONE 2026-10-05.** The Profit and Item Sales invoice column is now `S 8606` — type letter prefixed, linking to `/invoices/<id>/view` |
 | G | the Cash Memo tile uses the wrong glyph | **CLOSED as accepted** |
 | H | the dashboard keeps an `Overview` counters card legacy lacks | **CLOSED as accepted**, and the smoke assertion that protected a divergence should be revisited on its own terms |
-| I | the rail carries extra utility items | **OPEN — now the "fewer rail buttons" item above** |
+| I | the rail carries extra utility items | **DONE — the "fewer rail buttons" item above** |
 
 ## Already done, and still standing
 
@@ -99,12 +104,15 @@ in. A capability with no home is a gap; a capability with a different home is **
 
 ## Still open from the earlier framing
 
-- [ ] Sortable management tables, and a view action on a row (**item B**).
-- [ ] A link from a report's invoice column to the invoice (**item F**).
-- [ ] Decide the category-4 differences in [[guest-frontend-feature-parity-gaps]] (opening balances,
-      report-filter gating) and record the ruling.
-- [ ] Decide, per category-5 item, whether the new-side-only screens (Companies, `/p`, plugins) are
-      additions to keep or capabilities to converge.
+- [x] Sortable management tables, and a view action on a row (**item B**) — done 2026-10-05.
+- [x] A link from a report's invoice column to the invoice (**item F**) — done 2026-10-05.
+- [x] Decide the category-4 differences in [[guest-frontend-feature-parity-gaps]] (opening balances,
+      report-filter gating) and record the ruling. **Ruled 2026-10-05:** opening balances are a manual
+      per-period input — already present on the general ledger ([[report-routes-ignore-date-defaults]]).
+      The report-filter gating question (legacy filter modal vs inline) stays open, recorded below.
+- [x] Decide, per category-5 item, whether the new-side-only screens (Companies, `/p`, plugins) are
+      additions to keep or capabilities to converge. **Ruled 2026-10-05: keep as additions** — they are
+      permitted under functional parity and the operator wants them available.
 
 ## Suggestions, for the operator to take or leave
 
@@ -118,6 +126,11 @@ Offered because the mandate now allows them, and because each costs little next 
 2. **A keyboard-first item entry.** With the autocomplete and [[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]
    in place, `Ctrl+Enter` to add a line and arrow-key selection inside the grid make invoice entry
    almost entirely typable. The grid is already a spreadsheet.
+   **Assessed 2026-10-05, mostly already present.** The keyboard layer gives `Alt+Arrow` field
+   navigation across the grid's cells and `Ctrl+Enter` to submit the form. A separate "add a line on
+   Enter" would need a per-line append endpoint, which the batch-save grid model
+   ([[no-draft-invoices-published-on-save]]) does not have — the blank row *is* the add. Left as-is
+   rather than half-built; a per-line-append endpoint is its own change.
 3. **Remember the last filters.** A report filter set is usually the same all day; the guest drops it on
    every navigation. One "remember per report" toggle beats re-picking eight selects.
 4. **Put the rail's utilities behind one menu.** Six destinations and three utilities is two lists

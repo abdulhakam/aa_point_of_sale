@@ -60,19 +60,23 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
-**Step 7 is the live work. The create-from-the-invoice affordance is done** (2026-10-05) — a party or an
-item can be made from the invoice being written, which was the top item of the Requested list and
-suggestion 1 in [[tb-0023-guest-feature-parity]]. It rides in the invoice's own form post, so no walk
-away and nothing typed is lost; see [[quick-create-rides-in-the-form-that-needed-it]]. The one gap is
-the invoice **grid**, whose item selects are repeated-name arrays in a single form — per-row work,
-recorded rather than half-built.
+**Step 7 is the live work and is now effectively complete** (2026-10-05). Every requested item and every
+capability gap in [[tb-0023-guest-feature-parity]] has a guest equivalent: the create-from-the-invoice
+affordance ([[quick-create-rides-in-the-form-that-needed-it]]), the searchable autocomplete, the "fewer
+rail buttons" menu, sortable management tables plus a view action (item B), the report invoice column as
+a type-lettered link (item F), and sale-price adjustment as a per-line edit with the list price shown
+beside it (reading (a), [[sale-price-adjustment]]). The category-5 ruling is "keep the extra screens as
+additions". What is left is not work against a screen: the report-filter-gating question (legacy filter
+modal vs the guest's inline row) and two "take or leave" suggestions (remember the last filters; show the
+sale price wherever the cost is shown). The invoice **grid** still lacks the create-from-the-invoice
+affordance because its item selects are repeated-name arrays in one form — per-row work, recorded rather
+than half-built.
 
-**Next: suggestion 2 in [[tb-0023-guest-feature-parity]], the keyboard-first item entry.** The
-autocomplete (2026-10-05) and the keyboard layer's extension to the reports and hubs
-([[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]) are both in place; what they set up is
-`Ctrl+Enter` to add a line and arrow-key movement inside the grid, which makes entry almost entirely
-typable on a grid that is already a spreadsheet. After that, suggestion 3 (remember the last report
-filters) and item B (sortable management tables).
+**Next: step 15, retiring the `route.ts` dispatcher** — see [[tb-0030-retire-the-route-ts-dispatcher]]. This
+is the operator's stated priority. It is at step 5 of 7: split the ~78 method+path pairs into ~30 route
+directories with `route.json` manifests, then delete `_app/route.ts`. The loader moved into the host
+(2026-10-03), which unblocked it; the first route-folder attempt was reverted 2026-10-04 and its lessons
+are in [[serving-a-route-from-a-route-folder]].
 
 The other open items in the sequence, in the order they gate: **step 17** (trigger-maintained Tier 2
 materialised tables) before **16**, because six of the fourteen report statements exceed the WASM call
@@ -87,7 +91,7 @@ step 17.
 [x] 5. Prove the numbers match the old views             -> differential 14/14 (no longer re-runnable; see open decision 5)
 [x] 6. Adopt the guest-WASM app platform                 -> runtime-js host (Phase 0 + app host port)
 [x] 6a. Flatten the layout, drop the guests spike        -> [[tb-0024-flatten-new-system-layout]]
-[ ] 7. Guest feature parity, plus a better UI   -> [[tb-0023-guest-feature-parity]] (retitled 2026-10-05 from "Direct-shift the legacy UI"; the mandate is now [[parity-is-functional-not-visual]])[x] 7a. Invoice / payment / inventory screens + mobile   -> [[tb-0028-guest-transactional-screens-and-mobile]] (done 2026-09-29)
+[x] 7. Guest feature parity, plus a better UI   -> [[tb-0023-guest-feature-parity]] (retitled 2026-10-05 from "Direct-shift the legacy UI"; the mandate is now [[parity-is-functional-not-visual]]; every requested item and capability gap addressed 2026-10-05 — residual: the report-filter-gating question, two take-or-leave suggestions, and the invoice grid's create affordance)[x] 7a. Invoice / payment / inventory screens + mobile   -> [[tb-0028-guest-transactional-screens-and-mobile]] (done 2026-09-29)
 [x] 8. Build invoices / cash memos / printing on the guest -> [[tb-0021-invoices-cashmemos-printing]] (done 2026-09-29)
 [x] 8a. Invoice lifecycle, spreadsheet grid, standalone document -> [[guest-invoice-lifecycle]] (done 2026-09-29)
 [x] 9. Verify and finish the guest v1 (PocketBase) import -> done 2026-09-29, 60,245/60,245, sums match

@@ -59,6 +59,9 @@ function normalizeColumn(column) {
     key,
     label: String(column?.label ?? key),
     cls: cls || (column?.right ? "right" : column?.wrap ? "wrap" : ""),
+    // `link` names a link form the template knows how to render, e.g. `"invoice"` turns the invoice
+    // number cell into a type-lettered link to the invoice. Carried from the manifest unchanged.
+    link: typeof column?.link === "string" ? column.link : null,
   };
 }
 

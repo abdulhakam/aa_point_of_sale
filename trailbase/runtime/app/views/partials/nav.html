@@ -17,14 +17,22 @@
     <a class="nav-link{% if active == 'management' %} active{% endif %}" href="/management" title="Management">{{ icons.svg('settings', 20) }}</a>
   </div>
   <div class="navbar-bottom">
-    <a class="nav-link{% if active == 'pages' %} active{% endif %}" href="/p" title="Pages">{{ icons.svg('layout-grid', 20) }}</a>
-    <a class="nav-link{% if active == 'plugins' %} active{% endif %}" href="/plugins" title="Plugins">{{ icons.svg('plug', 20) }}</a>
-    <form class="job-form" method="post" action="/reports/refresh" data-job-form>
-      <button class="nav-link job" type="submit" data-job title="Reload report data">
-        <span class="job-dot" data-job-dot></span>
-        <span class="job-text" data-job-text>idle</span>
-      </button>
-    </form>
+    {# The rail's utility items collapse behind one "more" menu, so the rail is destinations and one
+       utility rather than six destinations and three utilities wearing the same coat. Logout stays
+       visible because the legacy rail ends with it. A <details> keeps the menu working with no JS. #}
+    <details class="nav-more">
+      <summary class="nav-link" title="More">{{ icons.svg('dots', 20) }}</summary>
+      <div class="nav-more-menu">
+        <a class="nav-link{% if active == 'pages' %} active{% endif %}" href="/p" title="Pages">{{ icons.svg('layout-grid', 20) }}</a>
+        <a class="nav-link{% if active == 'plugins' %} active{% endif %}" href="/plugins" title="Plugins">{{ icons.svg('plug', 20) }}</a>
+        <form class="job-form" method="post" action="/reports/refresh" data-job-form>
+          <button class="nav-link job" type="submit" data-job title="Reload report data">
+            <span class="job-dot" data-job-dot></span>
+            <span class="job-text" data-job-text>idle</span>
+          </button>
+        </form>
+      </div>
+    </details>
     <form method="post" action="/logout">
       <button class="nav-link" type="submit" title="Logout">{{ icons.svg('logout', 20) }}</button>
     </form>

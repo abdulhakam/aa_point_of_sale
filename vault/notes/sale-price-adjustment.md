@@ -1,7 +1,7 @@
 ---
 title: "Sale price adjustment: what the ask was taken to mean, and what is still open"
 type: note
-status: open
+status: closed
 created: 2026-10-05
 updated: 2026-10-05
 tags: [items, pricing, sale-price, invoice, ambiguity, ruling-needed, margin]
@@ -69,6 +69,16 @@ lot of money.
 
 > **When you say "sale price adjustment", do you mean adjusting the price on an invoice line, adjusting
 > an item's sale price, or adjusting prices across many items at once?**
+
+**ANSWERED 2026-10-05 — reading (a).** The operator meant "when writing an invoice, the price needs to
+be adjusted ONLY for that invoice, so we should be directly able to adjust the price in that invoice
+line." The capability already existed (type over the price cell — `app.js` fills the price only when it
+is empty or zero, so the operator's number always wins). What was missing was legibility: once a line is
+priced there was nothing on the line saying what the item's list price had been. The grid now shows the
+item's list price beside the editable price (`<span class="price-baseline">`, populated from the same
+`data-price` that fills the cell), so an adjustment is visible as "list 8.33" next to a typed "8.00".
+Reading (b) and (c) are **not** being built — no ruling asked for them, and (c) remains off the table
+without a separate decision.
 
 Two further questions ride on the answer, and are recorded here rather than asked separately:
 
