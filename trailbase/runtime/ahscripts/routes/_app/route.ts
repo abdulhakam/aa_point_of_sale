@@ -1076,16 +1076,30 @@ if (path === "/login" && method === "GET") {
     const concurrency = Number(query.concurrency || form.concurrency || 1) || 1;
     const origin = (String(req.url || "").match(/^https?:\/\/[^/]+/) || [""])[0];
     const reconciled = await A.jobs.reconcile(db, fanout ? { origin, concurrency } : {});
-    // Report materialisation runs here, off the request path: the minutely job drives this route,
-    // so the heavy view snapshot is built once and persisted for every runtime thread instead of
-    // being built on a report request that would hit the ~20 s call deadline.
+    // Report materialisation runs here, off the request path: the minutely job drives this route, so
+    // the fingerprint probe that invalidates every cached derived answer is not paid by a report
+    // request that would otherwise hit the ~20 s call deadline.
+    //
+    // ⚠️ This read `snap.built.length`, and there is no `built` any more. The view snapshot was retired
+    // in [[tb-0032-manifest-first-refactor]] phase 3 — `app/lib/reports.js` is now a probe and a diff,
+    // and `refresh()` returns `state` — but this call site was left behind. It threw a TypeError on
+    // every reconcile, the catch swallowed it, and `materialized` was therefore **always** null: a
+    // route that logs an error every minute and reports that it did nothing. Found by reading the
+    // server log during a fresh-depot report sweep, 2026-10-04, not by a failing check.
     let materialized: any = null;
     if (query.materialize !== "0") {
       try {
         const snap = await A.service.refresh(db);
-        materialized = { version: snap.version, views: snap.built.length };
+        materialized = {
+          tables: snap.fingerprints ? Object.keys(snap.fingerprints).length : 0,
+          changed: snap.lastRefresh ? snap.lastRefresh.changed.length : 0,
+          // Always empty, and deliberately so: a report's cost is its SQL on the current data, so
+          // there is nothing to rebuild. Reported rather than dropped so this key cannot be mistaken
+          // for the one that broke.
+          rebuilt: snap.lastRefresh ? snap.lastRefresh.rebuilt.length : 0,
+        };
       } catch (error) {
-        console.log("report materialize failed: " + error);
+        console.log("report fingerprint probe failed: " + error);
       }
     }
     return { reconciled, materialized };

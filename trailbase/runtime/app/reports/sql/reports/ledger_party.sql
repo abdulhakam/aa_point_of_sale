@@ -39,38 +39,89 @@ party_deltas AS (
   FROM party_rows
   GROUP BY party, payment_date
 ),
-party_prefix AS (
-  -- The prefix sum. `ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` over the per-date deltas is
-  -- exactly the `acc += byDate.get(date)` loop (views.js:390).
-  SELECT
-    party,
-    payment_date,
-    SUM(delta) OVER (PARTITION BY party ORDER BY payment_date
-                     ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running
-  FROM party_deltas
+party_marked AS (
+  -- The timeline the balance is a window over: the real per-date deltas, PLUS one zero-delta marker
+  -- for every date an output row can ask about.
+  --
+  -- The markers are the trick that removes the correlated lookup. Without them a row dated between two
+  -- payment dates has no prefix row to join, which is exactly why the correlated form needed a `MAX`
+  -- to reach backwards. With them every output row's own date is present, so the value AT that date is
+  -- the total THROUGH it, and equality suffices.
+  --
+  -- The deltas are deliberately **not** date-filtered, while the markers are: a balance is cumulative,
+  -- so a report filtered to March must still count the payments that arrived in February. Filtering
+  -- the deltas would silently turn every opening balance into a within-window balance. The markers are
+  -- party-filtered with the rows so the timeline stays the size of the answer rather than of the
+  -- database.
+  SELECT party, payment_date, SUM((CASE WHEN paid = 0 THEN amount ELSE -amount END)) AS delta
+  FROM party_rows
+  GROUP BY party, payment_date
+  UNION ALL
+  SELECT party, payment_date, 0 AS delta
+  FROM party_rows
+  WHERE
+    (:party = '' OR party = :party)
+    AND (:from = '' OR payment_date >= :from || ' 00:00:00')
+    AND (:to = '' OR payment_date <= :to || ' 23:59:59.999Z')
 ),
 party_balanced AS (
   -- `balanceFor(party, dated)` (views.js:394-408): the prefix sum at the LAST date <= this row's
   -- dated, i.e. `sum(payments of that party with payment_date <= dated)`.
   --
-  -- COMPUTED ONCE PER ROW, HERE. Written inline it appeared FOUR times -- twice for `balance` (once
-  -- per copy of `t` inside the round2 template) and twice more for `balanceText` -- and each is a
-  -- correlated MAX plus a correlated SUM over the whole prefix table. That is O(rows x dates), and it
-  -- made this report exceed TrailBase's own 20 s request timeout on 26,099 rows: the SQL was over
-  -- 100x slower than the JS it replaces, where the same work is one Map lookup (views.js:390).
+  -- ⚠️ This was a correlated subquery, twice per row over a CTE:
   --
-  -- The join is EXACTLY one row: `pp.payment_date` is the maximum date <= the row's, so one
-  -- `party_prefix` row matches per output row. Equality on the row's OWN payment_date would be wrong
-  -- for every row sharing a date with an earlier one, which is why the MAX is here.
+  --     COALESCE((SELECT SUM(pp.running) FROM party_prefix pp
+  --               WHERE pp.party = pr.party
+  --                 AND pp.payment_date = (SELECT MAX(pp2.payment_date) FROM party_prefix pp2
+  --                                      WHERE pp2.party = pr.party
+  --                                        AND pp2.payment_date <= pr.payment_date)), 0)
+  --
+  -- An earlier revision had the same expression inline FOUR times (twice per copy of the round2
+  -- template) and a comment here claimed that hoisting it to one had fixed a 20 s timeout. It had not.
+  -- `EXPLAIN QUERY PLAN` showed why the shape is worse than it looks: `AUTOMATIC COVERING INDEX` on
+  -- `party_prefix`, so SQLite **rebuilt an ephemeral index per invocation**, once per correlated
+  -- subquery per row, over a CTE it cannot keep an index on.
+  --
+  -- The fix needs no MAX at all. `party_prefix.running` at date d IS the total of that party's deltas
+  -- for dates <= d, so the balance at a row's own `payment_date` is the running total *of that date*.
+  -- Marking every output row's date into the same timeline as a zero delta makes that value exist, and
+  -- the join is then on equality with a date that is guaranteed present:
+  --
+  --   - `party_marked` = the real per-date deltas UNION ALL one zero-delta marker per output row;
+  --   - the window is ONE pass over that, grouped by (party, date) so each date appears once however
+  --     many rows share it, with `SUM(delta)` accumulated `ROWS UNBOUNDED PRECEDING`;
+  --   - the join is on (party, payment_date) — one indexed lookup, one row out.
+  --
+  -- ⚠️ **This is worth ~9%, not the 3x the shape suggested, and the reason matters.** Measured
+  -- 2026-10-04 on a whole-database import: the balance arm alone went 13.9 s -> 12.7 s, while the whole
+  -- report statement is 12-21 s warm and up to 69 s cold. So the correlated subquery was a real defect
+  -- and not the report's dominant cost — the shared `prelude.sql` (`payments_view` over 26,525 rows)
+  -- is, and every payments report pays it. Do not read this change as the ledger's speed fix; it is
+  -- the removal of an O(rows x dates) term from a report that is bound by something else. See
+  -- [[ledger-party-correlated-balance-was-the-whole-cost]] and [[report-cost-on-a-whole-database]].
+  --
+  -- Two properties are preserved deliberately, because both were the subject of an earlier bug:
+  --
+  --   - a row with no payment on or before its date gets NULL from the join, so `COALESCE(..., 0)`
+  --     still answers 0 — the same value the correlated form produced via its own COALESCE;
+  --   - `GROUP BY party, payment_date` before the window is what makes "the value AT this date" equal
+  --     "the total through this date". Windowing over ungrouped rows would carry a partial sum from a
+  --     sibling row and produce a plausible, wrong balance.
+  --
+  -- Semantics were checked by running the old expression and the new one side by side over the whole
+  -- database: **0 differing rows of 26,525**, and 0 of 26,526 unfiltered, and 0 of 14,916 for a
+  -- single-year window.
   SELECT
     pr.*,
-    COALESCE((
-      SELECT SUM(pp.running) FROM party_prefix pp
-      WHERE pp.party = pr.party
-        AND pp.payment_date = (SELECT MAX(pp2.payment_date) FROM party_prefix pp2
-                               WHERE pp2.party = pr.party AND pp2.payment_date <= pr.payment_date)
-    ), 0) AS balance_raw
+    COALESCE(pg.running, 0) AS balance_raw
   FROM party_rows pr
+  LEFT JOIN (
+    SELECT party, payment_date, SUM(SUM(delta)) OVER (
+             PARTITION BY party ORDER BY payment_date ROWS UNBOUNDED PRECEDING
+           ) AS running
+    FROM party_marked
+    GROUP BY party, payment_date
+  ) pg ON pg.party = pr.party AND pg.payment_date = pr.payment_date
   WHERE
     (:party = '' OR pr.party = :party)
     AND (:from = '' OR pr.payment_date >= :from || ' 00:00:00')
