@@ -275,3 +275,17 @@ export const flag = (value) => (value === "1" || value === "on" || value === "tr
 /** `{0:"Purchase",…}` -> `[{code:0,label:"Purchase"},…]`, the shape the type selects render. */
 export const typeOptions = (map) =>
   Object.keys(map).map((code) => ({ code: Number(code), label: map[code] }));
+
+/**
+ * The logged-in user's id as canonical UUID hex, for the invoice lease and creator columns.
+ *
+ * The host resolves `req.user.id` as a UUID string; this normalises it to the uppercase hex the
+ * schema stores. Used by the invoice-entry family (lease owner, creator), so it lives here rather
+ * than in each route folder.
+ */
+export function userHex(req) {
+  const id = String((req && req.user && req.user.id) || "");
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)
+    ? id.replace(/-/g, "").toUpperCase()
+    : b64ToHex(id);
+}

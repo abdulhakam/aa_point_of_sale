@@ -932,11 +932,8 @@ if (path === "/login" && method === "GET") {
   // snapshot so a report opened straight afterwards sees it. Money is rounded at 2 dp inside
   // those modules ([[money-is-2dp-everywhere]]).
 
-  const typeOptions = (map) => Object.keys(map).map((code) => ({ code: Number(code), label: map[code] }));
-  const paymentTypes = typeOptions(A.payments.PAYMENT_TYPES);
   const round2to = (v) => Math.round((Number(v) + Number.EPSILON) * 100) / 100;
   const pick = (value, fallback) => (value === undefined || value === null || value === "" ? fallback : value);
-  const flag = (value) => (value === "1" || value === "on" || value === "true" ? "on" : "");
 
   // ------------------------------------------------------------------ print queue
   //
@@ -1129,45 +1126,8 @@ if (path === "/login" && method === "GET") {
   // GET /invoices (the list) moved to `ahscripts/routes/invoices/route.ts` (tb-0030 step 5).
   // `/invoices/new` and `/invoices/<id>/…` still fall through to this dispatcher.
 
-  if (path === "/invoices/new") {
-    const type = pick(query.type, "1") === "0" ? 0 : 1;
-    const refs = await A.routeKit.refs();
-    if (method === "GET") {
-      return html(
-        await A.http.page(req, shell(user, "invoices", "New invoice"), "invoices/entry.html", {
-          isNew: true,
-          type,
-          typeLabel: A.invoices.typeLabel(type),
-          parties: refs.parties ?? [],
-          bookers: refs.bookers ?? [],
-          items: A.routeKit.editorItems(refs),
-          // The quick-create panels' option lists: the party's area and the item's company. The party's
-          // TYPE is the invoice's own type, and the item's numbers are typed, so neither needs a list.
-          areas: refs.areas ?? [],
-          companies: refs.companies ?? [],
-        })
-      );
-    }
-    // A key from the form makes a repeated submit return the same invoice instead of a second one.
-    const created = await A.routeKit.write(async () => {
-      // The party first: if it cannot be made, no invoice is created. A purchase's new party is a
-      // supplier and carries a company of its own name; see `lib/quick-create.js`.
-      const newParty = await A.quickCreate.partyFromForm(db, form);
-      const invoice = await A.invoicing.createInvoice(db, {
-        type,
-        key: String(form.key || ""),
-        userHex,
-        device: String(form.device || ""),
-      });
-      const createdHex = A.routeKit.b64ToHex(String(invoice.id));
-      await A.invoicing.patchHeader(db, createdHex, {
-        party: newParty ? A.routeKit.hexToB64(newParty) : String(form.party || ""),
-        dated: A.format.dateOnly(new Date().toISOString()),
-      });
-      return invoice;
-    });
-    return redirect("/invoices/" + created.id);
-  }
+  // /invoices/new (GET entry screen + POST create) moved to `ahscripts/routes/invoices/new/route.ts`
+  // (tb-0030 step 5).
 
   // Three POST routes, previously one (`/invoices/{id}/(header|line|complete)`). Split in place
   // (tb-0030 step 3) while this dispatcher is still the reference, so each can become its own route
@@ -1476,26 +1436,7 @@ if (path === "/login" && method === "GET") {
   // GET /payments (the list) moved to `ahscripts/routes/payments/route.ts` (tb-0030 step 5).
   // `/payments/new`, the POST and `/payments/<id>/delete` still fall through to this dispatcher.
 
-  if (path === "/payments/new" && method === "GET") {
-    const refs = await A.routeKit.refs();
-    const invoice = query.invoice ? await A.invoices.readInvoice(db, String(query.invoice)) : null;
-    const open = await A.invoices.listInvoices(db, { unpaid: "on" });
-    return html(
-      await A.http.page(req, shell(user, "payments", "New payment"), "payments/new.html", {
-        invoice,
-        openInvoices: open.slice(0, 100),
-        types: paymentTypes,
-        selectedType: Number(pick(query.type, invoice && invoice.type === 0 ? "0" : "1")),
-        selectedParty: String(pick(query.party, invoice ? invoice.party || "" : "")),
-        selectedPaidTo: "",
-        amount: String(pick(query.amount, invoice ? invoice.balanceText : "")),
-        today: A.format.dateOnly(new Date().toISOString()),
-        parties: refs.parties ?? [],
-        bookers: refs.bookers ?? [],
-        error: "",
-      })
-    );
-  }
+  // /payments/new moved to `ahscripts/routes/payments/new/route.ts` (tb-0030 step 5).
 
   if (path === "/payments" && method === "POST") {
     try {
@@ -1524,21 +1465,7 @@ if (path === "/login" && method === "GET") {
   // GET /inventory moved to `ahscripts/routes/inventory/route.ts` (tb-0030 step 5). `/inventory/save`
   // still falls through to this dispatcher.
 
-  if (path === "/inventory/save" && method === "POST") {
-    // Reject a body that omits a required field BEFORE the write. Without this an empty POST inserted
-    // an item with `name = ''` and redirected `303 ?status=ok` — the table's
-    // `name TEXT NOT NULL DEFAULT ''` was satisfied, and the junk item then showed up in the
-    // inventory, the stock report and the difference report. `createRow` now also enforces this, so
-    // the check here is what turns the refusal into a 400 rather than an unhandled 500.
-    const missing = A.management.missingRequired(A.entities.ENTITIES.items, form);
-    if (missing.length) return { error: "missing required fields", fields: missing };
-    await A.routeKit.write(() =>
-        String(form.id || "")
-          ? A.inventory.updateItem(db, "items", String(form.id), form)
-          : A.management.createRow(db, A.entities.ENTITIES.items, form)
-      );
-    return redirect("/inventory?status=ok");
-  }
+  // /inventory/save moved to `ahscripts/routes/inventory/save/route.ts` (tb-0030 step 5).
 
   if (path === "/p") {
     const pages = await A.pages.listPages(PAGES_DIR);

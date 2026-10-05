@@ -381,10 +381,16 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   ("not a parser"); treat a lone-brace report against a passing smoke as a tool artifact, not a syntax
   error, and fix the blanking before trusting it again.
 
-  **Next within step 5:** the remaining families, one at a time (`/invoices/new` and `/invoices/<id>/…`,
-  `/payments/new`, the POST and `<id>/delete`, `cashmemo`, `print`, the `invoice`/`invoice-doc` API
-  families, `/jobs`, `/p`); then the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`,
-  `/plugins/*`, `/favicon.svg`); then auth (`/login`, `/logout`, `/`).
+  **Then the first write routes** (2026-10-05): `/invoices/new` (GET entry + POST create, covered by the
+  create-from-the-invoice smoke checks), `/payments/new` (GET) and `/inventory/save` (POST) moved to
+  folders, their dispatcher branches deleted. `userHex` — the lease/creator id — moved to `route-kit` so
+  the invoice folders share it. `guest-smoke.mjs` **99/99**, and the now-dead `typeOptions`/`paymentTypes`/
+  `flag` locals were removed from the dispatcher.
+
+  **Next within step 5:** the remaining families, one at a time (`/invoices/<id>/…` — header, complete,
+  line, line delete, lines, grid, view, the page; the `/payments` POST and `<id>/delete`; `cashmemo`;
+  `print`; the `invoice`/`invoice-doc` API families; `/jobs`; `/p`); then the `{param}`/`[...rest]` prefix
+  routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`); then auth (`/login`, `/logout`, `/`).
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
