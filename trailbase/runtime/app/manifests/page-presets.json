@@ -1,0 +1,36 @@
+{
+  "$comment": "Named page-filter presets. A page's `filters` array may hold a STRING naming one of these instead of repeating the object; `normalizeMeta` in app/lib/pages.js expands it (an array preset, like a date range, splices in; an object preset becomes one filter). This is DATA, not behaviour: the field shapes are what fourteen page manifests were spelling out identically. A page still writes its own filters inline where they are unique (the payment `type` select, the `applyDate` check). An unknown preset name is dropped AND logged, so a typo is not a silently missing filter.",
+  "filters": {
+    "dateRangeInvoice": [
+      { "name": "from", "label": "Date From", "type": "date", "default": { "source": "invoice" } },
+      { "name": "to", "label": "Date To", "type": "date", "default": { "source": "invoice" } }
+    ],
+    "dateRangePayments": [
+      { "name": "from", "label": "Date From", "type": "date", "default": { "source": "payments" } },
+      { "name": "to", "label": "Date To", "type": "date", "default": { "source": "payments" } }
+    ],
+    "dateRangeGeneral": [
+      { "name": "from", "label": "Date From", "type": "date", "default": { "fn": "monthStart" } },
+      { "name": "to", "label": "Date To", "type": "date", "default": { "fn": "today" } }
+    ],
+    "company": { "name": "company", "label": "Company", "type": "select", "source": "companies" },
+    "party": { "name": "party", "label": "Party", "type": "select", "source": "parties" },
+    "booker": { "name": "booker", "label": "Booker", "type": "select", "source": "order_bookers" },
+    "area": { "name": "area", "label": "Area", "type": "select", "source": "areas" },
+    "section": { "name": "section", "label": "Section", "type": "select", "source": "sections" },
+    "item": { "name": "item", "label": "Item", "type": "select", "source": "items" },
+    "invoice": { "name": "invoice", "label": "Invoice", "type": "text" }
+  },
+  "columns": {
+    "paymentRow": [
+      { "key": "date", "label": "Date" },
+      { "key": "type", "label": "Type" },
+      { "key": "invoice", "label": "Invoice" },
+      { "key": "area", "label": "Area" },
+      { "key": "section", "label": "Section" },
+      { "key": "party", "label": "Party" },
+      { "key": "booker", "label": "Booker" },
+      { "key": "amountText", "label": "Amount", "right": true }
+    ]
+  }
+}

@@ -35,34 +35,9 @@
     }
   },
   "filters": [
-    {
-      "name": "from",
-      "label": "Date From",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "to",
-      "label": "Date To",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "area",
-      "label": "Area",
-      "type": "select",
-      "source": "areas"
-    },
-    {
-      "name": "section",
-      "label": "Section",
-      "type": "select",
-      "source": "sections"
-    }
+    "dateRangePayments",
+    "area",
+    "section"
   ],
   "columns": [
     {

@@ -17,7 +17,7 @@ const DIR = "/app/manifests";
 const cache = new Map();
 
 /** Every manifest this directory must hold. Named so a missing one fails at start-up, not at first use. */
-const REQUIRED = ["entities", "schema", "content-types", "static-mounts"];
+const REQUIRED = ["entities", "schema", "content-types", "static-mounts", "page-presets"];
 
 async function read(name) {
   if (cache.has(name)) return cache.get(name);
@@ -43,6 +43,14 @@ export const schema = () => read("schema");
 
 /** Which URL prefixes serve which directories under `/app`. Read by `routeKit.resolveMount`. */
 export const staticMounts = () => read("static-mounts");
+
+/**
+ * Named page-filter/column presets a page manifest may reference by name. Read by `app/lib/pages.js`'s
+ * `readMeta` and expanded in `normalizeMeta`, so fourteen page manifests stop spelling out the same
+ * filter objects. In `REQUIRED`, so a missing or malformed file is a start-up failure, not a page that
+ * silently loses its filters.
+ */
+export const pagePresets = () => read("page-presets");
 
 /** Everything, for a caller that wants it in one read. */
 export async function all() {

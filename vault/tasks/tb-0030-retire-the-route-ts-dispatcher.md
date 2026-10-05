@@ -482,8 +482,19 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
       **Follow-ups the deletion left (dev tools, not runtime):** `tools/feature-parity.mjs` and
       `tools/route-inventory.json` (with `route-coverage.mjs`) still parse the old dispatcher to enumerate
       routes; they want a folder-aware rewrite. They are not gates.
-- [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
-      folders. Independent of the route work; not to be bundled with it.
+- [x] **7. `meta.json` column/filter presets.** **DONE 2026-10-05.** `app/manifests/page-presets.json`
+      holds the named filter/column shapes the page manifests were spelling out identically:
+      `dateRangeInvoice`, `dateRangePayments`, `dateRangeGeneral` (the general ledger's `monthStart`/
+      `today` pair), and `company`/`party`/`booker`/`area`/`section`/`item`/`invoice`, plus a `paymentRow`
+      column set shared by payments and salesreport. A page's `filters`/`columns` array may name a preset
+      (an ARRAY preset splices in, an object preset is one entry) or keep an inline object where the field
+      is unique — `/reports/payments` mixes both, keeping its `type` select. Expansion is in `normalizeMeta`
+      (`app/lib/pages.js`), fed by `manifests.pagePresets()`; an unknown preset name is dropped **and
+      logged**, so a typo cannot become a silently missing filter, and the manifest is in `REQUIRED` so a
+      missing/malformed preset file fails at start-up. `guest-smoke.mjs` **112/112**, including two checks
+      that assert the filter LABELS expand — a lock the render checks cannot give, because a page missing a
+      filter still renders. Net ~45 manifest lines removed per converted page, not the estimated 11.
+      Independent of the route work, as planned.
 
 ## Acceptance gate
 

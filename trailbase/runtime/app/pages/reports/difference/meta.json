@@ -34,12 +34,7 @@
     }
   },
   "filters": [
-    {
-      "name": "company",
-      "label": "Company",
-      "type": "select",
-      "source": "companies"
-    }
+    "company"
   ],
   "columns": [
     {

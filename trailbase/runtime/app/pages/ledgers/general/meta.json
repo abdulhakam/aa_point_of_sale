@@ -75,22 +75,7 @@
     }
   },
   "filters": [
-    {
-      "name": "from",
-      "label": "Date From",
-      "type": "date",
-      "default": {
-        "fn": "monthStart"
-      }
-    },
-    {
-      "name": "to",
-      "label": "Date To",
-      "type": "date",
-      "default": {
-        "fn": "today"
-      }
-    }
+    "dateRangeGeneral"
   ],
   "columns": [
     {

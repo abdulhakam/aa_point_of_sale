@@ -50,58 +50,18 @@
     }
   },
   "filters": [
-    {
-      "name": "from",
-      "label": "Date From",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "to",
-      "label": "Date To",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
+    "dateRangePayments",
     {
       "name": "applyDate",
       "label": "Apply Date Filter",
       "type": "check",
       "default": true
     },
-    {
-      "name": "company",
-      "label": "Company",
-      "type": "select",
-      "source": "companies"
-    },
-    {
-      "name": "party",
-      "label": "Party",
-      "type": "select",
-      "source": "parties"
-    },
-    {
-      "name": "area",
-      "label": "Area",
-      "type": "select",
-      "source": "areas"
-    },
-    {
-      "name": "section",
-      "label": "Section",
-      "type": "select",
-      "source": "sections"
-    },
-    {
-      "name": "booker",
-      "label": "Booker",
-      "type": "select",
-      "source": "order_bookers"
-    }
+    "company",
+    "party",
+    "area",
+    "section",
+    "booker"
   ],
   "columns": [
     {

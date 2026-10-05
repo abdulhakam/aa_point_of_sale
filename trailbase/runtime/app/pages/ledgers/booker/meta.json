@@ -44,28 +44,8 @@
     }
   },
   "filters": [
-    {
-      "name": "from",
-      "label": "Date From",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "to",
-      "label": "Date To",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "booker",
-      "label": "Booker",
-      "type": "select",
-      "source": "order_bookers"
-    }
+    "dateRangePayments",
+    "booker"
   ],
   "columns": [
     {

@@ -31,40 +31,10 @@
     }
   },
   "filters": [
-    {
-      "name": "from",
-      "label": "Date From",
-      "type": "date",
-      "default": {
-        "source": "invoice"
-      }
-    },
-    {
-      "name": "to",
-      "label": "Date To",
-      "type": "date",
-      "default": {
-        "source": "invoice"
-      }
-    },
-    {
-      "name": "booker",
-      "label": "Booker",
-      "type": "select",
-      "source": "order_bookers"
-    },
-    {
-      "name": "area",
-      "label": "Area",
-      "type": "select",
-      "source": "areas"
-    },
-    {
-      "name": "section",
-      "label": "Section",
-      "type": "select",
-      "source": "sections"
-    }
+    "dateRangeInvoice",
+    "booker",
+    "area",
+    "section"
   ],
   "columns": [
     {

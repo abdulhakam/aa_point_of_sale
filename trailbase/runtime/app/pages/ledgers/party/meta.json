@@ -38,28 +38,8 @@
     }
   },
   "filters": [
-    {
-      "name": "from",
-      "label": "Date From",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "to",
-      "label": "Date To",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "party",
-      "label": "Party",
-      "type": "select",
-      "source": "parties"
-    }
+    "dateRangePayments",
+    "party"
   ],
   "columns": [
     {

@@ -12,6 +12,7 @@
 
 import * as format from "../compute/format.js";
 import { join, normalize } from "./paths.js";
+import { pagePresets } from "../manifests/index.js";
 
 const META = "meta.json";
 const MAX_DEPTH = 6;
@@ -108,8 +109,22 @@ export function bindTotalsGroups(groups, totals) {
   }));
 }
 
-export function normalizeMeta(meta) {
-  const filters = (Array.isArray(meta?.filters) ? meta.filters : []).map(normalizeFilter).filter((f) => f.name);
+export function normalizeMeta(meta, presets) {
+  // A `filters`/`columns` entry may be a STRING naming a preset from `app/manifests/page-presets.json`:
+  // an array preset (a date range) splices in, an object preset becomes one entry. An unknown name is
+  // dropped AND logged — a typo must not become a silently missing filter, which is the failure this
+  // mechanism would otherwise introduce.
+  const expand = (list, table, kind) =>
+    (Array.isArray(list) ? list : []).flatMap((entry) => {
+      if (typeof entry !== "string") return [entry];
+      const hit = table ? table[entry] : undefined;
+      if (hit === undefined) {
+        console.warn(`[pages] unknown ${kind} preset "${entry}"`);
+        return [];
+      }
+      return Array.isArray(hit) ? hit : [hit];
+    });
+  const filters = expand(meta?.filters, presets?.filters, "filter").map(normalizeFilter).filter((f) => f.name);
   const sources = filters.map((f) => f.source).filter(Boolean);
   return {
     title: typeof meta?.title === "string" && meta.title ? meta.title : "Page",
@@ -157,7 +172,7 @@ export function normalizeMeta(meta) {
     // `fields` is the server-rendered report template's name for the same list; both are exposed so
     // neither template has to know which host is asking.
     fields: filters,
-    columns: (Array.isArray(meta?.columns) ? meta.columns : []).map(normalizeColumn).filter((c) => c.key),
+    columns: expand(meta?.columns, presets?.columns, "column").map(normalizeColumn).filter((c) => c.key),
     totals: totalsGroups(meta),
   };
 }
@@ -170,7 +185,7 @@ async function readMeta(dir) {
     return null;
   }
   try {
-    return normalizeMeta(JSON.parse(raw));
+    return normalizeMeta(JSON.parse(raw), await pagePresets());
   } catch {
     return null;
   }

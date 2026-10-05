@@ -652,6 +652,23 @@ async function main() {
     const logout = await get(cookies, "/logout");
     check("logout redirects to TrailBase's auth endpoint", (logout.status === 302 || logout.status === 303) && String(logout.location).includes("auth"), `${logout.status} ${logout.location}`);
 
+    // Preset expansion (app/manifests/page-presets.json): a page's `filters`/`columns` array may name a
+    // preset, which `normalizeMeta` expands. A wrong preset name or a broken expansion would NOT fail a
+    // render check — the page still renders, just without that filter/column. So assert the LABELS are
+    // present, which is what makes the preset indirection safe.
+    const profitPage = await get(cookies, "/reports/profit");
+    check(
+      "report filter presets expand (profit shows every declared filter)",
+      ["Date From", "Date To", "Company", "Party", "Booker", "Area", "Section", "Item", "Invoice"].every((l) => profitPage.body.includes(l)),
+      `${profitPage.status}`
+    );
+    const paymentsPage = await get(cookies, "/reports/payments");
+    check(
+      "a page can mix presets with an inline filter (payments keeps Payment Type)",
+      paymentsPage.body.includes("Payment Type") && paymentsPage.body.includes("Date From") && paymentsPage.body.includes("Amount"),
+      `${paymentsPage.status}`
+    );
+
     // The host poller resolves /jobs/reconcile through the generic router at startup and fires it
     // minutely (tb-0030 step 6 made this folder-driven; before that it required a dispatcher FILE,
     // which no longer exists). The poller calls `run_route` DIRECTLY, so it never shows up as a normal

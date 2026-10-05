@@ -61,86 +61,15 @@
     }
   },
   "filters": [
-    {
-      "name": "from",
-      "label": "Date From",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "to",
-      "label": "Date To",
-      "type": "date",
-      "default": {
-        "source": "payments"
-      }
-    },
-    {
-      "name": "party",
-      "label": "Party",
-      "type": "select",
-      "source": "parties"
-    },
-    {
-      "name": "area",
-      "label": "Area",
-      "type": "select",
-      "source": "areas"
-    },
-    {
-      "name": "section",
-      "label": "Section",
-      "type": "select",
-      "source": "sections"
-    },
-    {
-      "name": "booker",
-      "label": "Booker",
-      "type": "select",
-      "source": "order_bookers"
-    },
-    {
-      "name": "invoice",
-      "label": "Invoice",
-      "type": "text"
-    }
+    "dateRangePayments",
+    "party",
+    "area",
+    "section",
+    "booker",
+    "invoice"
   ],
   "columns": [
-    {
-      "key": "date",
-      "label": "Date"
-    },
-    {
-      "key": "type",
-      "label": "Type"
-    },
-    {
-      "key": "invoice",
-      "label": "Invoice"
-    },
-    {
-      "key": "area",
-      "label": "Area"
-    },
-    {
-      "key": "section",
-      "label": "Section"
-    },
-    {
-      "key": "party",
-      "label": "Party"
-    },
-    {
-      "key": "booker",
-      "label": "Booker"
-    },
-    {
-      "key": "amountText",
-      "label": "Amount",
-      "right": true
-    }
+    "paymentRow"
   ],
   "totals": [
     {

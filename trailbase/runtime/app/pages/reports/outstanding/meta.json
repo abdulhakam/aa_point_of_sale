@@ -40,24 +40,9 @@
     }
   },
   "filters": [
-    {
-      "name": "booker",
-      "label": "Booker",
-      "type": "select",
-      "source": "order_bookers"
-    },
-    {
-      "name": "area",
-      "label": "Area",
-      "type": "select",
-      "source": "areas"
-    },
-    {
-      "name": "section",
-      "label": "Section",
-      "type": "select",
-      "source": "sections"
-    }
+    "booker",
+    "area",
+    "section"
   ],
   "columns": [
     {
