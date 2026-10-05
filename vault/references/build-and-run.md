@@ -199,6 +199,12 @@ All the harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-
 | `node trailbase/tools/hotkey-check.mjs` | **drives the keyboard layer with real keystrokes** in headless Chrome over CDP, and asserts the three rules it promises. 34 checks. Needs Chrome; pass `--chrome <path>` if it is not in the default place | yes |
 | `node trailbase/tools/grid-preview-check.mjs` | the invoice grid's live preview: a line edit moves the line and the total, an invoice Discount % moves every line, a Discount Rs moves only the total, and **the browser's total equals the server's** (by loading once with scripting disabled). 14 checks | yes |
 | `node trailbase/tools/client-cost.mjs` | **per-keystroke cost on the real database** — the table filter, the `<select>` filter, the grid recalculation and the row cursor. A measurement rather than a pass/fail, and re-runnable to compare against [[minimise-client-side-calculation]] | yes |
+| `node trailbase/tools/guest-capture.mjs` | **captures the guest at 1600×900** — the legacy reference's viewport — into `vault/attachments/guest-ui/`, writing a `.png` and a `.structure.json` per screen. This is how [[ui-parity-discrepancies-2026-10-05]] was measured; `--only <substring>` narrows it | yes |
+
+⚠️ `guest-capture.mjs` writes PNGs into `vault/attachments/guest-ui/`, which is **committed**. Re-running it
+overwrites them, so a diff of that directory is the visual-parity history. It does **not** capture the
+legacy app: every legacy screen answers "Please log in to continue", so the comparison is against the
+2026-09-27 captures in `vault/attachments/legacy-ui/`.
 
 ⚠️ `report-sql-provenance.mjs` needs the **depot's** `main.db`, so stop the server first or accept that
 the read-only connection sees committed data only. It is the one tool here that must not be run against a

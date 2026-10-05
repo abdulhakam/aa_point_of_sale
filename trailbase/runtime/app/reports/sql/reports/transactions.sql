@@ -16,7 +16,19 @@
     tr.dated,
     tr.type,
     tr.invoice,
-    tr.invoiceNo,
+    -- ⚠️ `invoiceNo` is a REAL, so selecting it raw printed "1.0", "2.0", "3840.0" — visible on the
+    -- Profit Report and the Item Sales Report, which both read this file, while the reports reading
+    -- `payments.sql` and `payments_by_company.sql` printed the integer text. The legacy column reads
+    -- `S 8606`. This is the same normalisation those two files already do, copied rather than invented:
+    -- integer-valued numbers become integer TEXT, and a genuinely fractional number falls back to TEXT
+    -- so nothing is silently rounded away. Found by diffing this screen against
+    -- `vault/attachments/legacy-ui/09-reports-profit.png` on 2026-10-05.
+    --
+    -- Still short of legacy, which prefixes the invoice TYPE letter and renders the number as a link to
+    -- the invoice. Recorded as a discrepancy rather than half-done here.
+    CASE WHEN CAST(tr.invoiceNo AS REAL) = CAST(CAST(tr.invoiceNo AS INTEGER) AS REAL)
+         THEN CAST(CAST(tr.invoiceNo AS INTEGER) AS TEXT)
+         ELSE CAST(tr.invoiceNo AS TEXT) END AS invoiceNo,
     tr.party,
     tr.item,
     tr.price,

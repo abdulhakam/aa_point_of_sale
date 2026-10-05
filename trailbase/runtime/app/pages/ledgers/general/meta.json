@@ -99,7 +99,7 @@
     },
     {
       "key": "invoiceNo",
-      "label": "Inv #"
+      "label": "Invoice"
     },
     {
       "key": "description",

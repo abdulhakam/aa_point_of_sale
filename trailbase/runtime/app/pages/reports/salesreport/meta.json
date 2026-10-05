@@ -103,7 +103,7 @@
     },
     {
       "name": "invoice",
-      "label": "Invoice #",
+      "label": "Invoice",
       "type": "text"
     }
   ],
@@ -118,7 +118,7 @@
     },
     {
       "key": "invoice",
-      "label": "Inv #"
+      "label": "Invoice"
     },
     {
       "key": "area",

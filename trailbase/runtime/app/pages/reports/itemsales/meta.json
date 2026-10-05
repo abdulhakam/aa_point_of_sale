@@ -110,7 +110,7 @@
     },
     {
       "name": "invoice",
-      "label": "Invoice #",
+      "label": "Invoice",
       "type": "text"
     }
   ],
@@ -129,7 +129,7 @@
     },
     {
       "key": "invoiceNo",
-      "label": "Inv #"
+      "label": "Invoice"
     },
     {
       "key": "party",

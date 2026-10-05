@@ -85,3 +85,24 @@ export function invalidate() {
 }
 
 const stripTrailingSemicolon = (sql) => String(sql).trim().replace(/;\s*$/, "");
+
+/**
+ * The legacy report's period line reads `11-Apr-2026` — day, three-letter month, four-digit year.
+ * Measured off `vault/attachments/legacy-ui/09-reports-profit.png`, where the title row carries
+ * "From: 11-Apr-2026 To: 28-Sep-2026" on the right.
+ *
+ * ⚠️ Deliberately NOT `toLocaleDateString`, whose output depends on the host's ICU data and locale —
+ * the same build would print `Apr 11, 2026` or `11/04/2026` on another machine, and a date that changes
+ * shape with the environment is not a date a shop can read a printout of. The month names are spelled
+ * out here.
+ *
+ * The parts are taken as TEXT rather than parsed into a Date, so no timezone can shift the day — the
+ * same reason the rest of this module works in UTC fields.
+ */
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+export function legacyDate(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ""));
+  if (!m) return value ? String(value) : "";
+  return `${m[3]}-${MONTHS[Number(m[2]) - 1] ?? m[2]}-${m[1]}`;
+}

@@ -420,6 +420,13 @@ async function renderReportPage(
     options,
     appliedLabels,
     missing,
+    // The legacy report's period line, `11-Apr-2026`, on the right of the title row. There was no
+    // `meta` on the frame — the old meta line below the filters was rendering `appliedLabels`, so the
+    // period was never shown in the legacy's own form. See `app/lib/dates.js::legacyDate`.
+    period: {
+      from: A.dates.legacyDate(filters.from),
+      to: A.dates.legacyDate(filters.to),
+    },
   };
   const view = pageDef.view || DEFAULT_REPORT_VIEW;
 

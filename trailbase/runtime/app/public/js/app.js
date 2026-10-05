@@ -75,7 +75,17 @@
       filter.placeholder = "filter…";
       filter.className = "select-filter";
       filter.setAttribute("aria-label", "Filter options");
-      select.parentNode.insertBefore(filter, select);
+
+      // The select and its search box go into a shared row wrapper. Inserted as a sibling inside the
+      // label's column flex, the box stacked ABOVE the select and put a second input over every report
+      // filter, so the legacy one-row filter block became a two-row grid of paired boxes. The legacy
+      // controls are Mantine Selects, which search inside the control; a native `<select>` cannot, so
+      // the affordance stays — but it sits beside its select now, and the row reads as it did.
+      var pair = document.createElement("span");
+      pair.className = "field-row";
+      select.parentNode.insertBefore(pair, select);
+      pair.appendChild(select);
+      pair.appendChild(filter);
 
       // The option text is lowercased ONCE, not once per keystroke. `option.text.toLowerCase()` inside
       // the handler meant a fresh string per option per keypress: 208 allocations per key on the item

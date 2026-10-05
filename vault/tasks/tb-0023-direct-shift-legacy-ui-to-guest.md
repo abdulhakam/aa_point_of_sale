@@ -33,8 +33,27 @@ reference ([[legacy-ui-reference-captures]]).
       read from the optional `trailbase/runtime/app/config/business.json` (legacy values as the
       built-in default in `route.ts`), and feeds the header brand and the report `.print-head`.
       Verified by overriding the file and seeing the rendered brand change without a rebuild.
+- [x] Screenshot-diff the ported pages against [[legacy-ui-reference-captures]]. Done 2026-10-05 —
+      `tools/guest-capture.mjs` captured 32 guest screens at the reference's 1600×900 and the
+      discrepancies were settled one by one: [[ui-parity-discrepancies-2026-10-05]]. Ten fixed, of which
+      two were not cosmetic — the Profit and Item Sales reports printed the invoice number as a float
+      (`1.0`) because `transactions.sql` selected a REAL raw, and the report period had never rendered at
+      all because the frame carries no `meta`. Nine remain (items A–I), of which **A — the management
+      screens carrying an inline create form, a count badge and card wrappers where legacy has a bare
+      filter row and a table — needs a decision, not work.**
+- [ ] Rule on the nine remaining discrepancies in [[ui-parity-discrepancies-2026-10-05]] (A–I).
 - [ ] Rule on the category-4 differences in [[guest-frontend-feature-parity-gaps]] (opening
       balances, report-filter gating) and record the ruling.
+
+⚠️ **The comparison is against the 2026-09-27 captures, not the running legacy app.** The legacy app
+answers "Please log in to continue" on every screen and no legacy credential is recorded, so a live
+side-by-side on the same data was not possible. It is the one gap in the method and it needs the legacy
+password to close.
+
+⚠️ **The comparison is against the 2026-09-27 captures, not the running legacy app.** The legacy app
+answers "Please log in to continue" on every screen and no legacy credential is recorded, so a live
+side-by-side on the same data was not possible. It is the one gap in the method and it needs the legacy
+password to close.
 - [ ] Decide, per category-5 item, whether the new-side-only screens (Companies, `/p`, plugins)
       converge with legacy or are accepted as additions.
 

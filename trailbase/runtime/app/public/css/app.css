@@ -136,7 +136,24 @@ h1, h2, h3 { font-weight: 700; }
 
 /* ------------------------------------------------------------------ tiles */
 
-.tiles { display: flex; flex-wrap: wrap; gap: 16px; }
+/* ⚠️ The legacy hub lays its tiles out as a FIXED five-column grid with a wide gap, not as a flow of
+ * equal-width boxes. Measured off `vault/attachments/legacy-ui/03-reports.png` at 1600x900: tiles are
+ * 160px wide at x = 124, 394, 664, 934, 1204 — a 110px gap — and the eleventh tile wraps to column 1
+ * of the next row. `display: flex; gap: 16px` fitted eight per row instead, which changed every hub's
+ * shape and was the largest single visual difference between the two systems.
+ *
+ * `justify-content: space-between` reproduces the spacing without hard-coding 110px, and keeps a short
+ * final row's tiles in columns 1..n — which is what the legacy capture shows for Daily Sale Report. */
+.tiles { display: grid; grid-template-columns: repeat(5, 10em); justify-content: space-between; gap: 32px 0; }
+
+/* The dashboard carries four tiles and the legacy spaces them at ~84px, ending well short of the card's
+ * right edge — so it is NOT the same five-column stretch. Measured off `02-dashboard.png`: x = 112, 356,
+ * 600, 845. */
+.tiles.dashboard { grid-template-columns: repeat(4, 10em); gap: 84px; justify-content: start; }
+
+@media (max-width: 1200px) { .tiles { grid-template-columns: repeat(4, 10em); gap: 32px; justify-content: start; } }
+@media (max-width: 900px) { .tiles, .tiles.dashboard { grid-template-columns: repeat(3, 10em); } }
+@media (max-width: 640px) { .tiles, .tiles.dashboard { grid-template-columns: repeat(2, 10em); } }
 
 .tile {
   width: 10em;
@@ -209,10 +226,24 @@ h1, h2, h3 { font-weight: 700; }
 .field.check { flex-direction: row; align-items: center; gap: 8px; }
 .field.check input { min-width: 0; height: auto; }
 .field.check > span { font-size: 0.875rem; }
+/* The search box `enhanceSelects` injects above every long <select>.
+ *
+ * ⚠️ It used to be a full-width block ABOVE its select (`display: block` inside a column flex label),
+ * which put a second input over every report filter and pushed the select down — so the legacy filter
+ * row, which is one row of selects ending in APPLY, became a two-row grid with paired boxes. The legacy
+ * controls are Mantine `Select`s, which search INSIDE the control; a native `<select>` cannot, so some
+ * affordance has to exist. This is now a compact trailing box on the SAME row, which keeps the row
+ * reading as one row of filters. The behaviour difference is recorded rather than hidden — see
+ * [[ui-parity-discrepancies-2026-10-05]]. */
 .select-filter {
-  font: inherit; font-size: 0.8rem; height: 28px; margin-bottom: 4px;
+  font: inherit; font-size: 0.75rem; height: 36px; width: 7rem; flex: 0 0 auto;
   padding: 0 8px; border: 1px solid var(--gray-4); border-radius: var(--radius);
 }
+.select-filter::placeholder { color: var(--gray-6); }
+/* The select and its search box travel together on one line, so a report's filter row still reads as
+ * one row of controls with the label above — which is the legacy shape. `enhanceSelects` wraps the pair. */
+.field-row { display: flex; align-items: center; gap: 6px; }
+.field-row > select { min-width: 0; }
 
 /* ---------------------------------------------------------------- buttons */
 
@@ -258,7 +289,11 @@ table.data tr.pos td, table.data tr.info td { color: var(--blue-7); }
 
 /* report tables — the legacy mantine-datatable: black borders, dense, xs type */
 .report table.data th, .report table.data td { border: 1px solid #000; padding: 2px 4px; }
-.report table.data thead th { background: #fff; position: sticky; top: var(--header-h); z-index: 1; }
+/* The legacy report tables print their headers in caps — DATE, TYPE, BOOKER… — while its management
+ * tables use title case with sort arrows. Measured off `vault/attachments/legacy-ui/09-reports-profit.png`
+ * against `25-management-parties.png`, so the transform is scoped to `.report` rather than applied to
+ * every `table.data`, which would have broken the management tables that already match. */
+.report table.data thead th { background: #fff; text-transform: uppercase; font-weight: 400; position: sticky; top: var(--header-h); z-index: 1; }
 
 /* row actions (legacy eye / pencil / trash icons) */
 .row-actions { white-space: nowrap; text-align: right; }
@@ -670,3 +705,25 @@ kbd {
   tr.hk-row > td, tr.hk-row:focus { background: none; outline: none; }
   .hk-overlay, .hk-nudge, .hk-live { display: none !important; }
 }
+
+/* ── report page chrome, to match the legacy report screen ──────────────────────────────────────
+   The legacy opens a report with the printer glyph, then the filter block, then the report name with
+   the period ranged on the right of the same line (`09-reports-profit.png`). These three rules carry
+   that shape; the markup is `views/reports/report.html`. */
+.report-tools { margin: 0 0 10px; }
+.btn.icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; color: var(--blue-6); }
+.btn.icon svg { display: block; }
+
+.report-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin: 28px 0 8px; }
+.report-head .page-title { margin: 0; }
+/* The period reads as "From: 11-Apr-2026 To: 28-Sep-2026" on the right, not as a meta line under the
+   filters. `meta.from`/`meta.to` are already the legacy's own d-MMM-yyyy text — see
+   `app/lib/spoolreports.js`. */
+.report-period { display: flex; gap: 10px; font-size: 0.875rem; color: #000; white-space: nowrap; }
+
+/* The legacy filter block is two rows: the two date inputs on the first, then one row of selects
+   ending in APPLY (`09-reports-profit.png`). `report.html` emits the date fields into `.filter-dates`
+   so they share that first row deliberately rather than wherever the width happens to break. */
+.filters { margin-bottom: 4px; }
+.filter-dates { display: flex; flex-wrap: wrap; gap: 12px; flex: 1 0 100%; }
+.filter-dates input[type="date"] { max-width: 14rem; }
