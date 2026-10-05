@@ -72,15 +72,20 @@ sale price wherever the cost is shown). The invoice **grid** still lacks the cre
 affordance because its item selects are repeated-name arrays in one form — per-row work, recorded rather
 than half-built.
 
-**Next: step 15, retiring the `route.ts` dispatcher** — see [[tb-0030-retire-the-route-ts-dispatcher]]. This
-is the operator's stated priority. It is at step 5 of 7: split the ~78 method+path pairs into ~30 route
-directories with `route.json` manifests, then delete `_app/route.ts`. The loader moved into the host
-(2026-10-03), which unblocked it; the first route-folder attempt was reverted 2026-10-04 and its lessons
-are in [[serving-a-route-from-a-route-folder]].
+**Step 15 is DONE (2026-10-05)** — [[tb-0030-retire-the-route-ts-dispatcher]]. Every route is a folder
+(~73 `route.ts` files), `_app/route.ts` is deleted, and `app/config/app.config.json` is `mode: crawler`;
+the dispatcher's `router.js` role is `app/lib/route-kit.js`, and page manifests now use filter/column
+presets. `tools/guest-smoke.mjs` is at **112 checks**, all green. Deferrals (all recorded in tb-0030): the
+host poller now resolves `/jobs/reconcile` through the generic router (a Rust change, wasm rebuilt), and
+the config-driven scheduler plus a folder-aware `feature-parity`/`route-inventory` rewrite remain
+follow-ups.
+
+**Next: step 17** (trigger-maintained Tier 2 materialised tables) before **step 16**, because six of the
+fourteen report statements exceed the WASM call deadline on their own; step 19's fix is step 17's output.
 
 The other open items in the sequence, in the order they gate: **step 17** (trigger-maintained Tier 2
 materialised tables) before **16**, because six of the fourteen report statements exceed the WASM call
-deadline on their own; **step 15** (retire `route.ts`); **step 19** is measured and needs its fix, which is
+deadline on their own; ~~**step 15** (retire `route.ts`)~~ **done**; **step 19** is measured and needs its fix, which is
 step 17.
 
 ```text
@@ -100,7 +105,7 @@ step 17.
 [--] 12. Recover the dropped-view endpoints on the legacy side -> SUPERSEDED: there are no legacy screens left
 [x] 13. Migrate the production data                       -> [[pos-0027-migrate-production-data-to-trailbase]] (done 2026-09-29)
 [--] 14. Gate the component split on a parity oracle      -> gate WAIVED by [[legacy-parity-checks-waived]]; became [[tb-0032-manifest-first-refactor]]
-[ ] 15. Retire the route.ts dispatcher (file-router conventions, no data DAG) -> [[tb-0030-retire-the-route-ts-dispatcher]]
+[x] 15. Retire the route.ts dispatcher (file-router conventions, no data DAG) -> [[tb-0030-retire-the-route-ts-dispatcher]] (done 2026-10-05: ~73 route folders, dispatcher deleted, mode: crawler; guest-smoke 112)
 [ ] 16. Three generic artifacts: composer + separate      -> [[component-split-and-sql-materialised-tables]]
 [ ] 17. Trigger-maintained Tier 2 materialised tables    -> resolves open decision 2 and tb-0015
 [x] 18. Remove the code the reference graph proves dead  -> [[tb-0031-remove-proven-dead-code]] (done 2026-10-01: 13 guest exports, 5 Rust items, 5 orphaned tools; `jobs.rs` kept, see open decision 6)

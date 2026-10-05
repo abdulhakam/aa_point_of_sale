@@ -1,7 +1,7 @@
 ---
 title: tb-0030 — Retire the route.ts dispatcher in favour of file-router conventions
 type: task
-status: doing
+status: done
 priority: high
 created: 2026-09-30
 tags: [trailbase, routing, refactoring, manifest]
@@ -30,8 +30,9 @@ Each step is separately reversible and must leave the app byte-identical.
       are verified against the *fixed* 49-route gate, which did not exist when they were first ticked.
       The diff against the committed baseline is one line — `page profit data` `version`, the
       fingerprint-derived integer — and no route changed status.
-- [ ] **1. Extract three JS guest helpers** into `app/lib/route-kit.js` — `write()`,
-      `renderRoute()`, `refs()` — and migrate every call site.
+- [x] **1. Extract three JS guest helpers** into `app/lib/route-kit.js` — `write()`,
+      `renderRoute()`, `refs()` — and migrate every call site. **DONE 2026-10-05** (the `renderRoute`
+      migration completed when step 6 deleted the dispatcher that held the last inline sites).
       - [x] `refs()` — 10 sites migrated (6 two-line collapses, 3 wider-snapshot kept as-is).
             ✅ **retested 2026-10-03 against the corrected 49-route gate** — no route changed status.
       - [x] `write()` — 15 of 16 sites migrated. The 16th is `/reports/refresh`'s deliberate
@@ -42,7 +43,10 @@ Each step is separately reversible and must leave the app byte-identical.
             The route-parity half is not.
             The write paths needed their own gate: `route-snapshot.mjs` only issues GETs, so it
             cannot see a regression in a helper whose entire job is to run *after* a mutation.
-      - [ ] `renderRoute()` — 23 inline `page(req, shell(user, …), tpl, data)` sites remain, plus one
+      - [x] `renderRoute()` — **DONE 2026-10-05, exactly as this note predicted.** The inline sites lived
+            in `route.ts`, which step 6 deleted; every route folder now calls `routeKit.renderRoute`, so the
+            migration happened as a side effect of the move and the "edit each site, then move it" work was
+            never done twice. (Historical text follows.) 23 inline `page(req, shell(user, …), tpl, data)` sites remain, plus one
             `pageSpooled` (different function — spooled rendering, left alone) and two
             `{ ...shell(…), paper }` variants that `renderRoute` also covers via its `paper` option.
             **⚠️ Deliberately NOT migrated ahead of step 5, and this is a decision, not an oversight.**
