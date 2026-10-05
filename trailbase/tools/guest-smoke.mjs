@@ -439,6 +439,37 @@ async function main() {
       JSON.stringify(fingerprintState?.lastRefresh?.rebuilt)
     );
 
+    // Update and delete cover the other two thirds of the write branch, so moving the management writes
+    // into route folders (tb-0030 step 5) is gated on all three verbs, not only create — a refactor needs
+    // the same behaviour asserted before and after. Placed AFTER the refresh assertions above, which key
+    // on the sections fingerprint: a create-then-delete is net-zero for it (the row's `updated` leaves
+    // with the row), so deleting before the refresh would make `changed` read [] and the refresh checks
+    // fail for the right reason.
+    //
+    // Target the row we just created, not the first in the list: the list is name-sorted, so the first
+    // `?edit=` id belongs to a SEEDED section, and deleting that would break the area/section relation
+    // check below.
+    const smokeRow = sections.body.split("<tr").find((tr) => tr.includes("Smoke Section"));
+    const sectionIdMatch = smokeRow ? /href="\/management\/sections\?edit=([^"&]+)/.exec(smokeRow) : null;
+    const sectionId = sectionIdMatch ? sectionIdMatch[1] : null;
+    if (sectionId) {
+      // The id is padded base64url (`...==`). It goes in a PATH segment, where `=` is legal and must be
+      // left raw: percent-encoding it to `%3D` feeds the tolerant base64 decoder a `3` and a `D` as
+      // sextets and corrupts the id into one that matches no row — a silent no-op update that still
+      // redirects `303 ?message=Updated`. Query ids ARE encoded; path ids are not.
+      const updated = await postForm(cookies, `/management/sections/${sectionId}/update`, { name: "Smoke Section 2" });
+      check("management update redirects", updated.status === 303 || updated.status === 302, `${updated.status}`);
+      const afterUpdate = await get(cookies, "/management/sections");
+      check("updated record shows the new value", afterUpdate.body.includes("Smoke Section 2"), `id=${sectionId}`);
+
+      const deleted = await postForm(cookies, `/management/sections/${sectionId}/delete`, {});
+      check("management delete redirects", deleted.status === 303 || deleted.status === 302, `${deleted.status}`);
+      const afterDelete = await get(cookies, "/management/sections");
+      check("deleted record is gone", !afterDelete.body.includes("Smoke Section 2"), "");
+    } else {
+      check("management update/delete: found the created section id", false, "no edit link on the list page");
+    }
+
     check("party list resolves area and section names", partiesList.body.includes("Area-1") && partiesList.body.includes("North"), "");
 
     const areasList = await get(cookies, "/management/areas");

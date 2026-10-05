@@ -202,3 +202,45 @@ export function b64ToHex(value) {
   }
   return hex.toUpperCase();
 }
+
+/**
+ * The host's wildcard path, collapsed: `//management/parties` -> `/management/parties`.
+ *
+ * A route FOLDER receives the host's raw `req`, whose `path` may carry a leading double slash (the
+ * wildcard `/{*wildcard}` capture). Shared here because every route folder needs it and a route file
+ * cannot import — it reaches this through `A.routeKit`. The dispatcher keeps its own copy until step 6
+ * deletes it; see vault/tasks/tb-0030-retire-the-route-ts-dispatcher.md.
+ */
+export function normalizePath(p) {
+  const abs = String(p).startsWith("/");
+  const out = String(p)
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter((part) => part && part !== ".");
+  return (abs ? "/" : "") + out.join("/");
+}
+
+/**
+ * Query/form decoding into pairs. `URLSearchParams` does not exist in the guest (QuickJS), so this is
+ * hand-rolled. A repeated key collects into an array, matching HTML form semantics for multi-selects.
+ */
+export function parsePairs(qs) {
+  const decode = (s) => {
+    try {
+      return decodeURIComponent(String(s).replace(/\+/g, " "));
+    } catch (e) {
+      return String(s);
+    }
+  };
+  const out = {};
+  for (const part of String(qs || "").split("&")) {
+    if (!part) continue;
+    const i = part.indexOf("=");
+    const k = decode(i < 0 ? part : part.slice(0, i));
+    const v = i < 0 ? "" : decode(part.slice(i + 1));
+    if (out[k] === undefined) out[k] = v;
+    else if (Array.isArray(out[k])) out[k].push(v);
+    else out[k] = [out[k], v];
+  }
+  return out;
+}

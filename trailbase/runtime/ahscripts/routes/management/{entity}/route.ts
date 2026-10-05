@@ -2,7 +2,7 @@
 //
 // The first route family off `_app/route.ts` (tb-0030 step 5). The host's `{entity}` param resolver
 // matches this folder before the dispatcher fallback, so this file owns `/management/<entity>`; the
-// dispatcher still owns `/management` (the index) and the three writes.
+// dispatcher still owns `/management` (the index).
 //
 // Three things this file must do, all recorded in `serving-a-route-from-a-route-folder`:
 //   - build the dispatcher's `req` shape itself (`path`, parsed `query`, `user`) — the host gives
@@ -10,40 +10,10 @@
 //   - parse the query by hand, because `URLSearchParams` does not exist in the guest (QuickJS);
 //   - wrap everything in ONE IIFE, because route files share a single QuickJS scope per evaluation,
 //     so a top-level helper name would redeclare on the next request. Only `globalThis.GET` is published.
+//
+// `normalizePath`/`parsePairs` live in `app/lib/route-kit.js`, reached through `A.routeKit`, so the four
+// management folders do not each carry a copy.
 (function () {
-  /** The host's wildcard yields a leading double slash ("//management/parties"); collapse it. */
-  function normalizePath(p) {
-    const abs = String(p).startsWith("/");
-    const out = String(p)
-      .replace(/\\/g, "/")
-      .split("/")
-      .filter((part) => part && part !== ".");
-    return (abs ? "/" : "") + out.join("/");
-  }
-
-  function decode(s) {
-    try {
-      return decodeURIComponent(String(s).replace(/\+/g, " "));
-    } catch (e) {
-      return String(s);
-    }
-  }
-
-  /** Query/form decoding, the same tolerant pair parser the dispatcher used. */
-  function parsePairs(qs) {
-    const out = {};
-    for (const part of String(qs || "").split("&")) {
-      if (!part) continue;
-      const i = part.indexOf("=");
-      const k = decode(i < 0 ? part : part.slice(0, i));
-      const v = i < 0 ? "" : decode(part.slice(i + 1));
-      if (out[k] === undefined) out[k] = v;
-      else if (Array.isArray(out[k])) out[k].push(v);
-      else out[k] = [out[k], v];
-    }
-    return out;
-  }
-
   /** The resolved TrailBase user, in the shell's shape. */
   function userOf(req) {
     const u = req.user;
@@ -58,8 +28,8 @@
     const A = await ctx.app();
     const routeKit = A.routeKit;
 
-    const path = normalizePath(String(req.path || "/"));
-    const query = parsePairs(String(req.query || ""));
+    const path = routeKit.normalizePath(String(req.path || "/"));
+    const query = routeKit.parsePairs(String(req.query || ""));
     const user = userOf(req);
 
     const match = /^\/management\/([^/]+)$/.exec(path);

@@ -904,42 +904,11 @@ if (path === "/login" && method === "GET") {
     const entities = A.entities.order().map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
     return html(await A.http.page(req, shell(user, "management", "Management"), "management/index.html", { entities }));
   }
-  // GET /management/<entity> moved to the route folder `ahscripts/routes/management/{entity}/route.ts`
-  // (tb-0030 step 5). The host's folder resolver matches it before this dispatcher, so the branch that
-  // used to live here would be dead; it is removed rather than left as a second implementation that
-  // can drift. The three writes below still route here.
-
-  // Writes: create / update / delete, then invalidate the snapshot so reads see the change.
-  const writeMatch = /^\/management\/([^/]+)\/(create|([^/]+)\/(update|delete))$/.exec(path);
-  if (writeMatch && method === "POST") {
-    const entityKey = writeMatch[1];
-    const entity = A.entities.ENTITIES[entityKey];
-    if (!entity) return text("Unknown entity", 404);
-    const action = writeMatch[2];
-    const idHex = writeMatch[3] ? A.routeKit.b64ToHex(writeMatch[3]) : null;
-    // A create or update that omits a required field is refused as a 400, before the write. The entity
-    // spec has declared `required` all along and nothing read it, so `POST /management/items/create`
-    // with an empty body inserted `name = ''` and redirected `303 ?status=ok`. See
-    // `app/lib/management.js` `missingRequired`.
-    if (action === "create" || action.endsWith("update")) {
-      const missing = A.management.missingRequired(entity, form);
-      if (missing.length) return { error: "missing required fields", entity: entityKey, fields: missing };
-    }
-    await A.routeKit.write(async () => {
-      if (action === "create") {
-        const newHex = await A.management.createRow(db, entity, form);
-        await A.management.syncLinks(db, entity, newHex, form);
-      } else if (action.endsWith("update")) {
-        await A.management.updateRow(db, entity, form, idHex);
-        await A.management.syncLinks(db, entity, idHex, form);
-      } else if (action.endsWith("delete")) {
-        if (entity.softDelete) await A.management.softDeleteRow(db, entity, idHex);
-        else await A.management.hardDeleteRow(db, entity, idHex);
-      }
-    });
-    const message = action === "create" ? "Created" : action.endsWith("update") ? "Updated" : "Deleted";
-    return redirect(`/management/${entityKey}?status=ok&message=${message}`);
-  }
+  // The whole /management/<entity> family — the GET list and the create / update / delete writes —
+  // moved to route folders (tb-0030 step 5): `ahscripts/routes/management/{entity}/route.ts` and the
+  // three siblings under it. The host's folder resolver matches them before this dispatcher, so the
+  // branches that used to live here would be dead; they are removed rather than left as a second
+  // implementation that can drift. `/management` (the index) still renders here.
 
 
   if (path === "/plugins") {

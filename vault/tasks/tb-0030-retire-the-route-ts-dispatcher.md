@@ -311,29 +311,39 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   the dispatcher. `route.ts` keeps a thin `app()` alias and delegates `business()` to it. This also
   removed `route.ts`'s only copy of the business defaults.
 
-  **The first route family is moved.** `GET /management/<entity>` is now served by
-  **`ahscripts/routes/management/{entity}/route.ts`** — an IIFE, so its `normalizePath`/`parsePairs`/
-  `userOf` helpers do not leak into the shared QuickJS scope, with only `globalThis.GET` published (the
-  fix the note prescribed). The dispatcher's own `GET /management/<entity>` branch is **deleted**, not
-  left as a second implementation. The three writes (`create`, `<id>/update`, `<id>/delete`) still route
-  to the dispatcher, because the host matches exact path shapes and has no folder for them yet.
+  **The first route family is moved — all of it.** `/management/<entity>` is now served entirely from
+  folders: `GET` by `ahscripts/routes/management/{entity}/route.ts`, and the three writes by
+  `.../create/route.ts`, `.../{id}/update/route.ts`, `.../{id}/delete/route.ts`. Each is an IIFE, so its
+  helpers do not leak into the shared QuickJS scope, with only the method-named export published
+  (`globalThis.GET` / `globalThis.POST`). The dispatcher's four branches are **deleted**, not left as a
+  second implementation. Only `/management` (the index) still renders in the dispatcher.
+
+  `normalizePath` and `parsePairs` moved to **`app/lib/route-kit.js`** (reached as `A.routeKit`), so the
+  four folders do not each carry a copy. The dispatcher keeps its own until step 6 deletes it.
 
   **A correction to the design doc's file layout.** `file-router-conventions-not-a-data-dag` proposed
   `route.json` + `loader.js` + `action.js`. The host as built resolves **`route.{ts,js}`** in the matched
-  folder and calls the method-named export (`globalThis.GET`, `globalThis.POST`, …) — see
-  `resolve_route_file` and the `run_route` wrapper in `tb-ah-run-js/src/lib.rs` / `runtime.rs`. There is
-  no `route.json` in play. The design's *intent* (a folder per route, no central dispatcher edit) holds;
-  only the file names differ.
+  folder and calls the method-named export — see `resolve_route_file` and the `run_route` wrapper in
+  `tb-ah-run-js/src/lib.rs` / `runtime.rs`. There is no `route.json` in play. The design's *intent* (a
+  folder per route, no central dispatcher edit) holds; only the file names differ.
 
-  **Verification:** `tools/guest-smoke.mjs` — **91/91**, before and after, including every management
-  screen (`sections`, `areas`, `parties`, `companies`, `bookers`, `items`), `management create redirects`,
-  and `unknown management entity is 404`. Because the folder resolver is tried before the dispatcher, the
-  pass proves the folder is what served those requests; removing the dispatcher branch and re-running to
-  the same 91/91 proves nothing else was serving them.
+  **Two gotchas the move made concrete, both recorded so the next family does not pay them again:**
+  - **A path id must be left RAW.** Ids are padded base64url (`…==`); `=` is legal in a path segment. A
+    percent-encoded `%3D` feeds the tolerant base64 decoder a `3` and a `D` as sextets and yields an id
+    that matches no row — a **silent no-op update that still redirects `303 ?message=Updated`**. Query
+    ids ARE encoded; path ids are not. This is exactly how the new smoke check first failed.
+  - **A route file's `req` is the host's shape** (`path`, plus `query` as a raw STRING, `body`, `user`),
+    and the host provides no parsed `{param}` values — the folder re-parses its own path with a regex.
 
-  **Next within step 5:** the three management writes into `management/{entity}/create`, `.../{id}/update`
-  and `.../{id}/delete`; then the remaining families one at a time. The `{param}`/`[...rest]` prefix
-  routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`) are their own step.
+  **Verification:** `tools/guest-smoke.mjs` — **95/95** (was 91/91). Five new checks were added first and
+  run green against the *dispatcher* before the move, so the move is gated on all three verbs rather than
+  create alone: `management update redirects`, `updated record shows the new value`,
+  `management delete redirects`, `deleted record is gone` (plus the existing create check). The two
+  refresh-fingerprint assertions were left ahead of the new delete, because a create-then-delete is
+  net-zero for the sections fingerprint and would make `changed` read `[]`.
+
+  **Next within step 5:** the remaining families, one at a time; then the `{param}`/`[...rest]` prefix
+  routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`).
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page

@@ -79,10 +79,19 @@ closes over) into `app/lib/`, loaded through `__AA_LOAD__` like every other modu
 
 **Built 2026-10-05.** `app()` now lives in **`app/lib/context.js`**, which exports `app()`, `business()`
 and `DEFAULT_BUSINESS`. It closes over nothing from the dispatcher (`loadModule` is the host global), and
-`route.ts` keeps only a thin `app()` alias plus a delegating `business()`. The first route family followed
-immediately: `GET /management/<entity>` is served from `ahscripts/routes/management/{entity}/route.ts`
-(an IIFE, only `globalThis.GET` published), the dispatcher branch deleted, `guest-smoke.mjs` **91/91**.
-See [[tb-0030-retire-the-route-ts-dispatcher]] step 5 for the entry.
+`route.ts` keeps only a thin `app()` alias plus a delegating `business()`. The whole `/management/<entity>`
+family followed: GET from `ahscripts/routes/management/{entity}/route.ts`, and create/update/delete from
+the three sibling folders — each an IIFE, only the method-named global published, the dispatcher branches
+deleted, `guest-smoke.mjs` **95/95**. See [[tb-0030-retire-the-route-ts-dispatcher]] step 5 for the entry.
+
+Two things the move made concrete, both already costing time once:
+
+- **A path id must be left RAW.** Ids are padded base64url (`…==`) and `=` is legal in a path segment.
+  Percent-encoding it to `%3D` feeds the tolerant base64 decoder a `3` and a `D` as sextets and produces
+  an id that matches no row — a **silent no-op update that still redirects `303 ?message=Updated`**.
+  Query ids ARE encoded; path ids are not.
+- **`req` is the host's shape**, with `query` as a raw STRING and no parsed `{param}` values, so the
+  folder re-parses its own path with a regex.
 
 A correction to the design's file layout, worth knowing before writing the next folder: the host resolves
 **`route.{ts,js}`** in the matched folder and calls the method-named export (`globalThis.GET` / `POST` /
