@@ -50,10 +50,29 @@ answers "Please log in to continue" on every screen and no legacy credential is 
 side-by-side on the same data was not possible. It is the one gap in the method and it needs the legacy
 password to close.
 
-⚠️ **The comparison is against the 2026-09-27 captures, not the running legacy app.** The legacy app
-answers "Please log in to continue" on every screen and no legacy credential is recorded, so a live
-side-by-side on the same data was not possible. It is the one gap in the method and it needs the legacy
-password to close.
+✅ **The gap is closed — the comparison was re-run against the RUNNING legacy app** once the operator
+supplied its login, via `ui-capture.mjs --system both`. The 2026-09-27 captures were validated against
+it and are **faithful**: the live legacy dashboard is pixel-identical to `02-dashboard.png`, so the ten
+fixes above stand.
+
+The live run found four things the captures could not:
+
+- a **"Filter Data" modal** behind the top-left glyph on the legacy report screens — so legacy has an
+  inline filter row *and* a modal, and it is an open question whether printing is behind that glyph at all;
+- legacy report tables have **no `<th>` at all** (the header row is `<td>`s), so the guest's
+  `<th>` + uppercase matches the look by a different mechanism and differs in what a screen reader is told;
+- some legacy reports print **raw `snake_case` column names** — `COMPANY  NAME  CP  QTY  BOX_SIZE_QTY
+  STOCK_AMOUNT` — where the guest renames them to `Carton Size`, `Stock Amount`. A deviation **in the
+  guest's favour**, and a ruling is needed: friendly labels everywhere, or faithful labels everywhere;
+- guest body links are **pure black** (`rgb(0,0,0)`) against legacy's grey (`rgb(73,80,87)`), on every
+  screen with a link. The cheapest remaining fix, and it is systematic.
+
+Making a two-app comparison honest also cost **four fixes to the harness itself**, each of which had
+been producing a confident wrong answer rather than an obvious failure — a class-based extractor that
+could not match Mantine, swapped only-guest/only-legacy labels, a wait that read true before a
+client-rendered app had loaded, and a login wait on `!pathname.includes("login")` when the legacy login
+path is `/auth`. All four are written up in [[ui-parity-discrepancies-2026-10-05]] Part 2.
+
 - [ ] Decide, per category-5 item, whether the new-side-only screens (Companies, `/p`, plugins)
       converge with legacy or are accepted as additions.
 

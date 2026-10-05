@@ -6,7 +6,7 @@ created: 2026-10-05
 updated: 2026-10-05
 tags: [ui, parity, legacy, guest, screenshots, css, discrepancy]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[legacy-ui-reference-captures]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[guest-frontend-feature-parity-gaps]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[settle-structural-claims-with-the-owning-artifact]]"]
+related_to: ["[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[party-and-booker-ledgers-render-empty-and-say-nothing]]", "[[legacy-ui-reference-captures]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[guest-frontend-feature-parity-gaps]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[settle-structural-claims-with-the-owning-artifact]]"]
 ---
 
 # UI parity discrepancies against the legacy bundle, 2026-10-05
@@ -26,6 +26,76 @@ the structure says *which label, which column, which control*.
 on `:3000` and every screen answers **"Please log in to continue"** — it gates on a PocketBase session
 and no legacy credential is recorded anywhere (`vault/credentials/` is empty). A live side-by-side on the
 same data would be better evidence and needs that password. This is the one gap in the method.
+
+## Part 2 — the LIVE comparison, 2026-10-05 (later the same day)
+
+The operator supplied the legacy login, so the gap above is closed: `ui-capture.mjs --system both`
+now drives **the running legacy app** and the guest at the same viewport with the same extractor.
+**The 2026-09-27 captures were validated against it and are faithful** — the live legacy dashboard is
+pixel-identical to `02-dashboard.png` — so the ten fixes above stand.
+
+Four tools' worth of change came out of making a two-app comparison honest, and each was a bug that
+produced a **confident wrong answer** rather than an obvious failure:
+
+| bug | what it made the report claim |
+|---|---|
+| the extractor asked for the **guest's class names** (`.header-brand`, `.tile`), which cannot match Mantine's | every field "absent" on the legacy side. Replaced with a neutral tag/role extractor |
+| the only-guest / only-legacy labels were **swapped** | every difference read backwards |
+| wait was `document.body.innerText.length > 200` — true within a second of a client-rendered app starting | **"legacy 0 headers, guest 7"** on six screens, which is not a finding. Now waits on in-flight requests, and records `_settled` |
+| login wait was `!pathname.includes("login")` — and the legacy login path is **`/auth`** | true *on the login page itself*, so one run captured 28 screens as an anonymous visitor and every one came back "Please log in to continue". Now waits on the gate text and re-verifies after a navigation |
+
+### What the live comparison found that the captures could not
+
+**1. The legacy report filter is a MODAL, not only an inline row.** Live captures of the Stock Report
+and Difference Report show a centred **"Filter Data"** dialog — `h2 filter data`, an `OK` button, the
+report name as its trigger — opened from the top-left glyph. The 2026-09-27 Profit capture shows an
+inline row, so legacy has **both**: an inline row and a modal behind the glyph. The guest has the inline
+row and a printer glyph that prints. **Open question, not a defect: does the legacy glyph open a filter
+dialog, and does printing live behind it at all?**
+
+**2. Legacy report tables have no `<th>` at all** — the header row is `<td>` cells. The guest's
+`<th>` + `text-transform: uppercase` reaches the same *look* by a different mechanism, so the two now
+match visually while differing in what a screen reader is told. Worth knowing; not worth changing back.
+
+**3. Some legacy reports print RAW column names, and the guest does not.**
+
+| | legacy (live) | guest |
+|---|---|---|
+| Stock Report | `COMPANY  NAME  CP  QTY  BOX_SIZE_QTY  STOCK_AMOUNT` | `Company  Name  CP  Qty  Carton Size  Stock Amount  Total Stock` |
+| Difference Report | `COMPANY … BOX_SIZE_QTY …` | `Company  Name  Carton Size  Qty …` |
+
+The legacy shows `snake_case` column names and abbreviates; the guest renames them. Under a *direct
+shift* mandate that is a deviation — **in the guest's favour**. Recorded rather than reverted, because
+nobody should type `box_size_qty` on a shop floor, and the legacy's own Profit Report *does* use friendly
+labels (`DATE, TYPE, BOOKER, INVOICE, PARTY…`). **The ruling needed: friendly labels everywhere, or
+byte-faithful labels everywhere.**
+
+**4. Guest links are pure black; legacy's are grey.** `rgb(0,0,0)` against `rgb(73, 80, 87)` — on
+**every screen with a link**. The guest's `--blue-6` tile labels are right; its body links are not. This
+is the cheapest remaining fix and it is systematic.
+
+**5. The management hubs have no headings at all in legacy.** `management-parties`: guest
+`h1 parties | h2 new party | h2 all parties (943)`, legacy **none**. Confirms item A below from the
+other direction — and note the legacy's parties screen carries buttons labelled
+`name | type | area | section | phone | address`, which is its filter row rendered as controls.
+
+**6. `Actions` vs `Row actions`.** The legacy truncates its column header ("Row acti…" in the capture,
+`row actions` live). One-word difference; trivial.
+
+**7. Two legacy screens are not evidence.** `reports-outstanding` never settled inside its 7-minute
+budget (`_settled: false`), and the ledgers that need a counterparty are empty on **both** sides — which
+is the same defect the guest has
+([[party-and-booker-ledgers-render-empty-and-say-nothing]]), so it is not a parity difference.
+
+### Correction to Part 1, item I
+
+Part 1 said the legacy rail shows five icons. The live capture shows **six** — there is a logout icon at
+the foot of the rail, below the gear. So the guest's rail carries **three** extra items (Pages, Plugins,
+the background-refresh dot), not four, and legacy already ends with Logout where the guest ends with it
+too.
+
+## Part 1 — the capture-based comparison (superseded in part by the live run above)
+
 
 ## Fixed in this pass
 
@@ -159,3 +229,4 @@ work; B's missing sort arrows and F's missing invoice link are the two that cost
   description.
 - [[guest-ui-is-a-direct-shift-of-legacy]] — the rule that says compare what renders.
 - [[guest-frontend-feature-parity-gaps]] — the behavioural half; this note is the visual half.
+- [[screen-parity-against-the-legacy-bundle-2026-10-04]] — which screens exist on each side, as opposed to how they look.
