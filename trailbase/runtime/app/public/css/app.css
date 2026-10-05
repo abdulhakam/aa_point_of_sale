@@ -568,3 +568,105 @@ table.grid select { min-width: 12rem; }
   @page { size: A4 landscape; margin: 10mm; }
 }
 
+
+/* ───────────────────────────────────────────────────── keyboard layer (hotkeys.js) ──────────────────
+   The focus ring is the important part and is NOT print furniture: it must never appear in a printout,
+   or an operator pressing `p` gets a page with a blue bar down the side of it. The overlays are
+   position:fixed and outside the page flow for the same reason — they are UI, not document. */
+
+/* The row the keyboard cursor is on. `outline` rather than `box-shadow` so it follows the row's own
+   border-radius and never changes the table's geometry (a box-shadow would not, an outline cannot
+   shift a neighbouring cell, and outline does not repaint the page). */
+tr.hk-row > td { background: var(--blue-0); }
+tr.hk-row:focus { outline: 2px solid var(--blue-6); outline-offset: -2px; }
+tr.hk-row:focus-visible { outline: 2px solid var(--blue-6); outline-offset: -22px; }
+
+/* Visually hidden, still announced. The live region narrates the cursor so the layer is usable without
+   sight of the ring — which is the whole reason it exists rather than being decoration. */
+.hk-live {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.hk-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 6vh 16px 16px;
+}
+.hk-panel {
+  background: #fff; color: var(--text);
+  border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  width: 100%; max-width: 640px; max-height: 82vh; overflow: auto;
+  padding: 16px 20px 20px;
+}
+.hk-panel:focus { outline: none; }
+
+/* Command palette. */
+.hk-palette-panel { max-width: 560px; }
+.hk-palette-input {
+  width: 100%; font: inherit; font-size: 1.05rem;
+  padding: 10px 12px; border: 1px solid var(--gray-4); border-radius: var(--radius);
+}
+.hk-palette-input:focus { outline: 2px solid var(--blue-6); outline-offset: -1px; border-color: var(--blue-6); }
+.hk-palette-list { list-style: none; margin: 10px 0 0; padding: 0; max-height: 52vh; overflow: auto; }
+.hk-palette-item {
+  display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+  padding: 7px 10px; border-radius: var(--radius); cursor: pointer;
+}
+.hk-palette-item.is-cursor { background: var(--blue-0); }
+.hk-palette-label { font-weight: 500; }
+.hk-palette-href { color: var(--gray-6); font-size: 0.8rem; white-space: nowrap; }
+.hk-palette-empty { color: var(--muted); padding: 10px; font-size: 0.875rem; }
+.hk-palette-hint { color: var(--muted); font-size: 0.8rem; margin: 10px 0 0; }
+
+/* Help overlay. */
+.hk-help-panel h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.hk-help-note, .hk-help-foot { color: var(--muted); font-size: 0.82rem; margin: 0 0 14px; }
+.hk-help-foot { margin: 16px 0 0; }
+.hk-help-group { margin: 0 0 14px; }
+.hk-help-group h3 {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--gray-6); margin: 0 0 6px;
+}
+.hk-help-group dl { margin: 0; display: grid; gap: 3px; }
+.hk-help-row { display: grid; grid-template-columns: 168px 1fr; gap: 10px; align-items: baseline; }
+.hk-help-row dt { margin: 0; }
+.hk-help-row dd { margin: 0; font-size: 0.875rem; }
+
+kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem; line-height: 1;
+  padding: 3px 6px; border: 1px solid var(--gray-4); border-bottom-width: 2px;
+  border-radius: 4px; background: var(--gray-0); color: var(--gray-7);
+}
+.hk-plus, .hk-sep { color: var(--gray-6); font-size: 0.75rem; margin: 0 3px; }
+
+/* The one-time hint. Bottom-centre, out of the way of the rail and of the reading column. */
+.hk-nudge {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 90; cursor: pointer;
+  background: var(--gray-7); color: #fff;
+  padding: 8px 14px; border-radius: 999px; font-size: 0.85rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  transition: opacity 0.4s ease;
+}
+.hk-nudge kbd { background: transparent; border-color: rgba(255, 255, 255, 0.4); color: #fff; }
+.hk-nudge-out { opacity: 0; }
+
+/* Below 768px the rail is a bottom bar, so a bottom-centred nudge would sit on top of it. */
+@media (max-width: 768px) {
+  .hk-nudge { bottom: 76px; }
+  .hk-overlay { padding-top: 3vh; }
+  .hk-help-row { grid-template-columns: 1fr; gap: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hk-nudge { transition: none; }
+}
+
+@media print {
+  /* None of this is document content. */
+  tr.hk-row > td, tr.hk-row:focus { background: none; outline: none; }
+  .hk-overlay, .hk-nudge, .hk-live { display: none !important; }
+}
