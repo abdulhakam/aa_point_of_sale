@@ -106,18 +106,8 @@ function jsonBody(req: any): any {
  * — and it keeps `readStatic` callable from a module that has no app bundle, which is how a route folder
  * will use it.
  */
-async function contentTypeFor(fsPath: string): Promise<string | null> {
-  const app: any = (globalThis as any).__AA_APP__;
-  if (!app || !app.manifests) return null;
-  const table = (await app.manifests.contentTypes()).byExtension;
-  return table[extOf(fsPath)] ?? null;
-}
-
-function extOf(p: string): string {
-  const i = p.lastIndexOf(".");
-  return i < 0 ? "" : p.slice(i).toLowerCase();
-}
-
+// `contentTypeFor`, `extOf` and `readStatic` moved to `app/lib/route-kit.js` (tb-0030 step 5), so a
+// route folder can serve a static file.
 function html(body: string): any {
   return { html: body };
 }
@@ -126,31 +116,6 @@ function text(body: string, status?: number): any {
 }
 function redirect(location: string, status?: number): any {
   return { redirect: location, status: status ?? 303 };
-}
-
-// Rendered-page cache (generic): a report page is one SQLite read on a repeat view instead of a
-// full compute + minijinja render of every row. The key is the live data fingerprint + the viewing
-// identity + the report + its filters + the RUNTIME REVISION, so a write (which moves the
-// fingerprint) misses and re-renders, and so does a code change.
-//
-// The revision is the part that was missing. Without it the cache keyed on data alone, so editing a
-// `.sql` file or a manifest, restarting, and requesting the page served the OLD html from a still-valid
-// data fingerprint. Nothing looked wrong; the numbers were just yesterday's code. It cost an hour of
-// false negatives during the manifest migration, and [[tb-0032-manifest-first-refactor]] is five
-// phases of editing exactly these files. `paths.runtimeRevision()` is a content hash of the whole
-// app tree, computed once per process, which `RUN.BAT` always pairs with a restart.
-// The rendered-page cache (`pageCacheGet`/`pageCachePut`) moved with the report renderer to
-// `app/lib/report-render.js` (tb-0030 step 5).
-
-async function readStatic(fsPath: string): Promise<any> {
-  try {
-    const body: string = await fs.readFile(fsPath);
-    // `contentTypeFor` reads `__AA_APP__` rather than closing over the bundle, so `readStatic` stays
-    // callable from a module with no app bundle — which is how a route folder will use it.
-    return { body, contentType: (await contentTypeFor(fsPath)) || "application/octet-stream" };
-  } catch {
-    return text("Not found", 404);
-  }
 }
 
 function userOf(req: any): any {
@@ -561,78 +526,18 @@ async function dispatch(req: any): Promise<any> {
   // Worker endpoint for the optional fan-out. Internal: it executes one already-claimed step by
   // id, and re-running a step is idempotent, so it is reachable without a session (the fan-out
   // call is server-to-self and carries no cookie). It cannot create work.
-  if (/^\/worker\/[^/]+\/step$/.test(path) && method === "POST") {
-    const work = jsonBody(req);
-    const stepId = String(work.stepId || "").toUpperCase();
-    if (!/^[0-9A-F]+$/.test(stepId)) return text("bad step id", 400);
-    return await A.jobs.executeStep(db, stepId);
-  }
+    // /worker/<id>/step moved to `ahscripts/routes/worker/{id}/step/route.ts` (tb-0030 step 5).
   // Static mounts, declared in `/app/manifests/static-mounts.json` and resolved by
   // `routeKit.resolveMount`. Three near-identical branches used to live here, each repeating the
   // `..` guard — which is how a guard ends up present twice and absent once. The guard is now in one
   // place, in `route-kit.js`, because refusing `..` is a security property and not a per-route detail.
-  const mount = A.routeKit.resolveMount(await A.manifests.staticMounts(), path);
-  if (mount) {
-    if (mount.refused) return text("Not found", 404);
-    if (mount.single) return readStatic(mount.rel);
-    if (mount.indexFallback) {
-      // Directory-style plugin URL -> its index.html. `path` arrives with the trailing slash
-      // normalised away, so treat any extension-less rel as a directory (not as a file).
-      if (mount.rel.endsWith("/") || mount.rel.indexOf(".") < 0) {
-        const res = await readStatic(mount.dir + "/" + mount.rel.replace(/\/$/, "") + "/index.html");
-        if (res && res.status !== 404) return res;
-      }
-    }
-    return readStatic(mount.dir + "/" + mount.rel);
-  }
+  // The static mounts moved to route folders (tb-0030 step 5): `static/[...path]`,
+  // `compute/[...path]`, `plugins/[...path]` and `favicon.svg`, each calling `routeKit.resolveMount`
+  // against the same `static-mounts.json`. Served without the auth gate, as here.
 
-if (path === "/login" && method === "GET") {
-    return A.routeKit.renderRoute(req, { user, active: "", title: "Log in", template: "auth/login.html" }, {
-      next: query.next || "",
-      expired: query.expired || "",
-      error: "",
-    });
-  }
-  if (path === "/login" && method === "POST") {
-    // The app's own login: exchange the credentials for tokens via TrailBase's JSON login, then
-    // set the same auth cookies its form flow would. No second session layer.
-    const next = String(form.next || query.next || "/dashboard");
-    const origin = (String(req.url || "").match(/^https?:\/\/[^/]+/) || [""])[0];
-    let tokens: any = null;
-    try {
-      const text = await (globalThis as any).http.postJson(
-        origin + "/api/auth/v1/login",
-        JSON.stringify({ email: String(form.email || ""), password: String(form.password || "") })
-      );
-      tokens = JSON.parse(text);
-    } catch {
-      tokens = null;
-    }
-    if (!tokens || !tokens.auth_token) {
-      return {
-        html: await A.http.page(req, shell(null, "", "Log in"), "auth/login.html", {
-          next,
-          expired: "",
-          error: "Invalid email or password",
-        }),
-        status: 401,
-      };
-    }
-    const attrs = "Path=/; HttpOnly; SameSite=Strict";
-    return {
-      redirect: next,
-      status: 303,
-      headers: {
-        "set-cookie": [
-          `auth_token=${tokens.auth_token}; ${attrs}; Max-Age=3600`,
-          `refresh_token=${tokens.refresh_token}; ${attrs}; Max-Age=2592000`,
-        ],
-      },
-    };
-  }
-  if (path === "/logout") return redirect("/_/auth/logout");
-  if (path === "/") return redirect(user ? "/dashboard" : "/login");
-
+  // /login (GET screen, POST exchange) and /logout moved to route folders (tb-0030 step 5):
+  // `ahscripts/routes/login/route.ts` and `.../logout/route.ts`. The `/` branch that used to sit here
+  // was DEAD — the host's own `root_handler` answers `/` before this dispatcher.
   if (!user) {
     const next = encodeURIComponent(path + (req.query ? "?" + req.query : ""));
     return redirect("/login?next=" + next);
@@ -644,12 +549,7 @@ if (path === "/login" && method === "GET") {
   // The `/reports` hub and its `ledgers`, `status` and `refresh` siblings all moved to route folders
   // (tb-0030 step 5), and the report-page family with `reports/{key}/route.ts`. Nothing for
   // `/reports/*` renders in this dispatcher any more.
-  if (path === "/management") {
-    // `order()` not `ENTITY_ORDER`: the ESM shim snapshots exports at load time, so a value that is set
-    // after the module is loaded (`install()`, from the manifest) is only visible through a function.
-    const entities = A.entities.order().map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
-    return html(await A.http.page(req, shell(user, "management", "Management"), "management/index.html", { entities }));
-  }
+  // /management (the hub) moved to `ahscripts/routes/management/route.ts` (tb-0030 step 5).
   // The whole /management/<entity> family — the GET list and the create / update / delete writes —
   // moved to route folders (tb-0030 step 5): `ahscripts/routes/management/{entity}/route.ts` and the
   // three siblings under it. The host's folder resolver matches them before this dispatcher, so the
@@ -737,127 +637,9 @@ if (path === "/login" && method === "GET") {
 
   // The /invoice-doc family moved to route folders (tb-0030 step 5): `ahscripts/routes/invoice-doc/route.ts`
   // and its `verify`, `list`, `rebuild`, `document` and `{id}` siblings.
-  // Invoice entry: immediate push, leased, server-numbered (tb-0021). JSON API for the screen.
-  const userHex = (() => {
-    const id = String(req.user?.id ?? "");
-    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)
-      ? id.replace(/-/g, "").toUpperCase()
-      : A.routeKit.b64ToHex(id);
-  })();
-  const locked = () =>
-    ({ body: JSON.stringify({ error: "locked", holder: "another device" }), contentType: "application/json; charset=utf-8", status: 409 });
-  const rowsToObjects = (columns: string[], rows: any[]) =>
-    (rows ?? []).map((values) => Object.fromEntries(columns.map((c, i) => [c, values[i]])));
-
-  if (path === "/invoice/context" && method === "GET") {
-    const type = String(query.type || "sale");
-    const items = (await A.baseviews.itemsReport()).map((r: any) => ({
-      id: r.id, name: r.name, category: r.category, box_size_qty: r.box_size_qty,
-      cost_price: r.cost_price, sale_price: r.sale_price, stock: r.qty,
-    }));
-    const counts = await db.all('SELECT "type", COUNT(*) FROM "invoices" GROUP BY "type" ORDER BY "type"', []);
-    const countOf = (code: number) => {
-      const hit = (counts ?? []).find((r: any[]) => Number(r[0]) === code);
-      return (hit ? Number(hit[1]) : 0) + 1;
-    };
-    const refs = await A.routeKit.refs();
-    // The ETag used to carry the snapshot's in-memory version COUNTER, which ticked when the refresh
-    // job ran rather than when the data changed — so an invoice edited from another tab could leave the
-    // ETag valid. The data fingerprint is what actually determines this payload, and it is already
-    // memoised for 1.5 s, so it is both cheaper and more honest. Nothing reads `version` (checked
-    // against app/public/js and the entry templates), but it stays in the payload for the shape's sake.
-    const version = await A.service.dataVersion();
-    const etag = `W/"inv-ctx-${version}-${JSON.stringify(counts)}-${type}"`;
-    const headers = { etag, "cache-control": "private, no-cache" };
-    if (String((req.headers && req.headers["if-none-match"]) || "") === etag) {
-      return { status: 304, body: "", contentType: "application/json; charset=utf-8", headers };
-    }
-    const payload = {
-      version,
-      type,
-      items,
-      parties: refs.parties ?? [],
-      bookers: refs.bookers ?? [],
-      areas: refs.areas ?? [],
-      sections: refs.sections ?? [],
-      categories: refs.categories ?? [],
-      companies: refs.companies ?? [],
-      next: { purchase: countOf(0), sale: countOf(1), return: countOf(2), difference: countOf(3) },
-    };
-    return { body: JSON.stringify(payload), contentType: "application/json; charset=utf-8", headers };
-  }
-
-  if (path === "/invoice" && method === "POST") {
-    const body = jsonBody(req);
-    // Validate `type` before calling in. `createInvoice` does `String(Number(type))`, so a missing or
-    // non-numeric type reached the INSERT as the literal string "NaN" and tripped the invoices CHECK
-    // constraint — surfacing as an opaque `500`. It is a bad request. Found by
-    // `tools/route-coverage.mjs`.
-    //
-    // 0 purchase, 1 sale, 2 return, 3 difference ([[data-model]]). The entry screens offer 0 and 1;
-    // return and difference have no guest screen yet ([[guest-frontend-feature-parity-gaps]]), so they
-    // are accepted but not reachable from the UI.
-    const type = Number(body.type);
-    if (!Number.isInteger(type) || type < 0 || type > 3) {
-      return { error: "invalid invoice type", type: body.type ?? null, allowed: [0, 1, 2, 3] };
-    }
-    const created = await A.routeKit.write(() =>
-      A.invoicing.createInvoice(db, { type, key: body.key, userHex, device: body.device })
-    );
-    return created;
-  }
-
-  const invoiceMatch = /^\/invoice\/([^/]+)$/.exec(path);
-  if (invoiceMatch && method === "GET") {
-    const hex = A.routeKit.b64ToHex(invoiceMatch[1]);
-    const head = rowsToObjects(
-      ["id", "type", "invoiceNo", "party", "booker", "dated", "discount_1", "discount_2", "discount_rs", "description", "completed"],
-      await db.all('SELECT "id","type","invoiceNo","party","booker","dated","discount_1","discount_2","discount_rs","description","completed" FROM "invoices" WHERE "id" = unhex(?)', [hex])
-    );
-    if (!head.length) return text("No such invoice", 404);
-    return {
-      invoice: head[0],
-      lines: rowsToObjects(
-        ["id", "item", "qty", "price", "cost_price", "discount_1", "discount_2", "discount_rs", "scheme"],
-        await db.all('SELECT "id","item","qty","price","cost_price","discount_1","discount_2","discount_rs","scheme" FROM "transactions" WHERE "invoice" = unhex(?) ORDER BY "id" DESC', [hex])
-      ),
-    };
-  }
-  if (invoiceMatch && method === "PATCH") {
-    const body = jsonBody(req);
-    const hex = A.routeKit.b64ToHex(invoiceMatch[1]);
-    if (!(await A.invoicing.takeLock(db, hex, userHex, String(body.device || "")))) return locked();
-    const updated = await A.routeKit.write(() => A.invoicing.patchHeader(db, hex, body));
-    return { updated };
-  }
-
-  const lineMatch = /^\/invoice\/([^/]+)\/line$/.exec(path);
-  if (lineMatch && method === "POST") {
-    const body = jsonBody(req);
-    const hex = A.routeKit.b64ToHex(lineMatch[1]);
-    if (!(await A.invoicing.takeLock(db, hex, userHex, String(body.device || "")))) return locked();
-    const line = await A.routeKit.write(() => A.invoicing.addLine(db, hex, body, body.opKey));
-    return { line };
-  }
-  const lineIdMatch = /^\/invoice\/([^/]+)\/line\/([^/]+)$/.exec(path);
-  if (lineIdMatch && method === "DELETE") {
-    const hex = A.routeKit.b64ToHex(lineIdMatch[1]);
-    if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
-    const deleted = await A.routeKit.write(() => A.invoicing.deleteLine(db, A.routeKit.b64ToHex(lineIdMatch[2])));
-    return { deleted };
-  }
-  const completeMatch = /^\/invoice\/([^/]+)\/complete$/.exec(path);
-  if (completeMatch && method === "POST") {
-    const hex = A.routeKit.b64ToHex(completeMatch[1]);
-    if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
-    const completed = await A.routeKit.write(() => A.invoicing.completeInvoice(db, hex, userHex, true));
-    return { completed };
-  }
-  const releaseMatch = /^\/invoice\/([^/]+)\/release$/.exec(path);
-  if (releaseMatch && method === "POST") {
-    return { released: await A.invoicing.releaseLock(db, A.routeKit.b64ToHex(releaseMatch[1]), userHex) };
-  }
-
+  // The /invoice/* JSON API moved to route folders (tb-0030 step 5): `ahscripts/routes/invoice/route.ts`
+  // (POST create) and its `context`, `{id}`, `{id}/line`, `{id}/line/{lineId}`, `{id}/complete` and
+  // `{id}/release` siblings. `userHex`, `locked` and `rowsToObjects` are now `route-kit` helpers.
   // ---------------------------------------------------------------- invoices / payments / stock
   //
   // The three working surfaces (tb-0028). Every write goes through the same module the JSON API

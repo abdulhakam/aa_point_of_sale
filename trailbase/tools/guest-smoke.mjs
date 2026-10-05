@@ -266,6 +266,12 @@ async function main() {
     const healthz = await get(cookies, "/healthz");
     check("/healthz reports ok", healthz.status === 200 && healthz.body.includes('"ok"'), `${healthz.status} ${healthz.body.slice(0, 60)}`);
 
+    // Static mounts are ungated too, and moved to `[...path]` route folders (tb-0030 step 5).
+    const staticCss = await get(cookies, "/static/css/app.css");
+    check("GET /static/css/app.css serves the stylesheet", staticCss.status === 200 && staticCss.body.includes("nav-link"), `${staticCss.status}`);
+    const favicon = await get(cookies, "/favicon.svg");
+    check("GET /favicon.svg serves the icon", favicon.status === 200, `${favicon.status}`);
+
     const badLogin = await postForm(cookies, "/login", { email: trail.email, password: "wrong-password" });
     check("login with a bad password is rejected", badLogin.status === 401, `${badLogin.status}`);
 
@@ -525,6 +531,15 @@ async function main() {
     );
     const createdInvoice = await get(cookies, newInvoicePath);
     check("...and the new party is the invoice's party", createdInvoice.body.includes("Smoke Walk-In"), `${createdInvoice.status}`);
+
+    // The JSON API the entry screen's client uses. GET /invoice/context is the reference snapshot; the
+    // path was moved to a route folder (tb-0030 step 5) and nothing else exercises it.
+    const invContext = await get(cookies, "/invoice/context?type=sale");
+    check(
+      "GET /invoice/context returns the entry snapshot",
+      invContext.status === 200 && invContext.body.includes('"items"') && invContext.body.includes('"next"'),
+      `${invContext.status} ${invContext.body.slice(0, 90)}`
+    );
 
     // A party made on a SALE must be a customer. The two enums have the same two names in the opposite
     // numbers (invoice 0 is purchase, party 0 is customer), so this is the assertion that would have

@@ -51,6 +51,35 @@ export function resolveMount(manifest, path) {
   if (single) return { rel: single.file, single: true };
   return null;
 }
+
+/** The lowercased extension of a path, or "". */
+function extOf(p) {
+  const i = String(p).lastIndexOf(".");
+  return i < 0 ? "" : String(p).slice(i).toLowerCase();
+}
+
+/**
+ * The Content-Type for a file, from `/app/manifests/content-types.json`.
+ *
+ * It reads `__AA_APP__` rather than closing over the bundle, so `readStatic` stays callable from a
+ * module with no app bundle — which is how a route folder uses it.
+ */
+async function contentTypeFor(fsPath) {
+  const app = globalThis.__AA_APP__;
+  if (!app || !app.manifests) return null;
+  const table = (await app.manifests.contentTypes()).byExtension;
+  return table[extOf(fsPath)] ?? null;
+}
+
+/** Read a static file with its Content-Type, or a 404 response. Used by the `[...path]` mount folders. */
+export async function readStatic(fsPath) {
+  try {
+    const body = await fs.readFile(fsPath);
+    return { body, contentType: (await contentTypeFor(fsPath)) || "application/octet-stream" };
+  } catch {
+    return { text: "Not found", status: 404 };
+  }
+}
 import * as refsModule from "./refs.js";
 import { page } from "./http.js";
 
@@ -316,3 +345,7 @@ export function jsonBody(req) {
     return {};
   }
 }
+
+/** `db.all` returns rows as value arrays against a known column order; this names them. */
+export const rowsToObjects = (columns, rows) =>
+  (rows ?? []).map((values) => Object.fromEntries(columns.map((c, i) => [c, values[i]])));

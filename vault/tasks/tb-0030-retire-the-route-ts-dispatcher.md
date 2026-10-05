@@ -419,9 +419,29 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   folder — a Rust change and a wasm rebuild.** The other `/jobs/*` routes *can* move; only `reconcile` is
   polled directly.
 
-  **Next within step 5:** the API families (`/jobs/*` except `reconcile`; `/invoice/*` — context, POST,
-  GET, line, complete, release); then the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`,
-  `/plugins/*`, `/favicon.svg`); then auth (`/login`, `/logout`, `/`).
+  **Then the `/invoice/*` JSON API** (2026-10-05): `invoice/route.ts` (POST create), `context`, `{id}`
+  (GET + PATCH), `{id}/line` (POST), `{id}/line/{lineId}` (DELETE), `{id}/complete`, `{id}/release` moved
+  to folders, the dispatcher branch deleted. `rowsToObjects` joined `route-kit`, and `userHex`/`locked`/
+  `rowsToObjects` left the dispatcher with it. A smoke check for `GET /invoice/context` was added (nothing
+  else exercised the JSON API — the smoke uses the form path). `guest-smoke.mjs` **105/105**.
+
+  ⚠️ **`/jobs/*` stays on the dispatcher for now.** Its own reason: a `jobs/{id}/route.ts` folder would
+  match `/jobs/reconcile` (the `{id}` param absorbs `reconcile`) and shadow the dispatcher branch for an
+  external client, turning a POST that worked into a GET-only 404. Combined with the poller calling the
+  dispatcher FILE directly (above), the whole `/jobs` family is left in place until the host poller is
+  changed — a Rust step, not a folder step.
+
+  **Then the prefix routes, auth, and the last small routes** (2026-10-05): the static mounts
+  (`static/[...path]`, `compute/[...path]`, `plugins/[...path]`, `favicon.svg`, all ungated, via
+  `routeKit.resolveMount`), `/login` (GET screen + POST exchange) and `/logout`, the `/management` hub,
+  and `/worker/{id}/step`. `readStatic`/`contentTypeFor`/`extOf` joined `route-kit`. The dispatcher's `/`
+  branch was removed as **dead** — the host's own `root_handler` answers `/` first. Smoke checks added for
+  `/static/css/app.css` and `/favicon.svg`; `guest-smoke.mjs` **107/107**.
+
+  **What is left on the dispatcher:** only `/jobs/*` (all of it, kept — see the poller note above) and the
+  `/bench/*` dev routes, plus the auth gate and the fallback 404.
+
+  **Next within step 5:** the `/bench/*` dev routes; then the dispatcher is down to `/jobs/*`.
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
