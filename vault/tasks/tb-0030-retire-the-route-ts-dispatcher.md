@@ -457,6 +457,15 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   forced `[...key]`/`[...slug]` catch-alls.
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
+      **Reduced 2026-10-05, not deleted.** The dispatcher is now **298 lines and holds one branch** —
+      `POST /jobs/reconcile` — plus the auth gate and the fallback 404. Every other route is a folder.
+      The `router.js` role is already covered: the shared helpers live in `app/lib/route-kit.js`
+      (`normalizePath`, `parsePairs`, `userOf`, `loginRedirect`, `pick`/`flag`/`typeOptions`, `userHex`,
+      `decode`, `locked`, `jsonBody`, `rowsToObjects`, `kvTakeJSONL`, `readStatic`, `resolveMount`,
+      `jobsReconcile`), reached as `A.routeKit`, which is exactly what a `router.js` would be. Full
+      deletion is **blocked only by `/jobs/reconcile`**: the host's poller calls the dispatcher file
+      directly, so the branch must stay reachable until the host resolves the route folder instead
+      (a Rust change + wasm rebuild). The operator chose to keep the branch for now.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
       folders. Independent of the route work; not to be bundled with it.
 

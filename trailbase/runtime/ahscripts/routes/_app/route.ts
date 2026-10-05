@@ -204,79 +204,13 @@ async function dispatch(req: any): Promise<any> {
   // /plugins moved to the route folder `ahscripts/routes/plugins/route.ts` (tb-0030 step 5).
 
   // Jobs: durable queue API.
-  if (path === "/jobs" && method === "POST") {
-    const body = jsonBody(req);
-    // Validate before enqueueing. `queue.enqueue` throws `Unknown job: <name>` for a name it does not
-    // not know, which reached the client as an opaque `500 Guest error: Unknown job: ` — so a request
-    // with a typo in the job name, or with no body at all, looked like a server fault. It is a bad
-    // request and it is now answered as one. Found by `tools/route-coverage.mjs`, which asserted the
-    // route was reachable and got a 500.
-    const name = String(body.name || "");
-    if (!A.jobs.isKnown(name)) {
-      return { error: "unknown job", name, known: A.jobs.known() };
-    }
-    const jobHex = await A.jobs.enqueue(db, name, body.input || {});
-    await A.jobs.reconcile(db);
-    const view = await A.jobs.jobView(db, jobHex);
-    return { id: view.id, state: view.state };
-  }
+  //
+  // Only `/jobs/reconcile` remains in this dispatcher, and only because the host's poller calls the
+  // dispatcher FILE directly for it (see tb-0030 step 6). Every other `/jobs/*` route is a folder now,
+  // and `jobs/reconcile/route.ts` serves external callers. Both call `routeKit.jobsReconcile`, so the
+  // polled path and an external caller cannot drift.
   if (path === "/jobs/reconcile" && method === "POST") {
-    const fanout = query.fanout === "1" || form.fanout === "1";
-    const concurrency = Number(query.concurrency || form.concurrency || 1) || 1;
-    const origin = (String(req.url || "").match(/^https?:\/\/[^/]+/) || [""])[0];
-    const reconciled = await A.jobs.reconcile(db, fanout ? { origin, concurrency } : {});
-    // Report materialisation runs here, off the request path: the minutely job drives this route, so
-    // the fingerprint probe that invalidates every cached derived answer is not paid by a report
-    // request that would otherwise hit the ~20 s call deadline.
-    //
-    // ⚠️ This read `snap.built.length`, and there is no `built` any more. The view snapshot was retired
-    // in [[tb-0032-manifest-first-refactor]] phase 3 — `app/lib/reports.js` is now a probe and a diff,
-    // and `refresh()` returns `state` — but this call site was left behind. It threw a TypeError on
-    // every reconcile, the catch swallowed it, and `materialized` was therefore **always** null: a
-    // route that logs an error every minute and reports that it did nothing. Found by reading the
-    // server log during a fresh-depot report sweep, 2026-10-04, not by a failing check.
-    let materialized: any = null;
-    if (query.materialize !== "0") {
-      try {
-        const snap = await A.service.refresh(db);
-        materialized = {
-          tables: snap.fingerprints ? Object.keys(snap.fingerprints).length : 0,
-          changed: snap.lastRefresh ? snap.lastRefresh.changed.length : 0,
-          // Always empty, and deliberately so: a report's cost is its SQL on the current data, so
-          // there is nothing to rebuild. Reported rather than dropped so this key cannot be mistaken
-          // for the one that broke.
-          rebuilt: snap.lastRefresh ? snap.lastRefresh.rebuilt.length : 0,
-        };
-      } catch (error) {
-        console.log("report fingerprint probe failed: " + error);
-      }
-    }
-    return { reconciled, materialized };
-  }
-  const jobResultMatch = /^\/jobs\/([^/]+)\/result$/.exec(path);
-  if (jobResultMatch && method === "GET") {
-    if (query.reconcile !== "0") await A.jobs.reconcile(db);
-    const view = await A.jobs.jobView(db, A.routeKit.b64ToHex(jobResultMatch[1]));
-    if (!view) return text("No such job", 404);
-    return { state: view.state, result: view.result, artifacts: view.artifacts };
-  }
-  const jobCancelMatch = /^\/jobs\/([^/]+)\/cancel$/.exec(path);
-  if (jobCancelMatch && method === "POST") {
-    await A.jobs.cancelJob(db, A.routeKit.b64ToHex(jobCancelMatch[1]));
-    return { ok: true };
-  }
-  const jobRecoverMatch = /^\/jobs\/([^/]+)\/steps\/([0-9]+)\/recover$/.exec(path);
-  if (jobRecoverMatch && method === "POST") {
-    await A.jobs.recoverStep(db, A.routeKit.b64ToHex(jobRecoverMatch[1]), Number(jobRecoverMatch[2]));
-    return { ok: true };
-  }
-  const jobMatch = /^\/jobs\/([^/]+)$/.exec(path);
-  if (jobMatch && method === "GET") {
-    // `?reconcile=0` inspects without running due work (used by the poller test).
-    if (query.reconcile !== "0") await A.jobs.reconcile(db);
-    const view = await A.jobs.jobView(db, A.routeKit.b64ToHex(jobMatch[1]));
-    if (!view) return text("No such job", 404);
-    return view;
+    return await A.routeKit.jobsReconcile(A, db, req, query, form);
   }
 
   // The /invoice-doc family moved to route folders (tb-0030 step 5): `ahscripts/routes/invoice-doc/route.ts`

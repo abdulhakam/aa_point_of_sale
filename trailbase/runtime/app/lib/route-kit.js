@@ -350,8 +350,7 @@ export function jsonBody(req) {
 export const rowsToObjects = (columns, rows) =>
   (rows ?? []).map((values) => Object.fromEntries(columns.map((c, i) => [c, values[i]])));
 
-/** Read a KV handle's JSONL rows and delete it — the spool handoff. Used by the `/bench/*` probes. */
-export async function kvTakeJSONL(key) {
+/** Read a KV handle's JSONL rows and delete it — the spool handoff. Used by the `/bench/*` probes. */export async function kvTakeJSONL(key) {
   const kv = globalThis.kv;
   const raw = await kv.get(String(key));
   const rows = String(raw)
@@ -364,4 +363,38 @@ export async function kvTakeJSONL(key) {
     // best effort
   }
   return rows;
+}
+
+/**
+ * `POST /jobs/reconcile` — run due queue work and probe the report fingerprint.
+ *
+ * Shared by the `jobs/reconcile` route folder AND the dispatcher's retained branch, because the host's
+ * poller calls the dispatcher FILE directly (see tb-0030). One implementation, two entry points, so the
+ * polled path and an external caller cannot drift.
+ */
+export async function jobsReconcile(A, db, req, query, form) {
+  const fanout = query.fanout === "1" || form.fanout === "1";
+  const concurrency = Number(query.concurrency || form.concurrency || 1) || 1;
+  const origin = (String((req && req.url) || "").match(/^https?:\/\/[^/]+/) || [""])[0];
+  const reconciled = await A.jobs.reconcile(db, fanout ? { origin, concurrency } : {});
+  // Report materialisation runs here, off the request path: the minutely job drives this route, so the
+  // fingerprint probe that invalidates every cached derived answer is not paid by a report request that
+  // would otherwise hit the ~20 s call deadline.
+  let materialized = null;
+  if (query.materialize !== "0") {
+    try {
+      const snap = await A.service.refresh(db);
+      materialized = {
+        tables: snap.fingerprints ? Object.keys(snap.fingerprints).length : 0,
+        changed: snap.lastRefresh ? snap.lastRefresh.changed.length : 0,
+        // Always empty, and deliberately so: a report's cost is its SQL on the current data, so there
+        // is nothing to rebuild. Reported rather than dropped so this key cannot be mistaken for the
+        // one that broke.
+        rebuilt: snap.lastRefresh ? snap.lastRefresh.rebuilt.length : 0,
+      };
+    } catch (error) {
+      console.log("report fingerprint probe failed: " + error);
+    }
+  }
+  return { reconciled, materialized };
 }
