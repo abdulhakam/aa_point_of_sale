@@ -1,17 +1,39 @@
 ---
 title: The guest frontend is a direct shift of the legacy UI, not a redesign
 type: decision
-status: accepted
+status: superseded
 decided_on: 2026-09-27
 created: 2026-09-27
-tags: [frontend, guest, wasm, parity, ui, cutover, legacy]
+updated: 2026-10-05
+superseded_by: "[[parity-is-functional-not-visual]]"
+tags: [frontend, guest, wasm, parity, ui, cutover, legacy, superseded]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0028-guest-transactional-screens-and-mobile]]"]
+related_to: ["[[parity-is-functional-not-visual]]", "[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0023-guest-feature-parity]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0028-guest-transactional-screens-and-mobile]]"]
 ---
 
 # The guest frontend is a direct shift of the legacy UI, not a redesign
 
-## Decision
+> ## ⚠️ SUPERSEDED 2026-10-05 — the VISUAL half only
+>
+> **Withdrawn:** *"one screen for one screen, **with the same look** … same layout, same labels, same
+> tiles, same print output"*, and with it the captured legacy UI as a **pixel** reference.
+>
+> **Replaced by** [[parity-is-functional-not-visual]]: parity is **functional**. The guest must be able
+> to do everything the legacy app could do and may be laid out and styled however it does the job
+> better.
+>
+> **Still in force from this decision:** one screen for one screen (every capability has a home, and
+> coverage is countable); the parity test must be decidable by evidence rather than taste — which is why
+> the new test is a **capability inventory** rather than a screenshot; and the guest must reproduce the
+> legacy printout header, which is a business identity, not a look
+> ([[environment]]).
+>
+> The rest of this note is kept **as it was written on 2026-09-27**, because a withdrawn claim that has
+> been deleted is indistinguishable from a claim that was never made — and this one was acted on for
+> eight days. What it caused is recorded in [[parity-is-functional-not-visual]] and measured in
+> [[ui-parity-discrepancies-2026-10-05]].
+
+## Decision (as written 2026-09-27)
 
 The guest-WASM frontend ([[runtime-js-guest-platform]]) replaces the legacy Next.js app
 ([[frontend]]) **one screen for one screen, with the same look**. It is a re-platform of the
@@ -42,7 +64,7 @@ The captured legacy UI is the reference for this work
   where the code lived under `frontend-ssr/` it now lives under `trailbase/runtime/app/`.
 - The guest's current screens must be restyled to match legacy, and the missing transactional
   screens must be built ([[guest-frontend-feature-parity-gaps]],
-  [[tb-0023-direct-shift-legacy-ui-to-guest]]).
+  [[tb-0023-guest-feature-parity]]).
 - The Node `frontend-ssr/plugins/import-from-v1/` copy of the data-migration tool was removed
   with the directory. A ported copy already exists on the guest at
   `trailbase/runtime/app/plugins/import-from-v1/`; verifying it is
@@ -71,6 +93,6 @@ The captured legacy UI is the reference for this work
 ## Related
 
 - [[guest-frontend-feature-parity-gaps]] — what is still missing.
-- [[tb-0023-direct-shift-legacy-ui-to-guest]] — the work item.
+- [[tb-0023-guest-feature-parity]] — the work item.
 - [[legacy-ui-reference-captures]] — the captured legacy UI.
 - [[runtime-js-guest-platform]] — the system that now carries the frontend.

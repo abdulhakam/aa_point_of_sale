@@ -7,7 +7,7 @@ created: 2026-09-29
 updated: 2026-09-29
 tags: [invoices, payments, inventory, mobile, responsive, guest, demo, ui]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[tb-0021-invoices-cashmemos-printing]]", "[[guest-frontend-feature-parity-gaps]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[money-is-2dp-everywhere]]", "[[invoice-entry-freshness-and-writes]]", "[[dispatcher-transpiled-per-request]]", "[[manifest-driven-routing-and-data-dag]]"]
+related_to: ["[[tb-0021-invoices-cashmemos-printing]]", "[[guest-frontend-feature-parity-gaps]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-guest-feature-parity]]", "[[money-is-2dp-everywhere]]", "[[invoice-entry-freshness-and-writes]]", "[[dispatcher-transpiled-per-request]]", "[[manifest-driven-routing-and-data-dag]]"]
 ---
 
 # TB-0028 Guest invoice / payment / inventory screens and a mobile layout

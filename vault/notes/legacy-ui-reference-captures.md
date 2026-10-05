@@ -4,15 +4,25 @@ type: note
 status: active
 created: 2026-09-27
 tags: [legacy, frontend, ui, parity, screenshots, reference, nextjs]
-related_to: ["[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[frontend]]", "[[route-map]]"]
+related_to: ["[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-guest-feature-parity]]", "[[frontend]]", "[[route-map]]"]
 ---
 
 # Legacy UI reference captures
 
 Screenshots and accessibility snapshots of the **legacy production UI** ([[frontend]], Next.js on
-`:3000`) taken through Chrome DevTools. They are the visual reference for the direct-shift parity
-work ([[guest-ui-is-a-direct-shift-of-legacy]],
-[[tb-0023-direct-shift-legacy-ui-to-guest]]).
+`:3000`) taken through Chrome DevTools.
+
+> **Re-read this note under the current mandate.** These captures were the **pixel** reference for a
+> visual direct-shift that was **withdrawn on 2026-10-05** — see [[parity-is-functional-not-visual]].
+> They are now a **capability** reference: what each legacy screen let a user *do*, which is the test
+> that replaced pixel matching. **A visual difference between the guest and a capture here is no longer
+> a defect.**
+>
+> They were **validated against the running legacy app** on 2026-10-05: the live dashboard is
+> pixel-identical to `02-dashboard.png`, so the captures are faithful. The live app can be captured
+> directly with `node trailbase/tools/ui-capture.mjs --system legacy --legacy-user … --legacy-password …`,
+> which writes to `vault/attachments/ui-capture/legacy/` — prefer that over these when the legacy app is
+> running.
 
 Files live in `vault/attachments/legacy-ui/` and are linked as `[[file.ext]]`.
 

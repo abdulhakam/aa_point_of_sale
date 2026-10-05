@@ -5,9 +5,24 @@ status: resolved
 severity: high
 created: 2026-09-27
 tags: [guest, wasm, parity, gaps, cutover, risk, ui]
-related_to: ["[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[pos-0028-decide-cutover-plan]]", "[[tb-0028-guest-transactional-screens-and-mobile]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[heavy-report-blocks-runtime-threads]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[frontend]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-guest-feature-parity]]", "[[pos-0028-decide-cutover-plan]]", "[[tb-0028-guest-transactional-screens-and-mobile]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[heavy-report-blocks-runtime-threads]]"]
 ---
 
+
+# The guest frontend is not yet a replacement for the legacy UI — the parity gaps
+
+> **This note's categories are re-read under the current mandate.**
+> [[parity-is-functional-not-visual]] withdrew the visual direct-shift on 2026-10-05, which changes what
+> two of these categories mean:
+>
+> - **Category 4 — visually different.** These are **no longer gaps.** They were written under a rule
+>   that has been withdrawn; the differences are accepted. The triage is in [[tb-0023-guest-feature-parity]].
+> - **Category 5 — new-side-only screens.** Unchanged in substance: these are capabilities the guest has
+>   and legacy did not, and the mandate now explicitly permits keeping them.
+> - **Categories 1–3 — missing screens and capabilities.** Still the substance of the work, and now
+>   measured against a **capability inventory** rather than a screenshot.
+>
+> The 2026-10-01 re-verification below stands: every screen listed as missing now answers 200.
 
 ## RE-VERIFIED 2026-10-01: the listed gaps are built
 
@@ -29,7 +44,7 @@ Two paths in the list were wrong rather than missing: `/invoices/entry` never ex
 The list is **stale** and this note is closed against it. A fresh browser sweep of all 58 routes found
 no dead links and no missing screen ([[browser-page-and-filter-sweep-2026-10-01]]). Note that "the
 screen exists" is not "the screen matches the legacy UI" - the remaining work is
-[[tb-0023-direct-shift-legacy-ui-to-guest]].
+[[tb-0023-guest-feature-parity]].
 
 # The guest frontend is not yet a replacement for the legacy UI — the parity gaps
 
@@ -91,7 +106,7 @@ legacy money exactly and covers the `final_total` rounding quirk.
 
 The guest's dashboard, report, ledger and management screens render their own layout. The
 direct-shift decision requires them restyled to match the captured legacy UI exactly. This is
-the bulk of [[tb-0023-direct-shift-legacy-ui-to-guest]] and is not a functional gap.
+the bulk of [[tb-0023-guest-feature-parity]] and is not a functional gap.
 
 ### 3. Deliberately omitted, with a stated reason
 
@@ -162,6 +177,6 @@ by the guest.
 ## Related
 
 - [[guest-ui-is-a-direct-shift-of-legacy]] — the look-and-behaviour mandate.
-- [[tb-0023-direct-shift-legacy-ui-to-guest]] — the parity work item.
+- [[tb-0023-guest-feature-parity]] — the parity work item.
 - [[tb-0021-invoices-cashmemos-printing]] — the transactional screens and their design.
 - [[legacy-ui-reference-captures]] — the captured legacy UI reference.

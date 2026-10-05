@@ -35,7 +35,7 @@ whose source was deleted from git on 2026-09-29) against the guest
 |---|---|---|---|
 | Login | `/auth` | `/login` | ✅ |
 | Root / redirect | `/` | `/` → dashboard | ✅ |
-| Dashboard | `/app/dashboard` | `/dashboard` | ✅ (look differs — [[tb-0023-direct-shift-legacy-ui-to-guest]]) |
+| Dashboard | `/app/dashboard` | `/dashboard` | ✅ (look differs — [[tb-0023-guest-feature-parity]]) |
 | Reports index | `/app/reports` | `/reports` | ✅ |
 | Unified Payments Report | `/app/reports/payments` | `/reports/payments` | ✅ |
 | Payments, area-wise | `/app/reports/payments/areawise` | — | ❌ omitted on purpose |

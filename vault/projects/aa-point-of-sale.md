@@ -96,8 +96,12 @@ documents the value translation between them, and that translation is what
 - ⚠️ **The legacy app is gone, not merely unrepointed.** `frontend/` was deleted from git on
   2026-09-29; `legacyforparity/standalone/` is a compiled bundle with no `src/`. There is nothing
   left to point at TrailBase ([[cutover-is-guest-only]]).
-- The guest UI is not yet visually identical to the legacy UI
-  ([[tb-0023-direct-shift-legacy-ui-to-guest]]).
+- ✅ **The guest UI is functionally equal to the legacy UI, and does not try to look like it.**
+  **Revised 2026-10-05.** This line previously read *"The guest UI is not yet visually identical to the
+  legacy UI"*, which is no longer a goal: [[parity-is-functional-not-visual]] withdrew the visual
+  mandate and replaced it with **functional parity** — every capability the legacy app has, and freedom
+  to lay it out better. What remains is [[tb-0023-guest-feature-parity]]: a searchable autocomplete,
+  create-party/create-item on the invoice pages, a smaller rail, and the sale-price question.
 
 **Open decisions** — the one that gated everything else is
 **closed**: [[cutover-is-guest-only]] records shape B, guest only, decided 2026-10-03. Shape A
@@ -141,8 +145,13 @@ frameworks. Concretely:
 - **Inherited numerics must not drift.** The new report engine has to reproduce the old view
   SQL's output for the same rows, quirks included, so that numbers can be compared during
   migration. [[reports-and-ledgers]] lists those quirks explicitly.
-- **The new UI is a direct shift of the legacy UI**, same look, so the cutover needs no
-  retraining. See [[guest-ui-is-a-direct-shift-of-legacy]].
+- **The new UI must be functionally equal to the legacy UI**, so the cutover needs no retraining in
+  *what staff can do*; it may look however it does that better.
+  ⚠️ **Revised 2026-10-05.** This line previously read **"a direct shift of the legacy UI, same look"**
+  ([[guest-ui-is-a-direct-shift-of-legacy]]), and that visual half was **withdrawn** —
+  see [[parity-is-functional-not-visual]]. The retraining argument still holds: an operator's muscle
+  memory is a list of *capabilities*, and capabilities are preserved. What is not preserved is the
+  arrangement of them, because a faithful copy was reproducing the legacy's own defects.
 
 ## Related
 

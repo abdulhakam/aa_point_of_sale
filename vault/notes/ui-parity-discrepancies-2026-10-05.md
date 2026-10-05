@@ -6,14 +6,31 @@ created: 2026-10-05
 updated: 2026-10-05
 tags: [ui, parity, legacy, guest, screenshots, css, discrepancy]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[party-and-booker-ledgers-render-empty-and-say-nothing]]", "[[legacy-ui-reference-captures]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[guest-frontend-feature-parity-gaps]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[settle-structural-claims-with-the-owning-artifact]]"]
+related_to: ["[[tb-0023-guest-feature-parity]]", "[[party-and-booker-ledgers-render-empty-and-say-nothing]]", "[[legacy-ui-reference-captures]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[guest-frontend-feature-parity-gaps]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[settle-structural-claims-with-the-owning-artifact]]"]
 ---
 
 # UI parity discrepancies against the legacy bundle, 2026-10-05
 
-The direct-shift mandate is [[guest-ui-is-a-direct-shift-of-legacy]]: the guest must look like the legacy
+> ## ⚠️ STATUS CHANGED 2026-10-05 — this is now a RECORD, not a work list
+>
+> The visual direct-shift mandate was **withdrawn** the same day
+> ([[parity-is-functional-not-visual]]): parity is **functional**, so a pixel difference between the
+> guest and the legacy app is **not a defect**.
+>
+> - **What stays useful here:** the live capture and comparison method (`ui-capture.mjs`,
+>   `ui-parity-report.mjs`), and the four harness bugs that produced *confident wrong answers*.
+> - **What is closed:** the pixel-only items. The nine "still discrepant" items are re-triaged in
+>   [[tb-0023-guest-feature-parity]] — four are closed as accepted differences, four are capability
+>   gaps that became work items.
+> - **The ten fixes committed 2026-10-05 stand.** Two of them were real defects regardless of looks: the
+>   Profit and Item Sales reports printed the invoice number as a float (`1.0`), and the report period
+>   had never rendered at all.
+>
+> Read this note for **what the two apps actually do to each other's faces**, not as a to-do list.
+
+The direct-shift mandate was [[guest-ui-is-a-direct-shift-of-legacy]]: the guest must look like the legacy
 app. This note is the first **measured** pass over that, screen by screen, against the 41 captures in
-[[legacy-ui-reference-captures]].
+[[legacy-ui-reference-captures]] — which the later live run validated as faithful.
 
 **Method.** New `trailbase/tools/guest-capture.mjs` drives the guest in headless Chrome at **1600×900** —
 the reference viewport, because a screenshot at a different size produces differences that belong to the

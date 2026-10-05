@@ -39,10 +39,15 @@ report logic are files under an `app/` directory, read and evaluated **at runtim
 or a page means editing files, not rebuilding a component. The intermediate Node `frontend-ssr`
 experiment was removed on 2026-09-27 ([[guest-ui-is-a-direct-shift-of-legacy]]).
 
-The parity target is a direct shift of the legacy UI onto this host, same look
-([[tb-0023-direct-shift-legacy-ui-to-guest]]) — but the legacy UI it is shifting **no longer has
-source**, so there is nothing to port *from*. The legacy look now has to be read off the captured
-screenshots in [[legacy-ui-reference-captures]] and the frozen bundle's rendered pages.
+The parity target is **functional equality with the legacy UI**: every capability it has, this host
+serves, laid out however it does that job better
+([[parity-is-functional-not-visual]], [[tb-0023-guest-feature-parity]]) — and the legacy UI **no longer
+has source**, so there is nothing to port *from*. Its capabilities have to be read off the captured
+screens in [[legacy-ui-reference-captures]] and the frozen bundle's rendered pages. ⚠️ **Revised
+2026-10-05**: this paragraph previously read *"a direct shift of the legacy UI onto this host, same
+look"*, and that visual half was **withdrawn** — a byte-faithful copy was reproducing the legacy's own
+defects (a column headed `BOX_SIZE_QTY`, report tables with no `<th>` at all) and refusing the
+improvements the operator asked for.
 
 ## The pieces
 
@@ -154,5 +159,5 @@ implementation" ([[legacy-parity-checks-waived]]).
 - [[trail-runtime-js-reference]] — the adopted host and its measurements.
 - [[cutover-is-guest-only]] — why this system is the end state, and why that does not make it
   production today.
-- [[guest-ui-is-a-direct-shift-of-legacy]] — the look-and-behaviour mandate.
+- [[parity-is-functional-not-visual]] — the current mandate (functional parity, visual freedom), and [[guest-ui-is-a-direct-shift-of-legacy]] — the withdrawn visual one, kept on record.
 - [[build-and-run]] / [[environment]] — how to start it.

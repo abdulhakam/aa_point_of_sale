@@ -32,7 +32,13 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 1. **Production data lives in a TrailBase depot**, migrated with ids and enum codes translated
    ([[pos-0027-migrate-production-data-to-trailbase]]).
 2. **A UI that staff accept covers the whole working day** — invoices, printing and cash memo
-   included — and looks like the legacy UI ([[guest-ui-is-a-direct-shift-of-legacy]]).
+   included — and is **functionally equal to the legacy UI**: everything the legacy app could do, the
+   guest can do, and it may look however it does the job better
+   ([[parity-is-functional-not-visual]]). ⚠️ **2026-10-05: this was "and looks like the legacy UI"
+   ([[guest-ui-is-a-direct-shift-of-legacy]]) and that visual half was withdrawn.** "Looks like" was
+   replaced by "does everything legacy does", because a byte-faithful copy was reproducing the legacy's
+   defects (`BOX_SIZE_QTY` as a column heading, report tables with no `<th>` at all) and was refusing the
+   improvements the operator asked for.
 3. **The legacy pair is no longer a live system**, and what remains is documented as a frozen oracle
    with its rollback stated.
 
@@ -62,7 +68,7 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 [x] 5. Prove the numbers match the old views             -> differential 14/14 (no longer re-runnable; see open decision 5)
 [x] 6. Adopt the guest-WASM app platform                 -> runtime-js host (Phase 0 + app host port)
 [x] 6a. Flatten the layout, drop the guests spike        -> [[tb-0024-flatten-new-system-layout]]
-[ ] 7. Direct-shift the legacy UI onto the guest         -> [[tb-0023-direct-shift-legacy-ui-to-guest]]
+[ ] 7. Guest feature parity, plus a better UI   -> [[tb-0023-guest-feature-parity]] (retitled 2026-10-05 from "Direct-shift the legacy UI"; the mandate is now [[parity-is-functional-not-visual]])
 [x] 7a. Invoice / payment / inventory screens + mobile   -> [[tb-0028-guest-transactional-screens-and-mobile]] (done 2026-09-29)
 [x] 8. Build invoices / cash memos / printing on the guest -> [[tb-0021-invoices-cashmemos-printing]] (done 2026-09-29)
 [x] 8a. Invoice lifecycle, spreadsheet grid, standalone document -> [[guest-invoice-lifecycle]] (done 2026-09-29)
@@ -256,7 +262,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | [[tb-0018-port-app-host-on-runtime-js]] | port the app host (reports parity; management/invoices left) |
 | [[tb-0020-guest-fingerprint-refresh]] | fingerprint-based incremental data refresh — done, but three boxes unticked |
 | [[tb-0022-move-reports-to-sql]] | move report arithmetic into runtime SQL files — largely done |
-| [[tb-0023-direct-shift-legacy-ui-to-guest]] | make the guest UI match legacy, screen for screen — ⚠️ no legacy source to compare against |
+| [[tb-0023-guest-feature-parity]] | make the guest UI match legacy, screen for screen — ⚠️ no legacy source to compare against |
 | [[tb-0025-host-endpoint-hygiene]] | leftover host endpoints |
 | [[tb-0030-retire-the-route-ts-dispatcher]] | retire `route.ts` |
 | [[tb-0032-manifest-first-refactor]] | manifest-first reports; gate it on `route-snapshot.mjs` |

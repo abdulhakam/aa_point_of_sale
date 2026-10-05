@@ -91,8 +91,11 @@ on the LAN can use it, behind a Private-profile Windows firewall rule —
 - **The legacy stack is production and has no source** — deleted from git 2026-09-29; it runs from
   `legacyforparity/` as a compiled bundle plus the PocketBase data directories, all untracked. It is
   the running system, so a defect in it cannot be fixed in it.
-- Parity target restated: the guest frontend is a direct shift of the legacy UI, same look
-  ([[guest-ui-is-a-direct-shift-of-legacy]]); the remaining gaps are in
+- Parity target restated: the guest frontend must be **functionally equal** to the legacy UI — every
+  capability it has — and is free to look however it does the job better
+  ([[parity-is-functional-not-visual]]). ⚠️ **Revised 2026-10-05**: this line previously read *"a direct
+  shift of the legacy UI, same look"* ([[guest-ui-is-a-direct-shift-of-legacy]]), and that visual
+  mandate was withdrawn; the remaining gaps are in
   [[guest-frontend-feature-parity-gaps]].
 
 Detail in [[system-status-overview]].

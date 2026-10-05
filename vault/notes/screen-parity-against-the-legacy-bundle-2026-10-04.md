@@ -6,7 +6,7 @@ created: 2026-10-04
 updated: 2026-10-04
 tags: [parity, legacy, guest, screens, routes, cutover]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[guest-frontend-feature-parity-gaps]]", "[[route-map]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[tb-0014-point-company-fields-at-companies]]", "[[legacy-ui-reference-captures]]", "[[reports-parity-and-e2e-2026-09-29]]", "[[legacy-parity-checks-waived]]", "[[settle-structural-claims-with-the-owning-artifact]]"]
+related_to: ["[[guest-frontend-feature-parity-gaps]]", "[[route-map]]", "[[tb-0023-guest-feature-parity]]", "[[tb-0014-point-company-fields-at-companies]]", "[[legacy-ui-reference-captures]]", "[[reports-parity-and-e2e-2026-09-29]]", "[[legacy-parity-checks-waived]]", "[[settle-structural-claims-with-the-owning-artifact]]"]
 ---
 
 # Screen-by-screen parity against the legacy bundle, 2026-10-04
@@ -110,7 +110,7 @@ guest route that answers 200 with the expected title. Five have no counterpart, 
 four by decision or consolidation, one (`orders`) by a decision recorded in code.
 
 **Does not establish:** that the guest's screens *behave* like the legacy ones. That is
-[[tb-0023-direct-shift-legacy-ui-to-guest]], the largest remaining item in the definition of done, and the
+[[tb-0023-guest-feature-parity]], the largest remaining item in the definition of done, and the
 reason this note says "answered 200" rather than "parity". The reference for that comparison is
 [[legacy-ui-reference-captures]], not the bundle.
 

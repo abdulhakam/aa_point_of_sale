@@ -209,7 +209,7 @@ Side-by-side with [[runtime-js-guest-platform]]: [[route-map]].
 | Item transactions report | ✅ | ❌ dropped | no guest equivalent, deliberately |
 | Management (sections, areas, categories, parties, bookers, items) | ✅ 6 | ✅ **7** | guest adds `/management/companies` |
 | Mobile layout | ➖ | ➕ **guest-only** | `≤768px` on every page |
-| **Look and behaviour** | ✅ | ❌ **not the legacy look** | [[tb-0023-direct-shift-legacy-ui-to-guest]] |
+| **Look and behaviour** | ✅ | ❌ **not the legacy look** | [[tb-0023-guest-feature-parity]] |
 | Storybook component workshop | ✅ | — | ⚠️ **unreachable**: needs `npm run storybook` in a `frontend/` that no longer exists |
 
 ### What this means

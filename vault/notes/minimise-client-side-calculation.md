@@ -6,7 +6,7 @@ created: 2026-10-05
 updated: 2026-10-05
 tags: [guest, client-js, latency, performance, invoice-grid, money, verification, cdp]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[client-side-live-recalculation]]", "[[report-numbers-come-from-sqlite]]", "[[money-is-2dp-everywhere]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]", "[[guest-writes-via-sql]]", "[[runtime-js-guest-platform]]", "[[route-snapshot-was-snapshotting-redirects]]", "[[settle-structural-claims-with-the-owning-artifact]]", "[[invoice-entry-freshness-and-writes]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]"]
+related_to: ["[[client-side-live-recalculation]]", "[[report-numbers-come-from-sqlite]]", "[[money-is-2dp-everywhere]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]", "[[guest-writes-via-sql]]", "[[runtime-js-guest-platform]]", "[[route-snapshot-was-snapshotting-redirects]]", "[[settle-structural-claims-with-the-owning-artifact]]", "[[invoice-entry-freshness-and-writes]]", "[[tb-0023-guest-feature-parity]]"]
 ---
 
 # Minimising client-side calculation, and the two wrong numbers it uncovered

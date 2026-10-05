@@ -83,7 +83,7 @@ run but not repaired, and shape A became impossible. The intermediate Node
 | Cutover shape undecided | **RESOLVED 2026-10-03 — guest only.** The legacy Next.js UI was deleted from git on 2026-09-29, so "repoint it" was never available; shape B is recorded as the decision | [[cutover-is-guest-only]] |
 | **The production stack cannot be repaired** | **NEW 2026-10-03.** The shop runs on `legacyforparity/`, whose source was deleted from git on 2026-09-29. A bug in the running POS cannot be fixed in the running POS — only lived with, or fixed forward in the guest. There is also no git copy of `legacyforparity/`, so it is simultaneously the only copy of itself | [[cutover-is-guest-only]], [[pocketbase-data-dirs-in-git]] |
 | Dropped views break legacy screens | **MOOT 2026-10-03** — there are no legacy screens left to break; `pocketbase-types.ts` was deleted with `frontend/` | [[tb-0013-rework-report-screens-without-views]] |
-| The money screens are all present, but the product is not finished | Every screen the parity-gap list named as missing now answers 200, and a sweep of all 58 routes found no dead links. What remains is that the guest UI is **not yet the legacy look** | [[tb-0023-direct-shift-legacy-ui-to-guest]] |
+| The money screens are all present, but the product is not finished | Every screen the parity-gap list named as missing now answers 200, and a sweep of all 58 routes found no dead links. What remains is that the guest UI is **not yet the legacy look** | [[tb-0023-guest-feature-parity]] |
 | Four reports used to fail the 20 s deadline | **STALE 2026-10-01.** `profit`, `itemsales`, `paymentsbycompany` and `ledgers/general` all return 200 in 100–165 ms on the production depot. The SQL spool and the server render are what fixed it. An uncapped `payments` (26,108 rows, 10 MB) is 2.8 s warm, 7.5 s cold — slow, but inside the deadline | [[heavy-report-blocks-runtime-threads]] |
 | The production depot could not be started | **RESOLVED 2026-10-01.** The generated depot was missing its config and one migration | [[production-depot-could-not-be-started]] |
 | The persisted snapshot can be stamped current while holding empty views, and `?full=1` cannot recover it | **REPRODUCED LIVE 2026-10-01.** `persistViews` stamps the fingerprint with no guard on an empty view, and a `full` refresh re-hydrates from the empty snapshot instead of rebuilding. Reports are SQL over base tables now, so the reads survive it — but the recovery path is dead | [[persisted-snapshot-can-be-stamped-current-while-empty]] |
@@ -111,7 +111,7 @@ run but not repaired, and shape A became impossible. The intermediate Node
 [[trailbase-client-side-migration-plugin]] · [[keep-legacy-stack-in-production]] ·
 [[cutover-is-guest-only]] (spends its "until a cutover is explicitly decided" clause) ·
 [[offline-local-deployment]] · [[trailbase-guest-wasm-runtime-defaults]] ·
-[[guest-ui-is-a-direct-shift-of-legacy]] · [[compiled-artifacts-are-generic-capabilities]] ·
+[[parity-is-functional-not-visual]] · [[guest-ui-is-a-direct-shift-of-legacy]] · [[compiled-artifacts-are-generic-capabilities]] ·
 [[rendered-page-cache]]
 
 ## Health of this vault

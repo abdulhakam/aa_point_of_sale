@@ -6,15 +6,30 @@ decided_on: 2026-09-29
 created: 2026-09-29
 tags: [ui, mobile, responsive, css, parity, trailbase, guest]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[tb-0028-guest-transactional-screens-and-mobile]]", "[[report-render-row-cap]]", "[[rendered-page-cache]]"]
+related_to: ["[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-guest-feature-parity]]", "[[tb-0028-guest-transactional-screens-and-mobile]]", "[[report-render-row-cap]]", "[[rendered-page-cache]]"]
 ---
 
 # The mobile layout is additive — the legacy look is preserved above 768px
 
+> **Partly superseded 2026-10-05 — its rule survives, its reason does not.**
+>
+> The rule — **mobile is additive, never a separate app: one set of routes, one set of capabilities, a
+> narrow layout on top** — is unaffected and remains the rule.
+>
+> What no longer holds is the premise. The Context below justifies it by "same look, so the cutover
+> needs no retraining", and [[parity-is-functional-not-visual]] withdrew the visual mandate, so there is
+> no "legacy look" left to preserve. The title names it too, which is why this banner exists rather than a
+> quiet edit. **Read the decision as: mobile is additive because one capability set is easier to defend
+> than two — not because of what anything looks like.** The measurements under it (a 14-column report
+> table, an 80px rail eating 27% of a 360px screen, sub-44px tap targets) are unaffected by that change
+> and still stand.
+
 ## Context
 
-[[guest-ui-is-a-direct-shift-of-legacy]] makes the guest UI a direct shift of the legacy Next.js
-UI: same look, so the cutover needs no retraining. That was written against a desktop layout — an
+~~[[guest-ui-is-a-direct-shift-of-legacy]] makes the guest UI a direct shift of the legacy Next.js
+UI: same look, so the cutover needs no retraining.~~ **That premise was withdrawn 2026-10-05** — see
+[[parity-is-functional-not-visual]] — but the layout problem below was never about looks, and the fix is
+unchanged. That was written against a desktop layout — an
 80px icon rail, 10em tiles, dense 12px tables with black borders, 36px inputs. On a phone all of
 that is unusable: the rail eats 27% of a 360px screen, a report table is 14 columns wide, and the
 tap targets are under the 44px minimum.

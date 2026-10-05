@@ -6,7 +6,7 @@ created: 2026-10-04
 updated: 2026-10-04
 tags: [guest, ledger, usability, defaults, report-default-window, empty-state]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[report-cost-on-a-whole-database]]", "[[report-default-window-comes-from-the-data]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[report-render-row-cap]]"]
+related_to: ["[[report-cost-on-a-whole-database]]", "[[report-default-window-comes-from-the-data]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0023-guest-feature-parity]]", "[[report-render-row-cap]]"]
 ---
 
 # The party and booker ledgers render an empty table and say nothing

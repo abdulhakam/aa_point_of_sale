@@ -6,7 +6,7 @@ created: 2026-10-04
 updated: 2026-10-04
 tags: [guest, keyboard, hotkeys, accessibility, client-js, verification, cdp]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[runtime-js-minimal-file-authoring-contract]]", "[[runtime-js-guest-platform]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-direct-shift-legacy-ui-to-guest]]", "[[tb-0024-flatten-new-system-layout]]", "[[settle-structural-claims-with-the-owning-artifact]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[route-snapshot-was-snapshotting-redirects]]", "[[tb-0032-manifest-first-refactor]]", "[[client-side-live-recalculation]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]"]
+related_to: ["[[runtime-js-minimal-file-authoring-contract]]", "[[runtime-js-guest-platform]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-guest-feature-parity]]", "[[tb-0024-flatten-new-system-layout]]", "[[settle-structural-claims-with-the-owning-artifact]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[route-snapshot-was-snapshotting-redirects]]", "[[tb-0032-manifest-first-refactor]]", "[[client-side-live-recalculation]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]"]
 ---
 
 # The keyboard layer, and the two bugs only a real keystroke could find
@@ -193,5 +193,5 @@ The count is whatever the tool prints, not a number written down here — see
 
 ## Related
 
-- [[tb-0023-direct-shift-legacy-ui-to-guest]] — the remaining parity work; this does not reduce it.
+- [[tb-0023-guest-feature-parity]] — the remaining parity work; this does not reduce it.
 - [[screen-parity-against-the-legacy-bundle-2026-10-04]] — what the keyboard can reach, screen by screen.
