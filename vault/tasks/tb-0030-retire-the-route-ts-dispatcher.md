@@ -455,32 +455,33 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   path shape, method-named exports, no `route.json`), because several paths that looked like one family
   route to different shapes — and because a report key and a page slug can each contain a slash, which
   forced `[...key]`/`[...slug]` catch-alls.
-- [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
-      query coercion, auth gate) as a *module*, not a route.
-      **Reduced 2026-10-05, not deleted.** The dispatcher is now **298 lines and holds one branch** —
-      `POST /jobs/reconcile` — plus the auth gate and the fallback 404. Every other route is a folder.
-      The `router.js` role is already covered: the shared helpers live in `app/lib/route-kit.js`
-      (`normalizePath`, `parsePairs`, `userOf`, `loginRedirect`, `pick`/`flag`/`typeOptions`, `userHex`,
-      `decode`, `locked`, `jsonBody`, `rowsToObjects`, `kvTakeJSONL`, `readStatic`, `resolveMount`,
-      `jobsReconcile`), reached as `A.routeKit`, which is exactly what a `router.js` would be. Full
-      deletion is **blocked only by `/jobs/reconcile`**: the host's poller calls the dispatcher file
-      directly, so the branch must stay reachable until the host resolves the route folder instead
-      (a Rust change + wasm rebuild). The operator chose to keep the branch for now.
+- [x] **6. Delete `_app/route.ts`; `app/lib/router.js` is `app/lib/route-kit.js`.** **DONE 2026-10-05.**
+      The dispatcher file is deleted, and its `router.js` role is already covered: the shared helpers live
+      in `app/lib/route-kit.js` (`normalizePath`, `parsePairs`, `userOf`, `loginRedirect`,
+      `pick`/`flag`/`typeOptions`, `userHex`, `decode`, `locked`, `jsonBody`, `rowsToObjects`,
+      `kvTakeJSONL`, `readStatic`, `resolveMount`, `jobsReconcile`), reached as `A.routeKit`. Every route
+      is a folder, and `app/config/app.config.json` is now `mode: crawler` (folder-only).
 
-      **Keep the engine generic while doing it.** Full deletion preserves genericity because
-      `resolve_route_file` *is* the "generic file router" [[compiled-artifacts-are-generic-capabilities]]
-      invariant 5 names — deleting an app runtime file adds nothing to the wasm, and the auth gate,
-      fallback 404 and every route stay in JS. But the poller is where it could go wrong: `job_handlers()`
-      in `tb-ah-run-js/src/lib.rs` already hardcodes the app nouns `queue_poller` and
-      `POST /jobs/reconcile` (and requires `config::dispatcher()`). Two ways to finish, to be chosen
-      deliberately:
-      - **minimal** — run the poll path through the generic resolver (`resolve_route_file` →
-        `jobs/reconcile/route.ts`); genericity stays at today's level, the path still a Rust literal;
-      - **clean** — make the scheduler config-driven (the app declares its poll paths + cadence in
-        `app/config/*.json`, as `business.json` already works); this removes the last app nouns from the
-        compiled artifact and satisfies invariants 1/2/5 outright.
-      Deleting the dispatcher also drops the `mode: dispatcher`/`dispatcher` config path, so the host
-      config collapses toward pure folder mode — again less app-shaped.
+      **What the deletion required.** The host's poller was the only dispatcher dependency:
+      `job_handlers()` in `tb-ah-run-js/src/lib.rs` called `run_route(&dispatcher, …)`. It now resolves the
+      poll path through the SAME generic file router the HTTP path uses —
+      `resolve_route_file("/jobs/reconcile")` → `jobs/reconcile/route.ts` — and registers no poller when
+      there is no such folder. This is the minimal, genericity-preserving fix: the path is still a Rust
+      literal, but the mechanism is the generic router and the host holds no app catch-all dependency (the
+      config-driven scheduler remains the cleaner future option). The wasm was rebuilt. With `mode:
+      crawler`, `config::dispatcher()` returns None, so the catch-all fallback in `wildcard_handler` is
+      inert for this app while the capability stays available to an app that opts in — the host stays a
+      generic file router, per [[compiled-artifacts-are-generic-capabilities]] invariant 5.
+
+      **Verification:** `guest-smoke.mjs` **110/110**, including two new checks — the host poller resolves
+      `/jobs/reconcile` at startup AND fires it. (The poller calls `run_route` directly, so it never appears
+      as a request path; the host now logs `queue: poller route -> …` and `queue: polling …`, which is what
+      the checks read.) `tools/brace-check.mjs` now checks **all 73** route files and reports balanced — its
+      earlier false positive was the dispatcher itself, now gone.
+
+      **Follow-ups the deletion left (dev tools, not runtime):** `tools/feature-parity.mjs` and
+      `tools/route-inventory.json` (with `route-coverage.mjs`) still parse the old dispatcher to enumerate
+      routes; they want a folder-aware rewrite. They are not gates.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
       folders. Independent of the route work; not to be bundled with it.
 

@@ -61,14 +61,17 @@ impl Guest for Endpoints {
     // trailbase-runtime-js-scheduler-not-running-jobs), so the poller drives the app's own
     // `/jobs/reconcile` route directly. A synthetic user satisfies the app's auth gate.
     //
-    // The poller goes through the DISPATCHER, because `/jobs/reconcile` is a dynamic path with no
-    // route folder of its own. So in `crawler` mode there is nothing to poll: a crawler frontend
-    // brings its own scheduling, and registering a job whose route cannot exist would log a failure
-    // every minute forever.
-    let Some(dispatcher) = config::dispatcher() else {
+    // It resolves that path through the SAME generic file router the HTTP path uses, rather than
+    // through a catch-all dispatcher file. That is what let tb-0030 step 6 delete `_app/route.ts`:
+    // the host holds no app catch-all dependency, so an app that puts a folder at this path gets its
+    // queue polled and one that does not gets no poller (and no per-minute failure) — the honest
+    // answer for a frontend that brings its own scheduling.
+    let Some(route_file) = resolve_route_file("/jobs/reconcile") else {
+      println!("queue: no /jobs/reconcile route folder, no poller registered");
       return vec![];
     };
-    let dispatcher = dispatcher.to_string();
+    let route_file = route_file.to_string_lossy().to_string();
+    println!("queue: poller route -> {}", route_file);
     return vec![Job::minutely("queue_poller", async move || {
         let request = serde_json::json!({
             "method": "POST",
@@ -79,7 +82,8 @@ impl Guest for Endpoints {
             "headers": {},
             "user": { "id": "system", "email": "system", "username": "system", "csrf_token": "" }
         });
-        match crate::runtime::run_route(&dispatcher, "POST", request).await {
+        println!("queue: polling {}", route_file);
+        match crate::runtime::run_route(&route_file, "POST", request).await {
             Ok(value) => {
                 if let Some(count) = value.get("reconciled").and_then(|v| v.as_u64()) {
                     if count > 0 {
@@ -348,11 +352,10 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
   let mut file_path = match resolve_route_file(clean_path) {
       Some(p) => p,
       None => {
-          // No route folder owns this path. In `dispatcher` mode the single app dispatcher still takes
-          // it — that is the whole URL space today, and `route.ts` is still the reference until
-          // tb-0030 step 6 deletes it. In `crawler` mode there is no catch-all by design: the host
-          // serves whatever folders it finds and holds no opinion about the app, so a path with no
-          // folder of its own is a 404. See config.rs.
+          // No route folder owns this path. The app is folder-only since tb-0030 step 6 deleted
+          // `_app/route.ts`: every URL is a folder under /ahscripts/routes, so a path with none is a
+          // 404. A `dispatcher` catch-all stays a generic capability an app MAY opt into through its
+          // config, but the host holds no app route of its own and names no app noun.
           let mut fallback: Option<std::path::PathBuf> = None;
           if let Some(dispatcher) = config::dispatcher() {
               if std::path::Path::new(dispatcher).exists() {

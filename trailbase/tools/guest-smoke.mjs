@@ -651,6 +651,18 @@ async function main() {
 
     const logout = await get(cookies, "/logout");
     check("logout redirects to TrailBase's auth endpoint", (logout.status === 302 || logout.status === 303) && String(logout.location).includes("auth"), `${logout.status} ${logout.location}`);
+
+    // The host poller resolves /jobs/reconcile through the generic router at startup and fires it
+    // minutely (tb-0030 step 6 made this folder-driven; before that it required a dispatcher FILE,
+    // which no longer exists). The poller calls `run_route` DIRECTLY, so it never shows up as a normal
+    // request path — the host logs its own resolution ("queue: poller route -> …") and each fire
+    // ("queue: polling …"), which is what proves both. Bounded wait for the first fire.
+    const pollDeadline = Date.now() + 70000;
+    while (!trailLog.includes("queue: polling") && Date.now() < pollDeadline) {
+      await sleep(1000);
+    }
+    check("the host poller resolves /jobs/reconcile at startup", trailLog.includes("queue: poller route ->"), "no resolution log line");
+    check("the host poller fires /jobs/reconcile", trailLog.includes("queue: polling"), "no poll fired within 70s");
   } finally {
     kill(trail.child);
     await sleep(1200);

@@ -12,9 +12,9 @@ use std::sync::OnceLock;
 ///                 is a folder", and it is the mode for hosting a different frontend: the host serves
 ///                 whatever folders it finds and holds no opinion about the app.
 ///
-///   `dispatcher`  A single catch-all handles every path that has no route folder of its own.
-///                 This is how the current app works — `/reports/<key>`, `/management/<entity>` and
-///                 `/p/<slug>` are all dynamic, so they cannot be URL folders.
+///   `dispatcher`  A single catch-all handles every path that has no route folder of its own. In this
+///                 app it is now UNUSED — tb-0030 step 5 moved every route to a folder and step 6
+///                 deleted `_app/route.ts` — but it stays as a generic capability an app may opt into.
 ///
 /// The default is `dispatcher`, so a missing or unreadable config file changes nothing.
 ///
