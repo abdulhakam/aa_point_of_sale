@@ -305,3 +305,14 @@ export const locked = () => ({
   contentType: "application/json; charset=utf-8",
   status: 409,
 });
+
+/** Parse a JSON request body, or `{}` when the content type is not JSON or the body is malformed. */
+export function jsonBody(req) {
+  const contentType = String((req && req.headers && req.headers["content-type"]) || "");
+  if (!contentType.includes("application/json")) return {};
+  try {
+    return JSON.parse(String((req && req.body) || "{}"));
+  } catch {
+    return {};
+  }
+}

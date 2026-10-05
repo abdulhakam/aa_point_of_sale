@@ -735,75 +735,8 @@ if (path === "/login" && method === "GET") {
     return view;
   }
 
-  // Materialised invoice documents (tb-0027).
-  //
-  //   GET  /invoice-doc                     status, counts, and the last rebuild
-  //   GET  /invoice-doc/verify              drift check against the base tables
-  //   GET  /invoice-doc/list                summaries from the generated columns
-  //   GET  /invoice-doc/document?id=<id>    one whole document
-  //   GET  /invoice-doc/{id|inv-1234}       one whole document (path form)
-  //   POST /invoice-doc/rebuild             rebuild every document
-  //
-  // A rebuild is seconds, not milliseconds, so it is not something to hide behind a spinner on an
-  // unauthenticated path -- it is an explicit POST that records who asked and why. The automatic
-  // path (`ahscripts/init/invoice-doc.js`) is the one that runs unattended.
-  if (path === "/invoice-doc" && method === "GET") {
-    return await A.invoiceDoc.status({ kind: query.kind || "invoice.build" });
-  }
-  if (path === "/invoice-doc/verify" && method === "GET") {
-    return await A.invoiceDoc.verify();
-  }
-  if (path === "/invoice-doc/list" && method === "GET") {
-    return await A.invoiceDoc.list({
-      type: query.type,
-      party: query.party,
-      booker: query.booker,
-      completed: query.completed,
-      datedFrom: query.datedFrom,
-      datedTo: query.datedTo,
-      unpaid: query.unpaid,
-      orderBy: query.orderBy,
-      order: query.order,
-      limit: query.limit,
-      offset: query.offset,
-    });
-  }
-  if (path === "/invoice-doc/rebuild" && method === "POST") {
-    const body = jsonBody(req);
-    // Enqueue, do not run it here. A full rebuild of the production depot is 3-10 s of SQLite
-    // work, and the guest's WASM call deadline is around 20 s -- reconciling inline completed the
-    // rebuild and then lost the HTTP response to the deadline. The job is durable and the minutely
-    // poller runs it; the caller polls `/jobs/{id}` or `GET /invoice-doc` for the outcome.
-    // `?reconcile=1` runs it in this call, which is convenient on a small depot and in tests.
-    const result = await A.invoiceDoc.requestRebuild({
-      kind: String(query.kind || body.kind || "invoice.build"),
-      reason: String(query.reason || body.reason || "manual"),
-      reconcile: query.reconcile === "1",
-    });
-    if (!result.ok) {
-      return { status: 500, body: JSON.stringify(result), contentType: "application/json; charset=utf-8" };
-    }
-    return result;
-  }
-  if (path === "/invoice-doc/rebuild" && method === "GET") {
-    // The rebuild-in-progress view, so a screen can poll without holding a handle.
-    return await A.invoiceDoc.status({ kind: query.kind || "invoice.build" });
-  }
-  if (path === "/invoice-doc/document" && method === "GET") {
-    // `id` is base64, and `=` inside a path segment is fragile through the router, so the query
-    // parameter is the supported form for a base64 id. The path form below is for `inv-<no>` and
-    // for hex.
-    const doc = await A.invoiceDoc.read(query.id || query.readableId || "");
-    if (!doc) return text("No such invoice document", 404);
-    return doc;
-  }
-  const invoiceDocMatch = /^\/invoice-doc\/([^/]+)$/.exec(path);
-  if (invoiceDocMatch && method === "GET") {
-    const doc = await A.invoiceDoc.read(decode(invoiceDocMatch[1]));
-    if (!doc) return text("No such invoice document", 404);
-    return doc;
-  }
-
+  // The /invoice-doc family moved to route folders (tb-0030 step 5): `ahscripts/routes/invoice-doc/route.ts`
+  // and its `verify`, `list`, `rebuild`, `document` and `{id}` siblings.
   // Invoice entry: immediate push, leased, server-numbered (tb-0021). JSON API for the screen.
   const userHex = (() => {
     const id = String(req.user?.id ?? "");
