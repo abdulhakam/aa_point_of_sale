@@ -466,6 +466,21 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
       deletion is **blocked only by `/jobs/reconcile`**: the host's poller calls the dispatcher file
       directly, so the branch must stay reachable until the host resolves the route folder instead
       (a Rust change + wasm rebuild). The operator chose to keep the branch for now.
+
+      **Keep the engine generic while doing it.** Full deletion preserves genericity because
+      `resolve_route_file` *is* the "generic file router" [[compiled-artifacts-are-generic-capabilities]]
+      invariant 5 names — deleting an app runtime file adds nothing to the wasm, and the auth gate,
+      fallback 404 and every route stay in JS. But the poller is where it could go wrong: `job_handlers()`
+      in `tb-ah-run-js/src/lib.rs` already hardcodes the app nouns `queue_poller` and
+      `POST /jobs/reconcile` (and requires `config::dispatcher()`). Two ways to finish, to be chosen
+      deliberately:
+      - **minimal** — run the poll path through the generic resolver (`resolve_route_file` →
+        `jobs/reconcile/route.ts`); genericity stays at today's level, the path still a Rust literal;
+      - **clean** — make the scheduler config-driven (the app declares its poll paths + cadence in
+        `app/config/*.json`, as `business.json` already works); this removes the last app nouns from the
+        compiled artifact and satisfies invariants 1/2/5 outright.
+      Deleting the dispatcher also drops the `mode: dispatcher`/`dispatcher` config path, so the host
+      config collapses toward pure folder mode — again less app-shaped.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
       folders. Independent of the route work; not to be bundled with it.
 
