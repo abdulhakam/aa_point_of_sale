@@ -1,7 +1,7 @@
 {
-  "$comment": "Every method+path branch the dispatcher handles. This is the COVERAGE inventory, not a config: `tools/route-coverage.mjs` walks it against a live server and asserts each route is reachable, so a route that stops being served fails the gate. It is hand-seeded from `ahscripts/routes/_app/route.ts` and updated in the SAME commit as any route is moved (tb-0030 step 5) - which is the only reason it cannot drift from the code. `probe` says how to reach it: `auth` whether a session is needed, `body` a form body for POST/DELETE, and `expect` the statuses that count as reachable (anything else is a failure). A route that is intentionally unroutable says so in `note`.",
+  "$comment": "Every method+path route the app serves, as a checkable claim. This is the COVERAGE inventory, not a config: `tools/route-coverage.mjs` walks it against a live server and asserts each route is reachable, so a route that stops being served fails the gate. Since tb-0030 step 6 deleted the `_app/route.ts` dispatcher, the routes ARE the folders under `ahscripts/routes/` - the paths below mirror that tree, with `{param}` matching a `{param}` folder and a placeholder id substituted at probe time - and an entry is added or removed in the SAME commit as its folder. `probe` says how to reach it: `auth` whether a session is needed, `body` a form body for POST/DELETE, and `expect` the statuses that count as reachable (anything else is a failure). A route that is intentionally unroutable says so in `note`.",
   "inventory_version": 1,
-  "source": "trailbase/runtime/ahscripts/routes/_app/route.ts",
+  "source": "trailbase/runtime/ahscripts/routes (the folder tree; `{param}` folders are `{param}` paths here)",
   "seeded_on": "2026-10-03",
   "routes": [
     {

@@ -4,13 +4,13 @@
  * ## Why this exists
  *
  * `route-snapshot.mjs` issues **GETs only**. `write-paths-check.mjs` covers 13 checks across three
- * write paths. Between them, roughly twenty of the dispatcher's **POST** and **DELETE** branches —
- * invoice header/line/complete/release, the management CRUD trio, payments, expenses, the print queue,
- * job cancel/recover — had **no automated coverage at all**.
+ * write paths. Between them, roughly twenty **POST** and **DELETE** routes — invoice
+ * header/line/complete/release, the management CRUD trio, payments, expenses, the print queue, job
+ * cancel/recover — had **no automated coverage at all**.
  *
- * That is what made tb-0030 step 5 (move ~60 branches into ~30 route folders, then delete the
- * dispatcher) genuinely risky rather than merely large: a regression in a POST is invisible to every
- * harness that existed, and these are the routes that touch money. So this was built first.
+ * That is what made tb-0030 (move every route into a folder, then delete the dispatcher) genuinely
+ * risky rather than merely large: a regression in a POST is invisible to every harness that existed,
+ * and these are the routes that touch money. So this was built first.
  *
  * ## What it asserts
  *
@@ -29,11 +29,11 @@
  *
  * ## Why the inventory is a file and not a parse
  *
- * `route.ts` was parsed by hand, once, on 2026-10-03. A regex scrape of a 2,167-line dispatcher is a
- * second source of truth that silently loses branches — which is the failure this whole tool exists to
- * prevent. So the inventory is **hand-seeded and checked in**, and it is updated in the SAME commit as
- * any route is moved. It is a claim a human maintains, not one a regex derives, and `check` below
- * fails if the two disagree about how many routes exist.
+ * The inventory was hand-seeded from the dispatcher once, on 2026-10-03. Since tb-0030 step 6 deleted
+ * that dispatcher, the routes ARE the folders under `ahscripts/routes/` and the inventory MIRRORS that
+ * tree — but it is still a hand-maintained file, because each entry carries a curated `probe` and
+ * `expect` a folder walk cannot derive. An entry is added or removed in the SAME commit as its folder.
+ * It is a claim a human maintains, not one a regex derives.
  *
  * ## Usage
  *

@@ -4,7 +4,7 @@
  *   node tools/route-snapshot.mjs [--base URL] [--out FILE]
  *
  * This is the refactoring gate. Steps that MOVE code (extracting route-kit helpers, splitting the
- * 1785-line dispatcher into per-route directories) must not change what any screen renders, so the
+ * dispatcher into per-route folders, then deleting it) must not change what any screen renders, so the
  * only honest check is a before/after diff of this file. A route that appears, disappears, or changes
  * fingerprint is a regression to explain, not a rounding difference to ignore.
  *

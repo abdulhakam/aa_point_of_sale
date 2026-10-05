@@ -52,16 +52,30 @@ function describe(file) {
 }
 
 /**
- * The guest's routes, read from the one place that defines them: the dispatcher's route table. Grepped
- * for the `path === "…"` comparisons rather than imported, because the dispatcher is TypeScript that
- * only loads inside the WASM guest.
+ * The guest's routes, read from the folder tree that defines them. Every URL is an
+ * `ahscripts/routes/<path>/route.ts` folder since tb-0030 step 5 moved the routes out of a single
+ * dispatcher, which step 6 then deleted. The folder names ARE the route: `{param}` is a single segment
+ * and `[...rest]` a catch-all. Read by walking, not by grepping a dispatcher — there is none any more.
  */
-function guestRoutes(dispatcher = "trailbase/runtime/ahscripts/routes/_app/route.ts") {
-  const src = readFileSync(dispatcher, "utf8");
+function guestRoutes(routesDir = "trailbase/runtime/ahscripts/routes") {
   const set = new Set();
-  for (const m of src.matchAll(/path\s*===\s*"(\/[^"]*)"/g)) set.add(m[1]);
-  // The declarative pages and their data endpoints are served from the page tree, not the dispatcher's
-  // literal table, so they are added from the manifests on disk.
+  const symbol = (seg) =>
+    seg.startsWith("{") && seg.endsWith("}")
+      ? ":" + seg.slice(1, -1)
+      : seg.startsWith("[...") && seg.endsWith("]")
+        ? "*"
+        : seg;
+  const walkRoutes = (dir, rel) => {
+    for (const e of readdirSync(dir)) {
+      const p = join(dir, e);
+      if (statSync(p).isDirectory()) walkRoutes(p, rel ? `${rel}/${e}` : e);
+      else if (e === "route.ts" || e === "route.js") set.add("/" + rel.split("/").map(symbol).join("/"));
+    }
+  };
+  if (statSync(routesDir, { throwIfNoEntry: false })) walkRoutes(routesDir, "");
+
+  // The declarative pages and their data endpoints are served by slug as well as by the `p/[...slug]`
+  // folder, so they are added from the manifests on disk.
   const pagesDir = "trailbase/runtime/app/pages";
   const walk = (dir) => {
     for (const e of readdirSync(dir)) {
