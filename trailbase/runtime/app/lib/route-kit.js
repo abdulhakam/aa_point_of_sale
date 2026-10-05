@@ -289,3 +289,19 @@ export function userHex(req) {
     ? id.replace(/-/g, "").toUpperCase()
     : b64ToHex(id);
 }
+
+/** Tolerant percent-decoding for a single value (a route id), the dispatcher's `decode`. */
+export function decode(value) {
+  try {
+    return decodeURIComponent(String(value).replace(/\+/g, " "));
+  } catch (e) {
+    return String(value);
+  }
+}
+
+/** The 409 the invoice-entry routes return when another device holds the invoice's lease. */
+export const locked = () => ({
+  body: JSON.stringify({ error: "locked", holder: "another device" }),
+  contentType: "application/json; charset=utf-8",
+  status: 409,
+});

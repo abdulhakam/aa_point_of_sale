@@ -387,9 +387,16 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   the invoice folders share it. `guest-smoke.mjs` **99/99**, and the now-dead `typeOptions`/`paymentTypes`/
   `flag` locals were removed from the dispatcher.
 
-  **Next within step 5:** the remaining families, one at a time (`/invoices/<id>/…` — header, complete,
-  line, line delete, lines, grid, view, the page; the `/payments` POST and `<id>/delete`; `cashmemo`;
-  `print`; the `invoice`/`invoice-doc` API families; `/jobs`; `/p`); then the `{param}`/`[...rest]` prefix
+  **Then the invoice page family and the payment writes** (2026-10-05): the whole `/invoices/<id>/*` family
+  (`route.ts` page, `grid`, `lines`, `view`, `header`, `complete`, `line`, `line/{lineId}/delete`) and the
+  payment writes (POST in `payments/route.ts`, `payments/{id}/delete/route.ts`) moved to folders, their
+  dispatcher branches deleted. `decode` and `locked` joined `route-kit`. The smoke's create-from-the-invoice
+  checks cover the `{id}` page GET and the `line` POST, so the move is gated on the paths it exercises;
+  `guest-smoke.mjs` **99/99**, and `userHex`/`locked`/`decode`/`rowsToObjects` remain in use by the
+  `/invoice/*` and `/invoice-doc/*` API families still on the dispatcher.
+
+  **Next within step 5:** the API families (`/invoice/*` — context, POST, GET, line, complete, release;
+  `/invoice-doc/*`; `/jobs/*`), then `cashmemo`, `print`, `/p`; then the `{param}`/`[...rest]` prefix
   routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`); then auth (`/login`, `/logout`, `/`).
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
