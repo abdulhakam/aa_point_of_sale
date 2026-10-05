@@ -5,22 +5,16 @@
 // dispatcher still owns `/management` (the index).
 //
 // Three things this file must do, all recorded in `serving-a-route-from-a-route-folder`:
-//   - build the dispatcher's `req` shape itself (`path`, parsed `query`, `user`) — the host gives
-//     `query` as a raw string and provides no parsed params;
-//   - parse the query by hand, because `URLSearchParams` does not exist in the guest (QuickJS);
+//   - apply the AUTH GATE itself (`req.user` is resolved by the host, not enforced) — a folder bypasses
+//     the dispatcher, which gated every authenticated route at one point before its branches;
+//   - build the dispatcher's `req` shape itself (`path`, parsed `query`) — the host gives `query` as a
+//     raw string and provides no parsed params;
 //   - wrap everything in ONE IIFE, because route files share a single QuickJS scope per evaluation,
 //     so a top-level helper name would redeclare on the next request. Only `globalThis.GET` is published.
 //
-// `normalizePath`/`parsePairs` live in `app/lib/route-kit.js`, reached through `A.routeKit`, so the four
-// management folders do not each carry a copy.
+// `userOf`/`loginRedirect`/`normalizePath`/`parsePairs` live in `app/lib/route-kit.js`, reached through
+// `A.routeKit`, so the four management folders do not each carry a copy.
 (function () {
-  /** The resolved TrailBase user, in the shell's shape. */
-  function userOf(req) {
-    const u = req.user;
-    if (!u || !u.id) return null;
-    return { name: u.username || u.email || "User", email: u.email || "" };
-  }
-
   (globalThis as any).GET = async (req: any) => {
     // The bundle was extracted to `app/lib/context.js` for exactly this: a route folder can build it
     // through the host's loader without ever calling the dispatcher.
@@ -29,8 +23,9 @@
     const routeKit = A.routeKit;
 
     const path = routeKit.normalizePath(String(req.path || "/"));
+    const user = routeKit.userOf(req);
+    if (!user) return routeKit.loginRedirect(req, path);
     const query = routeKit.parsePairs(String(req.query || ""));
-    const user = userOf(req);
 
     const match = /^\/management\/([^/]+)$/.exec(path);
     if (!match) return { text: "Not found", status: 404 };

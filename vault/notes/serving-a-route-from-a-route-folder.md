@@ -84,8 +84,14 @@ family followed: GET from `ahscripts/routes/management/{entity}/route.ts`, and c
 the three sibling folders — each an IIFE, only the method-named global published, the dispatcher branches
 deleted, `guest-smoke.mjs` **95/95**. See [[tb-0030-retire-the-route-ts-dispatcher]] step 5 for the entry.
 
-Two things the move made concrete, both already costing time once:
+Three things the move made concrete, all already costing time once:
 
+- **A folder MUST apply the AUTH GATE itself.** The dispatcher gated every authenticated route at one
+  point before its branches; a folder bypasses the dispatcher, so without an explicit
+  `if (!user) return loginRedirect(...)` it serves an anonymous request — and for a write, **executes**
+  it. This is a security regression, not a cosmetic one. `userOf`/`loginRedirect` now live in
+  `route-kit`, and `guest-smoke.mjs` asserts the anonymous redirect for both a management read and a
+  management write.
 - **A path id must be left RAW.** Ids are padded base64url (`…==`) and `=` is legal in a path segment.
   Percent-encoding it to `%3D` feeds the tolerant base64 decoder a `3` and a `D` as sextets and produces
   an id that matches no row — a **silent no-op update that still redirects `303 ?message=Updated`**.

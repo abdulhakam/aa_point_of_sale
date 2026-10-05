@@ -9,6 +9,8 @@
     const db = (globalThis as any).sqlite;
 
     const path = routeKit.normalizePath(String(req.path || "/"));
+    const user = routeKit.userOf(req);
+    if (!user) return routeKit.loginRedirect(req, path);
 
     const match = /^\/management\/([^/]+)\/([^/]+)\/delete$/.exec(path);
     if (!match) return { text: "Not found", status: 404 };

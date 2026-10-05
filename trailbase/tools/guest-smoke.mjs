@@ -255,6 +255,13 @@ async function main() {
     const anon = await get(cookies, "/dashboard");
     check("anonymous /dashboard redirects to /login", (anon.status === 302 || anon.status === 303) && String(anon.location).startsWith("/login"), `${anon.status} ${anon.location}`);
 
+    // A route FOLDER bypasses the dispatcher, so it must apply the auth gate itself. These lock that:
+    // without the gate a folder would serve (and, for a write, EXECUTE) an anonymous request.
+    const anonMgmt = await get(cookies, "/management/parties");
+    check("anonymous /management redirects to /login", (anonMgmt.status === 302 || anonMgmt.status === 303) && String(anonMgmt.location).startsWith("/login"), `${anonMgmt.status} ${anonMgmt.location}`);
+    const anonWrite = await postForm(cookies, "/management/sections/create", { name: "Anonymous" });
+    check("anonymous management write redirects to /login", (anonWrite.status === 302 || anonWrite.status === 303) && String(anonWrite.location).startsWith("/login"), `${anonWrite.status} ${anonWrite.location}`);
+
     const badLogin = await postForm(cookies, "/login", { email: trail.email, password: "wrong-password" });
     check("login with a bad password is rejected", badLogin.status === 401, `${badLogin.status}`);
 

@@ -10,6 +10,8 @@
     const db = (globalThis as any).sqlite;
 
     const path = routeKit.normalizePath(String(req.path || "/"));
+    const user = routeKit.userOf(req);
+    if (!user) return routeKit.loginRedirect(req, path);
     const form = routeKit.parsePairs(String(req.body || ""));
 
     const match = /^\/management\/([^/]+)\/([^/]+)\/update$/.exec(path);

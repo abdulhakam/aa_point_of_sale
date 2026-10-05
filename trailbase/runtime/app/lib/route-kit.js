@@ -244,3 +244,23 @@ export function parsePairs(qs) {
   }
   return out;
 }
+
+/**
+ * The resolved TrailBase user in the shell's shape, or null.
+ *
+ * ⚠️ THE AUTH GATE IS THE CALLER'S, and a route folder MUST apply it. The dispatcher gated every
+ * authenticated route at one point before its branches; a route folder bypasses the dispatcher, so
+ * without this call the folder would serve an anonymous request. `loginRedirect` is the matching
+ * redirect. Together they are the "auth gate" tb-0030 step 6 moves into `app/lib/router.js`.
+ */
+export function userOf(req) {
+  const u = req && req.user;
+  if (!u || !u.id) return null;
+  return { name: u.username || u.email || "User", email: u.email || "" };
+}
+
+/** The `/login?next=…` redirect an unauthenticated request to a gated route gets. */
+export function loginRedirect(req, path) {
+  const next = encodeURIComponent(path + (req && req.query ? "?" + req.query : ""));
+  return { redirect: "/login?next=" + next, status: 303 };
+}

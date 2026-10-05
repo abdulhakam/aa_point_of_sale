@@ -327,7 +327,14 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   `tb-ah-run-js/src/lib.rs` / `runtime.rs`. There is no `route.json` in play. The design's *intent* (a
   folder per route, no central dispatcher edit) holds; only the file names differ.
 
-  **Two gotchas the move made concrete, both recorded so the next family does not pay them again:**
+  **Three gotchas the move made concrete, all recorded so the next family does not pay them again:**
+  - **A route folder MUST apply the AUTH GATE itself.** The dispatcher gated every authenticated route
+    at one point before its branches; a folder bypasses the dispatcher, so without an explicit
+    `if (!user) return loginRedirect(...)` the folder serves an anonymous request — and for a write,
+    **executes** it. The first cut of the management folders omitted it (only noticed on re-reading the
+    dispatcher, not by any existing check), so `userOf`/`loginRedirect` were added to `route-kit` and two
+    smoke checks now lock it: `anonymous /management redirects to /login` and
+    `anonymous management write redirects to /login`.
   - **A path id must be left RAW.** Ids are padded base64url (`…==`); `=` is legal in a path segment. A
     percent-encoded `%3D` feeds the tolerant base64 decoder a `3` and a `D` as sextets and yields an id
     that matches no row — a **silent no-op update that still redirects `303 ?message=Updated`**. Query
@@ -335,12 +342,13 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   - **A route file's `req` is the host's shape** (`path`, plus `query` as a raw STRING, `body`, `user`),
     and the host provides no parsed `{param}` values — the folder re-parses its own path with a regex.
 
-  **Verification:** `tools/guest-smoke.mjs` — **95/95** (was 91/91). Five new checks were added first and
-  run green against the *dispatcher* before the move, so the move is gated on all three verbs rather than
-  create alone: `management update redirects`, `updated record shows the new value`,
-  `management delete redirects`, `deleted record is gone` (plus the existing create check). The two
-  refresh-fingerprint assertions were left ahead of the new delete, because a create-then-delete is
-  net-zero for the sections fingerprint and would make `changed` read `[]`.
+  **Verification:** `tools/guest-smoke.mjs` — **97/97** (was 91/91). Five new management checks were added
+  first and run green against the *dispatcher* before the write move, so the move is gated on all three
+  verbs rather than create alone: `management update redirects`, `updated record shows the new value`,
+  `management delete redirects`, `deleted record is gone` (plus the existing create check). Two auth-gate
+  checks were added for the folder's own gate. The two refresh-fingerprint assertions were left ahead of
+  the new delete, because a create-then-delete is net-zero for the sections fingerprint and would make
+  `changed` read `[]`.
 
   **Next within step 5:** the remaining families, one at a time; then the `{param}`/`[...rest]` prefix
   routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`).
