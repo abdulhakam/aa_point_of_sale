@@ -69,15 +69,25 @@ FREE   rout  routeway  routes  route_  Route  XrouteKit  aRoute
 Not a prefix rule — exactly the names my files used. **The fix is that every route file is an IIFE**, so
 its names are private. Full account: [[route-files-share-one-scope]].
 
-## The piece still missing
+## The piece that was missing — DONE 2026-10-05
 
-**`__AA_APP__` is built by `app()`, which lives in the dispatcher** — a route folder never calls it, so it
-cannot assume the module bundle exists. `__AA_LOAD__`, `__AA_APP__` and `__AA_KIT__` were all confirmed
+**`__AA_APP__` was built by `app()`, which lived in the dispatcher** — a route folder never calls it, so it
+could not assume the module bundle existed. `__AA_LOAD__`, `__AA_APP__` and `__AA_KIT__` were all confirmed
 present in a route's scope, and `routeScreens()` and `entityList()` both work when called from a probe
-with a real entity. The remaining work is therefore the shared-context extraction: move `app()` (and the
-helpers it closes over) into `app/lib/`, loaded through `__AA_LOAD__` like every other module. That is
-the `ctx.js` extraction reverted on 2026-10-04 — blocked then by the ESM/SWC composition, which the
-loader-in-the-host change resolved.
+with a real entity. The remaining work was the shared-context extraction: move `app()` (and the helpers it
+closes over) into `app/lib/`, loaded through `__AA_LOAD__` like every other module.
+
+**Built 2026-10-05.** `app()` now lives in **`app/lib/context.js`**, which exports `app()`, `business()`
+and `DEFAULT_BUSINESS`. It closes over nothing from the dispatcher (`loadModule` is the host global), and
+`route.ts` keeps only a thin `app()` alias plus a delegating `business()`. The first route family followed
+immediately: `GET /management/<entity>` is served from `ahscripts/routes/management/{entity}/route.ts`
+(an IIFE, only `globalThis.GET` published), the dispatcher branch deleted, `guest-smoke.mjs` **91/91**.
+See [[tb-0030-retire-the-route-ts-dispatcher]] step 5 for the entry.
+
+A correction to the design's file layout, worth knowing before writing the next folder: the host resolves
+**`route.{ts,js}`** in the matched folder and calls the method-named export (`globalThis.GET` / `POST` /
+…) — *not* the `route.json` + `loader.js` + `action.js` the decision proposed. The intent is unchanged;
+the names are not what the host implemented.
 
 ## The one that stopped it
 

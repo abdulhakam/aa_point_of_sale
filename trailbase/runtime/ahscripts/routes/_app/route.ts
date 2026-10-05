@@ -40,104 +40,12 @@ function normalizePath(p: string): string {
     .filter((part) => part && part !== ".");
   return (abs ? "/" : "") + out.join("/");
 }
+// The module bundle is now built by `app/lib/context.js`, so a route FOLDER can build it too —
+// see that file's header. This is the dispatcher's thin alias; its own call sites are unchanged.
+let CTX: any = null;
 async function app(): Promise<any> {
-  const g: any = globalThis as any;
-  // Optional per-deployment business identity; defaults to the legacy values in DEFAULT_BUSINESS.
-  if (!g.__AA_BUSINESS__) {
-    g.__AA_BUSINESS__ = DEFAULT_BUSINESS;
-    try {
-      const raw: string = await fs.readFile("/app/config/business.json");
-      const cfg = JSON.parse(raw);
-      g.__AA_BUSINESS__ = {
-        name: String(cfg.name || DEFAULT_BUSINESS.name),
-        address: String(cfg.address || DEFAULT_BUSINESS.address),
-        phone: String(cfg.phone || DEFAULT_BUSINESS.phone),
-      };
-    } catch (e) {
-      // Optional file: absent or unreadable keeps the defaults.
-    }
-  }
-  if (g.__AA_APP__) return g.__AA_APP__;
-  const modules = {
-    format: await loadModule("/app/compute/format.js"),
-    ids: await loadModule("/app/compute/ids.js"),
-    entities: await loadModule("/app/lib/entities.js"),
-    // Populated from `/app/manifests/entities.json` by `app()` below, which is async. Kept a plain
-    // object because `inventory.js` imports it synchronously.
-    manifests: null as any,
-    data: await loadModule("/app/lib/data.js"),
-    pages: await loadModule("/app/lib/pages.js"),
-    plugins: await loadModule("/app/lib/plugins.js"),
-    management: await loadModule("/app/lib/management.js"),
-    // A party or an item made from the screen that needed it — the invoice's own create affordance,
-    // as the legacy invoice screen had. Called inside the invoice write and lock, never on its own.
-    quickCreate: await loadModule("/app/lib/quick-create.js"),
-    invoicing: await loadModule("/app/lib/invoicing.js"),
-    lifecycle: await loadModule("/app/lib/invoice-lifecycle.js"),
-    invoices: await loadModule("/app/lib/invoices.js"),
-    expenses: await loadModule("/app/lib/expenses.js"),
-    qtyAsText: (await loadModule("/app/lib/format-qty.js")).qtyAsText,
-    payments: await loadModule("/app/lib/payments.js"),
-    inventory: await loadModule("/app/lib/inventory.js"),
-    // Path helpers, plus `runtimeRevision()` — a content hash of the app tree that the rendered-page
-    // cache keys on, so a code change invalidates it and not only a data change.
-    paths: await loadModule("/app/lib/paths.js"),
-    // The reference lists, defined by `app/sql/refs.sql`. Step 1 of tb-0032.
-    refs: await loadModule("/app/lib/refs.js"),
-    // The data-derived default date window, defined by `app/sql/latest_business_date.sql`, so a
-    // report opens on a month that has data rather than on the wall clock's current month.
-    dates: await loadModule("/app/lib/dates.js"),
-    service: await loadModule("/app/lib/reports.js"),
-    // The report engine. Every report is SQL: the statements under
-    // `app/reports/sql/reports/*.sql`, run through the spool. There is no JavaScript
-    // implementation of any report left to fall back to.
-    spooled: await loadModule("/app/lib/spoolreports.js"),
-    // The two derived reads the app still needs, as SQL: the dashboard counts and the item rows behind
-    // invoice entry and /inventory. These replaced the last live callers of the JavaScript view layer
-    // (tb-0032 step 3), which now lives in `trailbase/tools/_src/legacy-views.js` as a verification fixture.
-    baseviews: await loadModule("/app/lib/baseviews.js"),
-    http: await loadModule("/app/lib/http.js"),
-    renderClient: await loadModule("/app/lib/render-client.js"),
-    reportPages: await loadModule("/app/lib/report-pages.js"),
-    // The idioms every handler repeated: invalidate-on-commit, the refs snapshot, the page shell,
-    // and the hex<->base64 pair. See app/lib/route-kit.js for why each exists.
-    routeKit: await loadModule("/app/lib/route-kit.js"),
-  };
-  // The queue engine is a plain script so the scheduler's fresh runtime can load it too.
-  if (!g.__AA_QUEUE__) {
-    const source: string = await fs.readFile("/app/lib/queue.js");
-    (0, eval)(source);
-  }
-  modules.jobs = g.__AA_QUEUE__;
-  // Same reason: /ahscripts/init/invoice-doc.js reads this file in a fresh context at server start
-  // and calls the same rebuild. One implementation of "rebuild", so a boot rebuild and a button
-  // rebuild cannot drift apart.
-  if (!g.__AA_INVDOC__) {
-    const invoiceDocSource: string = await fs.readFile("/app/lib/invoice-doc.js");
-    (0, eval)(invoiceDocSource);
-  }
-  modules.invoiceDoc = g.__AA_INVDOC__;
-  // Manifests. The tables that used to be hand-written JavaScript — the entity definitions first — are
-  // data now, in `/app/manifests/*.json`, read once here.
-  //
-  // `entities.install()` rather than `modules.entities.ENTITIES = …`, because `inventory.js` captured a
-  // reference to `ENTITIES` when it was imported; reassigning the binding would leave it pointing at the
-  // empty object, and `Object.assign` mutates what it already holds.
-  modules.manifests = await loadModule("/app/manifests/index.js");
-  // `loadAll()` rather than three reads, so a MISSING manifest fails at start-up with its name instead of
-  // at the first request that happens to need it — which is the difference between a clear error and a
-  // screen that renders empty.
-  const manifests: any = await modules.manifests.loadAll();
-  modules.entities.install(manifests.entities);
-  // The schema contract: which tables exist, which columns are foreign keys, which are 0/1 booleans.
-  //
-  // `TABLES` is MUTATED (`length = 0; push(…)`) rather than reassigned, because `reports.js` captures a
-  // reference to it by destructuring at import time. Reassigning the module-local binding would leave
-  // `reports.js` holding an empty array and every fingerprint probe would silently cover zero tables —
-  // which reads as "the data never changes" rather than as a bug.
-  modules.data.install(manifests.schema);
-  g.__AA_APP__ = modules;
-  return modules;
+  CTX = await loadModule("/app/lib/context.js");
+  return CTX.app();
 }
 
 // ------------------------------------------------------------------ component handoff
@@ -278,14 +186,10 @@ function userOf(req: any): any {
 // (frontend/.env.local: NEXT_PUBLIC_NAME/ADDRESS/PHONE) so a direct shift matches what staff know;
 // an operator can override them without a rebuild by editing the optional
 // /app/config/business.json (loaded once in `app()`, see `app/config/business.json`).
-const DEFAULT_BUSINESS = {
-  name: "SAMPLE TRADERS",
-  address: "123 Sample Street, Sample City",
-  phone: "000-0000000",
-};
-
 function business(): { name: string; address: string; phone: string } {
-  return (globalThis as any).__AA_BUSINESS__ || DEFAULT_BUSINESS;
+  // The shared context owns the default identity and the __AA_BUSINESS__ bootstrap. app() has
+  // always run by the time a handler calls this, so CTX is set.
+  return CTX.business();
 }
 
 function shell(user: any, active: string, title: string): any {
@@ -1000,31 +904,10 @@ if (path === "/login" && method === "GET") {
     const entities = A.entities.order().map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
     return html(await A.http.page(req, shell(user, "management", "Management"), "management/index.html", { entities }));
   }
-  const mgmtMatch = /^\/management\/([^/]+)$/.exec(path);
-  if (mgmtMatch && method === "GET") {
-    const entityKey = mgmtMatch[1];
-    const entity = A.entities.ENTITIES[entityKey];
-    if (!entity) return text("Unknown entity", 404);
-    const refs = await A.routeKit.refs();
-    const options = A.management.optionLists(refs);
-    const all = A.management.sortRows(await A.data.readTable(entity.api), entity.sort);
-    const visible = all.filter((row: any) => !entity.softDelete || !row.deleted);
-    const links = await A.management.loadLinks(entity);
-    const editId = String(query.edit || "");
-    const editRow = editId ? all.find((r: any) => r.id === editId) ?? null : null;
-    return html(
-      await A.http.page(req, shell(user, "management", entity.label), "management/list.html", {
-        entity,
-        entityKey,
-        columns: entity.columns,
-        rows: A.management.displayRows(entity, visible, refs, links),
-        fields: A.management.formFields(entity, editRow, options, links),
-        editRow,
-        status: query.status || "",
-        message: query.message || "",
-      })
-    );
-  }
+  // GET /management/<entity> moved to the route folder `ahscripts/routes/management/{entity}/route.ts`
+  // (tb-0030 step 5). The host's folder resolver matches it before this dispatcher, so the branch that
+  // used to live here would be dead; it is removed rather than left as a second implementation that
+  // can drift. The three writes below still route here.
 
   // Writes: create / update / delete, then invalidate the snapshot so reads see the change.
   const writeMatch = /^\/management\/([^/]+)\/(create|([^/]+)\/(update|delete))$/.exec(path);

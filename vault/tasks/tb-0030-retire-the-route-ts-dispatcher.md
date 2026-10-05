@@ -301,6 +301,39 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
 
   A gate that asserts the wrong thing is worse than no gate: it reports defects that are not there, and
   the real ones get lost among them. All three of these would have been filed against the application.
+
+  #### 2026-10-05 — the shared-context extraction is done, and the first route family is off the dispatcher
+
+  **The one piece `serving-a-route-from-a-route-folder` named as still missing is now built.** `app()`
+  moved out of the dispatcher into a new **`app/lib/context.js`**, which exports `app()`, `business()`
+  and `DEFAULT_BUSINESS`. It closes over nothing from the dispatcher — `loadModule` is the host's
+  `__AA_LOAD__`, present in every route — so a route FOLDER can build `__AA_APP__` without ever calling
+  the dispatcher. `route.ts` keeps a thin `app()` alias and delegates `business()` to it. This also
+  removed `route.ts`'s only copy of the business defaults.
+
+  **The first route family is moved.** `GET /management/<entity>` is now served by
+  **`ahscripts/routes/management/{entity}/route.ts`** — an IIFE, so its `normalizePath`/`parsePairs`/
+  `userOf` helpers do not leak into the shared QuickJS scope, with only `globalThis.GET` published (the
+  fix the note prescribed). The dispatcher's own `GET /management/<entity>` branch is **deleted**, not
+  left as a second implementation. The three writes (`create`, `<id>/update`, `<id>/delete`) still route
+  to the dispatcher, because the host matches exact path shapes and has no folder for them yet.
+
+  **A correction to the design doc's file layout.** `file-router-conventions-not-a-data-dag` proposed
+  `route.json` + `loader.js` + `action.js`. The host as built resolves **`route.{ts,js}`** in the matched
+  folder and calls the method-named export (`globalThis.GET`, `globalThis.POST`, …) — see
+  `resolve_route_file` and the `run_route` wrapper in `tb-ah-run-js/src/lib.rs` / `runtime.rs`. There is
+  no `route.json` in play. The design's *intent* (a folder per route, no central dispatcher edit) holds;
+  only the file names differ.
+
+  **Verification:** `tools/guest-smoke.mjs` — **91/91**, before and after, including every management
+  screen (`sections`, `areas`, `parties`, `companies`, `bookers`, `items`), `management create redirects`,
+  and `unknown management entity is 404`. Because the folder resolver is tried before the dispatcher, the
+  pass proves the folder is what served those requests; removing the dispatcher branch and re-running to
+  the same 91/91 proves nothing else was serving them.
+
+  **Next within step 5:** the three management writes into `management/{entity}/create`, `.../{id}/update`
+  and `.../{id}/delete`; then the remaining families one at a time. The `{param}`/`[...rest]` prefix
+  routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`) are their own step.
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
