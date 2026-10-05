@@ -916,82 +916,8 @@ if (path === "/login" && method === "GET") {
 
   // /inventory/save moved to `ahscripts/routes/inventory/save/route.ts` (tb-0030 step 5).
 
-  if (path === "/p") {
-    const pages = await A.pages.listPages(PAGES_DIR);
-    return html(await A.http.page(req, shell(user, "pages", "Pages"), "pages/index.html", { pages }));
-  }
-
-  const dataMatch = /^\/p\/(.+)\/data$/.exec(path);
-  if (dataMatch && method === "GET") {
-    const slug = dataMatch[1];
-    const def = await A.pages.readPage(PAGES_DIR, slug);
-    if (!def) return text("No such page", 404);
-    const filters = await A.reportRender.filtersFor(A, def, query);
-    // The ETag keys on the DATA fingerprint, not on a snapshot version counter. The rows come from
-    // `spooled.jsonPayload`, which reads base tables through the prelude — nothing here used the view
-    // snapshot except for its version, so hydrating the declared views was pure cost. And the fingerprint
-    // is the honest key: it changes when the data changes, where the counter only ticked when the
-    // refresh job ran.
-    const version = await A.service.dataVersion();
-    const etag = `W/"v3-${version}-${encodeURIComponent(JSON.stringify(filters))}"`;
-    const headers: Record<string, string> = {
-      etag,
-      "cache-control": "private, no-cache",
-      vary: "accept-encoding",
-    };
-    const ifNoneMatch = String((req.headers && req.headers["if-none-match"]) || "");
-    if (ifNoneMatch === etag) {
-      return { status: 304, body: "", contentType: "application/json; charset=utf-8", headers };
-    }
-    const reportName = (def.compute && def.compute.report) || null;
-    // The rows are spliced into this payload and the whole body is serialised in Rust.
-    const payload: any = { version, slug: def.slug, filters, meta: { report: reportName } };
-    if (def.needs.tables.length) {
-      await A.service.ensureTables(def.needs.tables);
-      const tables: any = {};
-      for (const table of def.needs.tables) tables[table] = A.service.baseTable(table);
-      payload.tables = tables;
-    }
-
-    // No row cap here: an API consumer asked for the rows, so it gets every row.
-    const totals = reportName ? await A.spooled.totalsFor(reportName, filters) : {};
-    const body = await A.spooled.jsonPayload(reportName, filters, payload, totals, {});
-    return { body, contentType: "application/json; charset=utf-8", headers };
-  }
-
-  const pageMatch = /^\/p\/(.+)$/.exec(path);
-  if (pageMatch && method === "GET") {
-    const slug = pageMatch[1];
-    const def = await A.pages.readPage(PAGES_DIR, slug);
-    if (!def) return text("No such page", 404);
-
-    // A page that names a report is the SAME page as `/reports/<key>` - one manifest, one template,
-    // one rendering path. It used to be different: the shell shipped the manifest as JSON and
-    // `public/js/runtime/page.js` rebuilt the table in the DOM from `/p/<slug>/data`, which meant
-    // 171 lines of client JavaScript and an 8 MB response for a report `/reports` returns in 465 KB.
-    //
-    // The JSON endpoint stays, uncapped, as an API for a programmatic consumer. The BROWSER does
-    // not use it any more.
-    if (def.compute && typeof def.compute.report === "string" && (await A.spooled.names()).includes(def.compute.report)) {
-      return A.reportRender.renderReportPage(A, db, req, user, path, query, def.compute.report, def);
-    }
-
-    // A page with no report behind it is still a page: filters and an empty table, rendered
-    // server-side. It works with no JavaScript at all, which is the point of a declarative page.
-    const options = A.reportPages.filterOptions(await A.refs.refs(await A.service.fingerprint()), def.fields);
-    return html(
-      await A.http.page(req, shell(user, "pages", def.title), `${def.slug}/${def.template}`, {
-        meta: def,
-        filters: await A.reportRender.filtersFor(A, def, query),
-        options,
-        // The rows are the host's business; a page with no statement behind it has none.
-        columns: def.columns.map((c: any, i: number) => (i === 0 ? { ...c, lead: true } : c)),
-        rows: [],
-        totalsGroups: A.pages.bindTotalsGroups(def.totals || [], {}),
-      })
-    );
-  }
-
+  // The /p family moved to route folders (tb-0030 step 5): `ahscripts/routes/p/route.ts` (index) and
+  // `.../p/[...slug]/route.ts` (a page and its `/data` payload).
   return text("Not found", 404);
 }
 
@@ -1003,7 +929,7 @@ if (path === "/login" && method === "GET") {
 // `latestPeriod` and `filtersFor` moved to `app/lib/report-render.js` (tb-0030 step 5). The
 // `/p/<slug>/data` endpoint below calls `A.reportRender.filtersFor`.
 
-// ------------------------------------------------------------------ entry points// ------------------------------------------------------------------ entry points
+// ------------------------------------------------------------------ entry points
 
 async function handle(req: any): Promise<any> {
   try {

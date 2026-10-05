@@ -405,8 +405,22 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   POST enqueue), `document` and `{id}` moved to folders, the dispatcher branch deleted. `jsonBody` joined
   `route-kit`. `guest-smoke.mjs` **104/104**.
 
-  **Next within step 5:** the API families (`/jobs/*`; `/invoice/*` — context, POST, GET, line, complete,
-  release), then `/p`; then the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`,
+  **Then the `/p` page family** (2026-10-05): `p/route.ts` (index) and `p/[...slug]/route.ts`, a
+  catch-all because a page slug can be multi-segment (`reports/profit`) — it serves both the page and its
+  `/data` payload and tells them apart by the `/data` suffix. The dispatcher's `/p` branches are deleted;
+  the data-endpoint smoke checks (ETag revalidation, profit total) pass. `guest-smoke.mjs` **104/104**.
+
+  ⚠️ **`/jobs/reconcile` CANNOT move to a folder as things stand — the host poller calls the dispatcher
+  FILE directly.** `job_handlers()` in `tb-ah-run-js/src/lib.rs` builds a synthetic-user request and calls
+  `run_route(&dispatcher, "POST", request)` against `config::dispatcher()` — it never goes through
+  `resolve_route_file`, so a `jobs/reconcile/route.ts` folder would be ignored and the branch removed from
+  the dispatcher would 404 the poller, silently stopping reconciliation. **Step 6 must either keep this one
+  branch reachable (a minimal dispatcher left for it) or change the host poller to resolve the route
+  folder — a Rust change and a wasm rebuild.** The other `/jobs/*` routes *can* move; only `reconcile` is
+  polled directly.
+
+  **Next within step 5:** the API families (`/jobs/*` except `reconcile`; `/invoice/*` — context, POST,
+  GET, line, complete, release); then the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`,
   `/plugins/*`, `/favicon.svg`); then auth (`/login`, `/logout`, `/`).
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
