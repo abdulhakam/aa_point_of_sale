@@ -272,6 +272,10 @@ async function main() {
     const favicon = await get(cookies, "/favicon.svg");
     check("GET /favicon.svg serves the icon", favicon.status === 200, `${favicon.status}`);
 
+    // The /bench/* probes moved to route folders too; one suffices to prove the family resolves.
+    const benchKeys = await get(cookies, "/bench/reportkeys");
+    check("GET /bench/reportkeys lists the report keys", benchKeys.status === 200 && benchKeys.body.includes('"profit"'), `${benchKeys.status} ${benchKeys.body.slice(0, 80)}`);
+
     const badLogin = await postForm(cookies, "/login", { email: trail.email, password: "wrong-password" });
     check("login with a bad password is rejected", badLogin.status === 401, `${badLogin.status}`);
 

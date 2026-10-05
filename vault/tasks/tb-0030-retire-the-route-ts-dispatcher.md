@@ -197,7 +197,7 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
 | `guest-smoke.mjs` | every check passes |
 | resolver probe | 5 required shapes 200, 2 correctly-absent shapes 404 |
 
-- [ ] **5. Split the ~78 method+path pairs into ~30 route directories** with `route.json`.
+- [x] **5. Split the method+path pairs into route directories** (built as ~55 `route.ts` folders, method-named exports, no `route.json` — see the correction near the end). **Done 2026-10-05 except `/jobs/*`**, which stays on the dispatcher for the host-poller reason recorded there.
 
   #### Prerequisite built first: a POST coverage gate
 
@@ -438,10 +438,23 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   branch was removed as **dead** — the host's own `root_handler` answers `/` first. Smoke checks added for
   `/static/css/app.css` and `/favicon.svg`; `guest-smoke.mjs` **107/107**.
 
-  **What is left on the dispatcher:** only `/jobs/*` (all of it, kept — see the poller note above) and the
-  `/bench/*` dev routes, plus the auth gate and the fallback 404.
+  **Then the `/bench/*` probes** (2026-10-05): `reportkeys`, `report`, `payload`, `sqlfn`, `refs`, `spool`
+  (ungated) and `render`, moved to folders; `kvTakeJSONL` joined `route-kit`. A smoke check for
+  `/bench/reportkeys` was added. `guest-smoke.mjs` **108/108**.
 
-  **Next within step 5:** the `/bench/*` dev routes; then the dispatcher is down to `/jobs/*`.
+  ### Step 5 is COMPLETE except `/jobs/*`
+
+  Every route family is off the dispatcher except `/jobs/*`. The dispatcher went from **2193 lines to
+  ~280**, and now holds only the six `/jobs` branches plus the auth gate and the fallback 404. `/jobs`
+  stays for the two host reasons recorded above: the poller calls the dispatcher FILE directly, and a
+  `{id}` folder would shadow `/jobs/reconcile` for an external client. Moving `/jobs` is a host change
+  (poller resolves the folder), deferred until the operator wants it.
+
+  A correction to the plan's shape, worth keeping: the design said "~30 route directories for ~78
+  method+path pairs" with `route.json`. In practice it is **~55 `route.ts` folders** (a folder per exact
+  path shape, method-named exports, no `route.json`), because several paths that looked like one family
+  route to different shapes — and because a report key and a page slug can each contain a slash, which
+  forced `[...key]`/`[...slug]` catch-alls.
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page

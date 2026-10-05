@@ -349,3 +349,19 @@ export function jsonBody(req) {
 /** `db.all` returns rows as value arrays against a known column order; this names them. */
 export const rowsToObjects = (columns, rows) =>
   (rows ?? []).map((values) => Object.fromEntries(columns.map((c, i) => [c, values[i]])));
+
+/** Read a KV handle's JSONL rows and delete it — the spool handoff. Used by the `/bench/*` probes. */
+export async function kvTakeJSONL(key) {
+  const kv = globalThis.kv;
+  const raw = await kv.get(String(key));
+  const rows = String(raw)
+    .split("\n")
+    .filter((line) => line.length > 0)
+    .map((line) => JSON.parse(line));
+  try {
+    await kv.delete(String(key));
+  } catch (e) {
+    // best effort
+  }
+  return rows;
+}
