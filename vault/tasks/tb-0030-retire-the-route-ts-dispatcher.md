@@ -395,9 +395,15 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   `guest-smoke.mjs` **99/99**, and `userHex`/`locked`/`decode`/`rowsToObjects` remain in use by the
   `/invoice/*` and `/invoice-doc/*` API families still on the dispatcher.
 
+  **Then `/cashmemo` and `/print`** (2026-10-05): the cash-memo family (index, `vouchers`, `da`,
+  `expenses`, `expenses/save`, `expenses/{id}/delete`, `vouchers/{id}`) and `/print` (GET queue, POST
+  enqueue) moved to folders, their dispatcher branches deleted. Five smoke checks were added for the
+  cashmemo/print pages first and run green against the dispatcher before the move. The last dead locals
+  (`round2to`, `pick`) came out with them. `guest-smoke.mjs` **104/104**.
+
   **Next within step 5:** the API families (`/invoice/*` — context, POST, GET, line, complete, release;
-  `/invoice-doc/*`; `/jobs/*`), then `cashmemo`, `print`, `/p`; then the `{param}`/`[...rest]` prefix
-  routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`); then auth (`/login`, `/logout`, `/`).
+  `/invoice-doc/*`; `/jobs/*`), then `/p`; then the `{param}`/`[...rest]` prefix routes (`/static/*`,
+  `/compute/*`, `/plugins/*`, `/favicon.svg`); then auth (`/login`, `/logout`, `/`).
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
