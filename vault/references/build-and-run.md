@@ -4,7 +4,7 @@ type: reference
 status: active
 system: both
 created: 2026-09-26
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [pos, build, run, windows, bat, scripts]
 related_to: ["[[environment]]", "[[backend]]", "[[cutover-is-guest-only]]", "[[route-snapshot-was-snapshotting-redirects]]"]
 ---
@@ -174,7 +174,7 @@ All the harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-
 
 | Command | Checks | Needs a running server? |
 |---|---|---|
-| `node trailbase/tools/guest-smoke.mjs` | boots its own depot on `:4322`, seeds the smoke dataset, asserts every screen | **no** |
+| `node trailbase/tools/guest-smoke.mjs` | boots its own depot on `:4322`, seeds the smoke dataset, asserts every screen, the write paths and the create-from-the-invoice flow. **91 checks** | **no** |
 | `node trailbase/tools/route-snapshot.mjs` | status + content fingerprint for **49** routes — the refactoring gate for [[tb-0030-retire-the-route-ts-dispatcher]] | yes — `--base`, `--email`, `--password` |
 | `node trailbase/tools/route-coverage.mjs` | **every** method+path branch — **77**, GET and POST — probed for reachability against `route-inventory.json`. Cleans up its own fixtures; a cleanup failure fails the run | yes — `BASE`, `EMAIL`, `PASSWORD` |
 | `node trailbase/tools/write-paths-check.mjs` | a conditional write, an unconditional write and a delete, each **read back after** — `route-snapshot` issues GETs only, so this is the only gate that can see a helper whose whole job is to run *after* a mutation | yes — `BASE`, `EMAIL`, `PASSWORD` |
@@ -196,9 +196,9 @@ All the harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-
 | `node trailbase/tools/report-sql-time.mjs` | the same composed statements run **directly against SQLite**, so a report that 500s at the 20 s deadline can still be measured. `--repeat` matters: a cold run on a fresh import is 2–3× the warm cost | no (`DEPOT_DB`, read-only) |
 | `node trailbase/tools/report-sql-provenance.mjs` | **proves the report path is SQLite.** Fetches each page's `/data` and runs the same statement against `main.db`, comparing row for row, in order, every column — 10 of 14 pages byte-identical. Exits non-zero on a real difference | no — needs the guest up **and** read access to `main.db` |
 | `node trailbase/tools/feature-parity.mjs` | every screen the legacy bundle can serve, against the guest's routes. Has **no `MISSING` verdict** on purpose — the apps name the same screen differently, so an unmatched screen is `candidate`/`unmapped` for a human to decide | no — reads the bundle and the dispatcher, makes no requests |
-| `node trailbase/tools/hotkey-check.mjs` | **drives the keyboard layer with real keystrokes** in headless Chrome over CDP, and asserts the three rules it promises. 34 checks. Needs Chrome; pass `--chrome <path>` if it is not in the default place | yes |
+| `node trailbase/tools/hotkey-check.mjs` | **drives the keyboard layer with real keystrokes** in headless Chrome over CDP, and asserts the three rules it promises — on `/dashboard`, `/invoices`, `/management/parties`, a report, a report hub and a ledger with no table. **62 checks.** Needs Chrome; pass `--chrome <path>` if it is not in the default place | yes |
 | `node trailbase/tools/grid-preview-check.mjs` | the invoice grid's live preview: a line edit moves the line and the total, an invoice Discount % moves every line, a Discount Rs moves only the total, and **the browser's total equals the server's** (by loading once with scripting disabled). 14 checks | yes |
-| `node trailbase/tools/autocomplete-check.mjs` | the searchable combobox, driven with **real keystrokes**: typing narrows, Enter picks, and — the assertion that matters — **the form still posts the id the server expects**, and a pick still fires the `change` the invoice grid depends on. 25 checks | yes |
+| `node trailbase/tools/autocomplete-check.mjs` | the searchable combobox, driven with **real keystrokes**: typing narrows, Enter picks, and — the assertion that matters — **the form still posts the id the server expects**, and a pick still fires the `change` the invoice grid depends on. Also the create row, the panel it opens, and that a CLOSED panel is inert (disabled, so an abandoned create cannot submit). 39 checks, submits nothing | yes |
 | 
 ode trailbase/tools/client-cost.mjs` | **per-keystroke cost on the real database** — the table filter, the `<select>` filter, the grid recalculation and the row cursor. A measurement rather than a pass/fail, and re-runnable to compare against [[minimise-client-side-calculation]] | yes |
 | `node trailbase/tools/ui-capture.mjs --system guest\|legacy\|both` | **captures BOTH apps at 1600×900** with one neutral, class-free extractor, into `vault/attachments/ui-capture/<system>/`, writing a `.png` and a `.structure.json` per screen. The legacy arm needs `--legacy-user` and `--legacy-password`; they are **not defaulted and not recorded in this repository**. `--only <substring>` narrows it | yes |

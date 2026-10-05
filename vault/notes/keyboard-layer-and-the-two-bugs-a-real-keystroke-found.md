@@ -3,7 +3,7 @@ title: The keyboard layer, and the two bugs only a real keystroke could find
 type: note
 status: active
 created: 2026-10-04
-updated: 2026-10-04
+updated: 2026-10-05
 tags: [guest, keyboard, hotkeys, accessibility, client-js, verification, cdp]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[runtime-js-minimal-file-authoring-contract]]", "[[runtime-js-guest-platform]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[tb-0023-guest-feature-parity]]", "[[tb-0024-flatten-new-system-layout]]", "[[settle-structural-claims-with-the-owning-artifact]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[route-snapshot-was-snapshotting-redirects]]", "[[tb-0032-manifest-first-refactor]]", "[[client-side-live-recalculation]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]"]
@@ -190,6 +190,124 @@ The count is whatever the tool prints, not a number written down here — see
   reachable on a phone keyboard at all.
 - **No keybinding discovery beyond `?`.** There is no `?` → "press a key to find what it does", which is
   the only way to make a scheme like this learnable by someone who was not told about it.
+
+---
+
+# Extended 2026-10-05: the reports and the hubs, and four more dead keys
+
+The question that prompted this was "do we have hotkeys". Yes — but the layer had been verified on **three**
+routes (`/dashboard`, `/invoices`, `/management/parties`), and the reports and ledgers had never been
+driven. Sixteen report and ledger screens plus the two report hubs turned out to be partly or wholly
+un-keyboardable. Everything below was verified in a browser against the live depot.
+
+## What the layer covers now, and what it still does not
+
+| Screen | Before | After |
+|---|---|---|
+| The 10 reports + 4 ledgers | `j/k` worked over the rows; `/` was advertised and did nothing on **all sixteen**; `Enter`/`e` were advertised for rows that are `<td>`s and could only fail; `alt+1` printed the report while the overlay said `alt+2 APPLY` | `/` and Escape filter the rows; the cursor skips hidden rows; `Enter`/`e` are not offered; `alt+1` is listed as the print button |
+| `/reports`, `/reports/ledgers`, `/dashboard` | **links and nothing else** — the cursor only understood `<tr>`, so these pages were reachable only by tabbing | `j/k/g g/G/Home/End/PageUp/PageDown` walk the tiles and `Enter` opens the focused one |
+| `ledgers/party` and `ledgers/booker` with the requirement unmet | the Move group was advertised over a notice and no table | the group is hidden; `?` still works |
+
+The tile cursor is the whole fix for the hubs and needs no per-page registration: the shape was already in
+the markup (`main .tiles a.tile`), and the same cursor drives rows and tiles. The help labels name what the
+cursor moves over on the page it is on — "Next tile" on a hub, "Next row" on a table — rather than claiming
+a row that is not there.
+
+## Four more keys that did nothing, all of the class above
+
+- **`alt+ArrowDown` / `alt+ArrowUp` were dead on every page, forever.** Spelled with capitals in the
+  binding table while `normalise()` lowercases every named key, so `b.keys === normal` compared
+  `alt+ArrowDown` with `alt+arrowdown` and never matched. This is the *same* trap as the `shift+?` binding
+  recorded above, in the same file, and it is why `ARROWS` in `keyCap()` is now keyed on lowercase.
+- **`moveField()` could not enter a form.** With focus outside the form's fields the index was `-1` and
+  `next` came out as `0` for **both** directions, so `Alt+ArrowDown` refocused the very box it was pressed
+  from. Entering the set is directional now: down lands on the first field, up on the last.
+- **`/` on the report pages.** Advertised everywhere, resolved to nothing. Fixed on both sides — a target
+  to focus, and a `when` guard so the overlay stops claiming it where there is none. Every `when` clause
+  is now resolved in ONE place (`whenHolds()`), shared by the overlay and the dispatcher, because two
+  places is how they come to disagree.
+- **`alt+1` printed the report.** The printer is an icon-only button, so the overlay — which derived its
+  label from `innerText` — could not see it and listed only `alt+2 APPLY`. A reader counting from the help
+  pressed `alt+1` and got a print dialog. Both places now go through one `buttonLabel()`, which falls back
+  to `title` then `aria-label`.
+
+⚠️ The harness asserted the Alt+Arrow bindings with `beforeField !== afterField || true`, which is
+**always true**. That vacuous assertion is why a dead binding survived; it is the same failure as
+`typeof focusedAfterF === "string"`, which is true of `undefined`. Both were replaced with assertions that
+can fail.
+
+## `Ctrl+F` and `Ctrl+L` were removed, deliberately
+
+They were listed as "the same as `/` — without stealing the browser's own find". They DID steal it:
+`Ctrl+F` is find-in-page in every browser and `Ctrl+L` is the address bar. Both are muscle memory for a
+keyboard user, and a web app that takes them removes the fastest route to the text on the page. `/` needs
+no modifier and collides with nothing, so it is the only key for that action now — the same reasoning that
+has always kept `Ctrl+S` out. **`Ctrl+F`, `Ctrl+L`, `Ctrl+R` and `Ctrl+P` are now asserted to reach the
+browser un-prevented**, and `f` without a modifier is asserted to still be the app's.
+
+Two bindings remain that are browser commands elsewhere, both recorded rather than overlooked:
+
+- **`Ctrl+K` is Chrome's "search from the address bar".** It stays because the command palette is the one
+  place the convention is universal (VS Code, Slack, Linear) and `:` is a listed alternative that steals
+  nothing.
+- **`Alt+1..Alt+9` is Firefox tab switching.** Chrome does not bind it; the deployment target is Chrome on
+  Windows. The layer `preventDefault`s, so on Firefox the operator loses tab switching while the app has
+  focus.
+
+## The report filter, and why it cannot be wrong
+
+`views/reports/report.html` now carries a **"Find in this report"** box bound to the table through
+`data-table-filter` — markup only, reusing the client-side filter `app.js` has had for the management lists
+since the start. Two reasons it belongs on a report: `j/k` walk rows and a report can hold **1,000** of
+them, so without a way to narrow the set a keyboard user walks 1,000 rows to find one invoice; and `/`
+needed a target.
+
+It filters rows **already rendered** and nothing else, so it cannot change a money figure — verified in a
+browser: needle `8606` cut the payments report from 333 rows to 2 and the totals block did not move. A
+filter that could change a total would be a second arithmetic path, and this app has exactly one by
+decision. It does not replace **Show all** for rows past the 1,000-row render cap.
+
+## A bug the filter exposed, which had been hiding on the management lists
+
+`hotkeys.js` listened for the filter's `input` event to clear a cursor left on a hidden row, and called
+`onEscape()`. `onEscape` falls through to its last leg — **it clears the filter** — and dispatches another
+`input` event, which re-runs the filter with an empty needle and shows every row again. So typing one
+character in a filter hid 331 of 333 rows and the listener immediately undid it, leaving the input's own
+value empty. Found by driving, not by reading. Only the cursor is cleared now.
+
+## The harness
+
+`tools/hotkey-check.mjs` now drives `/reports/payments`, `/reports/profit`, `/reports`,
+`/reports/ledgers/party`, `/dashboard` and `/management/parties`, and asserts **62** things. Two
+harness-shaped traps, each of which produced a crash that said nothing about the app:
+
+- **`Ctrl+R` cannot be tested through a window variable.** It IS the reload, so asserting the app did not
+  prevent it reloads the page, the variable dies with the document, and the read-back throws
+  `Cannot read properties of undefined (reading 'length')`. It records into `localStorage`, which outlives
+  the navigation.
+- **A `keydown` observer dies with the document too**, so it is reinstalled after every navigation — and a
+  bare `return` in a statement list is a `SyntaxError`, so `watchKeys()` wraps itself in an IIFE.
+
+## The generalisation, named
+
+Three of the four dead keys were found by **asserting a specific behaviour**, not by reading the table. A
+key can be spelled plausibly, dispatch without error, appear in the help overlay, and do nothing. The
+binding table is a declaration of intent; only a behavioural assertion can tell whether the intent
+happened. The other two rules in this file are the same statement in other clothes: an advertised shortcut
+that does nothing teaches the reader to distrust the whole list, and a harness that cannot fail is worse
+than no harness.
+
+## Gates re-run after the 2026-10-05 extension
+
+| gate | result |
+|---|---|
+| `tools/hotkey-check.mjs` | **62 passed, 0 failed** |
+| `tools/guest-smoke.mjs` | **79/79 passed** |
+| `tools/route-snapshot.mjs` | **49 routes, 0 erroring** |
+| `tools/db-digest.mjs` | 60,245 → 60,246, only the seeded `Difference` party, every money column equal |
+
+The count is whatever the tool prints, not a number written down here — see
+[[smoke-count-is-not-a-hard-coded-number]].
 
 ## Related
 

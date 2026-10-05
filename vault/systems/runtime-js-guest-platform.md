@@ -150,6 +150,11 @@ implementation" ([[legacy-parity-checks-waived]]).
 - **`setTimeout` blocks and `setInterval` is absent**
   ([[trailbase-host-settimeout-blocks-and-no-setinterval]]).
 - A dropped streaming request can panic the host bridge (`wstd` connection reset).
+- **Module state is per runtime thread.** Anything that other threads must see — a cache invalidation, a
+  freshness signal — has to go through the shared KV store, or it only reaches the thread that wrote it.
+  A per-thread memo of the data fingerprint made a read after a write serve the pre-write page about one
+  run in five; fixed 2026-10-05 with a KV stamp
+  ([[fingerprint-memo-is-per-thread-so-a-read-after-a-write-can-be-stale]]).
 - SQLite errors and the DB bridge surface opaque errors unless the bridge logs them
   ([[guest-db-bridge-text-params-only]], [[trailbase-guest-error-string-opaque]]).
 

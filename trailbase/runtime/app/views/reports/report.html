@@ -50,7 +50,21 @@
   {% endif %}
 </div>
 {% block before_table %}{% endblock %}
-{{ tb.simple(columns, rows, mobile) }}
+{# A row filter over the rendered table, which the client-side filter in `app.js` already implements for
+   every management list. Two reasons it belongs here rather than only on the management screens:
+
+   - `j`/`k` walk the rows, and a report can hold 1,000 of them. Without a way to narrow the set, a
+     keyboard user walks 1,000 rows to find one invoice, which is slower than the mouse was.
+   - `/` and Escape's filter leg needed a target. Both were advertised on all sixteen report and ledger
+     screens and did nothing on every one — the overlay was promising a shortcut that did not exist.
+
+   It filters the rows ALREADY rendered, so it cannot change a total; a filter that changed a money figure
+   would be a second arithmetic path, and this app has exactly one by decision. Rows beyond the render cap
+   still need "Show all" below. #}
+<div class="report-filter">
+  <label class="field"><span>Find in this report</span><input type="search" data-table-filter="#report-table" autocomplete="off" spellcheck="false"></label>
+</div>
+{{ tb.simple(columns, rows, mobile, "report-table") }}
 {% if rowInfo and rowInfo.truncated %}
 <p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>
 {% endif %}

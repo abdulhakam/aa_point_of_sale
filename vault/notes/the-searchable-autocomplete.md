@@ -115,14 +115,38 @@ That is the same work `enhanceSelects` did, minus the second control.
 ## Not done
 
 - **No "create" in the autocomplete.** Typing a party that does not exist shows `No match` and nothing
-  else. The create affordance is the highest-value item on the suggestion list in
+  else. ~~The create affordance is the highest-value item on the suggestion list in
   [[tb-0023-guest-feature-parity]] and is deliberately a separate change: it needs a decision about
-  which fields a quick-create collects.
-- **No async lookup.** The whole list is in the page, which is fine at 943 parties and would not be at
-  50,000. When it stops being fine, the filter moves server-side and this component keeps its shape.
+  which fields a quick-create collects.~~ **Done 2026-10-05** — see "Create-from-here" below and
+  [[quick-create-rides-in-the-form-that-needed-it]]. The fields were recovered from the legacy bundles;
+  the create rides in the form that needed it.
+- **No async lookup.** The whole list is in the page, which is fine at 943 parties and would not be
+  at 50,000. When it stops being fine, the filter moves server-side and this component keeps its
+  shape.
 - **No touch-specific affordances.** The mobile layout has no combobox gestures
   ([[mobile-layout-is-additive-to-the-legacy-look]]).
 
+## Create-from-here, 2026-10-05
+
+The "No match" state is gone where a control was given a panel to open. A name that is not on the list
+adds one more row to the end of it — `Create “…”` — which opens a small block of fields inside the same
+form. Choosing the row never touches `select.value`, so rule 3 above still holds: the control offers to
+MAKE a value, and only a real option can be submitted.
+
+The fields, the panel's inert-when-closed rule, the party-type translation and the price rule are
+[[quick-create-rides-in-the-form-that-needed-it]]; this note only records what changed here:
+
+- The create row is an entry in the same array the arrows walk, not a decoration appended to the DOM.
+  An earlier draft painted it outside `filtered` and it could then only be clicked — worse than not
+  having it in a keyboard-first app.
+- `data-i` on a rendered row indexes **`shown()`**, the rows on screen, which is not `filtered` once a
+  create row is appended. Reading `filtered` there is an off-by-one whose only symptom is the wrong
+  thing being created.
+- A closed panel is `disabled`, and the disabling runs after every combobox on the page has been
+  enhanced (see the decision note: the panel contains a combobox of its own).
+
+Still not done here: no async lookup, and the create affordance is on the invoice screens only —
+not the invoice grid, whose item selects are repeated-name arrays.
 ## Gates
 
 | gate | result |

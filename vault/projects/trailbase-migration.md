@@ -3,7 +3,7 @@ title: TrailBase migration
 type: project
 status: active
 created: 2026-09-26
-updated: 2026-10-03
+updated: 2026-10-05
 tags: [pos, trailbase, migration, workstream]
 belongs_to: "[[aa-point-of-sale]]"
 related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]"]
@@ -60,6 +60,25 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**Step 7 is the live work. The create-from-the-invoice affordance is done** (2026-10-05) — a party or an
+item can be made from the invoice being written, which was the top item of the Requested list and
+suggestion 1 in [[tb-0023-guest-feature-parity]]. It rides in the invoice's own form post, so no walk
+away and nothing typed is lost; see [[quick-create-rides-in-the-form-that-needed-it]]. The one gap is
+the invoice **grid**, whose item selects are repeated-name arrays in a single form — per-row work,
+recorded rather than half-built.
+
+**Next: suggestion 2 in [[tb-0023-guest-feature-parity]], the keyboard-first item entry.** The
+autocomplete (2026-10-05) and the keyboard layer's extension to the reports and hubs
+([[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]) are both in place; what they set up is
+`Ctrl+Enter` to add a line and arrow-key movement inside the grid, which makes entry almost entirely
+typable on a grid that is already a spreadsheet. After that, suggestion 3 (remember the last report
+filters) and item B (sortable management tables).
+
+The other open items in the sequence, in the order they gate: **step 17** (trigger-maintained Tier 2
+materialised tables) before **16**, because six of the fourteen report statements exceed the WASM call
+deadline on their own; **step 15** (retire `route.ts`); **step 19** is measured and needs its fix, which is
+step 17.
+
 ```text
 [x] 1. Design and validate the TrailBase schema          -> 17 tables, 17 record APIs
 [x] 2. Decide where report arithmetic lives              -> SQL in runtime .sql files (was: JS under app/compute/)
@@ -68,8 +87,7 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 [x] 5. Prove the numbers match the old views             -> differential 14/14 (no longer re-runnable; see open decision 5)
 [x] 6. Adopt the guest-WASM app platform                 -> runtime-js host (Phase 0 + app host port)
 [x] 6a. Flatten the layout, drop the guests spike        -> [[tb-0024-flatten-new-system-layout]]
-[ ] 7. Guest feature parity, plus a better UI   -> [[tb-0023-guest-feature-parity]] (retitled 2026-10-05 from "Direct-shift the legacy UI"; the mandate is now [[parity-is-functional-not-visual]])
-[x] 7a. Invoice / payment / inventory screens + mobile   -> [[tb-0028-guest-transactional-screens-and-mobile]] (done 2026-09-29)
+[ ] 7. Guest feature parity, plus a better UI   -> [[tb-0023-guest-feature-parity]] (retitled 2026-10-05 from "Direct-shift the legacy UI"; the mandate is now [[parity-is-functional-not-visual]])[x] 7a. Invoice / payment / inventory screens + mobile   -> [[tb-0028-guest-transactional-screens-and-mobile]] (done 2026-09-29)
 [x] 8. Build invoices / cash memos / printing on the guest -> [[tb-0021-invoices-cashmemos-printing]] (done 2026-09-29)
 [x] 8a. Invoice lifecycle, spreadsheet grid, standalone document -> [[guest-invoice-lifecycle]] (done 2026-09-29)
 [x] 9. Verify and finish the guest v1 (PocketBase) import -> done 2026-09-29, 60,245/60,245, sums match

@@ -458,6 +458,114 @@ async function main() {
     const filteredStock = await get(cookies, "/reports/stockreport");
     check("stock report still renders after a write", filteredStock.status === 200, `${filteredStock.status}`);
 
+    /* ── create the party and the item FROM the invoice ─────────────────────────────────────────
+       The legacy invoice screen let an operator make a party or an item without leaving the invoice;
+       the guest had lost that, so a new customer cost a walk to Management and back. These post the
+       panel's own field names, which is what the browser posts when the combobox opens it. */
+    const newInvoice = await postForm(cookies, "/invoices/new", {
+      type: "1",
+      party: "",
+      party_new_name: "Smoke Walk-In",
+      party_new_from_invoice_type: "1",
+      party_new_phone: "555",
+    });
+    const newInvoicePath = String(newInvoice.location || "");
+    check(
+      "an invoice is created with a party made in the same submit",
+      (newInvoice.status === 302 || newInvoice.status === 303) && newInvoicePath.startsWith("/invoices/"),
+      `${newInvoice.status} ${newInvoicePath}`
+    );
+    const createdInvoice = await get(cookies, newInvoicePath);
+    check("...and the new party is the invoice's party", createdInvoice.body.includes("Smoke Walk-In"), `${createdInvoice.status}`);
+
+    // A party made on a SALE must be a customer. The two enums have the same two names in the opposite
+    // numbers (invoice 0 is purchase, party 0 is customer), so this is the assertion that would have
+    // caught the inversion the first draft shipped: invoice type 1 asked for a supplier.
+    //
+    // ⚠️ The row must be found by name AND by the row's own edit link. Matching on the name alone picked
+    // up the create form's COMPANY select — a party is a company name once it has been made — and read
+    // "no row" against a page that plainly had one. The name and the link together are the row.
+    const rowFor = (html, name) =>
+      html.split("<tr").find((row) => row.includes(name) && /management\/parties\?edit=/.test(row));
+    const partiesAfterCreate = await get(cookies, "/management/parties");
+    const customerEdit = (function () {
+      const row = rowFor(partiesAfterCreate.body, "Smoke Walk-In");
+      return row ? /management\/parties\?edit=([^"&]+)/.exec(row) : null;
+    })();
+    if (customerEdit) {
+      const customerForm = await get(cookies, `/management/parties?edit=${customerEdit[1]}`);
+      check("a sale's new party is a customer", /<option value="0" selected>customer<\/option>/.test(customerForm.body), "");
+    } else {
+      check("a sale's new party is a customer", false, "the new party was not found in the list");
+    }
+
+    const newLine = await postForm(cookies, `${newInvoicePath}/line`, {
+      opKey: `smoke-qc-${Date.now()}`,
+      item: "",
+      item_new_name: "Smoke Item",
+      item_new_cost_price: "10",
+      item_new_sale_price: "25",
+      item_new_box_size_qty: "12",
+      qty: "3",
+      price: "0",
+    });
+    check("a line is added with an item made in the same submit", newLine.status === 302 || newLine.status === 303, `${newLine.status}`);
+    const afterLine = await get(cookies, newInvoicePath);
+    check("...the line is on the invoice", afterLine.body.includes("Smoke Item"), "");
+    // The line form posts `price=0` as its default. Taking that literally would price every brand-new
+    // item at zero; the item's own sale price is what must land.
+    check("...priced from the new item, not from the form's default 0", /75\.00/.test(afterLine.body), "expected 3 x 25.00 = 75.00");
+    check("...and the item's own price is what the select carries", /data-price="25"[^>]*>Smoke Item/.test(afterLine.body), "");
+
+    // A purchase's new party is a supplier, and it carries a company of its own name — the legacy
+    // behaviour, and what the migrated data shows on every supplier it has.
+    const newPurchase = await postForm(cookies, "/invoices/new", {
+      type: "0",
+      party: "",
+      party_new_name: "Smoke Supplier",
+      party_new_from_invoice_type: "0",
+    });
+    check("a purchase is created with a party made in the same submit", newPurchase.status === 302 || newPurchase.status === 303, `${newPurchase.status}`);
+    const partiesAfterPurchase = await get(cookies, "/management/parties");
+    const supplierEdit = (function () {
+      const row = rowFor(partiesAfterPurchase.body, "Smoke Supplier");
+      return row ? /management\/parties\?edit=([^"&]+)/.exec(row) : null;
+    })();
+    if (supplierEdit) {
+      const supplierForm = await get(cookies, `/management/parties?edit=${supplierEdit[1]}`);
+      check("a purchase's new party is a supplier", /<option value="1" selected>supplier<\/option>/.test(supplierForm.body), "");
+    } else {
+      // The detail has to say WHY: the row being absent, the name being present without an edit link,
+      // and the edit link being present under a different row shape are three different findings.
+      const occurrences = (partiesAfterPurchase.body.match(/Smoke Supplier/g) || []).length;
+      const editLinks = (partiesAfterPurchase.body.match(/management\/parties\?edit=/g) || []).length;
+      check("a purchase's new party is a supplier", false, `no row matched — name x${occurrences}, ${editLinks} edit link(s), status ${partiesAfterPurchase.status}`);
+    }
+    const companiesAfterPurchase = await get(cookies, "/management/companies");
+    check("...and a company of its own name was made and linked", companiesAfterPurchase.body.includes("Smoke Supplier"), "");
+
+    // The panel is inert while closed, and the server must agree: a submit that carries only the panel's
+    // empty names creates nothing. This is the half of the contract the browser check cannot see.
+    const countParties = (html) => (html.match(/management\/parties\?edit=/g) || []).length;
+    const partiesBeforeEmptyPanel = countParties(partiesAfterPurchase.body);
+    const withEmptyPanel = await postForm(cookies, `${newInvoicePath}/header`, {
+      dated: "2026-09-20",
+      party: "",
+      booker: "",
+      description: "no new party here",
+      discount_1: "0",
+      discount_rs: "0",
+      party_new_name: "",
+      party_new_from_invoice_type: "1",
+    });
+    check("an empty panel creates no party", withEmptyPanel.status === 302 || withEmptyPanel.status === 303, `${withEmptyPanel.status}`);
+    const partiesAfterEmpty = await get(cookies, "/management/parties");
+    check(
+      "...confirmed: the party count did not move",
+      countParties(partiesAfterEmpty.body) === partiesBeforeEmptyPanel && partiesBeforeEmptyPanel > 0,
+      `${partiesBeforeEmptyPanel} -> ${countParties(partiesAfterEmpty.body)}`
+    );
+
     const health = await fetch(`${FE}/healthz`).then((r) => r.json());
     check("report worker pool is running", health.workers.workers >= 1, JSON.stringify(health.workers));
 

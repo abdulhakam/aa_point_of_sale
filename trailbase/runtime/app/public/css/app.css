@@ -432,7 +432,9 @@ table.grid select { min-width: 12rem; }
   .field > span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
   .filter-actions { margin-left: 0; width: 100%; }
   .filter-actions .btn { flex: 1; }
-
+  /* The report's row filter is a thumb-sized single control on its own row under 768px. */
+  .report-filter .field { flex-direction: row; align-items: center; }
+  .report-filter input[type="search"] { min-width: 0; flex: 1; }
   /* 44px minimum touch target everywhere a control is tappable. */
   .btn { height: 44px; font-size: 0.9rem; padding: 0 14px; }
   .btn.small { height: 40px; }
@@ -549,7 +551,7 @@ table.grid select { min-width: 12rem; }
 .no-print { display: revert; }
 
 @media print {
-  .header, .navbar, .filters, .crumbs, .btn, .notice, .flash, .job, .hub-title, .no-print, .pagebar, .stat-grid, .list-toolbar { display: none !important; }
+  .header, .navbar, .filters, .crumbs, .btn, .notice, .flash, .job, .hub-title, .no-print, .pagebar, .stat-grid, .list-toolbar, .report-filter { display: none !important; }
   body { background: #fff; }
   .appshell, .appbody, .main { display: block; padding: 0; margin: 0; }
   .card { border: 0; padding: 0; margin: 0; background: #fff; }
@@ -596,6 +598,10 @@ table.grid select { min-width: 12rem; }
 tr.hk-row > td { background: var(--blue-0); }
 tr.hk-row:focus { outline: 2px solid var(--blue-6); outline-offset: -2px; }
 tr.hk-row:focus-visible { outline: 2px solid var(--blue-6); outline-offset: -22px; }
+/* A tile is a "row" on a hub page, and it is already a box, so it takes an outline and no background
+   wash. Without this the cursor moved across the reports hub with nothing visible to follow. */
+a.tile.hk-row { background: var(--blue-0); }
+a.tile.hk-row:focus { outline: 2px solid var(--blue-6); outline-offset: 2px; }
 
 /* Visually hidden, still announced. The live region narrates the cursor so the layer is usable without
    sight of the ring — which is the whole reason it exists rather than being decoration. */
@@ -683,7 +689,7 @@ kbd {
 
 @media print {
   /* None of this is document content. */
-  tr.hk-row > td, tr.hk-row:focus { background: none; outline: none; }
+  tr.hk-row > td, tr.hk-row:focus, a.tile.hk-row, a.tile.hk-row:focus { background: none; outline: none; }
   .hk-overlay, .hk-nudge, .hk-live { display: none !important; }
 }
 
@@ -692,6 +698,14 @@ kbd {
    the period ranged on the right of the same line (`09-reports-profit.png`). These three rules carry
    that shape; the markup is `views/reports/report.html`. */
 .report-tools { margin: 0 0 10px; }
+/* The "Find in this report" box. `no-print` because a printed report must carry its rows, not the
+   control that narrows them — the same reason the filters block is hidden.
+   ⚠️ `flex-direction: row` is required and not optional. `.field` is a column, so overriding only
+   `align-items: center` left the label and the input stacked and CENTRED on the page. It was verified in
+   a browser: the input measured 224px wide at x=881 on a 1,793px block. */
+.report-filter { margin: 0 0 8px; }
+.report-filter .field { flex-direction: row; align-items: center; gap: 8px; }
+.report-filter input[type="search"] { min-width: 16em; }
 .btn.icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; color: var(--blue-6); }
 .btn.icon svg { display: block; }
 
@@ -743,8 +757,31 @@ kbd {
 }
 .ac-option { padding: 7px 12px; cursor: pointer; font-size: 0.875rem; }
 .ac-option.is-active, .ac-option:hover { background: var(--blue-0); }
+/* The create row: the action, not a row of data. A rule above it, so it does not read as one more
+   party in the list, and a weight that marks it as the offer it is. */
+.ac-option.ac-create { border-top: 1px solid var(--line); font-weight: 600; }
 .ac-empty { padding: 7px 12px; color: var(--muted); font-size: 0.8125rem; cursor: default; }
 .ac-empty:hover { background: none; }
+
+/* ─────────────────────────────────────────── the quick-create panel
+   Rendered by `views/partials/quick-create.html` inside the form its create belongs to. Hidden and with
+   its controls disabled until the combobox opens it, so an abandoned panel cannot submit.
+   ⚠️ `flex-basis: 100%` is load-bearing: these forms are `display: flex; flex-wrap: wrap`, so without it
+   the panel is one more flex item and lands mid-row — verified in a browser, where the item form put the
+   panel between Item and Qty and pushed Qty and Price onto a line of their own. With the full basis the
+   panel takes a line underneath the control that opened it, and while hidden it takes no space at all. */
+.qc {
+  flex-basis: 100%;
+  margin: 8px 0 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--blue-6);
+  border-radius: 4px;
+  background: var(--blue-0);
+}
+.qc-title { margin: 0 0 8px; font-weight: 600; }
+.qc-fields { display: flex; flex-wrap: wrap; gap: 10px; }
+.qc-fields .field { min-width: 12em; flex: 1 1 12em; }
 
 /* A long select inside a form must not be narrower than its label — the hidden native select still
    dictates the box's intrinsic width, and an autocomplete with 8rem of text room is unusable. */

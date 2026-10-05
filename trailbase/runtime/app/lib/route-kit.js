@@ -72,7 +72,10 @@ const B64_STANDARD = { "+": 62, "/": 63 };
  */
 export async function write(fn) {
   const result = await fn();
-  invalidate();
+  // Awaited: this is also what publishes the cross-thread invalidation stamp, and it has to be in the
+  // database before the mutation's response is, or a read on another runtime thread can arrive first and
+  // be served from a fingerprint that predates the write. See `probe` in reports.js.
+  await invalidate();
   return result;
 }
 

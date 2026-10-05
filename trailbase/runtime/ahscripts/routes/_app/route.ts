@@ -69,6 +69,9 @@ async function app(): Promise<any> {
     pages: await loadModule("/app/lib/pages.js"),
     plugins: await loadModule("/app/lib/plugins.js"),
     management: await loadModule("/app/lib/management.js"),
+    // A party or an item made from the screen that needed it — the invoice's own create affordance,
+    // as the legacy invoice screen had. Called inside the invoice write and lock, never on its own.
+    quickCreate: await loadModule("/app/lib/quick-create.js"),
     invoicing: await loadModule("/app/lib/invoicing.js"),
     lifecycle: await loadModule("/app/lib/invoice-lifecycle.js"),
     invoices: await loadModule("/app/lib/invoices.js"),
@@ -962,7 +965,7 @@ if (path === "/login" && method === "GET") {
     // `full` also drops the composed-SQL cache, or an edited `.sql` file would keep serving the
     // text that was composed when the process first read it.
     if (full) {
-      A.service.invalidate();
+      await A.service.invalidate();
       A.spooled.invalidate();
     }
     await A.service.refresh(db);
@@ -1564,11 +1567,18 @@ if (path === "/login" && method === "GET") {
           parties: refs.parties ?? [],
           bookers: refs.bookers ?? [],
           items: A.routeKit.editorItems(refs),
+          // The quick-create panels' option lists: the party's area and the item's company. The party's
+          // TYPE is the invoice's own type, and the item's numbers are typed, so neither needs a list.
+          areas: refs.areas ?? [],
+          companies: refs.companies ?? [],
         })
       );
     }
     // A key from the form makes a repeated submit return the same invoice instead of a second one.
     const created = await A.routeKit.write(async () => {
+      // The party first: if it cannot be made, no invoice is created. A purchase's new party is a
+      // supplier and carries a company of its own name; see `lib/quick-create.js`.
+      const newParty = await A.quickCreate.partyFromForm(db, form);
       const invoice = await A.invoicing.createInvoice(db, {
         type,
         key: String(form.key || ""),
@@ -1577,7 +1587,7 @@ if (path === "/login" && method === "GET") {
       });
       const createdHex = A.routeKit.b64ToHex(String(invoice.id));
       await A.invoicing.patchHeader(db, createdHex, {
-        party: String(form.party || ""),
+        party: newParty ? A.routeKit.hexToB64(newParty) : String(form.party || ""),
         dated: A.format.dateOnly(new Date().toISOString()),
       });
       return invoice;
@@ -1601,8 +1611,11 @@ if (path === "/login" && method === "GET") {
     const hex = A.routeKit.b64ToHex(String(invoiceHeader[1]));
     if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
     await A.routeKit.write(async () => {
+      // A party typed into the panel is created here, and the header is then saved with it — the same
+      // submit, so the date and booker that were being edited are not lost to a detour.
+      const newParty = await A.quickCreate.partyFromForm(db, form);
       await A.invoicing.patchHeader(db, hex, {
-        party: String(form.party || ""),
+        party: newParty ? A.routeKit.hexToB64(newParty) : String(form.party || ""),
         booker: String(form.booker || ""),
         dated: String(form.dated || ""),
         description: String(form.description || ""),
@@ -1628,21 +1641,38 @@ if (path === "/login" && method === "GET") {
     const hex = A.routeKit.b64ToHex(String(invoiceLine[1]));
     if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return locked();
     await A.routeKit.write(async () => {
+      // An item typed into the panel is created here and used for this very line, so "create the item"
+      // and "add the line" are one submit. The legacy did it in two steps and left the operator to find
+      // the item again in the list.
+      const createdItem = await A.quickCreate.itemFromForm(db, form);
+      const itemId = createdItem ? A.routeKit.hexToB64(createdItem) : String(form.item || "");
+      if (!itemId) throw new Error("A line needs an item");
       // An empty price or cost falls back to the item's own, so the mobile form can be short.
-      const itemId = String(form.item || "");
       const item = await db.all(
         'SELECT "cost_price", "sale_price" FROM items WHERE "id" = unhex(?)',
         [A.routeKit.b64ToHex(itemId)]
       );
       const cost = item && item.length ? Number(item[0][0]) || 0 : 0;
       const price = item && item.length ? Number(item[0][1]) || 0 : 0;
+      // ⚠️ The form ships `price` with a default of "0", so "empty" is not the only way the operator can
+      // decline to name one. For an item made in this same submit the 0 is the form's own default, not a
+      // price, and taking it literally would add every newly created item to its invoice at zero — the
+      // one thing a create-and-add must not do. So the create path yields to the new item's own price
+      // when the field is absent OR still at its default; a number the operator actually typed wins, as
+      // it does everywhere else. The existing-item path is left exactly as it was, because that is money
+      // behaviour nobody asked to change.
+      const submittedPrice = form.price === undefined ? "" : String(form.price);
+      const priceIsUnset = submittedPrice === "" || Number(submittedPrice) === 0;
+      const linePrice = createdItem
+        ? (priceIsUnset ? String(price) : submittedPrice)
+        : (submittedPrice === "" ? String(price) : submittedPrice);
       await A.invoicing.addLine(
         db,
         hex,
         {
           item: itemId,
           qty: String(form.qty || "0"),
-          price: form.price === undefined || form.price === "" ? String(price) : String(form.price),
+          price: linePrice,
           cost_price: form.cost_price === undefined || form.cost_price === "" ? String(cost) : String(form.cost_price),
           discount_1: String(form.discount_1 || "0"),
           discount_2: String(form.discount_2 || "0"),
@@ -1682,6 +1712,9 @@ if (path === "/login" && method === "GET") {
         parties: refs.parties ?? [],
         bookers: refs.bookers ?? [],
         items: A.routeKit.editorItems(refs),
+        // The quick-create panels' option lists; see `/invoices/new` above.
+        areas: refs.areas ?? [],
+        companies: refs.companies ?? [],
         message: query.status === "ok" ? "Saved" : "",
       })
     );

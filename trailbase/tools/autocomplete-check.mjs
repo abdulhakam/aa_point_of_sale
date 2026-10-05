@@ -270,6 +270,98 @@ try {
     check("the grid renders no per-line cost field (so app.js's cost fill is inert)", after && after.cost === undefined, `cost=${JSON.stringify(after && after.cost)}`);
   }
 
+  /* ── create-from-here: the row, the panel, and the value contract ────────────────────────────── */
+  // Nothing in this section submits. The CREATE itself is exercised end to end in `guest-smoke.mjs`,
+  // which runs against a throw-away depot; this is the live depot and a create here would be a real
+  // party in the operator's data.
+  await cdp.goto("/invoices");
+  const firstInvoice = await cdp.ev(`(function () {
+    var a = [].slice.call(document.querySelectorAll('a[href^="/invoices/"]')).filter(function (el) {
+      return !/\\/invoices\\/(new|$)/.test(el.getAttribute("href"));
+    });
+    return a.length ? a[0].getAttribute("href") : "";
+  })()`);
+  check("an invoice to open was found", !!firstInvoice, firstInvoice);
+  if (firstInvoice) {
+    await cdp.goto(firstInvoice);
+    for (let i = 0; i < 100; i++) { if (await cdp.ev("document.documentElement.getAttribute('data-hk-ready')==='1'").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
+
+    // A closed panel must be INERT, not merely invisible: a hidden input is still submitted, so an
+    // abandoned create would otherwise save its name with the next "Save header".
+    const inert = await cdp.ev(`(function () {
+      var p = document.getElementById("qc-party");
+      if (!p) return null;
+      return { hidden: p.hidden, disabled: [].slice.call(p.querySelectorAll("input, select, button")).every(function (el) { return el.disabled; }) };
+    })()`);
+    check("the quick-create panel renders hidden", !!inert && inert.hidden, JSON.stringify(inert));
+    check("...and every control in it is disabled while closed", !!inert && inert.disabled, JSON.stringify(inert));
+
+    await cdp.ev(`(function(){var i=document.querySelector('select[name="party"]').closest(".ac").querySelector(".ac-input");i.focus();})()`);
+    await cdp.type("Zzz New Party Name");
+    const offered = await cdp.ev(`(function () {
+      var w = document.querySelector('select[name="party"]').closest(".ac");
+      var rows = [].slice.call(w.querySelectorAll(".ac-option"));
+      var last = rows[rows.length - 1] || {};
+      return { rows: rows.length, isCreate: !!last.classList && last.classList.contains("ac-create"), text: last.textContent || "" };
+    })()`);
+    check("a name that is not on the list offers to create it", offered.isCreate && /Zzz New Party Name/.test(offered.text), JSON.stringify(offered));
+
+    // The create row must be in the same list the arrows walk, or it can only be clicked — which for a
+    // keyboard-first app is worse than not having it.
+    await cdp.key("ArrowUp");
+    const reachable = await cdp.ev(`(function () {
+      var w = document.querySelector('select[name="party"]').closest(".ac");
+      var a = w.querySelector(".ac-option.is-active");
+      return a ? { isCreate: a.classList.contains("ac-create"), text: a.textContent } : null;
+    })()`);
+    check("the create row is reachable with the arrow keys", !!reachable && reachable.isCreate, JSON.stringify(reachable));
+
+    await cdp.key("Enter");
+    await new Promise((r) => setTimeout(r, 200));
+    const opened = await cdp.ev(`(function () {
+      var p = document.getElementById("qc-party");
+      var name = p.querySelector('[name$="_name"]');
+      var sel = document.querySelector('select[name="party"]');
+      return { open: !p.hidden, name: name.value, required: name.required, enabled: !name.disabled,
+               selectValue: sel.value, focused: document.activeElement === name };
+    })()`);
+    check("choosing it opens the panel", opened.open, JSON.stringify(opened));
+    check("...with the typed name in the name field", opened.name === "Zzz New Party Name", opened.name);
+    check("...focused, enabled and required", opened.enabled && opened.required && opened.focused, JSON.stringify(opened));
+    // Rule 3 above all: the create row is an ACTION. If it reached the select, the control's promise
+    // that a value not on the list is never submitted would be broken by the control itself.
+    check("...and the native select is still empty, not set to the typed text", opened.selectValue === "", `value="${opened.selectValue}"`);
+
+    // The item panel's contract is stricter than the party's: its select is `required`, and the browser
+    // would refuse the very submit that creates the item unless the panel lifts it.
+    const itemReq = await cdp.ev(`(function(){var s=document.querySelector('select[name="item"]');return s?s.required:null})()`);
+    check("the line form's item select is required to begin with", itemReq === true, String(itemReq));
+
+    await cdp.ev(`(function(){var c=document.getElementById("qc-party").querySelector("[data-qc-cancel]");c.click();})()`);
+    await new Promise((r) => setTimeout(r, 200));
+    const closed = await cdp.ev(`(function () {
+      var p = document.getElementById("qc-party");
+      var name = p.querySelector('[name$="_name"]');
+      var sel = document.querySelector('select[name="party"]');
+      return { hidden: p.hidden, disabled: name.disabled, selectValue: sel.value,
+               shown: sel.closest(".ac").querySelector(".ac-input").value };
+    })()`);
+    check("Cancel closes the panel and disables it again", closed.hidden && closed.disabled, JSON.stringify(closed));
+    check("...without submitting anything", closed.selectValue === "", `value="${closed.selectValue}"`);
+    check("...and the box goes back to the select's own label", closed.shown === "", `shown="${closed.shown}"`);
+
+    // Escape, from inside the panel, means the panel — not the global layer's row cursor.
+    await cdp.ev(`(function(){var i=document.querySelector('select[name="party"]').closest(".ac").querySelector(".ac-input");i.focus();})()`);
+    await cdp.type("Zzz Escaped Name");
+    await cdp.key("Enter"); // opens the panel (the create row is the only match)
+    await new Promise((r) => setTimeout(r, 200));
+    const beforeEsc = await cdp.ev(`!document.getElementById("qc-party").hidden`);
+    await cdp.key("Escape");
+    await new Promise((r) => setTimeout(r, 200));
+    const afterEsc = await cdp.ev(`document.getElementById("qc-party").hidden`);
+    check("Escape from inside the panel closes it", beforeEsc && afterEsc, `${beforeEsc} -> ${afterEsc}`);
+  }
+
   check("no page exceptions or console errors", cdp.errors.length === 0, cdp.errors.slice(0, 2).join(" | "));
 
   console.log(`\n== ${pass} passed, ${failures.length} failed ==`);

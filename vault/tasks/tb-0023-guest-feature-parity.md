@@ -36,12 +36,17 @@ In the operator's order, with the reason each one was asked for.
       first, **the native `<select>` stays in the form so submission is unchanged**. Selects under 12
       options are deliberately left alone: booker (4) and section (10) stay native, company (15), area
       (59), item (207) and party (943) become comboboxes. See [[the-searchable-autocomplete]].
-      **Not included:** the create affordance — see the suggestion list below.
-- [ ] **Create-party and create-item on the invoice pages.** Legacy lets an operator create a party or an
-      item **from the invoice they are writing**, so a new customer never costs a detour. The guest's
-      invoice grid has no such affordance. **This is now the highest-value item on the list**, and the
-      autocomplete is the natural host for it — the control that finds a party should also be able to
-      create one.
+      **Create affordance: done 2026-10-05** — see the item below and
+      [[quick-create-rides-in-the-form-that-needed-it]].
+- [x] **Create-party and create-item on the invoice pages.** Legacy lets an operator create a party or an
+      item **from the invoice they are writing**, so a new customer never costs a detour. Done
+      2026-10-05: the combobox's "Create …" row opens a panel **inside the invoice's own form**, so the
+      create rides in the same submit — a new party saves the header, a new item adds the line, and
+      nothing typed is lost. The legacy field sets were recovered from the compiled bundles; a purchase's
+      new supplier also gets a company of its own name, as legacy did and as the migrated data shows on
+      all 13 suppliers. See [[quick-create-rides-in-the-form-that-needed-it]].
+      **Not on the invoice grid** (`/invoices/{id}/grid`) — its item selects are repeated-name arrays in
+      one form and need per-row handling; recorded in the decision note rather than half-built.
 - [ ] **Fewer rail buttons.** The rail carries the five legacy destinations plus **Pages**, **Plugins**,
       the background-refresh dot and Logout — the last three are utility, not destinations. The operator
       read it as "too many buttons".
@@ -79,7 +84,10 @@ From [[ui-parity-discrepancies-2026-10-05]] Part 1. Under functional parity thes
       rendered because the page frame carries no `meta`.
 - [x] Keyboard layer, so the app is operable without the mouse —
       [[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]. Relevant here because an autocomplete
-      has to be keyboard-first to be worth having.
+      has to be keyboard-first to be worth having. **Extended 2026-10-05 to the reports, ledgers and hubs**,
+      which the first version had never been driven against: `/` now filters a report's rows, `j/k` walk
+      the tile grids on `/reports` and `/dashboard`, `Ctrl+F`/`Ctrl+L` went back to the browser, and four
+      more dead keys were found — including `Alt+ArrowDown`, which had never worked anywhere. 62 checks.
 - [x] Screen inventory: 44 legacy screens against the guest's 68 routes, with the five that have no
       counterpart and why — [[screen-parity-against-the-legacy-bundle-2026-10-04]].
 
@@ -102,10 +110,11 @@ in. A capability with no home is a gap; a capability with a different home is **
 
 Offered because the mandate now allows them, and because each costs little next to what it saves.
 
-1. **The autocomplete should create as well as find** — type a party that does not exist, get "create
-   it", land back in the field. Legacy has this on the invoice screen (the create-party and create-item
-   asks), and it is the single highest-value thing on this list: it removes the detour that costs an
-   operator the most time in the whole app.
+1. ~~**The autocomplete should create as well as find**~~ **DONE 2026-10-05.** Type a party that does
+   not exist, get "Create …", fill the few fields and land back with it selected. Legacy had this on the
+   invoice screen, and it was the single highest-value item on this list.
+   See [[quick-create-rides-in-the-form-that-needed-it]]. Remaining gap: the invoice **grid**, whose item
+   selects are repeated-name arrays in one form.
 2. **A keyboard-first item entry.** With the autocomplete and [[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]
    in place, `Ctrl+Enter` to add a line and arrow-key selection inside the grid make invoice entry
    almost entirely typable. The grid is already a spreadsheet.

@@ -84,6 +84,46 @@ class CDP {
     });
   }
 
+  /** Install (or reinstall) the `defaultPrevented` observer on the CURRENT document. */
+  async watchKeys() {
+    // An IIFE, because the guard is a `return` and a bare statement list cannot contain one.
+    await this.evaluate(`(function () {
+      if (window.__hkWatchInstalled) return;
+      window.__hkWatchInstalled = true;
+      window.__prevented = [];
+      document.addEventListener("keydown", function (e) { window.__prevented.push(e.defaultPrevented); }, false);
+    })()`);
+  }
+
+  /**
+   * Record `defaultPrevented` into `localStorage` instead of a window variable.
+   *
+   * ⚠️ The obvious version — push into `window.__prevented` — cannot test Ctrl+R at all. Ctrl+R IS the
+   * browser reload, so asserting that the app did not prevent it reloads the page; the window variable
+   * dies with the document, and the read-back throws `Cannot read properties of undefined (reading
+   * 'length')`. That is a harness crash which says nothing about the app and cost a full run. The first
+   * version of this block had exactly that bug. `localStorage` outlives the navigation, so the answer can
+   * be read after the page has gone and come back.
+   *
+   * The listener is on `document` in the BUBBLE phase, so it runs after the keyboard layer's own document
+   * listener and observes the final, settled value.
+   */
+  async watchKeysDurable(tag) {
+    await this.evaluate(`(function () {
+      if (!window.__hkDurable) {
+        window.__hkDurable = true;
+        document.addEventListener("keydown", function (e) {
+          try { localStorage.setItem("__hk:" + e.code, String(e.defaultPrevented)); } catch (err) {}
+        }, false);
+      }
+      localStorage.removeItem(${JSON.stringify(`__hk:${tag}`)});
+    })()`);
+  }
+
+  async wasPrevented(tag) {
+    return (await this.evaluate(`localStorage.getItem(${JSON.stringify(`__hk:${tag}`)})`)) === "true";
+  }
+
   async evaluate(expression) {
     const r = await this.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
     if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? "evaluate failed");
@@ -252,10 +292,7 @@ check("help lists the row cursor", helpText.includes("Next row"));
   // text insertion depends on how Chrome routes the event, so asserting on the value can fail for a
   // reason that has nothing to do with the hotkeys. What matters is that the layer did NOT swallow the
   // key — and this listener is registered after the layer's, on the same node, so it sees the final state.
-  await cdp.evaluate(`
-    window.__prevented = [];
-    document.addEventListener("keydown", function (e) { window.__prevented.push(e.defaultPrevented); }, false);
-  `);
+  await cdp.watchKeys();
   await cdp.evaluate("(function(){var f=document.querySelector('[data-table-filter]')||document.querySelector('main input'); if(f) f.focus();})()");
   const focusLanded = await cdp.evaluate("document.activeElement.tagName");
   check("the test could focus a field", focusLanded === "INPUT" || focusLanded === "TEXTAREA" || focusLanded === "SELECT", `activeElement is ${focusLanded}`);
@@ -270,12 +307,27 @@ check("help lists the row cursor", helpText.includes("Next row"));
   check("Escape while typing clears the filter", await cdp.evaluate("document.activeElement.value === ''"));
 
   /* ── rule 2: Escape / Ctrl+Enter / Alt+Arrow work while typing ──────────────────────────────── */
-  await cdp.evaluate("document.querySelector('[data-table-filter]') || document.querySelector('main input')").focus?.();
   await cdp.evaluate("(function(){var f=document.querySelector('[data-table-filter]')||document.querySelector('main input'); if(f) f.focus();})()");
-  const beforeField = await cdp.evaluate("document.activeElement.name || document.activeElement.className");
+  // ⚠️ This assertion used to read `beforeField !== afterField || true`, which is always true — it could
+  // not fail, so it claimed Alt+ArrowDown moved between fields without ever checking that it did. The
+  // bindings were ALSO dead: spelled `alt+ArrowDown`, while `normalise` lowercases named keys, so the
+  // comparison could never match. The vacuous assertion is why that survived.
+  //
+  // Start from a field KNOWN to be inside the form, so this measures movement rather than entry.
+  await cdp.evaluate(`(function () {
+    var scope = document.querySelector('main form');
+    var list = scope ? [].slice.call(scope.querySelectorAll('input:not([type=hidden]):not([disabled]), textarea, select'))
+      .filter(function (el) { return el.offsetParent !== null || el.getClientRects().length; }) : [];
+    if (list[1]) list[1].focus();
+  })()`);
+  const ident = () => cdp.evaluate("(function(){var a=document.activeElement;return (a.name||a.className||a.tagName)+'#'+(a.tagName)})()");
+  const startField = await ident();
   await cdp.key("ArrowDown", { alt: true, code: "ArrowDown", keyCode: 40 });
-  const afterField = await cdp.evaluate("document.activeElement.name || document.activeElement.className");
-  check("Alt+ArrowDown moves between fields while typing", beforeField !== afterField || true, `${beforeField} -> ${afterField}`);
+  const downField = await ident();
+  check("Alt+ArrowDown moves to the next field", downField !== startField, `${startField} -> ${downField}`);
+  await cdp.key("ArrowUp", { alt: true, code: "ArrowUp", keyCode: 38 });
+  const upField = await ident();
+  check("Alt+ArrowUp moves back to the previous field", upField === startField, `${downField} -> ${upField} (started ${startField})`);
 
   /* ── the palette ────────────────────────────────────────────────────────────────────────────── */
   await cdp.evaluate("document.activeElement.blur()");
@@ -310,14 +362,25 @@ await cdp.key("e");
   /* ── `/` focuses the filter ─────────────────────────────────────────────────────────────────── */
   await cdp.goto("/management/parties");
   await cdp.key("/", { code: "Slash", keyCode: 191 });
-  check("`/` focuses the filter box", await cdp.evaluate("document.activeElement.hasAttribute('data-table-filter')"));
+  const filterFocused = await cdp.evaluate("document.activeElement.hasAttribute('data-table-filter') || document.activeElement.type === 'search'");
+  check("`/` focuses the filter box", filterFocused, await cdp.evaluate("document.activeElement.outerHTML.slice(0,60)"));
 
-  /* ── a route with no filter box must not throw, and `?` must still work there ────────────────── */
+  // `f` must focus a real field on a page that has one.
+  await cdp.goto("/reports/payments");
+  const fFocused = await cdp.evaluate("(function(){var a=document.activeElement;return a && a !== document.body && a.tagName})()");
+  await cdp.key("f");
+  const afterF = await cdp.evaluate("(function(){var a=document.activeElement;return a && a !== document.body && a.tagName})()");
+  check("`f` focuses a field on a report page", afterF === "INPUT" || afterF === "SELECT" || afterF === "TEXTAREA", `${fFocused} -> ${afterF}`);
+
+  /* ── a route with no filter box and no field must not throw, and `?` must still work there ─────── */
   await cdp.goto("/dashboard");
   await cdp.key("/", { code: "Slash", keyCode: 191 });
   await cdp.key("f");
-  const focusedAfterF = await cdp.evaluate("document.activeElement.tagName");
-  check("`f` on a page with no field reports nothing rather than throwing", typeof focusedAfterF === "string", focusedAfterF);
+  const dashAfterF = await cdp.evaluate("(function(){var a=document.activeElement;return a && a !== document.body && a.tagName})()");
+  // `f` is guarded on the page having a field, so on the dashboard it is not even dispatched and nothing
+  // takes focus. The first version of this check read `typeof focusedAfterF === "string"`, which is true
+  // of every value including "undefined" and therefore could not fail.
+  check("`f` on a page with no field leaves focus alone", !dashAfterF, String(dashAfterF));
   // `f` may have focused a field, and then `?` correctly types a question mark instead of opening the
   // help. Blur first so this asserts the overlay, not the typing guard.
   await cdp.evaluate("document.activeElement.blur()");
@@ -347,6 +410,139 @@ await cdp.key("e");
   const clicked = await cdp.evaluate("window.__clicked");
   check("`alt+1` reaches the page's first action button", clicked.length > 0, JSON.stringify(clicked));
   check("...and nothing was submitted", await cdp.evaluate("location.pathname") === "/management/parties", await cdp.evaluate("location.pathname"));
+
+/* ── a report page: the screens the layer was built for, and which nothing drove ───────────────── */
+  phase = "report";
+  await cdp.goto("/reports/payments");
+  const onReport = await cdp.evaluate("!!document.querySelector('main table.data')");
+  check("a report page renders its table", onReport, await cdp.evaluate("location.pathname"));
+
+  await cdp.key("?", { shift: true, code: "Slash", keyCode: 191 });
+  const reportHelp = await cdp.evaluate("(document.getElementById('hk-help')||{}).textContent || ''");
+  check("help on a report lists the filter box", /Focus the filter or search box/.test(reportHelp), reportHelp.slice(0, 120));
+  check("help on a report lists print", /Print this page/.test(reportHelp));
+  check("help on a report lists APPLY as an action", /APPLY/.test(reportHelp));
+  // The icon-only printer glyph is `alt+1` on a report and carries a title, not text. The first version
+  // derived the help's label from `innerText`, so it listed only `alt+2 APPLY` — a reader counting from
+  // the help pressed alt+1 and got a print dialog.
+  const printNumber = await cdp.evaluate(`(function () {
+    var btns = [].slice.call(document.querySelectorAll("main a.btn, main button.btn"));
+    var i = btns.findIndex(function (el) { return (el.innerText || el.textContent || "").trim() === "APPLY"; });
+    return i;
+  })()`);
+  check("APPLY is the page's second action button", printNumber === 1, `index ${printNumber}`);
+  await cdp.key("Escape", { code: "Escape", keyCode: 27 });
+
+  await cdp.key("/", { code: "Slash", keyCode: 191 });
+  check("`/` focuses the report's row filter", await cdp.evaluate("document.activeElement.type === 'search'"), await cdp.evaluate("document.activeElement.outerHTML.slice(0,60)"));
+  await cdp.evaluate("(function(){document.activeElement.value='8606';document.activeElement.dispatchEvent(new Event('input',{bubbles:true}));})()");
+  await new Promise((r) => setTimeout(r, 200));
+  const filtered = await cdp.evaluate(`(function () {
+    var rows = [].slice.call(document.querySelectorAll("#report-table tbody tr"));
+    return rows.filter(function (r) { return !r.hidden; }).length;
+  })()`);
+  const total = await cdp.evaluate("document.querySelectorAll('#report-table tbody tr').length");
+  check("typing in the report filter narrows the rendered rows", filtered > 0 && filtered < total, `${filtered} of ${total}`);
+  await cdp.key("Escape", { code: "Escape", keyCode: 27 });
+  const unfiltered = await cdp.evaluate(`[].slice.call(document.querySelectorAll("#report-table tbody tr")).filter(function (r) { return !r.hidden; }).length`);
+  check("Escape clears the report filter", unfiltered === total, `${unfiltered} of ${total}`);
+
+  // Rule 1 applies here too: the filter is a text field, so `j` must type a "j" and move nothing.
+  await cdp.evaluate("(function(){var f=document.querySelector('[data-table-filter]'); if(f){f.focus();f.value='7';f.dispatchEvent(new Event('input',{bubbles:true}));}})()");
+  await cdp.evaluate("window.__prevented = []; document.addEventListener('keydown', function (e) { window.__prevented.push(e.defaultPrevented); }, false);");
+  await cdp.key("j");
+  check("`j` is not swallowed by the report's filter", (await cdp.evaluate("window.__prevented[window.__prevented.length-1]")) === false);
+  check("...and no report row was focused", await cdp.evaluate("!document.querySelector('#report-table tr.hk-row')"));
+  await cdp.key("Escape", { code: "Escape", keyCode: 27 });
+  await cdp.evaluate("document.activeElement.blur()");
+
+  await cdp.key("j");
+  const reportCursor = await cdp.evaluate("!!document.querySelector('#report-table tr.hk-row')");
+  check("`j` focuses a report row when no field has focus", reportCursor);
+  // A report row is `<td>`s and nothing else, so `enter`/`e` must NOT be offered for it. Offering them
+  // anyway was the gap: `when: "row"` un-hid both the instant any row was focused.
+  await cdp.key("?", { shift: true, code: "Slash", keyCode: 191 });
+  const rowHelp = await cdp.evaluate("(document.getElementById('hk-help')||{}).textContent || ''");
+  check("help does not offer Enter on a row that cannot be opened", !/Open the focused row/.test(rowHelp), rowHelp.slice(0, 200));
+  await cdp.key("Escape", { code: "Escape", keyCode: 27 });
+  await cdp.key("Escape", { code: "Escape", keyCode: 27 });
+
+  /* ── Ctrl+Enter applies the report's filters, which is the only way to do it from the keyboard ──── */
+  // The filters form has no auto-submit and no change handler: APPLY is the only path, so Ctrl+Enter is not
+  // a convenience here, it is the keyboard's only route to a filtered report. A GET, so it only reads.
+  await cdp.goto("/reports/profit");
+  await cdp.evaluate(`(function () {
+    var f = document.querySelector('form.filters input[type="date"]');
+    if (f) { f.value = "2025-01-01"; f.dispatchEvent(new Event("input", { bubbles: true })); f.focus(); }
+  })()`);
+  await cdp.key("Enter", { ctrl: true, code: "Enter", keyCode: 13 });
+  await new Promise((r) => setTimeout(r, 1200));
+  await cdp.waitForHotkeys();
+  check("Ctrl+Enter applies the report filters", /from=2025-01-01/.test(await cdp.evaluate("location.search")), await cdp.evaluate("location.search"));
+
+  /* ── the browser keeps its own keys ──────────────────────────────────────────────────────────── */
+  // Ctrl+F (find), Ctrl+L (address bar), Ctrl+R (reload) and Ctrl+P (print) are the browser's, not the
+  // app's. A web app that swallows them takes away a keyboard user's fastest route to the page and to
+  // the text on it. Assert on `defaultPrevented` from a listener registered AFTER the layer's, so the
+  // value observed is the final one.
+  //
+  // ⚠️ The listener has to be (re-)installed after every navigation. It lives on `document`, and a
+  // navigation replaces the document — so an earlier install silently stops observing, `window.__prevented`
+  // comes back undefined, and the check throws on `.length` while reporting nothing about the browser.
+  await cdp.goto("/reports/payments");
+  await cdp.watchKeysDurable("browser");
+  for (const [label, text, opts, code] of [
+    ["Ctrl+F", "f", { ctrl: true, code: "KeyF", keyCode: 70 }, "KeyF"],
+    ["Ctrl+L", "l", { ctrl: true, code: "KeyL", keyCode: 76 }, "KeyL"],
+    ["Ctrl+R", "r", { ctrl: true, code: "KeyR", keyCode: 82 }, "KeyR"],
+    ["Ctrl+P", "p", { ctrl: true, code: "KeyP", keyCode: 80 }, "KeyP"],
+  ]) {
+    await cdp.key(text, opts);
+    if (code === "KeyR") {
+      // Ctrl+R reloads, by design — that is the claim being asserted. Wait for the new document, then
+      // reinstall the observer on it and read the answer the previous document recorded.
+      await cdp.goto("/reports/payments");
+      await cdp.watchKeysDurable("browser");
+    }
+    check(`${label} is left to the browser`, (await cdp.wasPrevented(code)) === false);
+  }
+
+  /* ── the reports hub: a tile grid, which the cursor did not understand at all ─────────────────── */
+  phase = "hub";
+  await cdp.goto("/reports");
+  const tileCount = await cdp.evaluate("document.querySelectorAll('main .tiles a.tile').length");
+  check("the reports hub is a grid of tiles", tileCount > 5, `${tileCount} tiles`);
+  await cdp.key("j");
+  const firstTile = await cdp.evaluate("(function(){var t=document.querySelector('main .tiles a.tile.hk-row');return t?t.getAttribute('href'):''})()");
+  check("`j` focuses a tile on the reports hub", !!firstTile, firstTile);
+  await cdp.key("j");
+  await cdp.key("j");
+  const thirdTile = await cdp.evaluate("(function(){var t=document.querySelector('main .tiles a.tile.hk-row');return t?t.getAttribute('href'):''})()");
+  check("`j` walks across tiles", thirdTile && thirdTile !== firstTile, `${firstTile} -> ${thirdTile}`);
+  await cdp.key("G", { shift: true, code: "KeyG", keyCode: 71 });
+  const lastTile = await cdp.evaluate("(function(){var all=[].slice.call(document.querySelectorAll('main .tiles a.tile'));var t=document.querySelector('main .tiles a.tile.hk-row');return t?all.indexOf(t):-1})()");
+  check("`G` jumps to the last tile", lastTile === tileCount - 1, `index ${lastTile} of ${tileCount}`);
+  // A tile IS its own link, so `enter` opens it. Neutralised? No — navigating is the claim, so assert the
+  // destination without leaving the run: read the href the layer would follow rather than pressing.
+  await cdp.key("?", { shift: true, code: "Slash", keyCode: 191 });
+  const hubHelp = await cdp.evaluate("(document.getElementById('hk-help')||{}).textContent || ''");
+  // The Move labels name what the cursor moves over on THIS page — a tile here, a row on a table page.
+  check("help offers Enter on a focused tile", /Open the focused tile/.test(hubHelp), hubHelp.slice(0, 160));
+  check("help says 'tile' on a tile grid, not 'row'", /Next tile/.test(hubHelp) && !/Next row/.test(hubHelp), hubHelp.slice(0, 160));
+  await cdp.key("Escape", { code: "Escape", keyCode: 27 });
+
+  /* ── a ledger that has no table until a party is chosen ───────────────────────────────────────── */
+  // `ledgers/party` declares `requires: party`, so it renders a notice and no table. The Move group must
+  // disappear rather than offer eight keys that do nothing.
+  phase = "empty-ledger";
+  await cdp.goto("/reports/ledgers/party");
+  await cdp.key("?", { shift: true, code: "Slash", keyCode: 191 });
+  const ledgerHelp = await cdp.evaluate("(document.getElementById('hk-help')||{}).textContent || ''");
+  check("help on a tableless ledger hides the Move group", !/Next row/.test(ledgerHelp), ledgerHelp.slice(0, 200));
+  check("...but still offers the filters and the jump chords", /Jump|Dashboard/.test(ledgerHelp));
+  await cdp.key("Escape", { code: "Escape", keyCode: 27 });
+  await cdp.key("j");
+  check("`j` on a tableless ledger does nothing rather than throwing", await cdp.evaluate("!document.querySelector('.hk-row')"));
 
 /* ── nothing threw ─────────────────────────────────────────────────────────────────────────── */
   if (process.argv.includes("--logs") && cdp.logs.length) {

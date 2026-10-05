@@ -3,8 +3,8 @@
    `mobile-layout-is-additive-to-the-legacy-look`. Every <td> carries its column label in
    `data-label`, which is what the card layout prints in front of the value. `lead` marks the
    columns that are the row's identity (an item or party name) and get a full-width line. #}
-{% macro simple(columns, rows, mobile) -%}
-<table class="data"{% if mobile %} data-mobile="{{ mobile }}"{% endif %}>
+{% macro simple(columns, rows, mobile, id) -%}
+<table class="data"{% if id %} id="{{ id }}"{% endif %}{% if mobile %} data-mobile="{{ mobile }}"{% endif %}>
 <thead><tr>
 {% for c in columns %}<th class="{{ c.cls }}">{{ c.label }}</th>{% endfor %}
 </tr></thead>

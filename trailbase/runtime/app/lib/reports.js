@@ -47,8 +47,37 @@ const state = {
   build: 0,
 };
 
-/** Memoised ~1.5 s, so one request does not probe seventeen tables repeatedly. */
-let probe = { at: 0, fingerprint: null, map: null };
+/**
+ * Memoised ~1.5 s, so one request does not probe seventeen tables repeatedly.
+ *
+ * `stamp` is the cross-thread half of the memo, and it is the fix for a real staleness window. The memo
+ * above is per-thread module state, and TrailBase serves requests on several runtime threads, so
+ * `invalidate()` only ever cleared the thread that took the write. A read that landed on ANOTHER thread
+ * could then use a fingerprint up to 1.5 s old, and everything keyed on it with it — `refs()` (so a party
+ * created a moment ago was absent from the dropdown), `dataVersion()` (so the host's rendered-page cache
+ * served the pre-write page). Observed intermittently in `tools/guest-smoke.mjs`: the same run that
+ * passed 91/91 failed "the new party is the invoice's party" and "the item's own price is what the select
+ * carries" on a later attempt, with no code change between them.
+ * See [[fingerprint-memo-is-per-thread-so-a-read-after-a-write-can-be-stale]].
+ *
+ * The stamp lives in the shared TrailBase KV store — the one channel every runtime thread agrees on, and
+ * already used for the sql/render handoff. `invalidate()` writes a fresh value there; a reader that sees
+ * a stamp it has not probed at yet re-probes at once. The 1.5 s TTL stays as the floor, because a writer
+ * outside this app (the record API, a script) cannot bump the stamp.
+ */
+let probe = { at: 0, fingerprint: null, map: null, stamp: null };
+
+/** The shared invalidation stamp. `""`/null-tolerant: a missing KV degrades this to the old TTL-only memo. */
+async function kvStamp() {
+  const kv = globalThis.kv;
+  if (!kv || typeof kv.get !== "function") return null;
+  try {
+    const value = await kv.get(KV_STAMP_KEY);
+    return value === undefined || value === null ? "" : String(value);
+  } catch {
+    return null;
+  }
+}
 
 async function probeFingerprints() {
   const out = {};
@@ -73,12 +102,28 @@ function fpString(map) {
   return JSON.stringify(TABLES.map((t) => [t, map[t]]));
 }
 
-/** The fingerprint as a string, memoised ~1.5 s. */
+/**
+ * The shared key a write bumps so the other runtime threads stop trusting their memo. See `probe`.
+ * Namespaced because the KV store is shared with the sql/render handoff and the page spool.
+ */
+const KV_STAMP_KEY = "aa:data-stamp";
+
+/** A fresh, unique stamp. Uniqueness is all that matters — nothing compares order. */
+function newStamp() {
+  return Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+}
+
+/** The fingerprint as a string; re-probes when the memo is old or another thread has written. */
 async function currentFingerprint() {
   const now = Date.now();
-  if (!probe.fingerprint || now - probe.at > 1500) {
+  const stamp = await kvStamp();
+  const otherThreadWrote = stamp !== null && probe.stamp !== null && stamp !== probe.stamp;
+  if (!probe.fingerprint || otherThreadWrote || now - probe.at > 1500) {
     const map = await probeFingerprints();
-    probe = { at: now, fingerprint: fpString(map), map };
+    // The stamp is read BEFORE the probe: a write that lands between the two leaves the memo holding a
+    // stamp that no longer matches, so the next read re-probes rather than trusting a fingerprint that
+    // may predate it. Reading it after would quietly mark the pre-write probe as current.
+    probe = { at: now, fingerprint: fpString(map), map, stamp };
   }
   return probe.fingerprint;
 }
@@ -119,12 +164,21 @@ export async function dataVersion() {
  * Called from `routeKit.write()` — i.e. by the TYPE of every mutation, not by remembering to do it. That
  * is the rule `reports.no_precomputation` turns on: a write cannot leave a cached derived answer standing.
  */
-export function invalidate() {
-  probe = { at: 0, fingerprint: null, map: null };
+export async function invalidate() {
+  probe = { at: 0, fingerprint: null, map: null, stamp: null };
   // Base rows are a read cache for the page payload, so a write must clear them too — otherwise
   // `/p/<slug>/data` would ship the item list from before the edit.
   for (const key of Object.keys(base)) delete base[key];
   state.build++;
+  // Tell the other runtime threads. This thread's memo is already cleared above; without this the read on
+  // another thread keeps its own up-to-1.5 s-old fingerprint and serves the pre-write page from the host's
+  // cache. AWAITED, not fired and forgotten: the stamp has to be committed before the mutation's response
+  // goes out, or the browser's redirect GET can arrive first and win the race to be stale. Best-effort —
+  // a KV that is missing or failing degrades this to the TTL-only behaviour rather than failing a write.
+  const kv = globalThis.kv;
+  if (kv && typeof kv.set === "function") {
+    try { await kv.set(KV_STAMP_KEY, newStamp()); } catch { /* TTL-only, as before */ }
+  }
 }
 
 /**

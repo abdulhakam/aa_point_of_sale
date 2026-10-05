@@ -36,6 +36,20 @@
    *  data: 4 bookers, 7 sections, 15 companies, 59 areas, 207 items, 942 parties. */
   var MIN_OPTIONS = 12;
 
+  /**
+   * Make a quick-create panel inert, or live.
+   *
+   * It has to run in two places, which is why it is not a line inside `panelClose`. The panel holds an
+   * AREA combobox, and enhancing that select injects an input into the panel — after the party's own
+   * `enhance()` has already walked the panel. Disabling from `enhance()` alone therefore left the
+   * injected input enabled, and the assertion that every control in a closed panel is disabled failed
+   * — which is the harness doing its job: the first draft only looked right.
+   */
+  function setPanelInert(panel, inert) {
+    var fields = panel.querySelectorAll("input, select, button");
+    for (var i = 0; i < fields.length; i++) fields[i].disabled = inert;
+  }
+
   function enhance(select) {
     if (select.multiple || select.dataset.acReady === "1") return;
     var options = [];
@@ -120,27 +134,48 @@
       filtered = scored.slice(0, MAX_RENDERED).map(function (r) { return r.entry; });
     }
 
+    /**
+     * What the list should show for the current query: the matches, and — when the text names something
+     * that is not on the list — one more row offering to create it.
+     *
+     * The row is an entry in the same array the arrows walk, not a decoration appended to the DOM. An
+     * earlier draft painted it as a separate element outside `filtered`; that made it invisible to
+     * ArrowDown and Enter, so it could only be clicked, which for a keyboard-first app is worse than not
+     * having it.
+     */
+    function shown() {
+      var rows = filtered.slice();
+      var name = creatableName();
+      if (name) rows.push({ create: true, label: name });
+      return rows;
+    }
+
     /** Redraw for the CURRENT query. Called on every keystroke, open or not. */
     function refresh() {
       filter();
-      cursor = filtered.length ? 0 : -1;
+      cursor = shown().length ? 0 : -1;
       paint();
       highlight();
     }
 
     function paint() {
-      if (!filtered.length) {
+      var rows = shown();
+      if (!rows.length) {
         list.innerHTML = '<li class="ac-empty" role="presentation">No match</li>';
         return;
       }
       var html = "";
-      for (var i = 0; i < filtered.length; i++) {
-        html += '<li class="ac-option" role="option" id="' + listId + "-" + i + '" aria-selected="false" data-i="' + i + '"></li>';
+      for (var i = 0; i < rows.length; i++) {
+        var cls = "ac-option" + (rows[i].create ? " ac-create" : "");
+        html += '<li class="' + cls + '" role="option" id="' + listId + "-" + i + '" aria-selected="false" data-i="' + i + '"></li>';
       }
       list.innerHTML = html;
       for (var j = 0; j < list.children.length; j++) {
-        list.children[j].textContent = filtered[j].label;
+        // The create row reads as the action it is, not as a row of data — the quotes are the hint that
+        // the name is a name to make, and the ellipsis that something follows.
+        list.children[j].textContent = rows[j].create ? "Create \u201c" + rows[j].label + "\u201d\u2026" : rows[j].label;
       }
+      if (rows[rows.length - 1].create) list.children[rows.length - 1].classList.add("is-last");
     }
 
     function highlight() {
@@ -183,6 +218,10 @@
     /** Choose an entry. Dispatches `change` on the select so existing handlers run — rule 1. */
     function choose(entry) {
       if (!entry) return false;
+      // The create row is an action, not a value: it must never reach `select.value`, or rule 3's
+      // promise ("a value that is not on the list is never submitted") would be broken by the very
+      // control that offers to make one.
+      if (entry.create) return openPanel(entry.label);
       input.value = entry.label;
       var changed = select.value !== entry.value;
       select.value = entry.value;
@@ -196,6 +235,7 @@
       var needle = input.value.toLowerCase().trim();
       var match = null;
       for (var i = 0; i < filtered.length; i++) {
+        if (filtered[i].create) continue;
         if (filtered[i].label.toLowerCase() === needle) { match = filtered[i]; break; }
       }
       if (match) return choose(match);
@@ -204,12 +244,99 @@
       return false;
     }
 
+    /* ───────────────────────────────────────────────────────────────────── creating from here ─────
+
+       When the typed text names something that is not on the list, the last row of the list becomes
+       "Create …". Choosing it opens the panel the select points at with `data-create` — a block of
+       fields rendered by `views/partials/quick-create.html` INSIDE the same form. The create therefore
+       travels in the form's own submit: the invoice header, or the line being added, is saved with it.
+       That is the whole reason it is not a fetch: nothing has to be re-rendered and nothing typed is
+       lost ([[runtime-js-minimal-file-authoring-contract]]).
+
+       ⚠️ The panel's controls are DISABLED while it is closed. Hidden is not enough — a hidden input is
+       still submitted, so a "Save header" after an abandoned create would have carried the typed name
+       into the database. Disabling is what makes "party_new_name is non-empty" a true signal, with no
+       marker field for anyone to forget to clear. */
+    var panel = null;
+    var panelSelector = select.getAttribute("data-create");
+    if (panelSelector) panel = document.querySelector(panelSelector);
+
+    /** The name the panel would create, or "" when the list already contains exactly that. */
+    function creatableName() {
+      if (!panel) return "";
+      var needle = input.value.replace(/\s+/g, " ").trim();
+      if (!needle) return "";
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].label.toLowerCase() === needle.toLowerCase()) return "";
+      }
+      return needle;
+    }
+
+    function openPanel(name) {
+      if (!panel) return false;
+      hide();
+      panel.hidden = false;
+      panel.classList.add("is-open");
+      setPanelInert(panel, false);
+      var nameField = panel.querySelector('[name$="_name"]');
+      if (nameField) {
+        nameField.required = true;
+        nameField.value = name;
+        nameField.focus();
+        if (nameField.select) nameField.select();
+      }
+      // The "create" answer stands in for the select's own value, so a select the browser would insist
+      // on (the line form's item is `required`) must not block the submit that creates it. Restored on
+      // close, so the no-JS requirement is intact and an abandoned panel cannot save an empty line.
+      if (select.required) {
+        select.dataset.acWasRequired = "1";
+        select.required = false;
+      }
+      return true;
+    }
+
+    function panelClose() {
+      if (!panel) return;
+      panel.hidden = true;
+      panel.classList.remove("is-open");
+      setPanelInert(panel, true);
+      var nameField = panel.querySelector('[name$="_name"]');
+      if (nameField) nameField.required = false;
+      if (select.dataset.acWasRequired === "1") {
+        select.required = true;
+        delete select.dataset.acWasRequired;
+      }
+      // Back to the control, showing the list's answer for whatever is in the box now — nothing, if the
+      // text named nothing, which is rule 3 holding after the create was abandoned.
+      input.value = currentLabel();
+      input.focus();
+    }
+
+    function panelOpen() {
+      return !!panel && !panel.hidden;
+    }
+
+    if (panel) {
+      var cancel = panel.querySelector("[data-qc-cancel]");
+      if (cancel) cancel.addEventListener("click", function () { panelClose(false); });
+      // Escape closes the panel and stays out of the global layer's way: from here it means the panel,
+      // not the row cursor or the filter ([[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]).
+      panel.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && !event.isComposing) {
+          event.preventDefault();
+          event.stopPropagation();
+          panelClose(false);
+        }
+      });
+    }
+
     input.addEventListener("focus", function () { input.select(); show(); });
     input.addEventListener("click", function () { show(); });
     input.addEventListener("input", show);
 
     input.addEventListener("keydown", function (event) {
       if (event.isComposing) return;
+      var rows = shown();
       var items = list.querySelectorAll(".ac-option");
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -224,16 +351,16 @@
       } else if (event.key === "Enter") {
         // In a form, Enter would submit. Choosing must win, or the operator cannot pick with the
         // keyboard at all — so the default is prevented whenever a choice is on offer.
-        if (open && cursor >= 0 && filtered[cursor]) {
+        if (open && cursor >= 0 && rows[cursor]) {
           event.preventDefault();
-          choose(filtered[cursor]);
+          choose(rows[cursor]);
         } else if (!open) {
           event.preventDefault();
           show();
         }
       } else if (event.key === "Tab") {
         // Tab is a choice: tabbing past a combobox must not silently discard what was highlighted.
-        if (open && cursor >= 0 && filtered[cursor]) choose(filtered[cursor]);
+        if (open && cursor >= 0 && rows[cursor]) choose(rows[cursor]);
       } else if (event.key === "Escape") {
         if (open) { event.preventDefault(); event.stopPropagation(); hide(); }
         else { input.value = currentLabel(); input.blur(); }
@@ -253,6 +380,10 @@
       if (wrap.contains(document.activeElement) && document.activeElement !== input) return;
       window.setTimeout(function () {
         if (wrap.contains(document.activeElement)) return;
+        // Focus went to the quick-create panel, which is the operator answering this control rather
+        // than leaving it. Committing here would reset the box to the select's empty label and take the
+        // typed name off the screen while the panel is showing it.
+        if (panelOpen()) return;
         hide();
         commitTyped();
       }, 0);
@@ -262,7 +393,10 @@
       var li = event.target.closest && event.target.closest(".ac-option");
       if (!li) return;
       event.preventDefault();
-      choose(filtered[Number(li.getAttribute("data-i"))]);
+      // `data-i` counts the rows the list is SHOWING, which includes the create row and is not the same
+      // array as `filtered`. Reading `filtered` here would have created whichever option happened to sit
+      // at that index — an off-by-one whose only symptom is the wrong thing being created.
+      choose(shown()[Number(li.getAttribute("data-i"))]);
       input.focus();
     });
 
@@ -284,6 +418,11 @@
     for (var i = 0; i < list.length; i++) {
       try { enhance(list[i]); } catch (error) { console.warn("autocomplete: " + (list[i].name || "select") + " left as a native select", error); }
     }
+    // Every combobox now exists, including the ones a quick-create panel carries, so a closed panel can
+    // be made inert without racing the enhancement order. Done for every panel on the page rather than
+    // only those a select points at: a panel nothing opens has no business being submittable either.
+    var panels = document.querySelectorAll(".qc");
+    for (var j = 0; j < panels.length; j++) setPanelInert(panels[j], true);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);

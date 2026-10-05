@@ -38,24 +38,35 @@
     { keys: "?", shift: true, group: "Go to", label: "This help", run: toggleHelp, inField: false },
     { keys: "escape", group: "Go to", label: "Close an overlay, or clear the focused row", run: onEscape, inField: true },
 
-    { keys: "/", group: "Find", label: "Focus the filter or search box on this page", run: focusFilter, inField: false },
-    { keys: "f", group: "Find", label: "Focus the first text field on this page", run: focusFirstField, inField: false },
-    { keys: "ctrl+f", alt: "ctrl+l", group: "Find", label: "Same as / — without stealing the browser's own find", run: focusFilter, inField: false },
+    // ⚠️ `Ctrl+F` and `Ctrl+L` used to be listed here as "the same as / without stealing the browser's
+    // own". They DO steal it: Ctrl+F is find-in-page in every browser and Ctrl+L is the address bar, and
+    // both are muscle memory for a keyboard user. `/` is the key that needs no modifier and collides with
+    // nothing, so it is the only binding for this action. The same reasoning is why `Ctrl+S` is absent.
+    { keys: "/", group: "Find", label: "Focus the filter or search box on this page", run: focusFilter, inField: false, when: "filter" },
+    { keys: "f", group: "Find", label: "Focus the first text field on this page", run: focusFirstField, inField: false, when: "field" },
 
-    { keys: "j", group: "Move", label: "Next row", run: function () { moveRow(1); }, inField: false, when: "table" },
-    { keys: "k", group: "Move", label: "Previous row", run: function () { moveRow(-1); }, inField: false, when: "table" },
-    { keys: "g g", group: "Move", label: "First row", run: function () { moveRowTo("first"); }, inField: false, when: "table" },
-    { keys: "G", shift: true, group: "Move", label: "Last row", run: function () { moveRowTo("last"); }, inField: false, when: "table" },
-    { keys: "home", group: "Move", label: "First row of the table", run: function () { moveRowTo("first"); }, inField: false, when: "table" },
-    { keys: "end", group: "Move", label: "Last row of the table", run: function () { moveRowTo("last"); }, inField: false, when: "table" },
-    { keys: "pageDown", group: "Move", label: "Down ten rows", run: function () { moveRow(10); }, inField: false, when: "table" },
-    { keys: "pageUp", group: "Move", label: "Up ten rows", run: function () { moveRow(-10); }, inField: false, when: "table" },
-    { keys: "enter", group: "Move", label: "Open the focused row", run: openFocusedRow, inField: false, when: "row" },
-    { keys: "e", group: "Move", label: "Edit the focused row", run: editFocusedRow, inField: false, when: "row" },
+    { keys: "j", group: "Move", label: "Next {r}", run: function () { moveRow(1); }, inField: false, when: "grid" },
+    { keys: "k", group: "Move", label: "Previous {r}", run: function () { moveRow(-1); }, inField: false, when: "grid" },
+    { keys: "g g", group: "Move", label: "First {r}", run: function () { moveRowTo("first"); }, inField: false, when: "grid" },
+    { keys: "G", shift: true, group: "Move", label: "Last {r}", run: function () { moveRowTo("last"); }, inField: false, when: "grid" },
+    { keys: "home", group: "Move", label: "First {r} of the grid", run: function () { moveRowTo("first"); }, inField: false, when: "grid" },
+    { keys: "end", group: "Move", label: "Last {r} of the grid", run: function () { moveRowTo("last"); }, inField: false, when: "grid" },
+    { keys: "pageDown", group: "Move", label: "Down ten {r}s", run: function () { moveRow(10); }, inField: false, when: "grid" },
+    { keys: "pageUp", group: "Move", label: "Up ten {r}s", run: function () { moveRow(-10); }, inField: false, when: "grid" },
+    // `enter` and `e` are advertised only when the FOCUSED row actually has something to open or edit. A
+    // report row is `<td>`s and nothing else, so an unguarded `when: "row"` un-hid both the moment a row
+    // was focused — the overlay started listing two keys that could only ever fail.
+    { keys: "enter", group: "Move", label: "Open the focused {r}", run: openFocusedRow, inField: false, when: "openable" },
+    { keys: "e", group: "Move", label: "Edit the focused {r}", run: editFocusedRow, inField: false, when: "editable" },
 
-    { keys: "ctrl+enter", group: "Form", label: "Submit the form this field belongs to", run: submitForm, inField: true },
-    { keys: "alt+ArrowDown", group: "Form", label: "Next field", run: function () { moveField(1); }, inField: true },
-    { keys: "alt+ArrowUp", group: "Form", label: "Previous field", run: function () { moveField(-1); }, inField: true },
+    { keys: "ctrl+enter", group: "Form", label: "Submit the form this field belongs to", run: submitForm, inField: true, when: "form" },
+    // ⚠️ These two were spelled `alt+ArrowDown` / `alt+ArrowUp` and therefore matched NOTHING, ever, on
+    // any page. `normalise` lowercases every named key — the DOM reports `ArrowDown`, the table has to say
+    // `arrowdown` — so the comparison `b.keys === normal` compared "alt+ArrowDown" with "alt+arrowdown" and
+    // always failed. Same failure mode as the Escape bug already recorded here, in the same file, three
+    // bindings further up: a key that is spelled plausibly, dispatches correctly, and does nothing.
+    { keys: "alt+arrowdown", group: "Form", label: "Next field", run: function () { moveField(1); }, inField: true, when: "field" },
+    { keys: "alt+arrowup", group: "Form", label: "Previous field", run: function () { moveField(-1); }, inField: true, when: "field" },
     // `alt+1`..`alt+9` reach the page's action buttons. `hiddenInHelp` because the Form group's generic
     // "First action button on this page" line and the "On this page" line below — which carries the
     // button's own name — describe the SAME key, and a key listed twice under two different descriptions
@@ -101,21 +112,62 @@
    */
   var rowCursor = null;
 
+  /**
+   * A "grid" is either a table's body or a tile grid — `main .tiles`, which is how the reports hub, the
+   * ledger hub and the dashboard are built. A tile is a link with a label, so the same cursor drives it.
+   *
+   * This was the gap on the two report hubs: they are links and nothing else, so a cursor that only
+   * understood `<tr>` left those pages reachable only by tabbing. `j`/`k` over the tiles is the whole
+   * fix, and it needs no per-page registration because the shape is already in the markup.
+   */
   function dataRows(table) {
     if (!table || !table.tBodies || !table.tBodies.length) return [];
     return Array.prototype.slice.call(table.tBodies[0].rows).filter(function (row) {
-      return !row.querySelector("td.empty");
+      // `hidden` matters now that a filter can hide rows: walking onto a row the operator cannot see is
+      // the one way a cursor can get lost. The management lists could already do this; the report filter
+      // makes it the common case.
+      return !row.hidden && !row.querySelector("td.empty");
     });
   }
 
-  /** The table a key should act on: the one the cursor is in, else the page's main table. */
-  function currentTable() {
+  function tileRows(grid) {
+    return Array.prototype.slice.call(grid.querySelectorAll("a.tile[href]")).filter(visible);
+  }
+
+  function visible(el) {
+    return el.offsetParent !== null || el.getClientRects().length > 0;
+  }
+
+  /** The grid a key should act on: the one the cursor is in, else the page's main one. */
+  function currentGrid() {
     if (rowCursor) {
-      var owner = rowCursor.closest("table");
+      var owner = rowCursor.closest("table, main .tiles");
       if (owner) return owner;
     }
-    var tables = Array.prototype.slice.call(document.querySelectorAll("main table"));
-    return tables.length ? tables[0] : null;
+    var table = document.querySelector("main table");
+    if (table) return table;
+    var tiles = document.querySelector("main .tiles");
+    return tiles || null;
+  }
+
+  /** The cursor's items on the current grid — rows, or tiles. */
+  function gridItems() {
+    var grid = currentGrid();
+    if (!grid) return [];
+    return grid.tagName === "TABLE" ? dataRows(grid) : tileRows(grid);
+  }
+
+  /** What the focused row can be opened or edited as, if anything. A report row is neither. */
+  function openTarget(row) {
+    if (!row) return null;
+    if (row.tagName === "A") return row;
+    return row.querySelector("a[href]");
+  }
+
+  function editTarget(row) {
+    if (!row) return null;
+    if (row.tagName === "A") return null;
+    return row.querySelector('a[href*="/edit"], form[action] button, a[href*="/edit/"]');
   }
 
   function paintRow(row) {
@@ -135,15 +187,16 @@
 
   /** What to say out loud for a row: its first few cells, without the action buttons' labels. */
   function rowLabel(row) {
-    var cells = Array.prototype.slice.call(row.cells || []);
+    var cells = row.tagName === "TR" ? Array.prototype.slice.call(row.cells || []) : [];
     var parts = cells
       .map(function (cell) { return (cell.innerText || cell.textContent || "").replace(/\s+/g, " ").trim(); })
       .filter(function (text) { return text && text !== "Edit" && text !== "Delete" && text !== "View"; });
-    return parts.slice(0, 4).join(" · ").slice(0, 160);
+    if (!parts.length) parts = [(row.innerText || row.textContent || "").replace(/\s+/g, " ").trim()];
+    return parts.join(" · ").slice(0, 160);
   }
 
   function moveRow(step) {
-    var rows = dataRows(currentTable());
+    var rows = gridItems();
     if (!rows.length) return;
     var index = rowCursor ? rows.indexOf(rowCursor) : -1;
     var next = index + step;
@@ -153,24 +206,22 @@
   }
 
   function moveRowTo(where) {
-    var rows = dataRows(currentTable());
+    var rows = gridItems();
     if (!rows.length) return;
     paintRow(where === "last" ? rows[rows.length - 1] : rows[0]);
   }
 
   function openFocusedRow() {
-    if (!rowCursor) return false;
-    var link = rowCursor.querySelector("a[href]");
-    if (!link) return false;
-    window.location.href = link.href;
+    var target = openTarget(rowCursor);
+    if (!target) return false;
+    window.location.href = target.href;
     return true;
   }
 
   function editFocusedRow() {
-    if (!rowCursor) return false;
-    var link = rowCursor.querySelector('a[href*="/edit"], form[action*="/edit"] button, form[action] button');
-    if (!link) return false;
-    link.click();
+    var target = editTarget(rowCursor);
+    if (!target) return false;
+    target.click();
     return true;
   }
 
@@ -205,8 +256,13 @@
     var list = fields();
     if (!list.length) return false;
     var index = list.indexOf(document.activeElement);
-    var next = index + step;
-    if (index < 0) next = 0;
+    // An index of -1 means focus is NOT on one of the fields — on the toolbar's search box, or on the
+    // body. The old code then computed `next = 0` for both directions, so Alt+ArrowDown on the parties
+    // page refocused the same search box and appeared to do nothing. Entering the set is now directional:
+    // down lands on the first field, up on the last, and Alt+ArrowUp from there walks back out to
+    // whatever had focus.
+    var next = index < 0 ? (step > 0 ? 0 : list.length - 1) : index + step;
+    if (next < 0) next = 0;
     if (next > list.length - 1) next = list.length - 1;
     list[next].focus();
     if (list[next].select) list[next].select();
@@ -223,12 +279,24 @@
     return true;
   }
 
-  /**
- * The page's action buttons, in the order the help listed them. `alt+1`..`alt+9` reach them, so the
- * numbered list in the help overlay is a promise rather than a decoration — an advertised shortcut that
- * does nothing is worse than no shortcut, because it teaches the reader to distrust the rest of the
- * list.
- */
+/**
+  * The page's action buttons, in the order the help listed them. `alt+1`..`alt+9` reach them, so the
+  * numbered list in the help overlay is a promise rather than a decoration — an advertised shortcut that
+  * does nothing is worse than no shortcut, because it teaches the reader to distrust the rest of the
+  * list.
+  *
+  * ⚠️ This list and the help overlay's list must be the SAME list, or the numbers disagree. The first
+  * version derived the label from `innerText`, so the report page's printer glyph — an icon-only button
+  * with a `title` and an `aria-label` and no text — was invisible to the overlay. It was `alt+1` in fact
+  * and `alt+2` on screen, so a reader counting buttons from the help opened the print dialog. Both places
+  * now go through `buttonLabel()`.
+  */
+function buttonLabel(el) {
+  var text = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+  if (text) return text;
+  return (el.getAttribute("title") || el.getAttribute("aria-label") || "").trim();
+}
+
 function pageButtons() {
   return Array.prototype.slice.call(document.querySelectorAll("main a.btn, main button.btn")).filter(function (el) {
     return el.offsetParent !== null || el.getClientRects().length;
@@ -243,7 +311,14 @@ function clickPageButton(n) {
   return true;
 }
 
-/** The page's filter box: the input the table filter or the search field is bound to. */
+/**
+ * The page's filter box: the input the table filter or the search field is bound to, or — on a report —
+ * the row filter the report template now carries.
+ *
+ * ⚠️ On the report and ledger pages this used to resolve to nothing, and the binding had no guard, so `/`
+ * was advertised on all sixteen of those screens and did nothing on every one. Two fixes were needed, not
+ * one: a target to focus, and a guard so the overlay stops claiming it where there is none.
+ */
   function filterInput() {
     return (
       document.querySelector("[data-table-filter]") ||
@@ -425,23 +500,48 @@ function clickPageButton(n) {
   }
 
   /**
+   * Whether a binding's `when` clause is satisfied by this page. One place, so the help overlay and the
+   * dispatcher can never disagree about what a key does here — an overlay that lists a key the dispatcher
+   * will ignore is the exact failure the vault has recorded twice.
+   */
+  function whenHolds(when) {
+    switch (when) {
+      case "grid": return gridItems().length > 0;
+      case "openable": return !!openTarget(rowCursor);
+      case "editable": return !!editTarget(rowCursor);
+      case "filter": return !!filterInput();
+      case "field": return fields().length > 0;
+      case "form": return !!((document.activeElement && document.activeElement.form) || document.querySelector("main form"));
+      case "printable": return !!document.querySelector("[data-print]");
+      case "job": return !!document.querySelector("[data-job]");
+      default: return true;
+    }
+  }
+
+  /**
    * The help overlay is built from the table above plus what the page actually offers, so it cannot
    * describe a shortcut that is not there. The nav chords are labelled from the rail's own titles
    * rather than a hand-written list, which means a nav link added later shows up here on its own.
    */
   function helpGroups() {
     var groups = {};
-    var path = location.pathname;
+
+    /**
+     * The noun for what the cursor moves over on THIS page: a row in a table, a tile in a tile grid.
+     * `{r}` in a label is replaced with it, so the hub says "Next tile" and a report says "Next row"
+     * rather than both claiming a row that is not there.
+     */
+    var gridNoun = (function () {
+      var grid = currentGrid();
+      return grid && grid.tagName !== "TABLE" ? "tile" : "row";
+    })();
 
     function add(group, key, label) {
-      (groups[group] = groups[group] || []).push({ key: key, label: label });
+      (groups[group] = groups[group] || []).push({ key: key, label: label.split("{r}").join(gridNoun) });
     }
 
     BINDINGS.forEach(function (b) {
-      if (b.when === "table" && !currentTable()) return;
-      if (b.when === "row" && !rowCursor) return;
-      if (b.when === "printable" && !document.querySelector("[data-print]")) return;
-      if (b.when === "job" && !document.querySelector("[data-job]")) return;
+      if (b.when && !whenHolds(b.when)) return;
       // A jump binding is listed from the chord map below, keyed by its destination — so it is skipped
       // here. Adding it here as well is what listed every rail destination twice in the first version.
       if (b.href) return;
@@ -470,7 +570,7 @@ function clickPageButton(n) {
     // Anything the page offers that is not a rail link. Read from the SAME list `alt+1`..`alt+9` click, so
     // the numbering here is the numbering that works.
     pageButtons().slice(0, 9).forEach(function (el, i) {
-      var label = (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+      var label = buttonLabel(el);
       if (!label) return;
       add("On this page", "alt+" + (i + 1), label);
     });
@@ -489,7 +589,7 @@ function clickPageButton(n) {
    * under it. Rendering is not worth automating this hard; this is the version that reads correctly.
    */
   function keyCap(text) {
-    var ARROWS = { ArrowDown: "↓", ArrowUp: "↑", ArrowLeft: "←", ArrowRight: "→", space: "space", escape: "esc" };
+    var ARROWS = { arrowdown: "↓", arrowup: "↑", arrowleft: "←", arrowright: "→", space: "space", escape: "esc", pageup: "pgup", pagedown: "pgdn", home: "home", end: "end" };
     var parts = String(text).split(/\s{2,}\s*·\s*|\s{2,}/);
     return parts
       .map(function (part) {
@@ -542,17 +642,18 @@ function clickPageButton(n) {
     else back.focus();
   }
 
+  function clearRow() {
+    if (!rowCursor) return;
+    rowCursor.classList.remove("hk-row");
+    rowCursor.removeAttribute("tabindex");
+    rowCursor = null;
+    announce("Row cleared");
+  }
+
   function onEscape() {
     if (document.getElementById("hk-help")) { document.getElementById("hk-help").remove(); return; }
     if (document.getElementById("hk-palette")) { document.getElementById("hk-palette").remove(); return; }
-    if (rowCursor) {
-      var table = rowCursor.closest("table");
-      rowCursor.classList.remove("hk-row");
-      rowCursor.removeAttribute("tabindex");
-      rowCursor = null;
-      announce("Row cleared");
-      return;
-    }
+    if (rowCursor) { clearRow(); return; }
     var filter = filterInput();
     if (filter && filter.value) {
       filter.value = "";
@@ -613,7 +714,7 @@ function clickPageButton(n) {
   function match(normal, event) {
     for (var i = 0; i < BINDINGS.length; i++) {
       var b = BINDINGS[i];
-      if (b.when === "row" && !rowCursor) continue;
+      if (b.when && !whenHolds(b.when)) continue;
       if (!modifierMatches(b, event)) continue;
       if (b.keys === normal && (!b.alt || !typing())) return b;
       if (b.alt === normal) return b;
@@ -753,17 +854,24 @@ function clickPageButton(n) {
     document.documentElement.setAttribute("data-hk-ready", "1");
 
     // Clicking a row moves the cursor to it, so the mouse and the keyboard do not disagree about
-    // which row `enter` will act on.
+    // which row `enter` will act on. A tile counts as a row: on the report hubs a tile IS the row.
     document.addEventListener("mousedown", function (event) {
-      var row = event.target.closest && event.target.closest("main table tbody tr");
-      if (row && !row.querySelector("td.empty")) paintRow(row);
+      var hit = event.target.closest && event.target.closest("main table tbody tr, main .tiles a.tile");
+      if (hit && !hit.querySelector("td.empty")) paintRow(hit);
     });
 
     // A filter that hides the focused row must not leave the cursor on something invisible.
+    //
+    // ⚠️ This used to call `onEscape()`. That is the same bug wearing a different hat: `onEscape` falls
+    // through to its last leg and CLEARS THE FILTER, then dispatches another `input` event, which re-runs
+    // the filter with an empty needle and shows every row again. So typing one character in a filter hid
+    // 331 of 333 rows, and the listener immediately undid it. Verified on /reports/payments: needle `8606`
+    // matched 2 rows and 333 stayed visible, with the input's own value left empty.
+    // Only the cursor is cleared here. The filter is what the operator just typed.
     var filter = filterInput();
     if (filter) {
       filter.addEventListener("input", function () {
-        if (!rowCursor || rowCursor.hidden) onEscape();
+        if (!rowCursor || rowCursor.hidden) clearRow();
       });
     }
 
