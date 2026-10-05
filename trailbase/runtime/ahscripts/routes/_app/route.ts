@@ -821,48 +821,12 @@ if (path === "/login" && method === "GET") {
     return redirect("/login?next=" + next);
   }
 
-  if (path === "/dashboard") {
-    const c = await A.baseviews.counts();
-    const tiles = [
-      { label: "Sections", value: c.sections },
-      { label: "Areas", value: c.areas },
-      { label: "Item Companies", value: c.categories },
-      { label: "Parties", value: c.parties },
-      { label: "Order Bookers", value: c.order_bookers },
-      { label: "Items", value: c.items },
-      { label: "Purchase Invoices", value: c.purchase_invoices },
-      { label: "Sale Invoices", value: c.sale_invoices },
-      { label: "Return Invoices", value: c.return_invoices },
-      { label: "Recieving Payments", value: c.recieving_payments },
-      { label: "Sending Payments", value: c.sending_payments },
-    ];
-    return html(
-      await A.http.page(req, shell(user, "dashboard", "Dashboard"), "dashboard/index.html", {
-        tiles,
-        shortcuts: [
-          { title: "Reports", target: "reports", tone: "pink" },
-          { title: "Management", target: "management", tone: "gray" },
-        ],
-      })
-    );
-  }
+  // /dashboard moved to the route folder `ahscripts/routes/dashboard/route.ts` (tb-0030 step 5). The
+  // host's folder resolver matches it before this dispatcher, so the branch here would be dead.
 
-  if (path === "/reports") {
-    const hub = await A.pages.hubIndex(PAGES_DIR);
-    // The `ledgers` tile is a link to the ledger hub rather than a report, so it is inserted at the
-    // position its legacy index held, between "Payments By Company" and "Stock Report".
-    const tiles = hub.reports.slice();
-    const ledgersAt = tiles.findIndex((t: any) => t.target === "stockreport");
-    if (ledgersAt >= 0) {
-      tiles.splice(ledgersAt, 0, { title: "Ledgers", target: "ledgers", tone: "grape", icon: "chart-line" });
-    }
-    return html(
-      await A.http.page(req, shell(user, "reports", "Reports"), "reports/index.html", {
-        tiles,
-        ledgerTiles: hub.ledgers,
-      })
-    );
-  }
+  // /reports (the hub) and /reports/ledgers moved to route folders (tb-0030 step 5):
+  // `ahscripts/routes/reports/route.ts` and `.../reports/ledgers/route.ts`. `/reports/<key>`,
+  // `/reports/status` and `/reports/refresh` still fall through to the dispatcher.
   if (path === "/reports/status") return A.service.status();
   if (path === "/reports/refresh" && method === "POST") {
     const full = query.full === "1" || query.full === "on" || form.full === "1" || form.full === "on";
@@ -879,10 +843,7 @@ if (path === "/login" && method === "GET") {
     const back = referer ? referer.replace(/^https?:\/\/[^/]+/, "") : "/dashboard";
     return redirect(back || "/dashboard");
   }
-  if (path === "/reports/ledgers") {
-    const hub = await A.pages.hubIndex(PAGES_DIR);
-    return html(await A.http.page(req, shell(user, "reports", "Ledgers"), "reports/ledgers/index.html", { tiles: hub.ledgers }));
-  }
+  // /reports/ledgers moved to `ahscripts/routes/reports/ledgers/route.ts` (see the /reports note above).
 
   const reportMatch = /^\/reports\/(.+)$/.exec(path);
   if (reportMatch && method === "GET") {

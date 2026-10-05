@@ -350,8 +350,17 @@ The `/_app` fallback is still in place, which is correct: it is the whole URL sp
   the new delete, because a create-then-delete is net-zero for the sections fingerprint and would make
   `changed` read `[]`.
 
-  **Next within step 5:** the remaining families, one at a time; then the `{param}`/`[...rest]` prefix
-  routes (`/static/*`, `/compute/*`, `/plugins/*`, `/favicon.svg`).
+  **Then the three GET hubs**, same day: `/dashboard`, `/reports` (the hub) and `/reports/ledgers` moved
+  to `ahscripts/routes/dashboard/route.ts`, `.../reports/route.ts` and `.../reports/ledgers/route.ts`,
+  their dispatcher branches deleted. `/reports/<key>` (a report page), `/reports/status` and
+  `/reports/refresh` deliberately still fall through — the host resolves a literal folder before a
+  `{param}` one, so a future `reports/{key}` folder cannot shadow `reports/ledgers`. `guest-smoke.mjs`
+  still **97/97**.
+
+  **Next within step 5:** the remaining families, one at a time (`/plugins`, `/invoices`, `/payments`,
+  `/inventory`, `/cashmemo`, `/print`, the report-page and `/p` families, the `invoice`/`invoice-doc`
+  API families, `/jobs`); then the `{param}`/`[...rest]` prefix routes (`/static/*`, `/compute/*`,
+  `/plugins/*`, `/favicon.svg`).
 - [ ] **6. Delete `_app/route.ts`**; add `app/lib/router.js` (manifest reading, param extraction,
       query coercion, auth gate) as a *module*, not a route.
 - [ ] **7. `meta.json` column/filter presets**, separately — 11 lines saved on each of 15 page
