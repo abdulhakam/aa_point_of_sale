@@ -76,7 +76,18 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 [ ] 16. Three generic artifacts: composer + separate      -> [[component-split-and-sql-materialised-tables]]
 [ ] 17. Trigger-maintained Tier 2 materialised tables    -> resolves open decision 2 and tb-0015
 [x] 18. Remove the code the reference graph proves dead  -> [[tb-0031-remove-proven-dead-code]] (done 2026-10-01: 13 guest exports, 5 Rust items, 5 orphaned tools; `jobs.rs` kept, see open decision 6)
+[ ] 19. Measure and bound report cost on a whole database -> [[report-cost-on-a-whole-database]] (measured 2026-10-04; step 17 promoted ahead of 16)
 ```
+
+**Step 19 is new, and it reorders 16 and 17.** On 2026-10-04 the depot was rebuilt and re-imported
+from the legacy oracle (60,245/60,245, 0 failed — [[fresh-import-and-whole-database-digest-2026-10-04]])
+and the report path measured against it for the first time. The result: every one of the fourteen
+report screens answers **200** and the slowest page is **186 ms**, but **six of the fourteen SQL
+statements exceed the ~20 s WASM call deadline on their own**, best-of-3, with no host overhead at all
+(`ledgers/booker` 29.1 s, `ledgers/party` 20.6 s). The cost is in the shared `prelude.sql`, which
+every payments report pays, so the fix is the one already chosen for open decision 2 — **step 17
+before step 16**. One O(rows × dates) term was removed along the way, and the account of how much it
+was worth had to be corrected from 3× to 9%: [[ledger-party-correlated-balance-was-the-whole-cost]].
 
 **Step 10 used to gate steps 11 and 13.** It no longer gates anything in the way it was written,
 because its answer made both of them impossible rather than shaping them. Step 13 turned out not to
@@ -161,7 +172,7 @@ being worked around silently.
 | # | Question | Options on the table | Note |
 |---|---|---|---|
 | 1 | ~~**Cutover shape**~~ — **DECIDED 2026-10-03: shape B, guest only.** Shape A was never available, because `frontend/` was deleted from git on 2026-09-29 | settled | [[cutover-is-guest-only]] |
-| 2 | ~~**Report cold path**~~ — **decided 2026-09-28.** SQL aggregation won: report results move into trigger-maintained materialised tables, which also satisfies `reports.no_precomputation` because Tier 2 cannot disagree with its base table | chosen: SQL aggregation + trigger maintenance | [[component-split-and-sql-materialised-tables]] |
+| 2 | ~~**Report cold path**~~ — **decided 2026-09-28.** SQL aggregation won: report results move into trigger-maintained materialised tables, which also satisfies `reports.no_precomputation` because Tier 2 cannot disagree with its base table. ⚠️ **2026-10-04: this decision is now the critical path.** Measured on a whole-database import, six of fourteen report statements exceed the 20 s call deadline on their own and the cost is the shared prelude — so step 17 is promoted ahead of step 16 | chosen: SQL aggregation + trigger maintenance | [[component-split-and-sql-materialised-tables]], [[report-cost-on-a-whole-database]] |
 | 3 | **Date defaults on report routes** — three named options, none chosen | declared, code, or per-request | [[report-routes-ignore-date-defaults]] → **resolved 2026-10-02**, see [[report-default-window-comes-from-the-data]] |
 | 4 | **General Ledger opening balances** are not persisted anywhere, so the ledger cannot reproduce a historical balance | carry forward, compute, or persist | [[guest-frontend-feature-parity-gaps]] §4 |
 | 5 | **The 14/14 parity gate is gone** and nothing replaced it. Re-baseline against a fresh import, mark it historical, or rebuild a differential | **partly answered 2026-10-02**: exact output parity is **waived**, and `verify-spool-reports.mjs` is now a self-consistency gate | [[legacy-parity-checks-waived]], [[guest-parity-differential-not-reproducible]] |
@@ -306,6 +317,23 @@ template change serves stale HTML until the data fingerprint moves — though
 
 ## Reference material
 
+- [[report-numbers-come-from-sqlite]] — **the reports' arithmetic, filters and ordering are SQLite, proven
+  row for row** (10 of 14 pages byte-identical; the rest differ only by 15-significant-digit transport and
+  one float sum), plus the one place JavaScript *does* calculate money.
+- [[screen-parity-against-the-legacy-bundle-2026-10-04]] — all 44 legacy screens against the guest's 68 routes,
+  settled screen by screen, with the five that have no counterpart and why.
+- [[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]] — the app is keyboard-first (`?` lists it),
+  and the two dead-key defects only a real keystroke could find.
+- [[minimise-client-side-calculation]] — per-keystroke cost cut 5× (worst 6.7 ms → 1.4 ms), and the
+  measurement found three wrong numbers in the invoice grid, including an editable price that rounded the
+  stored value on save.
+- [[fresh-import-and-whole-database-digest-2026-10-04]] — the 2026-10-04 fresh import, `db-digest.mjs`, the
+  money comparison that must be per-value, and the `p_data`-is-an-empty-stub trap.
+- [[report-cost-on-a-whole-database]] — every report's cost on a whole database, and the legacy comparison.
+- [[ledger-party-correlated-balance-was-the-whole-cost]] — the O(rows × dates) term removed from the party
+  ledger, and the overclaim corrected.
+- [[guest-report-500-not-always-the-deadline]] and [[legacy-view-filter-quotes-400]] — open, both found by
+  this sweep.
 - [[data-model]] — tables, codes, value translation.
 - [[api-contract-trailbase]] — every endpoint shape and the id/encoding rules.
 - [[reports-and-ledgers]] — the arithmetic and its inherited quirks.

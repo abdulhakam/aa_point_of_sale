@@ -48,15 +48,33 @@ PocketBase on it anymore. Nothing to commit, and the risk is gone rather than mi
    the *larger* 18 MB database — is untracked too. The bytes moved from "in git" to "on one
    untracked disk folder".
 
+4. **ANSWERED 2026-10-04 — which directory held the real data.** The question left open below is now
+   settled, and the answer is **both, at different times**:
+
+   | path | bytes | business rows |
+   |---|---|---|
+   | `legacyforparity/backend/pb_data/data.db` (working tree, **served today**) | 17,960,960 | the full dataset — 8,927 invoices, 26,526 payments, 23,413 transactions, 942 parties |
+   | `legacyforparity/backend/p_data/data.db` (working tree, **today**) | 745,472 | **none** — every business table is empty |
+   | `backend/p_data/data.db` at `c167d311^` (git blob) | 11,182,080 | the full dataset, identical in every row count to `pb_data` |
+
+   So the working-tree `p_data/data.db` has been **replaced by an empty stub** since the 2026-09-29
+   work, while the 11 MB blob in history still holds the data and agrees with `pb_data` on every money
+   column. **`p_data` in the working tree is now a trap: any check that names that path compares
+   against nothing and cannot fail.** Use `pb_data`, or extract the git blob
+   (`git cat-file blob c167d311^:backend/p_data/data.db`). Several vault notes still name the stub
+   path — grep `p_data` before trusting one. Full working:
+   [[fresh-import-and-whole-database-digest-2026-10-04]].
+
 ### The risk that is actually open
 
 - ⚠️ **The 11 MB `p_data/data.db` blob is still in git history.** Step 4 of *What to do* — purge from
-  history — has never been done. That is a history rewrite on a repository with a remote, so it
-  remains an owner decision rather than a drive-by commit.
+   history — has never been done. That is a history rewrite on a repository with a remote, so it
+   remains an owner decision rather than a drive-by commit.
 - ⚠️ **The parity oracle depends on one unignored folder surviving.** `legacyforparity/` has no git
   copy. See [[cutover-is-guest-only]] — it is both the rollback artefact and the only copy of the
   legacy data.
-- Whether `p_data/data.db` or `pb_data/data.db` held *real* business data is still unestablished;
+- ✅ **Resolved 2026-10-04:** whether `p_data/data.db` or `pb_data/data.db` held real business data —
+  both did; see point 4 above.
   `pb_data` is the larger of the two and the more likely candidate.
 
 The original issue body below is unchanged.

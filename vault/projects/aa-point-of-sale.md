@@ -79,8 +79,17 @@ documents the value translation between them, and that translation is what
   SQL against `legacyforparity/backend/p_data/data.db` and **all match**; payments agree to the cent (recieving
   25,907,041.11, sending 22,657,296.66). Verified again 2026-09-29 against the live depot on
   `:4000`: 8,927 invoices, 23,413 transactions, 26,526 payments, 88 expenses.
-  See [[reports-parity-and-e2e-2026-09-29]]. An earlier revision of this note said the depot had
-  been reset and no data was loaded; that was stale.
+  See [[reports-parity-and-e2e-2026-09-29]].
+  ⚠️ **Re-verified 2026-10-04, and the depot was rebuilt and re-imported from scratch** — 60,245 /
+  60,245, 0 failed, 359.5 s at 168 rec/s — and checked with a new harness, `tools/db-digest.mjs`:
+  **every money column matches the oracle at whole paisas**, with one expected difference of a single
+  row, the seeded `Difference` counterparty, so the depot holds 60,246. Two corrections came out of
+  it: money must be compared **per value at whole paisas**, because legacy stores two sub-paisa
+  amounts and the raw `sum(amount)` differs by a paisa for that reason alone; and the **working-tree
+  `p_data/data.db` is an empty stub**, so any check naming that path compares against nothing (the
+  2026-09-29 comparison was made against a database that had the data — the git blob
+  `c167d311^:backend/p_data/data.db`, 11,182,080 bytes, still holds it). Use `pb_data`.
+  See [[fresh-import-and-whole-database-digest-2026-10-04]].
   Outstanding: the guest's `created` is the import timestamp, not the business date
   ([[guest-depot-created-is-import-time]]), and 8,927 `invoice_maker` references are dropped
   ([[import-from-v1-drops-invoice-maker]]).
