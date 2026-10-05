@@ -30,14 +30,18 @@ recorded, not fixed; [[legacy-ui-reference-captures]] is now a *capability* refe
 
 In the operator's order, with the reason each one was asked for.
 
-- [ ] **A real searchable autocomplete, replacing the select-beside-a-text-input pattern.** Every long
-      `<select>` currently gets a separate `filter…` box injected beside it by `enhanceSelects`
-      (`app/public/js/app.js`), which is exactly the "looks bad" the operator named. One control that
-      filters as you type, is keyboard-first, and degrades to the native `<select>` without JS.
-      Legacy's Mantine `Autocomplete` is the behaviour to match; its appearance is not the target.
+- [x] **A real searchable autocomplete, replacing the select-beside-a-text-input pattern.** Every long
+      `<select>` used to get a separate `filter…` box injected beside it, which is exactly the "looks
+      bad" the operator named. Done 2026-10-05 — `app/public/js/autocomplete.js`, one control, keyboard
+      first, **the native `<select>` stays in the form so submission is unchanged**. Selects under 12
+      options are deliberately left alone: booker (4) and section (10) stay native, company (15), area
+      (59), item (207) and party (943) become comboboxes. See [[the-searchable-autocomplete]].
+      **Not included:** the create affordance — see the suggestion list below.
 - [ ] **Create-party and create-item on the invoice pages.** Legacy lets an operator create a party or an
       item **from the invoice they are writing**, so a new customer never costs a detour. The guest's
-      invoice grid has no such affordance.
+      invoice grid has no such affordance. **This is now the highest-value item on the list**, and the
+      autocomplete is the natural host for it — the control that finds a party should also be able to
+      create one.
 - [ ] **Fewer rail buttons.** The rail carries the five legacy destinations plus **Pages**, **Plugins**,
       the background-refresh dot and Logout — the last three are utility, not destinations. The operator
       read it as "too many buttons".

@@ -26,5 +26,9 @@
    so it can be reasoned about, tested and dropped without touching the app's own enhancements.
    `?` lists everything it can do on this page. #}
 <script src="/static/js/hotkeys.js" defer></script>
+{# The searchable control for long selects. It keeps the native <select> in the form, so a page with no
+   JavaScript is still a working form — this only replaces how the control looks and how it is picked
+   from. Loaded after app.js because it reads the selects app.js has already enhanced line editors on. #}
+<script src="/static/js/autocomplete.js" defer></script>
 </body>
 </html>

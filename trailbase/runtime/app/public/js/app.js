@@ -66,50 +66,9 @@
     });
   }
 
-  /** Add a small text filter above every long select so it stays usable without JS frameworks. */
-  function enhanceSelects() {
-    document.querySelectorAll("select[data-searchable]").forEach(function (select) {
-      if (select.multiple) return;
-      var filter = document.createElement("input");
-      filter.type = "search";
-      filter.placeholder = "filter…";
-      filter.className = "select-filter";
-      filter.setAttribute("aria-label", "Filter options");
-
-      // The select and its search box go into a shared row wrapper. Inserted as a sibling inside the
-      // label's column flex, the box stacked ABOVE the select and put a second input over every report
-      // filter, so the legacy one-row filter block became a two-row grid of paired boxes. The legacy
-      // controls are Mantine Selects, which search inside the control; a native `<select>` cannot, so
-      // the affordance stays — but it sits beside its select now, and the row reads as it did.
-      var pair = document.createElement("span");
-      pair.className = "field-row";
-      select.parentNode.insertBefore(pair, select);
-      pair.appendChild(select);
-      pair.appendChild(filter);
-
-      // The option text is lowercased ONCE, not once per keystroke. `option.text.toLowerCase()` inside
-      // the handler meant a fresh string per option per keypress: 208 allocations per key on the item
-      // list, to recompute a value that cannot change while the operator is typing. Measured at 3.3 ms
-      // per keystroke before this, 0.06 ms after (`tools/client-cost.mjs`).
-      var options = [];
-      for (var i = 0; i < select.options.length; i++) {
-        if (select.options[i].value === "") continue;
-        options.push({ option: select.options[i], hay: select.options[i].text.toLowerCase() });
-      }
-
-      var last = null;
-      filter.addEventListener("input", function () {
-        var needle = filter.value.toLowerCase().trim();
-        // An unchanged needle means an unchanged result; doing the work anyway is what made an idle
-        // re-focus or a paste of the same text cost a full pass.
-        if (needle === last) return;
-        last = needle;
-        options.forEach(function (entry) {
-          entry.option.hidden = needle !== "" && entry.hay.indexOf(needle) === -1;
-        });
-      });
-    });
-  }
+  /** Long selects are searchable — see `autocomplete.js`, which replaced the select-plus-filter-box
+   *  pair this used to inject. The reasoning for leaving short selects alone is there. */
+  function enhanceSelects() {}
 
   /**
    * Background refresh state, polled from /reports/status and shown as a dot:
