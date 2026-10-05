@@ -202,7 +202,22 @@ export async function readInvoice(db, publicId) {
       qtyText: String(round2(qty)),
       qtyAs: box ? qtyAsText(box, qty) : "",
       price: Number(r.price) || 0,
-      priceText: money(r.price),
+      // ⚠️ The EDITABLE price input carries the stored value, not `money(r.price)`.
+      //
+      // Legacy prices are not always 2 dp — invoice `AaEHwKG8…` has lines at `114.583333` and `58.3333`
+      // (a price of 1375/12). `money()` rendered those as `114.58` and `58.33` **into an input the operator
+      // can save**, which is two defects at once:
+      //
+      //   1. saving the form rewrites the stored price — 114.583333 becomes 114.58 — so touching an
+      //      invoice silently changes the ledger;
+      //   2. the browser preview recomputes from the rounded value while this module computes from the
+      //      stored one, so the grid's live total disagreed with the server's by 7.39 on that invoice.
+      //      Found by `tools/grid-preview-check.mjs`, which cross-checks the preview against the
+      //      server-rendered total; `money()` is right for a *display* column and wrong for an input.
+      //
+      // `String()` keeps the full stored precision, which is also what the operator must see to know what
+      // they are editing. See [[client-side-live-recalculation]].
+      priceText: String(r.price ?? 0),
       costPrice: Number(r.cost_price) || 0,
       discount1: d1,
       discount2: d2,

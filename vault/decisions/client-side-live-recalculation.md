@@ -6,10 +6,35 @@ decided_on: 2026-09-29
 created: 2026-09-29
 tags: [invoices, grid, javascript, rounding, ironcalc, guest, ui]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[guest-invoice-lifecycle]]", "[[money-is-2dp-everywhere]]", "[[sql-rounding-differs-from-js-round2]]", "[[invoice-lifecycle-draft-open-append-only]]", "[[guest-writes-via-sql]]"]
+related_to: ["[[guest-invoice-lifecycle]]", "[[money-is-2dp-everywhere]]", "[[sql-rounding-differs-from-js-round2]]", "[[invoice-lifecycle-draft-open-append-only]]", "[[guest-writes-via-sql]]", "[[minimise-client-side-calculation]]"]
 ---
 
 # Client-side live recalculation replicates the server's rounding; no spreadsheet engine
+
+## ⚠️ 2026-10-05: this decision had no check, and three defects lived in that gap
+
+The smoke suite creates invoices with discounts and **never opens the grid**, and no browser-driven check
+existed until 2026-10-04. So for the whole life of this decision **nothing asserted that the browser
+preview agreed with the server** — which is the exact risk this decision names. `tools/grid-preview-check.mjs`
+does now, and on its first run it found:
+
+1. **The invoice total was never written.** `[data-sum]` sits above the grid element (`grid.html:64`
+   against `:73`), so `grid.querySelector("[data-sum]")` was null. Typing a quantity moved the line amount
+   and left the invoice total frozen — a recalculated line beside a stale total.
+2. **The invoice-level discounts did nothing.** They came from `data-d1`/`data-d2` attributes rendered at
+   load, and `discount_rs` was hardcoded to `0`.
+3. **The editable price was rounded.** `invoices.js` rendered the price **input** with `money(r.price)`, so
+   a stored `114.583333` appeared as `114.58` — which both made saving rewrite the stored price and made
+   the preview disagree with the server by 7.39.
+
+All three are fixed, and the per-keystroke cost fell from 3.10 ms to 0.40 ms at the same time:
+[[minimise-client-side-calculation]].
+
+## The rule this adds
+
+**The editable input carries the stored value; `money()` is for display columns.** Legacy prices are not
+all 2 dp ([[money-is-2dp-everywhere]] governs what the app *writes*; the import never normalised what it
+read), so rounding a price for display silently changes the ledger on save.
 
 ## Context
 
