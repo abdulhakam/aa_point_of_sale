@@ -678,6 +678,21 @@ async function main() {
       `${session.status} ${session.body.slice(0, 90)}`
     );
 
+    // tb-0034: the filesystem document store. It is BLOCKED on a writable mount today — the guest fs
+    // root is read-only — so assert the route degrades gracefully (200 with `ok:false`), never a 500.
+    const vaultGen = await postForm(cookies, "/vaulter-lite/regenerate", {});
+    check(
+      "POST /vaulter-lite/regenerate degrades gracefully (read-only fs)",
+      vaultGen.status === 200 && /"ok"\s*:/.test(vaultGen.body),
+      `${vaultGen.status} ${vaultGen.body.slice(0, 90)}`
+    );
+    const vaultStatus = await get(cookies, "/vaulter-lite");
+    check(
+      "GET /vaulter-lite reports the last run",
+      vaultStatus.status === 200 && /"collections"/.test(vaultStatus.body),
+      `${vaultStatus.status}`
+    );
+
     // The host poller resolves /jobs/reconcile through the generic router at startup and fires it
     // minutely (tb-0030 step 6 made this folder-driven; before that it required a dispatcher FILE,
     // which no longer exists). The poller calls `run_route` DIRECTLY, so it never shows up as a normal

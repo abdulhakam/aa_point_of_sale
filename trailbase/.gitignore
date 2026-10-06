@@ -30,3 +30,5 @@ target/
 
 # Throw-away depot the tools create when they run.
 .tbdemo-guest/
+
+runtime/vaulter-lite/

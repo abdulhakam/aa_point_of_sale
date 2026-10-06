@@ -8,6 +8,21 @@ pub fn init(ctx: &Ctx<'_>) -> Result<()> {
 
     fs.set("readFile", Function::new(ctx.clone(), Async(read_file_js)))?;
     fs.set("writeFile", Function::new(ctx.clone(), Async(write_file_js)))?;
+    // `mkdir -p`. `writeFile` is `std::fs::write`, which does NOT create parent directories, so a
+    // generator that writes `<root>/<collection>/<id>.md` needs this first. Recursive, and idempotent
+    // (an existing directory is a success), which is what `std::fs::create_dir_all` gives. Added for
+    // tb-0034's filesystem document store; mechanism only — it names no directory.
+    fs.set("createDir", Function::new(ctx.clone(), |path: String| -> bool {
+        std::fs::create_dir_all(&path).is_ok()
+    }))?;
+    // `unlink`, so an incremental run can remove a document whose row is gone. Returns false when the
+    // path is already absent, so a delete is idempotent (tb-0034).
+    fs.set("removeFile", Function::new(ctx.clone(), |path: String| -> bool {
+        match std::fs::remove_file(&path) {
+            Ok(()) => true,
+            Err(e) => e.kind() == std::io::ErrorKind::NotFound,
+        }
+    }))?;
     // Implement others as needed: exists, readdir
     
     // Simple exists implementation using std::fs::metadata/exists since trailbase_wasm might just use WASI fs
