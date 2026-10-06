@@ -40,6 +40,11 @@ See [[trail-runtime-js-reference]] for the full assessment.
       `ahscripts/init` or `ahscripts/jobs` directory (verified absent in `runtime/` and the synced
       depot, and no git history ever had one), so nothing runs through either path and the `.ts` gap is
       never hit. Left open only as an upstream-shape item.
+      **On the 2026-10-06 request to use this to "recreate all reports every morning":** that assumed a
+      persistent report/invoice KV cache to regenerate, and **there is none** — KV is a transient spool
+      handoff plus a one-string data stamp, and the reports are SQL over base tables in ~0.05–1.2 s. A
+      timer rebuild would also reverse `reports.no_precomputation`. See
+      [[kv-is-a-handoff-not-a-report-cache]]. The init/jobs mechanics are not needed for it.
 - [x] Measure JS throughput, per-request latency and load time vs the Phase 0 StarlingMonkey numbers
 - [ ] Close the gaps: real `fetch`, typed/transactional DB params, handler cache
       **AUDITED 2026-10-06 — 2 of the 3 are done.**

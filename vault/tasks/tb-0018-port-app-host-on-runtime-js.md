@@ -50,6 +50,18 @@ actual application, so the report engine can be verified against the Node app on
       `content-encoding`/gzip anywhere in the host or the guest; only the `accept-encoding` header is
       forwarded (`lib.rs:406`). So the open piece is gzip on the uncapped `/p/<slug>/data` payload (up
       to ~11.9 MB).
+      **BLOCKED, attempt 2026-10-06.** gzip must happen in the HOST (QuickJS has no compressor), and
+      **no compression crate is in the offline lock** — `flate2` / `miniz_oxide` / `zlib` are **0 of 236
+      crates** (verified in `Cargo.lock`), and the build is `cargo build --offline`. So it needs one of:
+      (a) add a compression crate and vendor it for the offline build; (b) a hand-written deflate in
+      Rust; or (c) confirm whether the **TrailBase server layer** already compresses on
+      `accept-encoding` — it wraps the guest response, and if it does, this is moot and the work is only
+      a client `accept-encoding: gzip`. **Design when unblocked, per the operator's request (opt-in, per
+      request):** the guest marks the response it wants compressed (a `gzip: true` field or an
+      `x-compress: gzip` header), the host compresses **only** when the marker is present AND the
+      client's `accept-encoding` includes gzip, and a **per-report opt-in flag in the page manifest**
+      decides which reports ask. Off by default, so the biggest payloads stay uncompressed unless
+      deliberately enabled.
 - [ ] Record-API ACL/validation parity for writes (the guest writes raw SQL)
       **AUDITED 2026-10-06 — this is a deliberate divergence, not a bug.** Writes go through
       `routeKit.write` → `sqlite.execute`, guarded by a SQL **blocklist** (`api/sqlite.rs` `FORBIDDEN`:
