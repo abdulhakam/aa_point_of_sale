@@ -80,8 +80,11 @@ host poller now resolves `/jobs/reconcile` through the generic router (a Rust ch
 the config-driven scheduler plus a folder-aware `feature-parity`/`route-inventory` rewrite remain
 follow-ups.
 
-**Next: step 17** (trigger-maintained Tier 2 materialised tables) before **step 16**, because six of the
-fourteen report statements exceed the WASM call deadline on their own; step 19's fix is step 17's output.
+**Next: step 17** — [[tb-0033-trigger-maintained-report-tables]] — before **step 16**, because six of the
+fourteen report statements exceed the WASM call deadline on their own and the measured cost is the shared
+prelude, not any one report; step 19's fix is step 17's output. The task scopes the first, bounded move:
+materialise the shared payments chain (`payments_base` → `payments_view`) as a trigger-maintained table,
+following the `inv_doc` pattern.
 
 The other open items in the sequence, in the order they gate: **step 17** (trigger-maintained Tier 2
 materialised tables) before **16**, because six of the fourteen report statements exceed the WASM call
@@ -107,7 +110,7 @@ step 17.
 [--] 14. Gate the component split on a parity oracle      -> gate WAIVED by [[legacy-parity-checks-waived]]; became [[tb-0032-manifest-first-refactor]]
 [x] 15. Retire the route.ts dispatcher (file-router conventions, no data DAG) -> [[tb-0030-retire-the-route-ts-dispatcher]] (done 2026-10-05: ~73 route folders, dispatcher deleted, mode: crawler; guest-smoke 112)
 [ ] 16. Three generic artifacts: composer + separate      -> [[component-split-and-sql-materialised-tables]]
-[ ] 17. Trigger-maintained Tier 2 materialised tables    -> resolves open decision 2 and tb-0015
+[ ] 17. Trigger-maintained Tier 2 materialised tables    -> [[tb-0033-trigger-maintained-report-tables]] (resolves open decision 2; the shared prelude is the measured cost)
 [x] 18. Remove the code the reference graph proves dead  -> [[tb-0031-remove-proven-dead-code]] (done 2026-10-01: 13 guest exports, 5 Rust items, 5 orphaned tools; `jobs.rs` kept, see open decision 6)
 [ ] 19. Measure and bound report cost on a whole database -> [[report-cost-on-a-whole-database]] (measured 2026-10-04; step 17 promoted ahead of 16)
 ```
