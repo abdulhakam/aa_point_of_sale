@@ -70,11 +70,31 @@ write to **`/vaulter-lite`**, i.e. `%DEPOT%\runtime\vaulter-lite`.
 > are live, but they degrade gracefully (`{ ok:false, blocked:true }`) instead of writing, and the
 > store does not contain a single file yet.**
 >
-> **Unblock requires one of:** (a) a **writable mount** in `trail run` (a TrailBase change — an extra
-> `--docs-fs`-style preopen, or a `--runtime-root-fs` that is rw); (b) writing the store **through the
-> DB** (`inv_doc`-style, SQLite) and exporting it with a separate tool run outside the sandbox; or
-> (c) a **host bridge** that writes to the depot dir directly (the depot is writable — the DB lives
-> there — but the sandbox does not currently grant the component a path to it).
+> **Unblock requires one of:** (a) a **writable mount** in `trail run` (a TrailBase change); (b) writing
+> the store **through the DB** (SQLite, `inv_doc`-style) and exporting it with a tool run outside the
+> sandbox; or (c) a **host bridge** that writes to the depot dir directly.
+>
+> ### The writable mount (option a) is NOT achievable in this environment — checked 2026-10-06
+>
+> The operator asked for the writable mount. It cannot be delivered here, for three reasons, all
+> verified:
+> 1. **`trail` is a prebuilt binary** (`C:\…\instl\trailbase\trail.exe`, v0.34.0) with **no source and
+>    no `.git`** — only `trail.exe`, `CHANGELOG.md`, `LICENSE`.
+> 2. **There is no flag and no config for it.** `trail run --help` lists exactly one fs mount
+>    (`--runtime-root-fs`); `config.textproto`'s `server {}` block has no fs/runtime option; and the
+>    upstream CHANGELOG through **v0.34.4** has **no** writable-root/extra-mount entry.
+> 3. **A custom server binary can't be built offline.** TrailBase ≥ v0.30.0 allows a custom binary
+>    against the `trailbase` library crate, but that crate is **not** in this workspace's `Cargo.lock`
+>    (0 matches) and **not** in the cargo registry cache (only `trailbase-wasm`, `trailbase-sqlvalue`,
+>    `trailbase-wasm-common` are present). A `--offline` build cannot fetch it.
+>
+> So a writable mount needs **the TrailBase source + network**, on a machine that has them: either (a1)
+> a one-line fork setting the runtime-root preopen's `DirPerms` to writable, or (a2) a custom server
+> binary that mounts the root rw. Both are outside this repo. **Recommended fallback that works
+> offline: option (b)** — the guest keeps its JS incremental generator but writes each document into a
+> SQLite table, and a small external tool (node, outside the sandbox) materialises the `vaulter-lite/`
+> files from it; the guest's logic and the file format are unchanged, only the final `writeFile` moves
+> out of the sandbox.
 
 ⚠️ **And even with a writable mount, RUN.BAT mirrors `runtime\` onto `%DEPOT%\runtime` with
 `robocopy /MIR` on every start**, and `/MIR` makes the destination match the source *exactly* — so a
