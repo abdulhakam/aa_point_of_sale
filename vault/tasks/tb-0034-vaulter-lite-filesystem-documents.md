@@ -57,49 +57,66 @@ fingerprint; an unchanged collection is skipped whole. A changed collection is w
 only rows whose `updated` differs from the file's frontmatter are rewritten; ids present on disk but
 gone from the table are deleted.
 
-## Where it lives, and the blocker that decides it
+## Storage: TrailBase's file-uploads API, not the filesystem (operator, 2026-10-06)
 
-The guest's filesystem root is **`--runtime-root-fs=%DEPOT%\runtime`** (`RUN.bat`). The store was to
-write to **`/vaulter-lite`**, i.e. `%DEPOT%\runtime\vaulter-lite`.
+The sandboxed filesystem is out (see below). Instead each document is stored as a **file row via
+TrailBase's file-uploads API** — a `std.FileUpload` column, bytes written to TrailBase's **object
+store**, metadata in the column. Mechanism, read from the TrailBase source
+(`crates/core/src/records/{params,files}.rs`):
 
-> ⛔ **BLOCKED 2026-10-06: the guest fs root is mounted READ-ONLY.** Implemented and ran — `fs.createDir`
-> / `fs.writeFile` fail with **WASI EPERM (os error 63, "Operation not permitted")**, and
-> `trail run` exposes only the one `--runtime-root-fs` mount (`trail run --help`), no second writable
-> path. Building the host's `fs.createDir`/`fs.removeFile` (they did not exist; added, wasm rebuilt)
-> did not help — the mount itself denies writes. **So the generator is written and the trigger routes
-> are live, but they degrade gracefully (`{ ok:false, blocked:true }`) instead of writing, and the
-> store does not contain a single file yet.**
->
-> **Unblock requires one of:** (a) a **writable mount** in `trail run` (a TrailBase change); (b) writing
-> the store **through the DB** (SQLite, `inv_doc`-style) and exporting it with a tool run outside the
-> sandbox; or (c) a **host bridge** that writes to the depot dir directly.
->
-> ### The writable mount (option a) is NOT achievable in this environment — checked 2026-10-06
->
-> The operator asked for the writable mount. It cannot be delivered here, for three reasons, all
-> verified:
-> 1. **`trail` is a prebuilt binary** (`C:\…\instl\trailbase\trail.exe`, v0.34.0) with **no source and
->    no `.git`** — only `trail.exe`, `CHANGELOG.md`, `LICENSE`.
-> 2. **There is no flag and no config for it.** `trail run --help` lists exactly one fs mount
->    (`--runtime-root-fs`); `config.textproto`'s `server {}` block has no fs/runtime option; and the
->    upstream CHANGELOG through **v0.34.4** has **no** writable-root/extra-mount entry.
-> 3. **A custom server binary can't be built offline.** TrailBase ≥ v0.30.0 allows a custom binary
->    against the `trailbase` library crate, but that crate is **not** in this workspace's `Cargo.lock`
->    (0 matches) and **not** in the cargo registry cache (only `trailbase-wasm`, `trailbase-sqlvalue`,
->    `trailbase-wasm-common` are present). A `--offline` build cannot fetch it.
->
-> So a writable mount needs **the TrailBase source + network**, on a machine that has them: either (a1)
-> a one-line fork setting the runtime-root preopen's `DirPerms` to writable, or (a2) a custom server
-> binary that mounts the root rw. Both are outside this repo. **Recommended fallback that works
-> offline: option (b)** — the guest keeps its JS incremental generator but writes each document into a
-> SQLite table, and a small external tool (node, outside the sandbox) materialises the `vaulter-lite/`
-> files from it; the guest's logic and the file format are unchanged, only the final `writeFile` moves
-> out of the sandbox.
+- **Column declaration** (migration): a TEXT column with `CHECK(jsonschema('std.FileUpload', doc))`.
+  `std.FileUpload` is one file; `std.FileUploads` is an array of files.
+- **Upload** (record API create/update, JSON): the column value is
+  `{ "filename": "…", "content_type": "…", "data": "<BASE64URL of the bytes>" }`. With `data` present
+  the bytes are written to the object store; with only metadata (`{filename, original_filename,
+  content_type, mime_type}`) and no `data` the existing file is left in place — which is how a metadata
+  update is a no-op on the bytes.
+- **Read**: `GET /api/records/v1/<api>/<id>/<column>` streams the file back
+  (`get_uploaded_file_from_record_handler`); `Content-Type` from the stored metadata.
+- Storage backend is TrailBase's object store (local, or S3 if configured); the size ceiling is the
+  server's body limit (5 MB in `config.textproto`).
 
-⚠️ **And even with a writable mount, RUN.BAT mirrors `runtime\` onto `%DEPOT%\runtime` with
-`robocopy /MIR` on every start**, and `/MIR` makes the destination match the source *exactly* — so a
-generated `vaulter-lite\` under the runtime root would be **deleted on the next server start**. That
-`/XD vaulter-lite` exclusion is already added to `RUN.bat`, ready for when (a) lands.
+### ⚠️ Consequence: the GUEST cannot upload — this changes *who* generates
+
+The object store is **not** reachable from the guest (raw SQL cannot write it, and the sandboxed fs is
+read-only), so the bytes can only be written **through the record API over HTTP**. Two options:
+
+- **(G) guest uploads to itself** — the generator calls `http.request("POST",
+  "<origin>/api/records/v1/documents", …)` forwarding the triggering request's auth (the host resolves
+  `req.user` from a cookie **or** a bearer header). Correct, but nested HTTP through the guest and the
+  auth has to be passed through by hand.
+- **(T) an external tool uploads** — a node script (`tools/vaulter-lite.mjs`) logs in, reads the depot
+  DB, generates the Markdown, and POSTs it to the record API. It runs **outside the sandbox**, so it can
+  also write a plain-file mirror if wanted, and it is the same JS the native component later replaces.
+  This is the lower-risk path and the one that matches "the JS triggers a native component later".
+
+**Recommendation: (T).** It keeps the guest out of nested HTTP and puts the whole generator in one
+place that a future wasm component can mirror. The design below assumes (T); (G) is recorded as the
+alternative.
+
+Recommended shape: a `documents` record API — `id`, `collection`, `slug` (the record's UUID, the
+filename stem), `updated`, and `doc std.FileUpload`. One row per generated document; `GET
+/api/records/v1/documents/<id>/doc` is the document URL. `_meta.json`'s role (dirty detection) moves
+into the tool, or into a `documents.updated` comparison.
+
+## Where it used to live, and why the filesystem is out
+
+The guest's filesystem root is `--runtime-root-fs=%DEPOT%\runtime`. The store was to write to
+`/vaulter-lite` there.
+
+> ⛔ **BLOCKED and ABANDONED 2026-10-06: the guest fs root is mounted READ-ONLY.** `fs.createDir` /
+> `fs.writeFile` fail with **WASI EPERM (os error 63)**; `trail run` exposes only the one
+> `--runtime-root-fs` mount, `config.textproto` has no fs option, the upstream CHANGELOG (→ v0.34.4) has
+> no writable-root entry, and the `trailbase` **server crate is not available offline** (absent from the
+> lock and the cargo cache), so neither a fork nor a custom server binary is buildable here. **Hence
+> this task uses the file-uploads API instead** — the same "documents as files" goal, stored in
+> TrailBase's object store rather than on disk. The generated JS generator
+> (`app/lib/vaulter-lite.js`) and the trigger routes built on 2026-10-06 assumed the filesystem and are
+> **superseded** by this; they currently degrade gracefully and should be removed or repointed.
+>
+> ⚠️ If a plain-file mirror is ever wanted alongside the object store, RUN.BAT `/MIR`-mirrors `runtime\`
+> over the root on every start — the store must live outside that mirror (`/XD vaulter-lite` is already
+> there, ready).
 
 ## Components
 
