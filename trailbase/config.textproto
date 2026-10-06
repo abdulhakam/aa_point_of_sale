@@ -96,5 +96,12 @@ record_apis: [
   { name: "invoices"     table_name: "invoices"     acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["type", "party", "booker"] },
   { name: "invoices_return_reference" table_name: "invoices_return_reference" acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["original_invoices"] },
   { name: "transactions" table_name: "transactions" acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["invoice", "item"] },
-  { name: "payments"     table_name: "payments"     acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["invoice", "party", "paid_to", "type"] }
+  { name: "payments"     table_name: "payments"     acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] expand: ["invoice", "party", "paid_to", "type"] },
+
+  # --- Generated documents (tb-0034) -----------------------------------
+  # vaulter-lite's store. The `doc` column is a `std.FileUpload`, so the bytes live in the OBJECT
+  # STORE and only the record API can write them (the guest uploads through it). There is no `expand`
+  # because a file column is not a foreign key. The app never reads this to render a screen; it is a
+  # document export, so its ACLs are authenticated-staff only.
+  { name: "documents"    table_name: "documents"    acl_authenticated: [CREATE, READ, UPDATE, DELETE, SCHEMA] }
 ]

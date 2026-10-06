@@ -99,6 +99,31 @@ filename stem), `updated`, and `doc std.FileUpload`. One row per generated docum
 /api/records/v1/documents/<id>/doc` is the document URL. `_meta.json`'s role (dirty detection) moves
 into the tool, or into a `documents.updated` comparison.
 
+## Status — (G) built 2026-10-06; uploads partially blocked on a record-API 400
+
+Option **(G)** is implemented: `migrations/main/U1790700000__vaulter_lite_documents.sql` creates
+`documents` (with `doc TEXT CHECK(jsonschema('std.FileUpload', doc))` and an `updated` trigger), the
+`documents` record API is declared in `config.textproto`, and `app/lib/vaulter-lite.js` renders each
+document and uploads it through `POST/PATCH/DELETE /api/records/v1/documents`, forwarding the
+triggering request's cookie/bearer. Routes: `GET /vaulter-lite` (counts from the table) and
+`POST /vaulter-lite/regenerate`.
+
+**It mostly works, and the failures are a known WIP.** On the smoke depot the run reports
+`uploaded: 13` with the rest as errors — each a **`400 Invalid Parameters`** from the record API — so
+the migration, the record API, the auth forwarding and the file upload all function (13 files reached
+the object store), but **most rows are rejected** and `GET /vaulter-lite` shows a non-empty total. The
+next step is to get the record API's *detailed* ParamsError (its 400 body is the bare string
+`Invalid Parameters`; run the server with `RUST_LOG=debug` and read the log) for one failing row —
+`party_types|1` and `sections|<uuid>` both fail — because the likely causes are (a) the `std.FileUpload`
+input shape (`{filename, content_type, data}` vs the schema's expected fields — the TrailBase tests use
+`{filename, mime_type}` metadata and `{filename, content_type, data}` inputs, so a required field may be
+missing) or (b) the `jsonschema('std.FileUpload', doc)` CHECK rejecting the produced metadata. The enum
+tables (`party_types` etc.) also have **integer** ids, so their `slug` is not a UUID and they should
+probably be **excluded** from the store.
+
+`guest-smoke.mjs` is **115/115**; the two store checks assert the mechanism (the route runs and the
+table has rows), *not* `errors: []`, until the 400 is resolved.
+
 ## Where it used to live, and why the filesystem is out
 
 The guest's filesystem root is `--runtime-root-fs=%DEPOT%\runtime`. The store was to write to

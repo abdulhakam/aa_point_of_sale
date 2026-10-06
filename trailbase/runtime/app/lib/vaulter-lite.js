@@ -1,26 +1,22 @@
-// vaulter-lite — a filesystem Markdown document store derived from the base tables (tb-0034).
+// vaulter-lite — a document store derived from the base tables, written through TrailBase's
+// file-uploads API (tb-0034).
 //
-// One directory per collection, one `<uuid>.md` per row. The filename is the record's UUIDv7, so the
-// directory listing is already in id order with no index. The FRONTMATTER is the structured row, with
-// foreign keys written as `[[uuid]]` wikilinks; the BODY is the human-readable document, and ONLY
-// invoices get one (header, lines, totals, and the invoice's payments below) — every other collection
-// is frontmatter only.
+// One `documents` row per record: its Frontmatter is the structured row (foreign keys as `[[uuid]]`
+// wikilinks) and its BODY is the human-readable document — and ONLY invoices get a body (header, lines,
+// totals, and the invoice's payments below). The document text is stored as a FILE in TrailBase's
+// object store, through the record API (`POST/PATCH /api/records/v1/documents`), because the object
+// store is not reachable from the guest by any other route and the guest filesystem is read-only.
 //
-// Incremental: `_meta.json` records per-collection fingerprints; a collection whose fingerprint is
-// unchanged is skipped whole, and within a changed collection only rows whose `updated` moved are
-// rewritten. This is a VIEW for humans and tools, not a cache the app reads back, so a stale file
-// cannot make any screen or report wrong (`reports.no_precomputation` is untouched).
+// Incremental: the `documents` table itself is the manifest. A row whose `source_updated` still equals
+// the source row's `updated` is skipped; a changed row is PATCHed; a row whose source is gone is
+// DELETEd. A run with no writes makes no API calls.
 //
-// Root: `/vaulter-lite` under the guest fs root (`%DEPOT%\runtime`). ⚠️ RUN.BAT mirrors `runtime\` over
-// that with `robocopy /MIR`, so that copy must exclude `vaulter-lite` (`/XD`) or every restart wipes it.
+// This is a VIEW for humans and tools, not a cache the app reads back — a document an hour old cannot
+// make a report stale (`reports.no_precomputation` untouched).
 
 import { TABLES, readTable, relationsOf } from "./data.js";
-import { b64ToHex } from "./route-kit.js";
+import { b64ToHex, hexToB64 } from "./route-kit.js";
 
-const ROOT = "/vaulter-lite";
-const META = ROOT + "/_meta.json";
-
-/** A base64url record id -> the dashed UUID that names its file (UUIDv7 sorts by time). */
 export function uuidOf(id) {
   const hex = b64ToHex(String(id || ""));
   if (hex.length !== 32) return String(id || "");
@@ -29,7 +25,33 @@ export function uuidOf(id) {
   ).toLowerCase();
 }
 
-/** A YAML scalar, bare when it is clearly safe and JSON-quoted otherwise. */
+/** base64url of a string's UTF-8 bytes — the shape `std.FileUpload.data` wants. */
+function b64url(text) {
+  const enc = encodeURIComponent(String(text));
+  const bytes = [];
+  for (let i = 0; i < enc.length; i++) {
+    if (enc[i] === "%") {
+      bytes.push(parseInt(enc.slice(i + 1, i + 3), 16));
+      i += 2;
+    } else {
+      bytes.push(enc.charCodeAt(i));
+    }
+  }
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  let out = "";
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b0 = bytes[i];
+    const b1 = bytes[i + 1];
+    const b2 = bytes[i + 2];
+    out += A[b0 >> 2] + A[((b0 & 3) << 4) | ((b1 === undefined ? 0 : b1) >> 4)];
+    if (b1 === undefined) break;
+    out += A[((b1 & 15) << 2) | ((b2 === undefined ? 0 : b2) >> 6)];
+    if (b2 === undefined) break;
+    out += A[b2 & 63];
+  }
+  return out;
+}
+
 function yaml(v) {
   if (v === null || v === undefined) return "null";
   if (typeof v === "number" || typeof v === "boolean") return String(v);
@@ -37,17 +59,13 @@ function yaml(v) {
   return s !== "" && /^[A-Za-z0-9_./@-]+$/.test(s) ? s : JSON.stringify(s);
 }
 
-/** The frontmatter block: the row's columns, FKs as `[[uuid]]`, plus the collection and the id. */
 function frontmatter(table, row) {
   const rels = new Set(relationsOf(table));
   const out = ["---", `collection: ${table}`, `id: ${uuidOf(row.id)}`, `updated: ${yaml(row.updated)}`];
   for (const col of Object.keys(row)) {
     if (col === "id" || col === "updated") continue;
     const v = row[col];
-    // A foreign key becomes a wikilink to the related record's file. `[[uuid]]` and not
-    // `[[collection/uuid]]`: ids are globally unique, so the basename resolves unambiguously and the
-    // store needs no target map (the column name alone does not say `category -> companies`). Quoted so
-    // YAML reads it as a string, not a nested sequence.
+    // FKs are `[[uuid]]` wikilinks (ids are globally unique, so a basename resolves unambiguously).
     if (rels.has(col)) out.push(`${col}: ${v ? '"[[ ' + uuidOf(v) + ' ]]"' : "null"}`);
     else out.push(`${col}: ${yaml(v)}`);
   }
@@ -55,7 +73,6 @@ function frontmatter(table, row) {
   return out.join("\n");
 }
 
-/** The printable invoice body: the materialised `inv_doc` document + its payments, as Markdown. */
 async function invoiceBody(A, row) {
   const doc = await A.invoiceDoc.read(String(row.id));
   if (!doc) return "_No materialised document for this invoice yet._\n";
@@ -95,91 +112,97 @@ async function invoiceBody(A, row) {
   ].join("\n");
 }
 
-async function readMeta() {
-  try {
-    return JSON.parse(await fs.readFile(META));
-  } catch {
-    return { lastRun: null, collections: {} };
-  }
+async function docOf(A, table, row) {
+  let text = frontmatter(table, row);
+  if (table === "invoices" && A.invoiceDoc) text += "\n" + (await invoiceBody(A, row));
+  return text;
 }
 
-async function fingerprintOf(db, table) {
-  const rows = await db.all(`SELECT COUNT(*) AS n, COALESCE(MAX("updated"), '') AS newest FROM "${table}"`, []);
-  return rows && rows.length ? `${rows[0][0]}:${rows[0][1]}` : "0:";
+/** One record-API call. Returns the created record id (base64url) for a POST. */
+async function call(origin, headers, method, path, body) {
+  const res = await globalThis.http.request({
+    method,
+    url: origin + path,
+    headers: { "content-type": "application/json", ...headers },
+    body: body === undefined ? "" : JSON.stringify(body),
+  });
+  if (!res || Number(res.status) >= 300) {
+    throw new Error(`documents API ${method} ${path} -> ${res && res.status}: ${String((res && res.body) || "").slice(0, 200)}`);
+  }
+  return res.body ? JSON.parse(String(res.body)) : {};
 }
 
 /**
- * Generate or refresh the store. `opts.full` ignores the manifest and rewrites every row (a repair).
- * Returns a per-collection report, which is also written to `_meta.json`.
+ * Generate/refresh the store. `opts.origin` is the server origin (the record API is served from it);
+ * `opts.headers` carries the triggering request's auth (cookie or bearer) so the API call is authorised.
+ * `opts.full` ignores the manifest and re-uploads every document.
  */
 export async function generate(A, db, opts) {
+  const origin = String((opts && opts.origin) || "").replace(/\/+$/, "");
+  const headers = (opts && opts.headers) || {};
   const full = !!(opts && opts.full);
-  // ⚠️ BLOCKER (tb-0034): the guest's filesystem root (`--runtime-root-fs`) is mounted READ-ONLY, so a
-  // write here fails with WASI EPERM and `trail run` exposes no second, writable mount. Until a
-  // writable mount exists (a TrailBase change) this returns a clear report instead of a 500, so the
-  // trigger route degrades rather than crashing. When the mount is added, the guard below simply
-  // stops firing and the generator runs.
-  const made = fs.createDir(ROOT);
-  if (!made && !fs.exists(ROOT)) {
-    return {
-      ok: false,
-      blocked: true,
-      reason: "the guest filesystem is read-only (WASI EPERM); a writable mount is required to generate the store",
-      root: ROOT,
-    };
-  }
-  const meta = await readMeta();
-  const report = { ok: true, ranAt: new Date().toISOString(), full, collections: {}, written: 0, removed: 0, skipped: 0 };
-  const tables = opts && opts.tables ? opts.tables : TABLES;
+  if (!origin) return { ok: false, blocked: true, reason: "no origin: the record API is required to write the documents" };
 
-  for (const table of tables) {
-    const fp = await fingerprintOf(db, table);
-    if (!full && meta.collections && meta.collections[table] === fp) {
-      report.collections[table] = { skipped: true, fingerprint: fp };
-      report.skipped++;
-      continue;
-    }
-    const dir = `${ROOT}/${table}`;
-    fs.createDir(dir);
+  // Existing documents: `collection|slug` -> { id, sourceUpdated }, read with SQL (the guest can read).
+  const existing = {};
+  for (const r of (await db.all('SELECT "collection", "slug", "source_updated", hex("id") FROM "documents"')) || []) {
+    existing[r[0] + "|" + r[1]] = { sourceUpdated: r[2], id: hexToB64(String(r[3])) };
+  }
+
+  const report = { ok: true, ranAt: new Date().toISOString(), full, uploaded: 0, updated: 0, removed: 0, skipped: 0, errors: [] };
+  const keep = new Set();
+
+  for (const table of (opts && opts.tables) || TABLES) {
     const rows = await readTable(table);
-    const keep = new Set();
-    let written = 0;
     for (const row of rows) {
-      const name = uuidOf(row.id) + ".md";
-      keep.add(name);
-      const file = `${dir}/${name}`;
-      if (!full) {
-        let existing = null;
-        try {
-          existing = await fs.readFile(file);
-        } catch {
-          existing = null;
+      const slug = uuidOf(row.id);
+      const key = table + "|" + slug;
+      keep.add(key);
+      const prev = existing[key];
+      if (!full && prev && prev.sourceUpdated === String(row.updated ?? "")) {
+        report.skipped++;
+        continue;
+      }
+      try {
+        const text = await docOf(A, table, row);
+        // No `/` in the filename: it becomes the object-store key, and a slash is a path separator
+        // there, not part of a name.
+        const file = { filename: table + "-" + slug + ".md", content_type: "text/markdown", data: b64url(text) };
+        if (prev) {
+          await call(origin, headers, "PATCH", "/api/records/v1/documents/" + prev.id, { source_updated: String(row.updated ?? ""), doc: file });
+          report.updated++;
+        } else {
+          await call(origin, headers, "POST", "/api/records/v1/documents", { collection: table, slug, source_updated: String(row.updated ?? ""), doc: file });
+          report.uploaded++;
         }
-        const m = existing ? existing.match(/^updated: (.+)$/m) : null;
-        if (m && m[1] === yaml(row.updated)) continue; // unchanged since the last run
-      }
-      let text = frontmatter(table, row);
-      if (table === "invoices" && A.invoiceDoc) text += "\n" + (await invoiceBody(A, row));
-      await fs.writeFile(file, text);
-      written++;
-      report.written++;
-    }
-    let removed = 0;
-    for (const name of (await fs.readdir(dir)) || []) {
-      if (/\.md$/.test(name) && !keep.has(name)) {
-        fs.removeFile(`${dir}/${name}`);
-        removed++;
-        report.removed++;
+      } catch (e) {
+        report.errors.push(`${key}: ${(e && e.message) || String(e)}`);
       }
     }
-    report.collections[table] = { rows: rows.length, written, removed, fingerprint: fp };
   }
 
-  await fs.writeFile(META, JSON.stringify(report, null, 2));
+  // Remove documents whose source row is gone.
+  for (const key of Object.keys(existing)) {
+    if (keep.has(key)) continue;
+    try {
+      await call(origin, headers, "DELETE", "/api/records/v1/documents/" + existing[key].id);
+      report.removed++;
+    } catch (e) {
+      report.errors.push(`${key} (delete): ${(e && e.message) || String(e)}`);
+    }
+  }
+
   return report;
 }
 
-/** The last run's report, or null if the store has never been generated. */
-export async function status() {
-  return await readMeta();
+/** A status summary read straight from the `documents` table. */
+export async function status(db) {
+  const rows = (await db.all('SELECT "collection", COUNT(*) FROM "documents" GROUP BY "collection"')) || [];
+  const collections = {};
+  let total = 0;
+  for (const r of rows) {
+    collections[r[0]] = Number(r[1]);
+    total += Number(r[1]);
+  }
+  return { collections, total };
 }
