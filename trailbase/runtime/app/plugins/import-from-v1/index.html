@@ -171,7 +171,13 @@
       fields: { name: text, category: { rel: "companies" }, barcode: text, display_id: text, cost_price: num, sale_price: num, box_size_qty: num } },
     { collection: "expenses", api: "expenses", fields: { name: text, description: text, amount: money, date: text } },
     { collection: "invoices", api: "invoices",
-      fields: { type: { enum: "invoice_types" }, invoiceNo: num, party: { rel: "parties" }, booker: { rel: "order_bookers" }, dated: text, duedate: text, description: text, discount_1: num, discount_2: num, discount_rs: money, completed: flag, deleted: flag } },
+      fields: { type: { enum: "invoice_types" }, invoiceNo: num, party: { rel: "parties" }, booker: { rel: "order_bookers" }, dated: text, duedate: text, description: text, discount_1: num, discount_2: num, discount_rs: money, completed: flag, deleted: flag,
+        // tb-0026: attribute a historical author. The source id is a PocketBase `_user` id and cannot be
+        // mapped, so the whole migration is attributed to the operator running it — and ONLY for rows the
+        // source had attributed (`v ? operatorId : null`). Sending it per row here (rather than as a
+        // post-pass) keeps one code path, and `buildBody` passes a function spec through untransformed,
+        // which is exactly what this needs: the record API takes the dashed UUID `operatorId` already is.
+        invoice_maker: function (v) { return v ? operatorId : null; } } },
     { collection: "invoices_return_reference", api: "invoices_return_reference", fields: { original_invoices: { rel: "invoices" } } },
     { collection: "transactions", api: "transactions",
       fields: { invoice: { rel: "invoices", required: true }, item: { rel: "items", required: true }, cost_price: num, price: num, qty: num, scheme: num, discount_1: num, discount_2: num, discount_rs: money, deleted: flag } },
@@ -182,6 +188,15 @@
   var WIPE_ORDER = ["payments", "transactions", "invoices_return_reference", "invoices", "party_companies", "order_booker_companies", "items", "order_bookers", "parties", "expenses", "areas", "companies", "categories", "sections"];
 
   var BATCH = 500, MAX_ERRORS = 500, PAGE = 500, RATE_WINDOW_MS = 5000;
+
+  // The importing operator's `_user` id, resolved at login (tb-0026). Every imported invoice whose
+  // SOURCE had `invoice_maker` set is attributed to this user — ONE honest attribution for the whole
+  // migration, never a per-row email match. Rows the source never attributed stay NULL, which keeps
+  // "never had an author" distinct from "attributed to the importer".
+  //
+  // It therefore means "imported by", not "created by", for historical rows; any screen that shows
+  // authorship must not present it otherwise.
+  var operatorId = null;
 
   function text(v) { return v === undefined || v === null ? "" : String(v); }
   function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
@@ -282,6 +297,12 @@
         var r = await req("POST", "/api/auth/v1/login", { email: email, password: password }, false);
         if (!r || !r.auth_token) throw new Error("TrailBase returned no auth token");
         token = r.auth_token;
+        // Resolve the operator's `_user` id now that we hold a bearer token (tb-0026). `_user` has no
+        // record API, so the app exposes the CALLER's own id at `GET /session`, answered from the
+        // bearer token by the host. Failing here is better than importing 8,927 invoices with no author.
+        var s = await req("GET", "/session");
+        operatorId = (s && s.id) || null;
+        if (!operatorId) throw new Error("Could not read the session user id from /session");
       },
       async createMany(api, bodies) {
         var r = await req("POST", "/api/records/v1/" + api, bodies);
@@ -308,7 +329,7 @@
   }
 
   /* -------------------------------------------------------------- the state */
-  var state = { status: "idle", phase: "", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, droppedMakers: 0, stop: false };
+  var state = { status: "idle", phase: "", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, attributedMakers: 0, stop: false };
   var el = function (id) { return document.getElementById(id); };
   var fill = function (id, v) { var e = el(id); if (e) e.textContent = v == null ? "" : String(v); };
   var int = function (n) { return Number(n || 0).toLocaleString(); };
@@ -454,7 +475,7 @@
     if (!pbUrl) return flash("error", "PocketBase URL is required.");
     if (!tbUrl || !tbIdentity || !tbPassword) return flash("error", "TrailBase URL, user email and password are required.");
 
-    state = { status: "running", phase: "starting", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, droppedMakers: 0, stop: false };
+    state = { status: "running", phase: "starting", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, attributedMakers: 0, stop: false };
     rateBuf = [];
     render();
 
@@ -517,7 +538,7 @@
             if (state.stop) break;
             stats.read++;
             state.done++;
-            if (step2.collection === "invoices" && src.invoice_maker) state.droppedMakers++;
+            if (step2.collection === "invoices" && src.invoice_maker) state.attributedMakers++;
             state.rate = sampleRate(state.done);
             scheduleRender();
             if (!dryRun) {
@@ -554,7 +575,9 @@
 
       state.status = state.stop ? "stopped" : (state.errorTotal ? "done-with-errors" : "done");
       state.phase = "finished"; state.current = ""; state.rate = null;
-      if (state.droppedMakers) log("warn", int(state.droppedMakers) + " invoice(s) had invoice_maker set; that reference is dropped (PocketBase _user ids have no TrailBase counterpart).");
+        // tb-0026: the historical author is no longer dropped. State what the count MEANS, because the
+        // column now reads "imported by" for these rows and "created by" for post-cutover ones.
+        if (state.attributedMakers) log("info", int(state.attributedMakers) + " invoice(s) had invoice_maker set; each is attributed to this import's operator (tb-0026). The column means \"imported by\" for these rows, not \"created by\".");
       log("info", "Finished. " + (state.errorTotal ? state.errorTotal + " error(s)." : "No errors."));
       flash(state.errorTotal ? "warn" : "ok", "Import " + state.status + ".");
     } catch (e5) {

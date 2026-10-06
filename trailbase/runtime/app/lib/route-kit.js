@@ -319,6 +319,25 @@ export function userHex(req) {
     : b64ToHex(id);
 }
 
+/**
+ * The logged-in user's id in the canonical dashed-UUID form the RECORD API writes.
+ *
+ * `userHex` is for the invoice lease/creator hex columns; this is for a relation write — the migration
+ * plugin (tb-0026) attributes imported invoices to the operator, and the record API takes relation ids
+ * as dashed UUIDs (the importer's own `toUuid`). Returns "" when there is no session.
+ */
+export function userId(req) {
+  const id = String((req && req.user && req.user.id) || "");
+  if (!id) return "";
+  if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(id)) {
+    return id.toLowerCase();
+  }
+  const hex = b64ToHex(id);
+  return hex.length === 32
+    ? `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`.toLowerCase()
+    : id;
+}
+
 /** Tolerant percent-decoding for a single value (a route id), the dispatcher's `decode`. */
 export function decode(value) {
   try {

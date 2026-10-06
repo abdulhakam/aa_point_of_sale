@@ -1,7 +1,7 @@
 ---
 title: "Attribute imported invoices.invoice_maker to the logged-in operator instead of dropping it"
 type: task
-status: todo
+status: doing
 priority: low
 created: 2026-09-29
 updated: 2026-09-29
@@ -67,29 +67,28 @@ CREATE INDEX "idx_invoices_invoice_maker" ON "invoices" ("invoice_maker");
 
 ## The work
 
-- [ ] **Resolve how the plugin learns the destination `_user` id.** This is the one genuinely
-      unknown. The plugin already authenticates to TrailBase — `POST /api/auth/v1/login` against
-      `base`, storing the token at `index.html:227` — but `_user` is a **hidden** table that
-      config.textproto deliberately does not declare as a record API, so there is no
-      `/api/records/v1/_user` to read. Options to evaluate, cheapest first: the id carried by the
-      auth token, `/api/auths/refresh`, or a small guest endpoint that returns the session user.
-      **Whatever is chosen, verify it returns a `_user` id and not a token subject or a record id.**
-- [ ] **Set `invoice_maker` on import.** In the `invoices` PLAN entry, write the resolved user id
-      into the `invoice_maker` field for every row whose source `invoice_maker` was set. Rows whose
-      source maker was `NULL` should stay `NULL` — that preserves "never had an author" as distinct
-      from "attributed to the importer", and is the least inventive reading.
-- [ ] **Replace the `droppedMakers` warning.** `index.html:498` counts
-      `src.invoice_maker` and `index.html:535` logs the drop. That must become a count of
-      *attributed* invoices, or the log will keep reporting a loss that no longer happens.
-- [ ] **Verify by count, not by eye.** After a clean-slate import,
-      `SELECT COUNT(*) FROM invoices WHERE "invoice_maker" IS NOT NULL` must equal
-      `SELECT COUNT(*) FROM invoices WHERE "invoice_maker" IS NOT NULL` on the source — 8,927 on
-      current data. Assert it in the run log so a future regression surfaces immediately.
-- [ ] **Confirm the FK holds.** Every attributed value must resolve against `_user`; a dangling
-      reference would be worse than `NULL`, because it would look answered and be wrong.
-- [ ] **Say it in the UI.** The invoice screen and any print view that shows authorship must not
-      claim these invoices were entered by the logged-in operator. This is the item most likely to
-      be forgotten, and it is the one that turns a data choice into a false statement.
+**CODE IN PLACE 2026-10-06; verification pending a browser re-import.** The three code subtasks are done
+and the run does not need re-deriving:
+
+- [x] **Resolve how the plugin learns the destination `_user` id.** Chosen: **a small guest endpoint** —
+      `GET /session` (`runtime/ahscripts/routes/session/route.ts`) returns the CALLER's own
+      `{id, hex, name}`. The host resolves `req.user` from the cookie OR the `Authorization: Bearer`
+      header (`lib.rs`), so the plugin's bearer-authenticated call is answered. `route-kit.userId()`
+      gives the dashed-UUID form the record API writes; `userHex()` the hex form. Verified live by
+      `guest-smoke.mjs` (`GET /session returns the signed-in user's id`, 113/113).
+- [x] **Set `invoice_maker` on import.** The `invoices` PLAN entry gained
+      `invoice_maker: function (v) { return v ? operatorId : null; }`; `buildBody` already passes a
+      function spec through untransformed, and the record API exposes `invoice_maker` (the `invoices`
+      API has no column restriction). `operatorId` is resolved in `trailBase.login()` right after the
+      auth token. Rows the source never attributed stay `NULL`.
+- [x] **Replace the `droppedMakers` warning.** `state.droppedMakers` → `attributedMakers`, and the log
+      now says the reference is *attributed to this import's operator*, not dropped.
+- [ ] **Verify by count, not by eye.** Needs a browser re-import: `SELECT COUNT(*) FROM invoices WHERE
+      "invoice_maker" IS NOT NULL` must be 8,927.
+- [ ] **Confirm the FK holds.** Needs the same re-import: every attributed value must resolve against
+      `_user`, not be dangling.
+- [ ] **Say it in the UI.** Not started — the invoice screen / print view must not present `imported by`
+      historical rows as `created by`.
 
 ## Constraints this must respect
 

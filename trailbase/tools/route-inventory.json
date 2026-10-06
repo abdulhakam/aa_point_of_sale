@@ -17,6 +17,18 @@
     },
     {
       "method": "GET",
+      "path": "/session",
+      "probe": {
+        "auth": true
+      },
+      "expect": [
+        200,
+        303
+      ],
+      "note": "the signed-in user's id, for the migration plugin (tb-0026)"
+    },
+    {
+      "method": "GET",
       "path": "/",
       "probe": {
         "auth": false

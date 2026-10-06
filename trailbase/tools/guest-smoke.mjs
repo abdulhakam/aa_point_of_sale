@@ -669,6 +669,15 @@ async function main() {
       `${paymentsPage.status}`
     );
 
+    // The migration plugin's operator-id endpoint (tb-0026): `_user` has no record API, so the app
+    // exposes the CALLER's own id here, resolved from the session. Must be non-empty for a signed-in user.
+    const session = await get(cookies, "/session");
+    check(
+      "GET /session returns the signed-in user's id",
+      session.status === 200 && session.body.includes('"id":"') && !session.body.includes('"id":""'),
+      `${session.status} ${session.body.slice(0, 90)}`
+    );
+
     // The host poller resolves /jobs/reconcile through the generic router at startup and fires it
     // minutely (tb-0030 step 6 made this folder-driven; before that it required a dispatcher FILE,
     // which no longer exists). The poller calls `run_route` DIRECTLY, so it never shows up as a normal
