@@ -16,6 +16,15 @@ related_to: ["[[import-from-v1-drops-invoice-maker]]", "[[trailbase-client-side-
 cash-memo work, and everything else about the migration is correct without it. Do not pull this
 forward unless someone asks who entered historical invoices.
 
+**VERIFIED NOT DONE, 2026-10-06** (asked directly, in case the vault was stale). Both the data and the
+code say it is still open:
+- `SELECT COUNT(*) FROM invoices WHERE "invoice_maker" IS NOT NULL` on the depot = **0**, out of 8,927
+  invoices — every maker reference is still dropped.
+- The importer still drops it: `runtime/app/plugins/import-from-v1/index.html:520` increments
+  `state.droppedMakers`, and `:557` logs `"…had invoice_maker set; that reference is dropped"`.
+
+So the `status: todo` is correct. Nothing below has been started.
+
 ## The decision
 
 Today the importer **drops** `invoices.invoice_maker`: PocketBase's `_user` ids and TrailBase's

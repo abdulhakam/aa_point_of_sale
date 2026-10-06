@@ -82,6 +82,12 @@ than patching the field, because a patch is a second copy of the document's fiel
 > 2026-10-03 in `d8b5a8e3` (tb-0032 step 3). So **no report table needs materialising**; the invoice
 > `inv_doc` table stands on its own merits (a write-through document, not a performance measure).
 > [[tb-0033-trigger-maintained-report-tables]] is **skipped**; see [[report-cost-on-a-whole-database]].
+>
+> **The packaging half (§1, step 16) is ALSO SKIPPED (2026-10-06, operator).** The three-artifact
+> composition (`wasm-tools compose`) existed to make the hot path fast, and the boundary's +71% cost was
+> the argument against separate components. With the perf premise withdrawn, the split is a pure
+> architecture/packaging goal with no measured problem to solve, and the operator chose not to spend the
+> Rust/build effort on it. The decision is retained as the record of the analysis, not as work to do.
 
 - A frontend-triggered invalidation may refresh **Tier 3 only**. `service.invalidate()` dropping
   Tier 2 synchronously after every management write — today's behaviour — is retired.

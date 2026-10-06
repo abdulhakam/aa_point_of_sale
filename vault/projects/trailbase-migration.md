@@ -110,7 +110,7 @@ on.
 [x] 13. Migrate the production data                       -> [[pos-0027-migrate-production-data-to-trailbase]] (done 2026-09-29)
 [--] 14. Gate the component split on a parity oracle      -> gate WAIVED by [[legacy-parity-checks-waived]]; became [[tb-0032-manifest-first-refactor]]
 [x] 15. Retire the route.ts dispatcher (file-router conventions, no data DAG) -> [[tb-0030-retire-the-route-ts-dispatcher]] (done 2026-10-05: ~73 route folders, dispatcher deleted, mode: crawler; guest-smoke 112)
-[ ] 16. Three generic artifacts: composer + separate      -> [[component-split-and-sql-materialised-tables]]
+[--] 16. Three generic artifacts: composer + separate      -> [[component-split-and-sql-materialised-tables]] (SKIPPED 2026-10-06 by the operator: its driver was the report perf cliff, which was a wrong measurement — the SQL runs in ~0.05-1.2 s; see [[report-cost-on-a-whole-database]]. It is now a pure architecture/packaging goal, not a fix, and the operator chose not to spend the Rust/build effort on it)
 [--] 17. Trigger-maintained Tier 2 materialised tables    -> [[tb-0033-trigger-maintained-report-tables]] (SKIPPED 2026-10-06: the premise was wrong — the SQL runs in ~0.05-1.2 s and the slowness was JS reprocessing in the route handlers, fixed 2026-10-03)
 [x] 18. Remove the code the reference graph proves dead  -> [[tb-0031-remove-proven-dead-code]] (done 2026-10-01: 13 guest exports, 5 Rust items, 5 orphaned tools; `jobs.rs` kept, see open decision 6)
 [--] 19. Measure and bound report cost on a whole database -> [[report-cost-on-a-whole-database]] (measured 2026-10-04; its SQL claim was WRONG — see the note's correction — so the step-17 promotion it caused is withdrawn and this step needs revisiting)

@@ -44,16 +44,33 @@ actual application, so the report engine can be verified against the Node app on
 - [x] Login flow: the app's own `/login` POST — exchanges credentials via TrailBase's JSON login
       and sets the auth cookies ([[guest-outbound-http-and-login]]); bad password → 401
 - [ ] `/p/<slug>/data` gzip; binary static assets (current assets are all text)
+      **AUDITED 2026-10-06.** *binary static assets:* **DONE** — the guest `routeKit.readStatic` falls
+      back to `application/octet-stream` via `manifests.contentTypes()`, so a binary asset is served
+      correctly (all shipped assets happen to be text). *gzip:* **NOT done** — there is no
+      `content-encoding`/gzip anywhere in the host or the guest; only the `accept-encoding` header is
+      forwarded (`lib.rs:406`). So the open piece is gzip on the uncapped `/p/<slug>/data` payload (up
+      to ~11.9 MB).
 - [ ] Record-API ACL/validation parity for writes (the guest writes raw SQL)
-- [ ] Invoices / cash-memos / printing — **out of scope by request** for the former Node
-      frontend (`frontend-ssr`, removed 2026-09-27)
-      ([[guest-frontend-feature-parity-gaps]]), so not parity work for this port; the platform
-      only makes them authorable as new pages
-- [x] Jobs + worker queue — durable in-process queue done ([[jobs-in-process-durable-queue]]);
-      HTTP worker fan-out not built
+      **AUDITED 2026-10-06 — this is a deliberate divergence, not a bug.** Writes go through
+      `routeKit.write` → `sqlite.execute`, guarded by a SQL **blocklist** (`api/sqlite.rs` `FORBIDDEN`:
+      DROP/ATTACH/DETACH/PRAGMA/VACUUM/REINDEX) and by `management.missingRequired` field validation.
+      There is **no per-table record-API ACL**, because the guest's own auth gate (`routeKit.userOf` +
+      `loginRedirect` in every route folder) already gates every authenticated route. Record it as a
+      divergence if that matters to a reviewer; do not call it parity.
+- [--] Invoices / cash-memos / printing — **SUPERSEDED 2026-10-06.** Was "out of scope by request" for
+      the former Node frontend; those surfaces are now **built** on the guest
+      ([[tb-0021-invoices-cashmemos-printing]], [[tb-0028-guest-transactional-screens-and-mobile]],
+      [[guest-invoice-lifecycle]]) — invoice entry, the spreadsheet grid, the standalone document, and
+      cash-memo/printing.
+- [x] Jobs + worker queue — durable in-process queue done ([[jobs-in-process-durable-queue]]); **the HTTP
+      worker fan-out is ALSO built** (AUDITED 2026-10-06 — `app/lib/queue.js` posts `${origin}/worker/1/step`
+      across `concurrency` workers, `routeKit.jobsReconcile` passes `{origin, concurrency}`, and
+      `api/fetch.rs` provides the response-with-headers client it needs). The old "HTTP worker fan-out not
+      built" note was **stale**.
 - [x] Adapt the smoke suite to drive the guest (55/55 and pinned totals) —
-      `trailbase/tools/guest-smoke.mjs`, **71/71 checks pass** (guest is on TrailBase's own port;
-      69 when this was written)
+      `trailbase/tools/guest-smoke.mjs`, **112/112** today (was 71 when this box was ticked; the suite
+      grew with the route-folder and preset work — it now covers the host poller, the static mounts, the
+      auth gate and the manifest presets).
 
 ## Related
 
