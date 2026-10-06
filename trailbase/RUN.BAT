@@ -50,8 +50,12 @@ rem
 rem /MIR makes the destination match the source exactly, so a file deleted or renamed in
 rem `runtime\` disappears here too. Robocopy exit codes 0-7 are success; 8 and above are
 rem failures.
+rem
+rem `/XD vaulter-lite` EXCLUDES the generated document store (tb-0034) from the mirror. Without it,
+rem `/MIR` would delete `%DEPOT%\runtime\vaulter-lite` on every start, because it exists only in the
+rem destination - so the store would silently lose everything it generated at each restart.
 echo Syncing runtime\ into %DEPOT%\runtime ...
-robocopy "runtime" "%DEPOT%\runtime" /MIR /NFL /NDL /NJH /NJS /NP >nul
+robocopy "runtime" "%DEPOT%\runtime" /MIR /XD vaulter-lite /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 (echo ERROR: could not sync runtime\ into %DEPOT%\runtime & endlocal & goto :eof)
 
 rem The migrations are synced for the same reason. The server applies what is in
