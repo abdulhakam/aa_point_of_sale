@@ -6,7 +6,7 @@ priority: high
 created: 2026-10-06
 tags: [trailbase, documents, markdown, filesystem, vaulter, invoices, jobs, wasm]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[invoice-document-write-through-and-rebuild]]", "[[tb-0027-materialised-invoice-documents]]", "[[batch-j-js-runtime-and-guest-app]]", "[[runtime-js-single-host]]", "[[kv-is-a-handoff-not-a-report-cache]]", "[[tb-0017-adopt-trail-runtime-js]]", "[[tb-0018-port-app-host-on-runtime-js]]"]
+related_to: ["[[invoice-document-write-through-and-rebuild]]", "[[tb-0027-materialised-invoice-documents]]", "[[jobs-in-process-durable-queue]]", "[[runtime-js-single-host]]", "[[kv-is-a-handoff-not-a-report-cache]]", "[[tb-0017-adopt-trail-runtime-js]]", "[[tb-0018-port-app-host-on-runtime-js]]"]
 ---
 
 # tb-0034 — vaulter-lite: a filesystem markdown document store
@@ -99,7 +99,7 @@ generated `vaulter-lite\` under the runtime root would be **deleted on the next 
      `invoice-doc.js`'s pattern (a fresh context evals the implementation and calls the same `generate`).
    - **hourly** — a **time-gated step inside the existing minutely poll** (`jobs.reconcile` → a check of
      "has an hour passed since `_meta.json`'s `lastRun`?"), so no host scheduler change is needed. This
-     is the same shape as [[batch-j-js-runtime-and-guest-app]]'s queue; the gate lives in JS.
+     is the same shape as [[jobs-in-process-durable-queue]]'s queue; the gate lives in JS.
 4. **A manual trigger** — `POST /vaulter-lite/regenerate` (admin) and `GET /vaulter-lite` (status: last
    run, per-collection counts), so it can be run and inspected without waiting for the hour. This is also
    how the smoke verifies it.
