@@ -71,8 +71,17 @@ durable job queue. The design, the measurements, and the one-definition enforcem
 [[invoice-doc-sync]]. Two things there are the general case rather than the invoice case and are
 worth carrying to the next tier-2 table: a trigger body is a *copy* of the build statement
 (SQLite cannot call one from a trigger), so the copies are machine-checked against the original
-rather than trusted; and a rename on a denormalised field re-derives the affected documents
-rather than patching the field, because a patch is a second copy of the document's field list.
+rather than trusted; and a rename on a denormalised field re-derives the affected documents rather
+than patching the field, because a patch is a second copy of the document's field list.
+
+> **CORRECTION 2026-10-06 — the report-table half of this decision is unnecessary.** Tier 2
+> materialised tables were chosen to move report results off the CPU cliff, but the cliff was never the
+> SQL: the reports are SQL and run in **~0.05–1.2 s** on the whole depot, inside the ~20 s deadline
+> (`node tools/report-sql-time.mjs --repeat 5`). The 20 s the report *path* hit came from **JS
+> reprocessing in the route handlers** — the `[mview] hydrate` of views the route never read — removed
+> 2026-10-03 in `d8b5a8e3` (tb-0032 step 3). So **no report table needs materialising**; the invoice
+> `inv_doc` table stands on its own merits (a write-through document, not a performance measure).
+> [[tb-0033-trigger-maintained-report-tables]] is **skipped**; see [[report-cost-on-a-whole-database]].
 
 - A frontend-triggered invalidation may refresh **Tier 3 only**. `service.invalidate()` dropping
   Tier 2 synchronously after every management write — today's behaviour — is retired.

@@ -60,6 +60,10 @@ Implemented entirely in runtime files: `app/lib/reports.js` exposes `fingerprint
 
 - **Cold is unchanged.** The first render of a heavy report still costs the full compute + render and
   can exceed the 20 s deadline (`paymentsbycompany` still 500s). This attacks the hot path only.
+  > **CORRECTED 2026-10-06:** that `paymentsbycompany` 500 was the pre-fix state. The report SQL runs in
+  > **~0.05–1.2 s**, and the cold 20 s came from **JS reprocessing in the route handlers** (the `[mview]
+  > hydrate`), removed 2026-10-03. Cold is inside the deadline now — see
+  > [[report-cost-on-a-whole-database]].
 - **Unbounded growth** as filters vary; a local deployment tolerates it, but an eviction policy
   (cap by age/count) is a later need.
 - **Staleness window** = the fingerprint memo (≤1.5 s), not zero.

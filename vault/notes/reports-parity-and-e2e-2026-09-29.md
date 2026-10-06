@@ -81,6 +81,13 @@ their full dataset. It *would* bite on any narrower range.
 `itemsales` and `profit` still exceed the ~20 s guest deadline on the cold path, exactly as
 [[report-performance-baseline]] records. This is the Tier 2 materialised-table problem, unchanged.
 
+> **CORRECTED 2026-10-06:** this was the **JS-era** report path, before the reports moved to SQL
+> ([[tb-0022-move-reports-to-sql]]). The SQL runs in **~0.05–1.2 s** and never neared the deadline. The
+> 20 s the *page* path did hit came from **JS reprocessing in the route handlers** (the `[mview]
+> hydrate`), removed 2026-10-03. There is no Tier 2 problem to fix, and
+> [[tb-0033-trigger-maintained-report-tables]] is **skipped** — see the correction in
+> [[report-cost-on-a-whole-database]].
+
 ### v1 (client-rendered, measured in-browser)
 
 | report | end-to-end | rows |

@@ -34,6 +34,11 @@ that instance is both slow and deadline-bounded:
   whole-table pass over a real `transactions` table can exceed the 20 s deadline and return a 500.
   The plan's answer is to keep heavy aggregation in SQLite (materialised views) and shard work into
   job steps ([[trailbase-guest-wasm-runtime-defaults]]).
+  > **CORRECTED 2026-10-06:** the reports no longer do per-row JS arithmetic — they are SQL, and run in
+  > **~0.05–1.2 s** on the whole depot, inside the deadline. The earlier 20 s report figures were **JS
+  > reprocessing in the route handlers** (the `[mview] hydrate`), removed 2026-10-03 — see
+  > [[report-cost-on-a-whole-database]]. The engine limit still holds for any genuinely long synchronous
+  > handler; it is just not what the reports hit.
 - A handler that blocks the clock cannot be used to fake a delay or a timeout; it must `await` a
   timer instead (`/spike/sleep` with `setTimeout` overlapped correctly: two 1500 ms sleeps in
   1792 ms).

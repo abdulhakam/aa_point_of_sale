@@ -80,16 +80,17 @@ host poller now resolves `/jobs/reconcile` through the generic router (a Rust ch
 the config-driven scheduler plus a folder-aware `feature-parity`/`route-inventory` rewrite remain
 follow-ups.
 
-**Next: step 17** — [[tb-0033-trigger-maintained-report-tables]] — before **step 16**, because six of the
-fourteen report statements exceed the WASM call deadline on their own and the measured cost is the shared
-prelude, not any one report; step 19's fix is step 17's output. The task scopes the first, bounded move:
-materialise the shared payments chain (`payments_base` → `payments_view`) as a trigger-maintained table,
-following the `inv_doc` pattern.
+**Next: step 16** (three generic artifacts) — **step 17 is SKIPPED (2026-10-06)**. Its premise was
+wrong: the report SQL runs in **~0.05–1.2 s** and never approached the 20 s deadline (`node
+tools/report-sql-time.mjs --repeat 5`: "no statement exceeds 20 s on its own"). The slowness measured
+on 2026-10-04 was **JS reprocessing in the route handlers** — the `[mview] hydrate` of views the route
+never read — removed **2026-10-03** in `d8b5a8e3`; the SQL was never changed. See the correction in
+[[report-cost-on-a-whole-database]] and the skipped task [[tb-0033-trigger-maintained-report-tables]].
 
-The other open items in the sequence, in the order they gate: **step 17** (trigger-maintained Tier 2
-materialised tables) before **16**, because six of the fourteen report statements exceed the WASM call
-deadline on their own; ~~**step 15** (retire `route.ts`)~~ **done**; **step 19** is measured and needs its fix, which is
-step 17.
+The other open items in the sequence: ~~**step 17** (trigger-maintained Tier 2 materialised tables)~~
+**skipped 2026-10-06**; ~~**step 15** (retire `route.ts`)~~ **done**; **step 19** was the measurement
+that produced step 17, so its premise is the same wrong one and it needs revisiting rather than acting
+on.
 
 ```text
 [x] 1. Design and validate the TrailBase schema          -> 17 tables, 17 record APIs
@@ -110,20 +111,24 @@ step 17.
 [--] 14. Gate the component split on a parity oracle      -> gate WAIVED by [[legacy-parity-checks-waived]]; became [[tb-0032-manifest-first-refactor]]
 [x] 15. Retire the route.ts dispatcher (file-router conventions, no data DAG) -> [[tb-0030-retire-the-route-ts-dispatcher]] (done 2026-10-05: ~73 route folders, dispatcher deleted, mode: crawler; guest-smoke 112)
 [ ] 16. Three generic artifacts: composer + separate      -> [[component-split-and-sql-materialised-tables]]
-[ ] 17. Trigger-maintained Tier 2 materialised tables    -> [[tb-0033-trigger-maintained-report-tables]] (resolves open decision 2; the shared prelude is the measured cost)
+[--] 17. Trigger-maintained Tier 2 materialised tables    -> [[tb-0033-trigger-maintained-report-tables]] (SKIPPED 2026-10-06: the premise was wrong — the SQL runs in ~0.05-1.2 s and the slowness was JS reprocessing in the route handlers, fixed 2026-10-03)
 [x] 18. Remove the code the reference graph proves dead  -> [[tb-0031-remove-proven-dead-code]] (done 2026-10-01: 13 guest exports, 5 Rust items, 5 orphaned tools; `jobs.rs` kept, see open decision 6)
-[ ] 19. Measure and bound report cost on a whole database -> [[report-cost-on-a-whole-database]] (measured 2026-10-04; step 17 promoted ahead of 16)
+[--] 19. Measure and bound report cost on a whole database -> [[report-cost-on-a-whole-database]] (measured 2026-10-04; its SQL claim was WRONG — see the note's correction — so the step-17 promotion it caused is withdrawn and this step needs revisiting)
 ```
 
 **Step 19 is new, and it reorders 16 and 17.** On 2026-10-04 the depot was rebuilt and re-imported
 from the legacy oracle (60,245/60,245, 0 failed — [[fresh-import-and-whole-database-digest-2026-10-04]])
-and the report path measured against it for the first time. The result: every one of the fourteen
+and the report path measured against it for the first time. ~~The result: every one of the fourteen
 report screens answers **200** and the slowest page is **186 ms**, but **six of the fourteen SQL
 statements exceed the ~20 s WASM call deadline on their own**, best-of-3, with no host overhead at all
 (`ledgers/booker` 29.1 s, `ledgers/party` 20.6 s). The cost is in the shared `prelude.sql`, which
 every payments report pays, so the fix is the one already chosen for open decision 2 — **step 17
-before step 16**. One O(rows × dates) term was removed along the way, and the account of how much it
-was worth had to be corrected from 3× to 9%: [[ledger-party-correlated-balance-was-the-whole-cost]].
+before step 16**.~~ **CORRECTED 2026-10-06:** the page figures stand, but the SQL claim does not — the
+statements run in ~0.05–1.2 s and the slowness was JS reprocessing in the route handlers, removed
+2026-10-03 (`d8b5a8e3`). Neither ordering nor step 17 survives this; see
+[[report-cost-on-a-whole-database]]. One O(rows × dates) term was removed along the way, and the
+account of how much it was worth had to be corrected from 3× to 9%:
+[[ledger-party-correlated-balance-was-the-whole-cost]].
 
 **Step 10 used to gate steps 11 and 13.** It no longer gates anything in the way it was written,
 because its answer made both of them impossible rather than shaping them. Step 13 turned out not to
@@ -208,7 +213,7 @@ being worked around silently.
 | # | Question | Options on the table | Note |
 |---|---|---|---|
 | 1 | ~~**Cutover shape**~~ — **DECIDED 2026-10-03: shape B, guest only.** Shape A was never available, because `frontend/` was deleted from git on 2026-09-29 | settled | [[cutover-is-guest-only]] |
-| 2 | ~~**Report cold path**~~ — **decided 2026-09-28.** SQL aggregation won: report results move into trigger-maintained materialised tables, which also satisfies `reports.no_precomputation` because Tier 2 cannot disagree with its base table. ⚠️ **2026-10-04: this decision is now the critical path.** Measured on a whole-database import, six of fourteen report statements exceed the 20 s call deadline on their own and the cost is the shared prelude — so step 17 is promoted ahead of step 16 | chosen: SQL aggregation + trigger maintenance | [[component-split-and-sql-materialised-tables]], [[report-cost-on-a-whole-database]] |
+| 2 | ~~**Report cold path**~~ — **decided 2026-09-28.** SQL aggregation won: report results move into trigger-maintained materialised tables, which also satisfies `reports.no_precomputation` because Tier 2 cannot disagree with its base table. ⚠️ **2026-10-06: the 2026-10-04 promotion is WITHDRAWN.** The measurement behind it was wrong — the report SQL runs in ~0.05–1.2 s and never neared the 20 s deadline; the slowness was JS reprocessing in the route handlers, removed 2026-10-03 (see [[report-cost-on-a-whole-database]]'s correction). Step 17 ([[tb-0033-trigger-maintained-report-tables]]) is **skipped**, and this decision is not on the critical path | chosen: SQL aggregation + trigger maintenance | [[component-split-and-sql-materialised-tables]], [[report-cost-on-a-whole-database]] |
 | 3 | **Date defaults on report routes** — three named options, none chosen | declared, code, or per-request | [[report-routes-ignore-date-defaults]] → **resolved 2026-10-02**, see [[report-default-window-comes-from-the-data]] |
 | 4 | **General Ledger opening balances** are not persisted anywhere, so the ledger cannot reproduce a historical balance | carry forward, compute, or persist | [[guest-frontend-feature-parity-gaps]] §4 |
 | 5 | **The 14/14 parity gate is gone** and nothing replaced it. Re-baseline against a fresh import, mark it historical, or rebuild a differential | **partly answered 2026-10-02**: exact output parity is **waived**, and `verify-spool-reports.mjs` is now a self-consistency gate | [[legacy-parity-checks-waived]], [[guest-parity-differential-not-reproducible]] |

@@ -3,7 +3,7 @@ title: Report cost on a whole database, measured 2026-10-04
 type: note
 status: active
 created: 2026-10-04
-updated: 2026-10-04
+updated: 2026-10-06
 tags: [pos, performance, reports, sql, wasm-deadline, whole-database, benchmarks]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[ledger-party-correlated-balance-was-the-whole-cost]]", "[[reports-and-ledgers]]", "[[heavy-report-blocks-runtime-threads]]", "[[fresh-import-and-whole-database-digest-2026-10-04]]", "[[component-split-and-sql-materialised-tables]]", "[[tb-0032-manifest-first-refactor]]", "[[guest-report-500-not-always-the-deadline]]", "[[party-and-booker-ledgers-render-empty-and-say-nothing]]", "[[legacy-view-filter-quotes-400]]"]
@@ -15,6 +15,19 @@ The first measurement of the guest's report path against a **freshly imported wh
 the first like-for-like comparison against the legacy app. Every figure below comes from
 `trailbase/tools/report-sweep.mjs`, `trailbase/tools/report-sql-time.mjs` and
 `trailbase/tools/db-digest.mjs`, on the depot rebuilt from scratch that day.
+
+> ⚠️ **CORRECTION 2026-10-06 — §2's timings are WITHDRAWN.** This note reported that six of the
+> fourteen report SQL statements took 17–29 s (§2). **Re-measured directly against the depot on
+> 2026-10-06, that is false.** Every statement runs in **~0.05–1.2 s** —
+> `node tools/report-sql-time.mjs --from 2024-01-01 --to 2026-10-04 --repeat 5` reports "no statement
+> exceeds 20 s on its own" (slowest `reports/profit` ~1.19 s). **The SQL was never the cause and was
+> never changed.** The report path was slow because the **route handlers re-ran work the SQL had
+> already done** — the `[mview] hydrate` of views the route never read — and that was removed
+> **2026-10-03** in `d8b5a8e3` (`refactor(trailbase): the JS view layer loses its last live consumer`,
+> tb-0032 step 3). That fix, not any SQL change, is what moved the reports inside the WASM deadline.
+> So: read §1 (what a user waited) as history, read §2's table as **withdrawn**, and treat the
+> "step 17 is the critical path" conclusion in "What this changes" as **wrong** — `tb-0033`, which that
+> conclusion created, is **skipped**.
 
 **Read the two sections separately.** They measure different things and only one of them is what a
 user waits for.
@@ -88,6 +101,11 @@ component 'tb-ah-run-js'` and answers `component responded unexpectedly`. See
 is a different fault and was transient — see [[guest-report-500-not-always-the-deadline]].
 
 ## 2. What the SQL costs: outside the deadline
+
+> ⚠️ **WITHDRAWN 2026-10-06** — the table in this section is wrong (17–29 s). Re-measured: ~0.05–1.2 s,
+> no statement over 20 s. The slowness was JS reprocessing in the route handlers, removed 2026-10-03.
+> See the correction at the top of this note. The text below is kept as the record of the withdrawn
+> claim.
 
 `report-sweep.mjs` cannot tell you *why* a request hit 20 s, because the request refuses to wait that
 long. `report-sql-time.mjs` runs the same composed statement — the app's own
@@ -218,16 +236,22 @@ Two caveats that cut against the guest, stated because they are real:
   the two ledgers that need it, rendering 1,000 rows. So the comparison is generous to the guest by
   construction.
 
-And the guest's own cost is not hidden by the ratio: **six of its fourteen statements exceed the 20 s
+~~And the guest's own cost is not hidden by the ratio: **six of its fourteen statements exceed the 20 s
 call deadline on their own** (§2). On a bigger dataset, or with a wider default window, the guest will
-start failing at the deadline too — which is why step 17 is the critical path and not a nice-to-have.
+start failing at the deadline too — which is why step 17 is the critical path and not a nice-to-have.~~
+**WITHDRAWN 2026-10-06:** §2 is wrong; the statements run in ~0.05–1.2 s. The slowness was JS
+reprocessing in the route handlers, removed 2026-10-03. Step 17 is not needed for performance.
 
 
 ## What this changes
 
-- **Step 17 is now the critical path for report performance**, ahead of step 16. Measured here: the
+- ~~**Step 17 is now the critical path for report performance**, ahead of step 16. Measured here: the
   shared prelude is the cost, and materialising it is the already-chosen answer. Six of fourteen
-  statements are already over the deadline on a whole database — before the shop's data grows at all.
+  statements are already over the deadline on a whole database — before the shop's data grows at all.~~
+  **WITHDRAWN 2026-10-06 — see the correction at the top.** The premise is not reproducible: the
+  statements run in ~0.05–1.2 s, and the slowness was JS reprocessing in the route handlers (the
+  `[mview] hydrate`), removed 2026-10-03. There is nothing to materialise for performance; `tb-0033` is
+  skipped.
 - The guest's advantage is **structural, not a tuning win**: legacy's cost is proportional to total
   rows, the guest's to rows in the window. It widens as the data grows, which is the opposite of what
   happens to a system that is merely slow today.

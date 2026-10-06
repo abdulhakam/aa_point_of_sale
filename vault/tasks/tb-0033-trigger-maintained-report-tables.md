@@ -1,17 +1,28 @@
 ---
 title: tb-0033 — Trigger-maintained Tier 2 report tables (step 17)
 type: task
-status: todo
+status: skipped
 priority: high
 created: 2026-10-06
-tags: [trailbase, reports, sql, materialised-tables, triggers, performance, step-17]
+tags: [trailbase, reports, sql, materialised-tables, triggers, performance, step-17, skipped]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[component-split-and-sql-materialised-tables]]", "[[report-cost-on-a-whole-database]]", "[[invoice-document-write-through-and-rebuild]]", "[[invoice-doc-sync]]", "[[tb-0027-materialised-invoice-documents]]", "[[materialised-store-cannot-be-a-separate-database]]", "[[money-is-2dp-everywhere]]", "[[guest-report-performance-options]]", "[[tb-0015-integer-cents-for-money]]"]
 ---
 
 # tb-0033 — Trigger-maintained Tier 2 report tables (step 17)
 
-## Why this is the critical path
+> **SKIPPED 2026-10-06 — the premise was wrong.** This task was created from
+> [[report-cost-on-a-whole-database]] §2, which claimed six of the fourteen **report SQL statements**
+> took 17–29 s. **Re-measured directly against the depot, that is false**: every statement runs in
+> **~0.05–1.2 s** (`node tools/report-sql-time.mjs --from 2024-01-01 --to 2026-10-04 --repeat 5`), and
+> the tool's own verdict is "no statement exceeds 20 s on its own". **SQL was never changed** for this
+> and never needed to be: the slowness the sweep measured was **JS reprocessing in the route
+> handlers** — the route re-running work the statement had already done, i.e. the `[mview] hydrate` of
+> views it never read — removed **2026-10-03** in `d8b5a8e3` (`tb-0032` step 3). With that gone the
+> reports answer inside the WASM deadline, so there is nothing to materialise for performance. The body
+> below is kept as the record of what was proposed and why, not as work to do.
+
+## Why this was the critical path (withdrawn)
 
 Measured 2026-10-04 on a whole-database import — [[report-cost-on-a-whole-database]] — **six of the
 fourteen report statements exceed the ~20 s WASM call deadline on their own**, before any host overhead:
