@@ -20,9 +20,13 @@
  */
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const arg = (n, d) => { const i = process.argv.indexOf(n); return i > -1 ? process.argv[i + 1] : d; };
-const LEGACY_ROOT = arg("--legacy-root", "legacyforparity/standalone/.next/server/app");
+const LEGACY_ROOT = arg(
+  "--legacy-root",
+  fileURLToPath(new URL("../../legacyforparity/standalone/.next/server/app", import.meta.url))
+);
 const JSON_OUT = arg("--json", "");
 
 /** The legacy app's routes, from the bundle that serves them. */
@@ -57,7 +61,9 @@ function describe(file) {
  * dispatcher, which step 6 then deleted. The folder names ARE the route: `{param}` is a single segment
  * and `[...rest]` a catch-all. Read by walking, not by grepping a dispatcher — there is none any more.
  */
-function guestRoutes(routesDir = "trailbase/runtime/ahscripts/routes") {
+function guestRoutes(
+  routesDir = fileURLToPath(new URL("../runtime/ahscripts/routes", import.meta.url))
+) {
   const set = new Set();
   const symbol = (seg) =>
     seg.startsWith("{") && seg.endsWith("}")
@@ -76,7 +82,7 @@ function guestRoutes(routesDir = "trailbase/runtime/ahscripts/routes") {
 
   // The declarative pages and their data endpoints are served by slug as well as by the `p/[...slug]`
   // folder, so they are added from the manifests on disk.
-  const pagesDir = "trailbase/runtime/app/pages";
+  const pagesDir = fileURLToPath(new URL("../runtime/app/pages", import.meta.url));
   const walk = (dir) => {
     for (const e of readdirSync(dir)) {
       const p = join(dir, e);

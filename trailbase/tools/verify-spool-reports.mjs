@@ -107,14 +107,30 @@ async function verifyPageColumns() {
   };
   walk(PAGES_DIR);
 
+  // A page manifest may name a COLUMN/FILTER PRESET instead of spelling the object out
+  // (`app/manifests/page-presets.json`, tb-0030 step 7). A raw read sees the NAME, i.e. a string, so
+  // `c.key` is `undefined` and the check reports a phantom "column absent from the projection" with an
+  // empty name — which is exactly how this gate wrongly went red for payments and salesreport. Expand
+  // strings here exactly as `normalizeMeta` does in the guest before checking.
+  const PRESETS_PATH = join(repo, "trailbase", "runtime", "app", "manifests", "page-presets.json");
+  const presets = existsSync(PRESETS_PATH)
+    ? JSON.parse(readFileSync(PRESETS_PATH, "utf8"))
+    : { columns: {}, filters: {} };
+  const expand = (list, table) =>
+    (Array.isArray(list) ? list : []).flatMap((entry) => {
+      if (typeof entry !== "string") return [entry];
+      const hit = table ? table[entry] : undefined;
+      return hit === undefined ? [] : Array.isArray(hit) ? hit : [hit];
+    });
+
   for (const [name, def] of manifests) {
     const spec = REGISTRY[name];
     if (!spec) {
       issues.push(`${name}: a report page exists with no spooled statement`);
       continue;
     }
-    const columns = Array.isArray(def.columns) ? def.columns : [];
-    const missing = columns.map((c) => c.key).filter((k) => !spec.cols.includes(k));
+    const columns = expand(def.columns, presets.columns);
+    const missing = columns.map((c) => c && c.key).filter((k) => !k || !spec.cols.includes(k));
     if (missing.length) issues.push(`${name}: page columns absent from the projection: ${missing.join(", ")}`);
     // Each totals entry names a key on the totals row (or a composed `join` of them), so an
     // unmatched key prints "undefined".
