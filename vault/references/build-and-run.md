@@ -175,6 +175,12 @@ to a chosen `_user`:
 node trailbase\tools\import-v1-tui.mjs --wipe --dest trailbase\traildepot\data\main.db --source legacyforparity\backend\pb_data\data.db
 ```
 
+For a from-scratch reload, `trailbase\devreset.bat` does `clear_db.bat` **plus** re-places the
+prebuilt guest-wasm into `traildepot\wasm\` (from `target\wasm32-wasip2\release\`, falling back to
+the components already in the depot), so no `cargo build` is needed; `trailbase\import.bat` then
+runs the importer with `--user admin@localhost --wipe --yes` and initialises `data\main.db` first if
+it is missing. Order: `devreset.bat` → `import.bat` → `RUN.BAT`.
+
 `--dry-run` first if unsure; `--yes` skips the setup screen; `--plain` prints plain lines. The tool
 takes a write lock on `main.db`, so a running server is the only source of `SQLITE_BUSY`
 ([[v1-direct-import-tool]]).

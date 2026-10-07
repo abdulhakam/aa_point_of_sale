@@ -52,6 +52,24 @@ node trailbase/tools/import-v1-tui.mjs \
 **Stop the TrailBase server first.** The tool takes a write lock on `main.db`; a running server is
 the only source of `SQLITE_BUSY`. It sets `busy_timeout=15000` and `foreign_keys=ON`.
 
+### Wrappers: `devreset.bat` and `import.bat`
+
+Two `.bat` wrappers in `trailbase/` turn a from-scratch reload into one command each:
+
+- **`trailbase\devreset.bat`** — runs `clear_db.bat` (which wipes `traildepot\` and re-copies the
+  checked-in sources) **and then re-places the prebuilt guest-wasm components** into
+  `traildepot\wasm\`, so no `cargo build` is needed. It prefers the last build output in
+  `target\wasm32-wasip2\release\`; if that is gone it stashes the components already deployed in
+  `traildepot\wasm\` before the wipe and restores them. It warns if neither exists.
+- **`trailbase\import.bat`** — runs this tool against the v1 `data.db` with
+  `--user admin@localhost --wipe --yes` (extra args are forwarded). It initialises `traildepot\data\main.db`
+  and the admin user first if the depot does not exist yet (the same bootstrap `RUN.BAT` uses), so it
+  works on a freshly `devreset` depot. `--wipe` makes it destructive to existing business rows in that
+  depot — see the warning at the top of the file.
+
+Flow: `devreset.bat` → `import.bat` → `RUN.BAT`. The two wrappers exist for offline/data-testing
+reloads of the production depot copy.
+
 ## What it does that the API path cannot
 
 | | API plugin | direct tool |
