@@ -242,6 +242,26 @@ start failing at the deadline too — which is why step 17 is the critical path 
 **WITHDRAWN 2026-10-06:** §2 is wrong; the statements run in ~0.05–1.2 s. The slowness was JS
 reprocessing in the route handlers, removed 2026-10-03. Step 17 is not needed for performance.
 
+> **Re-measured 2026-10-06 (later the same day, on a freshly reset + re-imported depot, uncontended),
+> and the correction above stands.** A session claim that appeared to contradict it — "`payments` and
+> `outstanding` return 500 at the 20 s deadline" — was **wrong: that was contention**, a runaway
+> `/reports/status` + `/login` request storm starving the 4-thread WASM runtime. On a quiet server:
+>
+> | guest route, `from=2024-01-01&to=2026-10-06` | cold | warm (rendered-page cache) |
+> |---|---|---|
+> | `/reports/payments` | 14.2 s | 0.20 s |
+> | `/reports/ledgers/general` | 11.3 s | 0.15 s |
+> | `/reports/itemsales` | 17.6 s | 0.15 s |
+> | `/reports/profit` | 17.1 s | 0.58 s |
+> | `/reports/paymentsbycompany` | 18.1 s | 0.51 s |
+> | `/reports/outstanding` | ~14 s (browser, operator-observed) | 0.11–1.2 s |
+>
+> **No guest report is a persistent failure**; every one that was retested answered 200. Cold heavy
+> reports land at ~11–18 s (under the deadline) and every repeat is served from `pagecache` in
+> 0.1–0.6 s. So the residual cost is the cold first view of the heavy reports, not a deadline 500.
+> The storm that fakes those 500s is a separate, real defect worth fixing — but it is not the
+> statements, and §2's withdrawal is correct.
+
 
 ## What this changes
 

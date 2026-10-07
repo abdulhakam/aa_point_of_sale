@@ -593,6 +593,10 @@ async function params(name, filters) {
     // `payments` filters on the raw payment type code (reports.js:127), which arrives as TEXT from a
     // query string and is CAST in the statement.
     type: text(f.type),
+    // The Supply Summary takes a SUBMITTED SET of sale invoices rather than a filter. The set arrives
+    // as ONE delimited string of HEX invoice ids, `|HEX|HEX|`, so a single text bind covers a list;
+    // the statement matches it with `instr(:invoices, '|' || hex(tv.invoice) || '|')`.
+    invoices: text(f.invoices),
     // Report-constant parameters, from the REGISTRY rather than the caller's filter: they describe
     // the report, not the user's query. `salesreport` is "unpaid recieving/return only"
     // (reports.js:146); `difference`/`stockreport` differ only in which aggregate they read.

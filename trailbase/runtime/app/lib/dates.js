@@ -106,3 +106,28 @@ export function legacyDate(value) {
   if (!m) return value ? String(value) : "";
   return `${m[3]}-${MONTHS[Number(m[2]) - 1] ?? m[2]}-${m[1]}`;
 }
+
+/**
+ * The invoice sheet's date, `Apr 11, 2026` (month name, day, year) — the legacy print header's shape,
+ * not the report period line's `11-Apr-2026`. Same text-first rule and the same MONTHS table as
+ * `legacyDate`, so the month names are spelled once.
+ */
+export function printDate(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ""));
+  if (!m) return String(value ?? "").slice(0, 10);
+  return `${MONTHS[Number(m[2]) - 1] ?? m[2]} ${Number(m[3])}, ${m[1]}`;
+}
+
+/**
+ * The invoice sheet's 12-hour time, `2:33:45 PM`. The legacy sheet sources this from the invoice's v1
+ * `created`; the import overwrites `created` with the import timestamp
+ * ([[guest-depot-created-is-import-time]]), so callers pass the invoice's `dated` instead and the time
+ * is the dated time.
+ */
+export function printTime(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(value ?? ""));
+  if (!m) return "";
+  const hh = Number(m[4]);
+  const h = hh % 12 || 12;
+  return `${h}:${m[5]}:${String(m[6] ?? "00")} ${hh >= 12 ? "PM" : "AM"}`;
+}

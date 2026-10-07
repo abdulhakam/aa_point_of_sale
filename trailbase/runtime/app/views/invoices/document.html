@@ -1,10 +1,11 @@
 {% extends 'layout.html' %}
 {% block body %}
 {# The standalone invoice document, rendered from the materialised `inv_doc` JSON document.
-   The printed page and this screen are therefore the same artefact: what an operator sees here is
-   exactly what the materialised build produced, and printing is a stylesheet rather than a second
-   renderer (vault/tasks/guest-invoice-lifecycle.md). A `?print=1` request drops the navigation so
-   the page is the document and nothing else. #}
+   The screen and the printout are the same artefact: printing is a stylesheet over this, not a second
+   renderer. The sheet mirrors the LEGACY print (`/app/invoices/print?invoiceId=…`) so browser printing
+   produces the same paper — header block (Party/Address/Booker/Remarks/Invoice #/Date/Time), the legacy
+   line columns (BOX SIZE, CTN/UNTS/FREE, UNIT/CTN price, TOTAL) and the legacy totals labels. A
+   `?print=1` request drops the navigation so the page is the document and nothing else. #}
 {% if print %}<p class="crumbs no-print"><a href="/invoices">← Invoices</a> <a href="/invoices/{{ invoice.id }}/grid">Edit</a></p>{% endif %}
 <article class="invoice-doc" data-invoice-doc>
   <header class="doc-head">
@@ -15,73 +16,66 @@
     </div>
     <div class="doc-meta">
       <div class="doc-type">{{ typeLabel }}</div>
-      <div class="doc-no">#{{ doc.invoiceNo }}</div>
-      <div class="doc-dated">{{ dated }}</div>
     </div>
   </header>
 
   <section class="doc-parties">
-    <div><span class="doc-label">Party</span><span class="doc-value">{{ partyName }}</span></div>
-    {% if bookerName %}<div><span class="doc-label">Booker</span><span class="doc-value">{{ bookerName }}</span></div>{% endif %}
-    {% if doc.description %}<div><span class="doc-label">Notes</span><span class="doc-value">{{ doc.description }}</span></div>{% endif %}
+    <div><span class="doc-label">Party</span><span class="doc-value">{{ partyName }} ({{ partyPhone }})</span></div>
+    {% if partyAddress %}<div><span class="doc-label">Address</span><span class="doc-value">{{ partyAddress }}</span></div>{% endif %}
+    {% if bookerName %}<div><span class="doc-label">Booker</span><span class="doc-value">{{ bookerName }} ({{ bookerPhone }})</span></div>{% endif %}
+    <div><span class="doc-label">Remarks</span><span class="doc-value">{{ remarks }}</span></div>
+    <div><span class="doc-label">Invoice #:</span><span class="doc-value">{{ invoiceNo }}</span></div>
+    <div><span class="doc-label">Invoice Date:</span><span class="doc-value">{{ invDate }}</span></div>
+    {% if invTime %}<div><span class="doc-label">Invoice Time:</span><span class="doc-value">{{ invTime }}</span></div>{% endif %}
   </section>
 
+  {# Legacy column layout: BOX SIZE, QUANTITY (CTN / UNTS / FREE), PRICES (UNIT / CTN), TOTAL.
+     CTN price is box size x unit price, which is the figure the legacy sheet prints. #}
   <table class="data doc-lines">
-    <thead><tr>
-      <th>#</th><th>Item</th><th class="right">Qty</th><th>Qty as</th>
-      <th class="right">Price</th><th class="right">Disc</th><th class="right">Amount</th>
-    </tr></thead>
+    <thead>
+      <tr>
+        <th rowspan="2">#</th><th rowspan="2">Item</th><th rowspan="2" class="right">Box Size</th>
+        <th colspan="3" class="center">Quantity</th>
+        <th colspan="2" class="right">Prices</th>
+        <th rowspan="2" class="right">Total</th>
+        {# The legacy sheet adds a DISCOUNTS group only when some line carries a discount. #}
+        {% if hasLineDiscounts %}<th colspan="3" class="right">Discounts</th>{% endif %}
+      </tr>
+      <tr>
+        <th class="right">CTN</th><th class="right">UNTS</th><th class="right">FREE</th>
+        <th class="right">UNIT</th><th class="right">CTN</th>
+        {% if hasLineDiscounts %}<th class="right">1(%)</th><th class="right">2(%)</th><th class="right">IN RS</th>{% endif %}
+      </tr>
+    </thead>
     <tbody>
     {% for l in lines %}
       <tr>
-        <td data-label="#">{{ loop.index }}</td>
+        <td data-label="#">{{ l.index }}</td>
         <td data-label="Item" data-lead>{{ l.itemName }}</td>
-        <td class="right" data-label="Qty">{{ l.qtyText }}</td>
-        <td data-label="Qty as">{{ l.qtyAs }}</td>
-        <td class="right" data-label="Price">{{ l.priceText }}</td>
-        <td class="right" data-label="Disc">{{ l.discountText }}</td>
-        <td class="right" data-label="Amount">{{ l.amountText }}</td>
+        <td class="right" data-label="Box Size">{{ l.boxSize }}</td>
+        <td class="right" data-label="CTN">{{ l.ctn }}</td>
+        <td class="right" data-label="UNTS">{{ l.units }}</td>
+        <td class="right" data-label="FREE">{{ l.free }}</td>
+        <td class="right" data-label="UNIT">{{ l.unitPrice }}</td>
+        <td class="right" data-label="CTN">{{ l.ctnPrice }}</td>
+        <td class="right" data-label="Total">{{ l.total }}</td>
+        {% if hasLineDiscounts %}<td class="right" data-label="1(%)">{{ l.d1Text }}</td><td class="right" data-label="2(%)">{{ l.d2Text }}</td><td class="right" data-label="IN RS">{{ l.drsText }}</td>{% endif %}
       </tr>
     {% else %}
-      <tr><td class="empty" colspan="7">This document has no lines.</td></tr>
+      <tr><td class="empty" colspan="{% if hasLineDiscounts %}12{% else %}9{% endif %}">This document has no lines.</td></tr>
     {% endfor %}
     </tbody>
   </table>
 
   <section class="doc-totals">
     <table class="totals-table">
-      <tr><th>Lines</th><td class="right">{{ lineSumText }}</td></tr>
-      {% if doc.d1 %}<tr><th>Discount {{ doc.d1 }}%</th><td class="right">-</td></tr>{% endif %}
-      {% if doc.drs %}<tr><th>Discount Rs</th><td class="right">-{{ doc.drs }}</td></tr>{% endif %}
-      <tr class="doc-grand"><th>Total</th><td class="right">{{ totalText }}</td></tr>
-      <tr><th>Paid</th><td class="right">{{ paidText }}</td></tr>
-      <tr class="doc-grand"><th>{% if creditDue %}Credit due{% else %}Balance{% endif %}</th><td class="right">{{ remainingText }}</td></tr>
+      <tr><th>Total Amount</th><td class="right">{{ totals.totalAmountText }}</td></tr>
+      <tr><th>Discount 1</th><td class="right">{{ totals.d1Text }}</td></tr>
+      <tr><th>Discount 2</th><td class="right">{{ totals.d2Text }}</td></tr>
+      <tr><th>Discount cash</th><td class="right">{{ totals.cashText }}</td></tr>
+      <tr class="doc-grand"><th>Payable Amount</th><td class="right">{{ totals.payableText }}</td></tr>
     </table>
   </section>
-
-  {% if payments %}
-  <section class="doc-payments">
-    <h2>Payments</h2>
-    <table class="data" data-mobile="cards">
-      <thead><tr><th>Date</th><th class="right">Amount</th><th>Description</th></tr></thead>
-      <tbody>
-      {% for p in payments %}
-        <tr>
-          <td data-label="Date" data-lead>{{ p.date }}</td>
-          <td class="right" data-label="Amount">{{ p.amountText }}</td>
-          <td data-label="Description">{{ p.description }}</td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </section>
-  {% endif %}
-
-  {% if stale %}
-  <p class="notice no-print" data-state="warn">This document was built before the last change to
-     the invoice. Rebuild it to make the printout match, or read
-     <a href="/invoices/{{ invoice.id }}/grid">the live invoice</a>.</p>
-  {% endif %}
 </article>
 
 {% if not print %}

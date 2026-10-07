@@ -158,7 +158,14 @@ The value translations that must be applied:
 
 A working implementation of exactly this translation exists as the `import-from-v1` plugin,
 ported to the guest at `trailbase/runtime/app/plugins/import-from-v1/` (the Node copy at
-`frontend-ssr/plugins/import-from-v1/` was deleted with that app on 2026-09-27) — but it still
-drops `invoices.invoice_maker` (see [[import-from-v1-drops-invoice-maker]]) and is unverified.
-Verifying it is [[pos-0029-rebuild-v1-import-on-guest]], feeding
+`frontend-ssr/plugins/import-from-v1/` was deleted with that app on 2026-09-27).
+
+> **Corrected 2026-10-06.** This paragraph used to end "…but it still drops
+> `invoices.invoice_maker` (see [[import-from-v1-drops-invoice-maker]]) and is unverified." Both
+> halves are now false: the plugin attributes `invoice_maker` (verified through the browser UI,
+> [[ui-import-from-v1-reset-2026-10-06]]) and the import has been run and verified many times. There
+> is also a second, file-to-file importer that writes `main.db` directly and preserves `created`/
+> `updated` ([[v1-direct-import-tool]]).
+
+Verifying it was [[pos-0029-rebuild-v1-import-on-guest]], feeding
 [[pos-0027-migrate-production-data-to-trailbase]].

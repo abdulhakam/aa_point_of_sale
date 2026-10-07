@@ -9,6 +9,21 @@ related_to: ["[[data-model]]", "[[reports-and-ledgers]]", "[[pos-0027-migrate-pr
 ---
 
 
+## RESOLVED FOR THE DIRECT PATH 2026-10-06
+
+The defect is a property of the **record-API import path**, not of the trailbase schema. The direct
+importer ([[v1-direct-import-tool]], `trailbase/tools/import-v1-tui.mjs`) writes `main.db` itself and
+copies the source row's `created` and `updated` verbatim: a full import on a depot copy produced
+**0 created/updated mismatches** across all eleven collections, and a live end-to-end reset+import on
+2026-10-07 reproduced it (min..max `created`/`updated` identical to source for invoices, transactions,
+payments and items; reports return rows) ([[tb-0035-direct-sqlite-v1-importer]]).
+
+So option 1 below ("fix the import to carry the source `created`/`updated` through") is **done for
+the file-to-file path**. The browser plugin / `import-from-v1.mjs` path still stamps the import time,
+because that is what the record API does; the note remains accurate for it. The residual `Invoice
+Time` on the printed guest sheet ([[guest-invoice-print-dropped-the-party-and-booker-names]]) is
+resolved the same way when the depot is loaded by the direct tool.
+
 ## RE-MEASURED 2026-10-01: true, but the impact is narrower than "high" suggests
 
 The data confirms it, and it is worth being precise about what it does and does not affect.

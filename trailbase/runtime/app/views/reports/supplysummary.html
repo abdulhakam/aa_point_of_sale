@@ -1,0 +1,53 @@
+{% extends 'layout.html' %}
+{% import 'partials/table.html' as tb %}
+{% block body %}
+{# Supply Summary. The input is a SET of sale invoices the operator picks; the output is a table of
+   PRODUCTS only — quantity and amount per product, and a total — never grouped by invoice. The list of
+   invoices is generated for the chosen date range and submitted with the form (GET). #}
+<h1 class="page-title">Supply Summary</h1>
+<p class="muted no-print">Pick the sale invoices to summarise, then SUBMIT. The report lists products
+   only: quantity and amount per product, with a total amount. No invoice ever appears in the result.</p>
+
+<form class="filters" method="get" action="/reports/supplysummary">
+  <div class="filter-dates">
+    <label class="field"><span>Date From</span><input type="date" name="from" value="{{ from }}"></label>
+    <label class="field"><span>Date To</span><input type="date" name="to" value="{{ to }}"></label>
+  </div>
+
+  <div class="report-filter">
+    <div class="picker-head"><span>{{ invoices | length }} sale invoice(s) in range{% if selectedCount %} · {{ selectedCount }} selected{% endif %}</span></div>
+    <div class="picker-list">
+    {% for inv in invoices %}
+      <label class="picker-row">
+        <input type="checkbox" name="invoices" value="{{ inv.hex }}"{% if inv.checked %} checked{% endif %}>
+        <span class="picker-no">#{{ inv.no }}</span>
+        <span class="picker-date">{{ inv.date }}</span>
+        <span class="picker-party">{{ inv.party }}</span>
+      </label>
+    {% else %}
+      <p class="notice">No sale invoices dated in this range.</p>
+    {% endfor %}
+    </div>
+  </div>
+
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">SUBMIT</button>
+  </div>
+</form>
+
+{% if totals %}
+<div class="report" id="report">
+  <div class="report-head">
+    <h2 class="page-title">Products ({{ rowInfo.total }})</h2>
+    <div class="report-period"><span><strong>From:</strong> {{ from }}</span> <span><strong>To:</strong> {{ to }}</span></div>
+  </div>
+  {{ tb.simple(columns, rows, "scroll", "supply-table") }}
+  {% if rowInfo and rowInfo.truncated %}
+  <p class="notice no-print">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>
+  {% endif %}
+  <table class="totals-table">
+    <tr class="doc-grand"><th>Total Amount</th><td class="right">{{ totals.amount }}</td></tr>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

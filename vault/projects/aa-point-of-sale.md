@@ -3,7 +3,7 @@ title: AA Point of Sale
 type: project
 status: active
 created: 2026-09-26
-updated: 2026-09-27
+updated: 2026-10-06
 tags: [pos, erp, trade-and-distribution, programme]
 related_to: ["[[trailbase-migration]]"]
 ---
@@ -90,9 +90,14 @@ documents the value translation between them, and that translation is what
   2026-09-29 comparison was made against a database that had the data — the git blob
   `c167d311^:backend/p_data/data.db`, 11,182,080 bytes, still holds it). Use `pb_data`.
   See [[fresh-import-and-whole-database-digest-2026-10-04]].
+  Re-verified yet again **2026-10-06** through the **browser UI** on a depot reset from scratch:
+  60,245 / 60,245, 0 failed, and the 8,927 `invoice_maker` references are now **attributed**, not
+  dropped ([[ui-import-from-v1-reset-2026-10-06]]).
   Outstanding: the guest's `created` is the import timestamp, not the business date
-  ([[guest-depot-created-is-import-time]]), and 8,927 `invoice_maker` references are dropped
-  ([[import-from-v1-drops-invoice-maker]]).
+  ([[guest-depot-created-is-import-time]]).
+  ~~8,927 `invoice_maker` references are dropped~~ — **fixed 2026-10-06** by
+  [[tb-0026-attribute-imported-invoice-maker-to-logged-in-user]]; all 8,927 now attributed to the
+  importing operator ([[ui-import-from-v1-reset-2026-10-06]]).
 - ⚠️ **The legacy app is gone, not merely unrepointed.** `frontend/` was deleted from git on
   2026-09-29; `legacyforparity/standalone/` is a compiled bundle with no `src/`. There is nothing
   left to point at TrailBase ([[cutover-is-guest-only]]).

@@ -12,7 +12,7 @@ const loadModule = globalThis.__AA_LOAD__;
 // is the dominant cold cost (and can cross the ~20 s call deadline), so a page renders the first
 // `RENDER_MAX_ROWS` rows with a "show all" link; `?all=1` renders everything, `?maxRows=N` overrides.
 // Totals are always computed over every row — only the table body is capped.
-const RENDER_MAX_ROWS = 1000;
+export const RENDER_MAX_ROWS = 1000;
 
 // The shared server-rendered report template. A manifest may override it with `view` (the general
 // ledger does), which is how a report gets a bespoke layout without its own route.

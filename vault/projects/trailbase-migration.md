@@ -48,6 +48,12 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
   ([[reports-parity-and-e2e-2026-09-29]], [[clean-slate-benchmark-cycle]]). The depot currently holds
   that data. An earlier revision of this note said the depot had been reset and no data was loaded;
   that was stale.
+- **This step now has a second, file-to-file path (2026-10-06).** `trailbase/tools/import-v1-tui.mjs`
+  writes `traildepot/data/main.db` directly instead of through the record API, so `created` and
+  `updated` are preserved from the source rather than stamped at import time, and `invoice_maker` is
+  attributed to a chosen `_user` without a session. Verified on a depot copy: 60,245 / 60,245, 0
+  failures, 31 s, with per-collection counts and dates matching
+  ([[v1-direct-import-tool]], [[tb-0035-direct-sqlite-v1-importer]]).
 - Step 2 is **mostly done**: the read-heavy surfaces, the management screens, invoice entry for sale
   and purchase, payments, inventory, the cash-memo module and the print queue all exist. What remains
   is that the guest UI is **not yet the legacy look**, and that **return** and **difference** invoice
@@ -302,6 +308,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | [[tb-0030-retire-the-route-ts-dispatcher]] | retire `route.ts` |
 | [[tb-0032-manifest-first-refactor]] | manifest-first reports; gate it on `route-snapshot.mjs` |
 | [[tb-0026-attribute-imported-invoice-maker-to-logged-in-user]] | attribute imported invoice authorship |
+| [[tb-0035-direct-sqlite-v1-importer]] | **done 2026-10-06** — standalone TUI that writes `main.db` directly, preserving `created`/`updated` and attributing `invoice_maker` to a chosen `_user` ([[v1-direct-import-tool]]) |
 | ~~[[tb-0015-integer-cents-for-money]]~~ | **declined**; money is 2 dp everywhere |
 | ~~[[pos-0027-migrate-production-data-to-trailbase]]~~ | **done** 2026-09-29 |
 | ~~[[pos-0028-decide-cutover-plan]]~~ | **done** 2026-10-03 — [[cutover-is-guest-only]] |

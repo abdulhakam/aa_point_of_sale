@@ -165,6 +165,20 @@ trail --depot=traildepot run --address=127.0.0.1:4000 --runtime-threads=4 --runt
   missing one migration file, and the server refused to start at all — the repair and the diagnosis
   are in [[production-depot-could-not-be-started]].
 
+### Loading v1 data directly (file-to-file)
+
+Stop the server, then run the standalone TUI importer — it writes `traildepot\data\main.db` itself,
+so `created`/`updated` are preserved from the PocketBase source and `invoice_maker` is attributed
+to a chosen `_user`:
+
+```powershell
+node trailbase\tools\import-v1-tui.mjs --wipe --dest trailbase\traildepot\data\main.db --source legacyforparity\backend\pb_data\data.db
+```
+
+`--dry-run` first if unsure; `--yes` skips the setup screen; `--plain` prints plain lines. The tool
+takes a write lock on `main.db`, so a running server is the only source of `SQLITE_BUSY`
+([[v1-direct-import-tool]]).
+
 ### Verify
 
 All the harnesses live in `trailbase/tools/`. The Node-comparative ones (`guest-parity.mjs`,

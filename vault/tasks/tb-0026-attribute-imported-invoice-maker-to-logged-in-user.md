@@ -4,7 +4,7 @@ type: task
 status: doing
 priority: low
 created: 2026-09-29
-updated: 2026-09-29
+updated: 2026-10-06
 tags: [migration, import, invoice-maker, attribution, deferrable, far-future]
 belongs_to: "[[pos-0029-rebuild-v1-import-on-guest]]"
 related_to: ["[[import-from-v1-drops-invoice-maker]]", "[[trailbase-client-side-migration-plugin]]", "[[pos-0027-migrate-production-data-to-trailbase]]", "[[api-contract-trailbase]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[trailbase-encode-enums-as-integer-codes]]"]
@@ -16,14 +16,20 @@ related_to: ["[[import-from-v1-drops-invoice-maker]]", "[[trailbase-client-side-
 cash-memo work, and everything else about the migration is correct without it. Do not pull this
 forward unless someone asks who entered historical invoices.
 
-**VERIFIED NOT DONE, 2026-10-06** (asked directly, in case the vault was stale). Both the data and the
-code say it is still open:
-- `SELECT COUNT(*) FROM invoices WHERE "invoice_maker" IS NOT NULL` on the depot = **0**, out of 8,927
-  invoices — every maker reference is still dropped.
-- The importer still drops it: `runtime/app/plugins/import-from-v1/index.html:520` increments
-  `state.droppedMakers`, and `:557` logs `"…had invoice_maker set; that reference is dropped"`.
+> **Corrected 2026-10-06 (later the same day).** An earlier paragraph here read **"VERIFIED NOT
+> DONE, 2026-10-06"**, claiming the depot held `0` attributed invoices and that `index.html:520`
+> still incremented `state.droppedMakers`. **That was wrong** — it described an older revision of the
+> plugin. The current plugin has `state.attributedMakers` and an `invoice_maker` function spec, and a
+> fresh browser re-import proves it.
 
-So the `status: todo` is correct. Nothing below has been started.
+**VERIFIED DONE, 2026-10-06 — through the browser UI, on a freshly reset depot.** See
+[[ui-import-from-v1-reset-2026-10-06]] for the full run. The two verification checks below pass:
+
+- `SELECT COUNT(*) FROM invoices WHERE "invoice_maker" IS NOT NULL` on the depot = **8,927** of 8,927.
+- Every value resolves against `_user` — **0 dangling** — to `admin@localhost`, the operator who ran
+  the import.
+
+The remaining open item is the UI wording, not the attribution.
 
 ## The decision
 
@@ -83,10 +89,10 @@ and the run does not need re-deriving:
       auth token. Rows the source never attributed stay `NULL`.
 - [x] **Replace the `droppedMakers` warning.** `state.droppedMakers` → `attributedMakers`, and the log
       now says the reference is *attributed to this import's operator*, not dropped.
-- [ ] **Verify by count, not by eye.** Needs a browser re-import: `SELECT COUNT(*) FROM invoices WHERE
-      "invoice_maker" IS NOT NULL` must be 8,927.
-- [ ] **Confirm the FK holds.** Needs the same re-import: every attributed value must resolve against
-      `_user`, not be dangling.
+- [x] **Verify by count, not by eye.** Done 2026-10-06: `SELECT COUNT(*) FROM invoices WHERE
+      "invoice_maker" IS NOT NULL` = 8,927 ([[ui-import-from-v1-reset-2026-10-06]]).
+- [x] **Confirm the FK holds.** Done 2026-10-06: every attributed value resolves against `_user`;
+      0 dangling, all to `admin@localhost` ([[ui-import-from-v1-reset-2026-10-06]]).
 - [ ] **Say it in the UI.** Not started — the invoice screen / print view must not present `imported by`
       historical rows as `created by`.
 

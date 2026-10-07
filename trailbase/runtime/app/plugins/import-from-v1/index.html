@@ -96,6 +96,7 @@
       <div class="stat"><div class="stat-value" id="mig-records">—</div><div class="stat-label">Records</div></div>
       <div class="stat"><div class="stat-value" id="mig-speed">—</div><div class="stat-label">Speed</div></div>
       <div class="stat"><div class="stat-value" id="mig-current">—</div><div class="stat-label">Collection</div></div>
+      <div class="stat"><div class="stat-value" id="mig-elapsed">—</div><div class="stat-label">Elapsed</div></div>
     </div>
 
     <h2 style="margin-top:1rem">Log</h2>
@@ -329,7 +330,7 @@
   }
 
   /* -------------------------------------------------------------- the state */
-  var state = { status: "idle", phase: "", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, attributedMakers: 0, stop: false };
+  var state = { status: "idle", phase: "", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, attributedMakers: 0, stop: false, startedAt: 0, finishedAt: 0 };
   var el = function (id) { return document.getElementById(id); };
   var fill = function (id, v) { var e = el(id); if (e) e.textContent = v == null ? "" : String(v); };
   var int = function (n) { return Number(n || 0).toLocaleString(); };
@@ -338,6 +339,21 @@
     if (rate == null || !isFinite(rate) || rate <= 0) return "—";
     if (rate >= 1) return (rate >= 10 ? rate.toFixed(0) : rate.toFixed(1)) + " rec/s";
     return (1 / rate).toFixed(1) + " s/rec";
+  }
+
+  // Wall-clock time from pressing Start to reaching a terminal state, so the page states how long the
+  // import actually took instead of leaving it to a stopwatch outside the browser. `finishedAt` freezes
+  // the value on completion; while running it keeps ticking with `render()`.
+  function formatDuration(ms) {
+    if (!ms || ms < 0) return "—";
+    var s = ms / 1000;
+    if (s < 60) return s.toFixed(1) + " s";
+    var m = Math.floor(s / 60);
+    return m + "m " + String(Math.round(s % 60)).padStart(2, "0") + "s";
+  }
+  function elapsedMs() {
+    if (!state.startedAt) return 0;
+    return (state.finishedAt || Date.now()) - state.startedAt;
   }
 
   // Records-per-second over a short sliding window, so the readout tracks the
@@ -383,6 +399,7 @@
     fill("mig-records", total > 0 ? int(done) + " / " + int(total) : "—");
     fill("mig-speed", formatSpeed(state.rate));
     fill("mig-current", state.current || "—");
+    fill("mig-elapsed", state.startedAt ? formatDuration(elapsedMs()) : "—");
     fill("mig-error-total", state.errorTotal ? state.errorTotal + " error(s)" : "");
 
     var ul = el("mig-log"); ul.textContent = "";
@@ -475,7 +492,7 @@
     if (!pbUrl) return flash("error", "PocketBase URL is required.");
     if (!tbUrl || !tbIdentity || !tbPassword) return flash("error", "TrailBase URL, user email and password are required.");
 
-    state = { status: "running", phase: "starting", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, attributedMakers: 0, stop: false };
+    state = { status: "running", phase: "starting", message: "", current: "", done: 0, total: 0, rate: null, errors: [], errorTotal: 0, log: [], summary: null, attributedMakers: 0, stop: false, startedAt: Date.now(), finishedAt: 0 };
     rateBuf = [];
     render();
 
@@ -575,13 +592,15 @@
 
       state.status = state.stop ? "stopped" : (state.errorTotal ? "done-with-errors" : "done");
       state.phase = "finished"; state.current = ""; state.rate = null;
+      state.finishedAt = Date.now();
         // tb-0026: the historical author is no longer dropped. State what the count MEANS, because the
         // column now reads "imported by" for these rows and "created by" for post-cutover ones.
         if (state.attributedMakers) log("info", int(state.attributedMakers) + " invoice(s) had invoice_maker set; each is attributed to this import's operator (tb-0026). The column means \"imported by\" for these rows, not \"created by\".");
-      log("info", "Finished. " + (state.errorTotal ? state.errorTotal + " error(s)." : "No errors."));
+      log("info", "Finished in " + formatDuration(elapsedMs()) + ". " + (state.errorTotal ? state.errorTotal + " error(s)." : "No errors."));
       flash(state.errorTotal ? "warn" : "ok", "Import " + state.status + ".");
     } catch (e5) {
       state.status = "failed"; state.phase = "failed"; state.message = e5.message || String(e5); state.rate = null;
+      state.finishedAt = Date.now();
       log("error", state.message);
       flash("error", "Import failed: " + state.message);
     }

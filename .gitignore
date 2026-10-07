@@ -30,3 +30,9 @@
 
 # Python bytecode from the bench harnesses in trailbase/tools
 __pycache__/
+
+# Dated run output from the report sweep/parity harnesses, and the parity scratch dir. These are
+# local evidence, not source; a blanket `git add -A` must not publish them.
+trailbase/tools/sweep-*.json
+vault/attachments/_parity-test/
+vault/attachments/report-parity-*/

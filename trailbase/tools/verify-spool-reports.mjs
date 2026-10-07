@@ -360,6 +360,9 @@ const IMPOSSIBLE = {
   type: () => "99",
   from: () => "9999-12-31",
   to: () => "0001-01-01",
+  // Supply Summary's submitted set: a delimited hex list matching no invoice (all-zero id), so a live
+  // bind returns 0 rows and a dead one would return the whole report.
+  invoices: () => "|" + Buffer.alloc(16).toString("hex").toUpperCase() + "|",
 };
 
 /**
@@ -414,6 +417,28 @@ async function verifyBinds() {
 
     const all = await countRows(name, {});
     for (const key of filters) {
+      // Supply Summary's `invoices` is a LIST, not a single id, so the generic busy-value machinery
+      // cannot build one. It also has no "all rows" baseline (an empty selection is 0 rows by design),
+      // which makes the impossible-value check alone vacuous: `instr(NULL, …)` is NULL, so an unbound
+      // bind also returns 0. Prove the bind POSITIVELY instead — a real sale invoice must select rows.
+      if (key === "invoices") {
+        checked++;
+        const none = await countRows(name, { invoices: IMPOSSIBLE.invoices() });
+        if (none !== 0) {
+          issues.push(`${name}.invoices: a value matching nothing still returned ${none} rows — the bind is not reaching the statement`);
+        }
+        const real = db.prepare(
+          "SELECT hex(i.id) AS h FROM invoices i JOIN transactions t ON t.invoice = i.id " +
+            "WHERE i.type = 1 AND i.deleted = 0 AND t.deleted = 0 GROUP BY i.id ORDER BY COUNT(*) DESC LIMIT 1"
+        ).get();
+        if (real && real.h) {
+          const withOne = await countRows(name, { invoices: "|" + String(real.h).toUpperCase() + "|" });
+          if (!(withOne > 0)) {
+            issues.push(`${name}.invoices: a real sale invoice returned ${withOne} rows — the bind is not selecting by invoice`);
+          }
+        }
+        continue;
+      }
       const dead = IMPOSSIBLE[key];
       if (!dead) {
         issues.push(`${name}.${key}: no impossible value to prove the bind arrives`);

@@ -87,7 +87,7 @@ final_total     = round2(unrounded_total − discount_rs)
 `dated` falls back to `created` when unset (`inv.dated || inv.created`), matching the old
 `COALESCE`-style behaviour.
 
-## The 14 reports
+## The 14 legacy reports
 
 `compute/reports.js` (23,580 bytes) exports `REPORTS` — a map of name → `{title, inputs, run}`
 — and `runReport(name, ctx, filters)`. `inputs` names the views each report needs, which is how
@@ -114,6 +114,12 @@ Note `productsale`'s title is **"Product Supply Summary"**, not "Product Sale Re
 tile on the index is labelled with the latter. `ledgers/general` is the only report with no
 `refs` input, which is also why it is excluded from the warm-up list in
 `trailbase/runtime/ahscripts/routes/_app/route.ts`.
+
+> **A 15th report, guest-only, added 2026-10-06: "Supply Summary"**
+> (`/reports/supplysummary`). It has **no legacy counterpart** — its input is a submitted SET of sale
+> invoices and its output is products only (quantity, amount, total). It is not in the 14 above
+> because that list is the legacy report engine's; Supply Summary is served by its own route folder
+> plus a spooled SQL report. See [[supply-summary-report-guest-only-2026-10-06]].
 
 The 4 ledger pages are reached at `/reports/ledgers/{area,booker,general,party}` and from
 `LEDGER_INDEX`; the other 11 from `REPORT_INDEX`.

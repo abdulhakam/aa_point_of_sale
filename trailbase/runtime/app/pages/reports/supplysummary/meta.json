@@ -1,0 +1,55 @@
+{
+  "title": "Supply Summary",
+  "template": "page.html",
+  "hub": {
+    "title": "Supply Summary",
+    "target": "supplysummary",
+    "tone": "cyan",
+    "icon": "report-money",
+    "hub": "reports",
+    "order": 12
+  },
+  "compute": {
+    "report": "supplysummary"
+  },
+  "spool": {
+    "sql": "supplysummary.sql",
+    "row": [
+      "id",
+      "name",
+      "units",
+      "amount",
+      "box_size_qty",
+      "box",
+      "amountText",
+      "qtyText"
+    ],
+    "totals": {
+      "cents": {
+        "amount": "amount"
+      }
+    }
+  },
+  "columns": [
+    {
+      "key": "name",
+      "label": "Product Name"
+    },
+    {
+      "key": "qtyText",
+      "label": "Quantity",
+      "right": true
+    },
+    {
+      "key": "amountText",
+      "label": "Amount",
+      "right": true
+    }
+  ],
+  "totals": [
+    {
+      "label": "Total",
+      "key": "amount"
+    }
+  ]
+}

@@ -25,6 +25,13 @@ expenses 88, invoices 8,927, invoices_return_reference 54, transactions 23,413, 
 8,927 `invoice_maker` references are dropped as before (PocketBase `_user` ids have no TrailBase
 counterpart). This is identical to the headless path — see [[clean-slate-benchmark-cycle]].
 
+> **Corrected 2026-10-06 — the `invoice_maker` half of the paragraph above no longer holds.** This
+> line previously read that the 8,927 references "are dropped as before". [[tb-0026-attribute-imported-invoice-maker-to-logged-in-user]]
+> removed that loss: the plugin now resolves the importing operator's own `_user` id from the new
+> `GET /session` route and attributes every invoice whose source had `invoice_maker` set. Re-verified
+> through the browser UI on a freshly reset depot — see [[ui-import-from-v1-reset-2026-10-06]]:
+> **all 8,927 invoices carry `invoice_maker`.** The row/collection counts quoted above are unchanged.
+
 ## Data parity — exact
 
 Compared straight in SQL between `traildepot/data/main.db` and `backend/p_data/data.db`, per table and
