@@ -152,11 +152,6 @@
     </div>
 
     {% if invoice.canWrite %}
-    {# The create-item panel, inside the grid's own form. Choosing "Create …" in any row's item select
-       opens it; `refdb-create.js` POSTs the new item and selects it IN THAT ROW, so SAVE LINES then
-       saves the line normally. On the grid the create is a JavaScript path only — with no JS the
-       combobox never offers "Create …" in the first place. #}
-    {{ qc.item(companies) }}
     <div class="pagebar" style="margin-top:12px">
       <button class="btn primary" type="submit" name="op" value="save">SAVE LINES</button>
       <span class="muted">A negative quantity is a return. The server recomputes every amount; the
@@ -164,8 +159,13 @@
     </div>
     {% endif %}
   </form>
+  {# The create dialog lives OUTSIDE the grid form: a `<form>` inside a `<form>` is invalid HTML and the
+     parser drops the inner one, which would put the dialog's fields back into SAVE LINES. `<aa-modal>`
+     moves it to the body on upgrade, so its authored position is cosmetic. #}
+  {% if invoice.canWrite %}{{ qc.item(companies) }}{% endif %}
 </section>
 
+{% if invoice.paidPayments|length %}
 <section class="card">
   <h2>Payments ({{ invoice.paidPayments|length }})</h2>
   <div class="tablewrap">
@@ -179,11 +179,10 @@
         <td data-label="Description">{{ p.description }}</td>
         <td data-label="Paid to">{{ p.paidTo }}</td>
       </tr>
-    {% else %}
-      <tr><td class="empty" colspan="4">Nothing paid against this invoice yet.</td></tr>
     {% endfor %}
     </tbody>
   </table>
   </div>
 </section>
+{% endif %}
 {% endblock %}

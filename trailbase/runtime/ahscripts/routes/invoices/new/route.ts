@@ -24,6 +24,7 @@
         isNew: true,
         type,
         typeLabel: A.invoices.typeLabel(type),
+        today: A.format.dateOnly(new Date().toISOString()),
         parties: refs.parties ?? [],
         bookers: refs.bookers ?? [],
         items: routeKit.editorItems(refs),
@@ -63,9 +64,12 @@
         device: String(form.device || ""),
       });
       const createdHex = routeKit.b64ToHex(String(invoice.id));
+      // The legacy entry bar collects the date and (on a sale) the booker at create time, so the same
+      // fields are honoured here; a missing date falls back to today, which is what the bar shows.
       await A.invoicing.patchHeader(db, createdHex, {
         party: newParty ? routeKit.hexToB64(newParty) : String(form.party || ""),
-        dated: A.format.dateOnly(new Date().toISOString()),
+        booker: String(form.booker || ""),
+        dated: String(form.dated || "") || A.format.dateOnly(new Date().toISOString()),
       });
       return invoice;
     });

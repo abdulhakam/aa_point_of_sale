@@ -3,12 +3,11 @@
 {% block body %}
 <section class="card hub">
   <div class="hub-title">Dashboard</div>
-  {# ⚠️ The legacy dashboard is four tiles in this order — Reports, Invoices, Cash Memo, Management
-     (measured off `vault/attachments/legacy-ui/02-dashboard.png`). This had Invoices, Payments,
-     Inventory, Reports, Management: **Cash Memo was missing** even though `/cashmemo` exists and is in
-     the rail, and Reports had moved to fourth. The legacy four now lead, in the legacy order, and the
-     two new-side additions follow so nothing the guest offers is hidden. The icon colours follow the
-     legacy capture — pink report, orange invoice, blue cash-memo, grey management.
+  {# ⚠️ The legacy dashboard is exactly four tiles in this order — Reports, Invoices, Cash Memo,
+     Management (measured off the live legacy dashboard and `vault/attachments/legacy-ui/02-dashboard.png`).
+     The guest's extra Payments and Inventory tiles were removed 2026-10-08 to match it 1-1; both
+     surfaces stay reachable from the rail's foot menu. The icon colours follow the legacy capture —
+     pink report, orange invoice, blue cash-memo, grey management.
 
      The Cash Memo glyph is the legacy's **filled blue € circle** (`coin-euro-filled`), not the Tabler
      card outline it used to carry ([[tb-0023-guest-feature-parity]] item G). #}
@@ -17,8 +16,6 @@
     <a class="tile" href="/invoices"><span class="c-orange-4">{{ icons.svg('file-invoice', 64) }}</span><span class="tile-label">Invoices</span></a>
     <a class="tile" href="/cashmemo"><span class="c-blue">{{ icons.svg('coin-euro-filled', 64) }}</span><span class="tile-label">Cash Memo</span></a>
     <a class="tile" href="/management"><span class="c-gray-4">{{ icons.svg('settings', 64) }}</span><span class="tile-label">Management</span></a>
-    <a class="tile" href="/payments"><span class="c-green">{{ icons.svg('cash', 64) }}</span><span class="tile-label">Payments</span></a>
-    <a class="tile" href="/inventory"><span class="c-orange-4">{{ icons.svg('trolley', 64) }}</span><span class="tile-label">Inventory</span></a>
   </div>
 </section>
 {# The legacy dashboard has no counters, so the guest's `Overview` card is gone (item H). The counts

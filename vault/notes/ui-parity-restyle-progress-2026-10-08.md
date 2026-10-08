@@ -5,7 +5,7 @@ status: active
 created: 2026-10-08
 updated: 2026-10-08
 tags: [guest, ui, parity, legacy, evidence, restyle]
-related_to: ["[[ui-parity-discrepancies-2026-10-05]]", "[[tb-0023-guest-feature-parity]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[features-as-native-web-components]]", "[[legacy-ui-reference-captures]]"]
+related_to: ["[[ui-parity-discrepancies-2026-10-05]]", "[[ui-parity-discrepancies-2026-10-08]]", "[[tb-0023-guest-feature-parity]]", "[[parity-carve-outs-reconfirmed-2026-10-08]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[features-as-native-web-components]]", "[[legacy-ui-reference-captures]]"]
 ---
 
 # Legacy-look restyle progress, 2026-10-08
@@ -133,6 +133,47 @@ The four items the owner asked for next.
 
 Gates: `guest-smoke` 115/115, `autocomplete-check` 39/0, `hotkey-check` 62/0, `grid-preview-check` 14/0,
 `refdb-check` 12/12, `route-snapshot` 49/0.
+
+## Fifth increment (2026-10-08, later): the reconfirmed carve-outs, the invoice entry bar, the create dialog
+
+After the owner restated "1-1 with legacy, except the discussed cases" and reconfirmed each carve-out
+one by one ([[parity-carve-outs-reconfirmed-2026-10-08]]), this increment applied the four answers that
+changed something.
+
+- **The four invoice entry views** — `views/invoices/entry.html` is now the legacy entry bar: a
+  `{TYPE} INVOICE` heading over a rule, then one inline row — `INVOICE NO:`, `INVOICE DATE`, the
+  transaction's party (`BOOKER` + `CUSTOMER` on a sale, `SUPPLIER` on a purchase, `PARTY` +
+  `Original Invoice` on a return, **none** on a difference), the disabled `USER:`, the create/save
+  control and the print glyph — then the lines grid. Measured off the live legacy
+  `/app/invoices/{purchase,sale,return,difference}` (all four captured). The create path
+  (`/invoices/new?type=…`) uses the same bar, so the four types look the same before and after the
+  invoice exists; `routes/invoices/new/route.ts` now honours the form's `dated` and `booker`.
+  The bar's controls are the legacy ones: the invoice-create button reads **`Create`**, and the
+  legacy **blue `+`** beside the party opens the **Create New Customer/Supplier** dialog
+  (measured live: legacy's `+` raises a modal titled `Create New Customer` with Name / Area / Phone /
+  Address and an OK). The `+` is wired by `refdb-create.js`'s `[data-qc-open]` handler; the combobox's
+  own "Create …" row remains the other opener.
+- **Create-from-invoice is a dialog with its own submit** — `partials/quick-create.html` wraps each
+  panel in `<aa-modal>` with its own `<form action="/quick-create">`; `autocomplete.js` opens/closes the
+  owning dialog instead of an inline panel, and `components/modal.js` tags its overlay with `__aaHost`
+  because `<aa-modal>` MOVES its children out of the element (so `closest("aa-modal")` is null).
+  ⚠️ The dialog is authored **outside** every enclosing form: a `<form>` inside a `<form>` is invalid
+  HTML and the browser drops the inner one, which would have put the dialog's fields back into the
+  invoice's submit.
+- **Dashboard** — the guest's `Payments` and `Inventory` tiles are removed; the dashboard is exactly
+  the legacy four (Reports, Invoices, Cash Memo, Management).
+- **Management create control** — the button reads legacy's `add new`.
+- **Payments below an invoice** — the amount of a return can take an invoice below what was paid; the
+  entry screen no longer renders an empty `Payments` section, only when `paidPayments` is non-empty.
+
+Gates after this increment: `guest-smoke` 115/115, `autocomplete-check` 39/0, `hotkey-check` 62/0,
+`route-snapshot` 49/0, `grid-preview-check` 14/0, `refdb-check` 12/12.
+
+Test/tooling corrections were needed and are deliberate: three `guest-smoke` needles encoded the
+old headings (`Start a sale invoice`, `New Section`) and now assert the legacy ones
+(`SALE INVOICE`, `add new`); `autocomplete-check` and `refdb-check` both filter their invoice to a
+**sale** (a difference invoice has no party field) and `autocomplete-check` checks the party select is
+*unchanged* by the create flow rather than *empty* (a real sale may carry a party).
 
 ## Still open (the rest of A2 and the reopened list)
 

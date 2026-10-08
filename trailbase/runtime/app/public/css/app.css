@@ -924,3 +924,48 @@ aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
 .pager-info { color: var(--grey-6, #495057); font-size: 0.9em; }
 .btn.disabled { opacity: 0.5; pointer-events: none; }
 @media print { .pager { display: none !important; } }
+
+/* ── quick-create dialog (partials/quick-create.html + <aa-modal>) ──────────────────────────────────
+   The create-from-the-invoice form is a real dialog now, so the inline `.qc` card styling that used to
+   sit inside the invoice form is neutralised inside the modal body. */
+.aa-modal-body .qc { border: 0; padding: 0; margin: 0; background: transparent; flex-basis: auto; }
+
+/* ── invoice entry bar (views/invoices/entry.html) ──────────────────────────────────────────────────
+   The legacy entry screen is a "{TYPE} INVOICE" heading over a rule, then one inline row of fields and
+   the create/save control, then the grid. Measured off the live bundle at 1600×900. */
+.inv-type-title { margin: 0 0 8px; font-size: 1.25rem; font-weight: 700; letter-spacing: 0.01em; }
+.inv-rule { border: 0; border-top: 1px solid var(--gray-4); margin: 0 0 14px; }
+.invoice-head {
+  display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;
+  margin: 0 0 8px;
+}
+.invoice-head .ih-field { display: flex; flex-direction: column; gap: 4px; }
+.invoice-head .ih-field > span {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;
+  color: #000; font-weight: 600;
+}
+.invoice-head .ih-field input,
+.invoice-head .ih-field select,
+.invoice-head .ih-field aa-date-input { min-width: 10rem; }
+.invoice-head .ih-field input[readonly],
+.invoice-head .ih-field input:disabled { background: var(--gray-1, #f1f3f5); color: var(--gray-7, #495057); }
+.invoice-head .ih-go { min-width: 2.5rem; height: 36px; padding: 0 10px; font-size: 1.1rem; line-height: 1; }
+/* The legacy blue "+" beside the party opens the Create New Customer/Supplier dialog. */
+.invoice-head .ih-with-add { display: flex; align-items: center; gap: 6px; }
+.invoice-head .ih-with-add > select { flex: 1 1 auto; }
+.invoice-head .ih-add {
+  flex: 0 0 auto; width: 34px; height: 36px; padding: 0;
+  border: 0; border-radius: var(--radius); background: var(--blue-6, #1c7ed6);
+  color: #fff; font-size: 1.25rem; line-height: 1; cursor: pointer;
+}
+.invoice-head .ih-add:hover { background: var(--blue-7, #1971c2); }
+.invoice-head .ih-print {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; color: var(--blue-6);
+}
+.invoice-head .ih-row2 {
+  flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px;
+  padding-top: 6px; border-top: 1px dashed var(--gray-3);
+}
+.invoice-head .ih-field.wide { flex: 1 1 18rem; }
+.invoice-head .ih-field.wide input { width: 100%; min-width: 0; }

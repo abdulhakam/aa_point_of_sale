@@ -63,6 +63,10 @@
       dialog.appendChild(header);
       dialog.appendChild(body);
       overlay.appendChild(dialog);
+      // The authored children are MOVED out of this element into the overlay, so `closest("aa-modal")`
+      // from inside the dialog is null. Tag the overlay with its host so anything inside the dialog can
+      // find the modal it belongs to (autocomplete's create dialog, `[data-modal-close]`).
+      overlay.__aaHost = this;
       this._overlay = overlay;
       document.body.appendChild(overlay);
 
@@ -109,7 +113,10 @@
     }
     var closer = e.target.closest && e.target.closest("[data-modal-close]");
     if (closer) {
-      var host = closer.closest("aa-modal");
+      // The content lives in the overlay, not inside the `<aa-modal>`, so the host is found through the
+      // overlay rather than `closest("aa-modal")`.
+      var ov = closer.closest(".aa-modal-overlay");
+      var host = (ov && ov.__aaHost) || closer.closest("aa-modal");
       if (host) { e.preventDefault(); host.close(); }
     }
   });

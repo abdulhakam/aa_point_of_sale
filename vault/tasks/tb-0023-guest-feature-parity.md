@@ -171,6 +171,23 @@ the legacy rail carries **six including Orders** — and shows a **reversed mana
 - [x] **Colours** — active rail link (guest blue, legacy gray). **Done 2026-10-08** (active glyph back
       to gray-7 on the blue-0 chip). Raw/tile anchor colour still open.
 
+### Reconfirmed carve-outs, 2026-10-08
+
+The owner restated "1-1 with legacy except the discussed cases" and reconfirmed each carve-out:
+[[parity-carve-outs-reconfirmed-2026-10-08]]. Applied in the same turn
+([[ui-parity-restyle-progress-2026-10-08]] fifth increment):
+
+- [x] **The four invoice entry views** (purchase, sale, return, difference) restyled to the legacy
+      entry bar. `views/invoices/entry.html`, `routes/invoices/new/route.ts`. The legacy blue **`+`**
+      beside the party opens the **Create New Customer/Supplier** dialog; the invoice-create button
+      reads **`Create`**.
+- [x] **Create-from-invoice is a dialog with its own submit** — `<aa-modal>` + its own
+      `POST /quick-create` form. `views/partials/quick-create.html`, `autocomplete.js`, `modal.js`.
+- [x] **Dashboard is exactly the legacy four tiles** — the Payments and Inventory tiles removed.
+- [x] **Management create control reads `add new`.**
+- [x] **The invoice entry hides the payments list until the invoice has a payment.**
+
+
 ## Already done, and still standing
 
 - [x] The shared look ported 2026-09-27 (header, rail, tiles, tables, login) —

@@ -292,6 +292,19 @@
       return needle;
     }
 
+    /** The `<aa-modal>` that carries this panel, if the panel is authored inside one (the legacy
+     *  create dialog). Opening/closing the dialog is what shows/hides it; the panel itself is only
+     *  unhidden so its controls are visible and enabled inside the dialog.
+     *
+     *  ⚠️ `<aa-modal>` MOVES its children into an overlay on `document.body`, so `closest("aa-modal")`
+     *  from the panel is null; the overlay is tagged with its host (`__aaHost`) instead. */
+    function panelModal() {
+      if (!panel || !panel.closest) return null;
+      var ov = panel.closest(".aa-modal-overlay");
+      if (ov && ov.__aaHost) return ov.__aaHost;
+      return panel.closest("aa-modal");
+    }
+
     function openPanel(name) {
       if (!panel) return false;
       hide();
@@ -302,12 +315,23 @@
       panel.hidden = false;
       panel.classList.add("is-open");
       setPanelInert(panel, false);
+      var modal = panelModal();
+      if (modal && modal.open) modal.open();
       var nameField = panel.querySelector('[name$="_name"]');
       if (nameField) {
         nameField.required = true;
         nameField.value = name;
-        nameField.focus();
-        if (nameField.select) nameField.select();
+        // Inside a dialog the panel is shown by `<aa-modal>` in the same tick, so focus is deferred one
+        // frame — focusing an element that was `display:none` a moment ago can silently fail.
+        if (modal) {
+          requestAnimationFrame(function () {
+            nameField.focus();
+            if (nameField.select) nameField.select();
+          });
+        } else {
+          nameField.focus();
+          if (nameField.select) nameField.select();
+        }
       }
       // The "create" answer stands in for the select's own value, so a select the browser would insist
       // on (the line form's item is `required`) must not block the submit that creates it. Restored on
@@ -324,6 +348,8 @@
       panel.hidden = true;
       panel.classList.remove("is-open");
       setPanelInert(panel, true);
+      var modal = panelModal();
+      if (modal && modal.close) modal.close();
       var nameField = panel.querySelector('[name$="_name"]');
       if (nameField) nameField.required = false;
       if (select.dataset.acWasRequired === "1") {
@@ -337,7 +363,10 @@
     }
 
     function panelOpen() {
-      return !!panel && !panel.hidden;
+      if (!panel) return false;
+      var modal = panelModal();
+      if (modal) return modal.hasAttribute("open");
+      return !panel.hidden;
     }
 
     if (panel) {

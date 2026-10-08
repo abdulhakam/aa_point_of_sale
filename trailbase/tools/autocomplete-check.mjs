@@ -290,7 +290,9 @@ try {
   // Nothing in this section submits. The CREATE itself is exercised end to end in `guest-smoke.mjs`,
   // which runs against a throw-away depot; this is the live depot and a create here would be a real
   // party in the operator's data.
-  await cdp.goto("/invoices/all");
+  // ⚠️ Filter to SALES: a difference invoice has no party field (the legacy Difference header is
+  // INVOICE NO / DATE / USER only), and this section drives the party combobox by name.
+  await cdp.goto("/invoices/all?type=1");
   const firstInvoice = await cdp.ev(`(function () {
     var a = [].slice.call(document.querySelectorAll('a[href^="/invoices/"]')).filter(function (el) {
       return !/\\/invoices\\/(new|all|$)/.test(el.getAttribute("href"));
@@ -301,6 +303,11 @@ try {
   if (firstInvoice) {
     await cdp.goto(firstInvoice);
     for (let i = 0; i < 100; i++) { if (await cdp.ev("document.documentElement.getAttribute('data-hk-ready')==='1'").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
+
+    // A real sale may already carry a party, so the "unchanged" contract is checked against the
+    // control's state BEFORE the create flow rather than against an empty string.
+    const initialParty = await cdp.ev(`document.querySelector('select[name="party"]').value`);
+    const initialShown = await cdp.ev(`document.querySelector('select[name="party"]').closest(".ac").querySelector(".ac-input").value`);
 
     // A closed panel must be INERT, not merely invisible: a hidden input is still submitted, so an
     // abandoned create would otherwise save its name with the next "Save header".
@@ -346,7 +353,7 @@ try {
     check("...focused, enabled and required", opened.enabled && opened.required && opened.focused, JSON.stringify(opened));
     // Rule 3 above all: the create row is an ACTION. If it reached the select, the control's promise
     // that a value not on the list is never submitted would be broken by the control itself.
-    check("...and the native select is still empty, not set to the typed text", opened.selectValue === "", `value="${opened.selectValue}"`);
+    check("...and the native select is unchanged, not set to the typed text", opened.selectValue === initialParty, `value="${opened.selectValue}" initial="${initialParty}"`);
 
     // The item panel's contract is stricter than the party's: its select is `required`, and the browser
     // would refuse the very submit that creates the item unless the panel lifts it.
@@ -363,8 +370,8 @@ try {
                shown: sel.closest(".ac").querySelector(".ac-input").value };
     })()`);
     check("Cancel closes the panel and disables it again", closed.hidden && closed.disabled, JSON.stringify(closed));
-    check("...without submitting anything", closed.selectValue === "", `value="${closed.selectValue}"`);
-    check("...and the box goes back to the select's own label", closed.shown === "No party", `shown="${closed.shown}"`);
+    check("...without submitting anything", closed.selectValue === initialParty, `value="${closed.selectValue}"`);
+    check("...and the box goes back to the select's own label", closed.shown === initialShown, `shown="${closed.shown}" initial="${initialShown}"`);
 
     // Escape, from inside the panel, means the panel — not the global layer's row cursor.
     await cdp.ev(`(function(){var i=document.querySelector('select[name="party"]').closest(".ac").querySelector(".ac-input");i.focus();})()`);

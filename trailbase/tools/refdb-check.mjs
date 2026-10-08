@@ -94,7 +94,9 @@ try {
   // *new-invoice start form* has only a party + area; the item select lives on the invoice itself.)
   // `/invoices` is the legacy five-tile hub now; the list is at `/invoices/all`, and its rows are
   // where an invoice id to open lives ([[ui-parity-discrepancies-2026-10-08]]).
-  await cdp.goto("/invoices/all");
+  // ⚠️ Filter to SALES: a difference invoice has no party field (legacy Difference header is
+  // INVOICE NO / DATE / USER only), and this section drives the party combobox by name.
+  await cdp.goto("/invoices/all?type=1");
   const invoiceHref = await cdp.ev(`(function(){
     var links = document.querySelectorAll('a[href^="/invoices/"]');
     for (var i = 0; i < links.length; i++) {

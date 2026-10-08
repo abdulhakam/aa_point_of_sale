@@ -108,4 +108,28 @@
     var button = target && target.closest ? target.closest("[data-qc-create]") : null;
     if (button) create(button, event);
   });
+
+  /*
+   * The legacy blue "+" beside the party field opens the create dialog directly (measured off the live
+   * bundle: it raises a "Create New Customer" modal with Name/Area/Phone/Address). The combobox's
+   * "Create …" row is the other opener; this is the explicit button the legacy header carries.
+   */
+  document.addEventListener("click", function (event) {
+    var target = event.target;
+    var opener = target && target.closest ? target.closest("[data-qc-open]") : null;
+    if (!opener) return;
+    var panel = document.querySelector(opener.getAttribute("data-qc-open"));
+    if (!panel) return;
+    event.preventDefault();
+    panel.hidden = false;
+    panel.classList.add("is-open");
+    var fields = panel.querySelectorAll("input, select, button");
+    for (var i = 0; i < fields.length; i++) fields[i].disabled = false;
+    var nameField = panel.querySelector('[name$="_name"]');
+    if (nameField) { nameField.required = true; }
+    var overlay = panel.closest ? panel.closest(".aa-modal-overlay") : null;
+    var host = overlay && overlay.__aaHost;
+    if (host && host.open) host.open();
+    if (nameField && nameField.focus) nameField.focus();
+  });
 })();
