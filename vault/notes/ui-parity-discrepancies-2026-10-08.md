@@ -52,8 +52,8 @@ link metric was split into `navLinkColor` / `contentLinkColor` / `rawAnchorColor
   "0 rows in memory"), and Logout (labelled).
 - The five shared destinations are in the **same relative order**; Orders is absent because it was
   withdrawn ([[no-draft-invoices-published-on-save]]), so this is a capability difference, not a
-  mis-ordering. Decide whether the extras stay behind the menu (current) or legacy's single logout
-  control.
+  mis-ordering. **Ruled 2026-10-08: Orders is not needed** — the legacy `orders` destination is an
+  **accepted divergence**, and the guest keeps its foot menu as it is.
 
 ## 2. Hubs and grids — item order
 
@@ -125,7 +125,8 @@ difference, not a rendering one; see [[report-default-window-comes-from-the-data
 5. **Invoices hub vs list** — decide whether guest `/invoices` should be legacy's five-tile hub, with
    the list behind it.
 6. **Cash-memo tile set/labels** — legacy da entry-purchases / crv / cpv / payments / expenses.
-7. **Rail** — the Orders capability decision, and whether the extras stay behind the foot menu.
+7. **Rail** — ~~the Orders capability decision~~ **resolved 2026-10-08: Orders is not needed** (accepted
+   divergence); the foot-menu extras stay.
 8. **Colours** — the active rail link (guest blue, legacy gray) and the raw/tile anchor colour.
 
 ## Related

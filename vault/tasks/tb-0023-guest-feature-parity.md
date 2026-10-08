@@ -163,7 +163,11 @@ the legacy rail carries **six including Orders** — and shows a **reversed mana
 - [x] **Cash-memo tile set/labels** — da entry-purchases / crv / cpv / payments / expenses. **Done
       2026-10-08** — five legacy tiles, legacy order/labels/colours; the guest-only summary card, date
       filter and crumb removed.
-- [ ] **Rail** — the Orders decision and the foot-menu extras.
+- [x] **Rail** — the Orders decision and the foot-menu extras. **Ruled 2026-10-08: Orders is not
+      needed.** The legacy rail's sixth destination is dropped for good; the guest rails keeps its five
+      (Dashboard, Reports, Invoices, Cash Memo, Management) plus Logout, with Payments / Inventory /
+      Print / Pages / Plugins / refresh behind the foot menu. The `Orders` entry in the capture diff is
+      therefore an **accepted divergence**, not a gap.
 - [x] **Colours** — active rail link (guest blue, legacy gray). **Done 2026-10-08** (active glyph back
       to gray-7 on the blue-0 chip). Raw/tile anchor colour still open.
 
