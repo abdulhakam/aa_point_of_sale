@@ -177,7 +177,11 @@ h1, h2, h3 { font-weight: 700; }
  *
  * `justify-content: space-between` reproduces the spacing without hard-coding 110px, and keeps a short
  * final row's tiles in columns 1..n — which is what the legacy capture shows for Daily Sale Report. */
-.tiles { display: grid; grid-template-columns: repeat(5, 10em); justify-content: space-between; gap: 32px 0; }
+/* Hub tiles. The legacy packs them LEFT with a fixed gap, it does not spread them across the card:
+   measured off the live `/app/invoices` hub, five 160px tiles sit at x = 113/411/709/1007/1305 — a
+   138px gap — and end well short of the card's right edge. `space-between` pushed the last tile to the
+   far edge instead. The dashboard's own row uses an 84px gap (measured separately). */
+.tiles { display: grid; grid-template-columns: repeat(5, 10em); justify-content: start; gap: 32px 138px; }
 
 /* The dashboard carries four tiles and the legacy spaces them at ~84px, ending well short of the card's
  * right edge — so it is NOT the same five-column stretch. Measured off `02-dashboard.png`: x = 112, 356,

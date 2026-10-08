@@ -121,6 +121,15 @@ The four items the owner asked for next.
   normally. JS-only, which is fine: with no JS the combobox never offers "Create …".
 - Test harnesses that found their page on `/invoices` now use `/invoices/all`
   (`autocomplete-check`, `refdb-check`).
+- **Hub tile spacing** — the guest spread hub tiles across the card (`justify-content: space-between`);
+  the legacy packs them left with a fixed gap. Measured off the live `/app/invoices` hub (five 160px
+  tiles at x = 113/411/709/1007/1305, a 138px gap), `.tiles` now uses `justify-content: start; gap: 32px
+  138px`; the dashboard keeps its own 84px gap. The guest invoices hub now renders at those exact x
+  positions.
+
+  ⚠️ The capture diff's "login" screen is an **artifact**: the legacy arm's `/auth` redirected to
+  `/app/dashboard` (it was already authenticated), so it compared the legacy dashboard against the
+  guest login form. Not a real difference.
 
 Gates: `guest-smoke` 115/115, `autocomplete-check` 39/0, `hotkey-check` 62/0, `grid-preview-check` 14/0,
 `refdb-check` 12/12, `route-snapshot` 49/0.
