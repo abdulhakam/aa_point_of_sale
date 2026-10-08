@@ -44,15 +44,9 @@
     if (!hex) return json({ error: "nothing created" }, 400);
 
     // The row the client's cache stores, in the refs keys' shape so `refdb.js` can list it directly.
-    const row: any = { id: routeKit.hexToB64(hex), name };
-    if (kind === "party") {
-      row.type = Number(text(form.party_new_from_invoice_type)) === 0 ? 1 : 0; // purchase -> supplier
-    } else {
-      row.category = text(form.item_new_category);
-      row.sale_price = text(form.item_new_sale_price);
-      row.cost_price = text(form.item_new_cost_price);
-      row.box_size_qty = text(form.item_new_box_size_qty);
-    }
+    // Built by `quickCreate.refRow` beside the writers, so the invoice→party translation and the item
+    // columns are not re-derived here ([[guest-writes-via-sql]]).
+    const row = A.quickCreate.refRow(kind, form, routeKit.hexToB64(hex), name);
     return json({ ok: true, table: kind === "party" ? "parties" : "items", kind, id: row.id, row });
   };
 })();

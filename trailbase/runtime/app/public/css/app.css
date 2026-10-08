@@ -19,7 +19,6 @@
   --line: #dee2e6;
 
   --blue-0: #e7f5ff;
-  --blue-4: #4dabf7;
   --blue-6: #228be6;
   --blue-7: #1c7ed6;
   --blue-9: #1864ab;
@@ -65,8 +64,8 @@ body {
 }
 
 /* Legacy body links are Mantine gray-7 (`rgb(73, 80, 87)`), not blue — measured on every screen
- * (`ui-parity-report.mjs`, metric linkColor). Tile labels (`.tile-label`), report links
- * (`.report-link`) and subtle buttons set their own colour, so the blue affordances stay blue. */
+ * (`ui-parity-report.mjs`, metric linkColor). Tile labels (`.tile-label`) and report links
+ * (`.report-link`) set their own colour, so the blue affordances stay blue. */
 a { color: var(--gray-7); }
 
 h1, h2, h3 { font-weight: 700; }
@@ -225,7 +224,6 @@ h1, h2, h3 { font-weight: 700; }
 .c-gray { color: var(--gray-6); }
 .c-pink-4 { color: var(--pink-4); }
 .c-orange-4 { color: var(--orange-4); }
-.c-blue-4 { color: var(--blue-4); }
 .c-gray-4 { color: var(--gray-4-tile); }
 
 /* ------------------------------------------------------------------ stats */
@@ -284,8 +282,6 @@ h1, h2, h3 { font-weight: 700; }
 .btn:hover { background: #e9ecef; }
 .btn.primary { background: var(--blue-6); border-color: var(--blue-6); color: #fff; }
 .btn.primary:hover { background: var(--blue-7); }
-.btn.subtle { border: 0; background: transparent; color: var(--blue-6); padding: 0 12px; }
-.btn.subtle:hover { background: var(--blue-0); }
 .btn.small { height: 28px; padding: 0 10px; font-size: 0.75rem; }
 .btn.danger { color: #fff; background: var(--danger); border-color: var(--danger); }
 .btn.danger:hover { background: #e03131; }

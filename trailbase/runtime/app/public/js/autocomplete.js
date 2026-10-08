@@ -110,6 +110,17 @@
       return (opt.textContent || "").replace(/\s+/g, " ").trim();
     }
 
+    /**
+     * What the operator has TYPED, as a query — the box at rest shows the current selection's label
+     * (legacy's `All` / `No party`), and that label is not a query. Without this the resting box read
+     * as a search for its own label: the open list filtered to nothing and offered a bogus
+     * `Create "No party"` row instead of the rows a refdb insert had just added.
+     */
+    function typedQuery() {
+      if (input.value === currentLabel()) return "";
+      return input.value;
+    }
+
     var filtered = options.slice();
     var cursor = -1;
     var open = false;
@@ -126,7 +137,7 @@
     var MAX_RENDERED = 50;
 
     function filter() {
-      var needle = input.value.toLowerCase().trim();
+      var needle = typedQuery().toLowerCase().trim();
       if (!needle) {
         // An empty query opens a *short* list, not the whole table. Rendering 943 <li> for the 943
         // parties is a page's worth of DOM per open, and the invoice grid has 37 of these.
@@ -239,8 +250,9 @@
     }
 
     function commitTyped() {
-      // Rule 3: only an option that exists may be submitted.
-      var needle = input.value.toLowerCase().trim();
+      // Rule 3: only an option that exists may be submitted. `typedQuery` so the resting box (showing
+      // the current selection's label) is not committed as if that label had been typed.
+      var needle = typedQuery().toLowerCase().trim();
       var match = null;
       for (var i = 0; i < filtered.length; i++) {
         if (filtered[i].create) continue;
@@ -272,7 +284,7 @@
     /** The name the panel would create, or "" when the list already contains exactly that. */
     function creatableName() {
       if (!panel) return "";
-      var needle = input.value.replace(/\s+/g, " ").trim();
+      var needle = typedQuery().replace(/\s+/g, " ").trim();
       if (!needle) return "";
       for (var i = 0; i < options.length; i++) {
         if (options[i].label.toLowerCase() === needle.toLowerCase()) return "";

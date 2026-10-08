@@ -175,9 +175,10 @@ export async function renderRoute(req, options, data) {
         paper: opts.paper ?? "",
         // The data version the client's IndexedDB reference cache syncs against. `dataVersionIfWarm`
         // never probes — the reconcile job and report/ETag requests keep the memo warm — so embedding
-        // it costs nothing on a plain content page. An empty value makes the client sync, not trust a
-        // stale cache. See [[reference-lists-come-from-indexeddb]].
-        refdbVersion: dataVersionIfWarm(),
+        // it costs nothing on a plain content page. It DOES read the shared stamp, so a memo left warm
+        // by a write on another thread does not embed a pre-write version. An empty value makes the
+        // client sync, not trust a stale cache. See [[reference-lists-come-from-indexeddb]].
+        refdbVersion: await dataVersionIfWarm(),
       },
       opts.template,
       data

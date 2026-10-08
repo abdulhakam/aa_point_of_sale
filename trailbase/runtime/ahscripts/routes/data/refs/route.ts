@@ -65,6 +65,22 @@
       });
     }
 
-    return { body: JSON.stringify({ version, tables }), contentType, headers };
+    // The alias map and the per-table option spec travel WITH the data, so `refdb.js` holds no second
+    // copy of "which `data-ref` value means which list" or "which column fills `data-price`". One
+    // source (here) instead of a client constant that drifts from the projection it consumes.
+    const ALIAS: { [key: string]: string } = {
+      order_bookers: "bookers",
+      party_types: "partyTypes",
+      invoice_types: "invoiceTypes",
+      payment_types: "paymentTypes",
+    };
+    const spec: { [key: string]: any } = {};
+    for (const key of Object.keys(tables)) {
+      spec[key] = key === "items"
+        ? { label: "name", data: { price: "sale_price", cost: "cost_price", box: "box_size_qty" } }
+        : { label: "name" };
+    }
+
+    return { body: JSON.stringify({ version, tables, alias: ALIAS, spec }), contentType, headers };
   };
 })();

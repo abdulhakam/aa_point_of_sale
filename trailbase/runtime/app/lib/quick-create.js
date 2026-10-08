@@ -145,3 +145,22 @@ export async function itemFromForm(db, form) {
     box_size_qty: form.item_new_box_size_qty,
   });
 }
+
+/**
+ * The client-cache row for a freshly created party/item, in the refs keys' shape `refdb.js` lists
+ * directly. It lives HERE, beside the writers, so the create's own field mapping — the invoice→party
+ * translation above, the item's columns below — is not re-derived a second time in the route and
+ * cannot disagree with what was written.
+ */
+export function refRow(kind, form, id, name) {
+  const row = { id: String(id), name: text(name) };
+  if (kind === "party") {
+    row.type = partyTypeForInvoice(form?.party_new_from_invoice_type);
+  } else {
+    row.category = text(form?.item_new_category);
+    row.sale_price = text(form?.item_new_sale_price);
+    row.cost_price = text(form?.item_new_cost_price);
+    row.box_size_qty = text(form?.item_new_box_size_qty);
+  }
+  return row;
+}

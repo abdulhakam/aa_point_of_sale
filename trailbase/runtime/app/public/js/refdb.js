@@ -33,38 +33,31 @@
   var DB_VERSION = 1;
   var META_STORE = "meta";
 
-  // What the refs key is, given the `data-ref` value a template wrote. Most pass the refs key; the
-  // management/report sources pass the table name.
-  var REF_ALIAS = {
-    order_bookers: "bookers",
-    party_types: "partyTypes",
-    invoice_types: "invoiceTypes",
-    payment_types: "paymentTypes",
-  };
+  // ⚠️ Bump this on any change to what refdb caches or the option spec it renders. It is stored with
+  // the data version and compared on load, so a DEPLOY that changes the cache shape invalidates every
+  // warm client even when the data fingerprint is unchanged. Without it a code change that adds/changes
+  // an option `data-*` attribute would never reach a browser holding a warm cache.
+  var CACHE_REV = 2;
+
+  // The nine lists defined by app/sql/refs.sql. This is the IndexedDB store list, so it must be known
+  // BEFORE the fetch (stores are created in `onupgradeneeded`). It is the ONE thing that stays a
+  // client-side constant; the label/data spec and the source alias map are delivered by `/data/refs`
+  // (below) so the client holds no second copy that could drift from the projection it consumes.
+  var TABLES = ["parties", "items", "areas", "sections", "companies", "bookers", "partyTypes", "invoiceTypes", "paymentTypes"];
+
+  // Populated from the `/data/refs` payload (and persisted in the meta store for the cache path).
+  // `REF_ALIAS` maps a template's `data-ref` value to the refs key; `TABLE_SPEC` maps a refs key to its
+  // `{label, data}` option spec. Both come from the server, which is the single source.
+  var REF_ALIAS = {};
+  var TABLE_SPEC = {};
+  function adoptSpec(spec, alias) {
+    if (alias) for (var a in alias) if (Object.prototype.hasOwnProperty.call(alias, a)) REF_ALIAS[a] = alias[a];
+    if (spec) for (var t in spec) if (Object.prototype.hasOwnProperty.call(spec, t)) TABLE_SPEC[t] = spec[t];
+  }
   function refKey(name) {
     var n = String(name || "");
     return REF_ALIAS[n] || n;
   }
-
-  // The label field and the extra data attributes a select's options carry. `items` is the one that
-  // matters beyond display: the invoice grid fills a line from `data-price`/`data-cost`/`data-box`
-  // on change, so those attributes must survive a repopulation (app.js reads them).
-  var TABLE_SPEC = {
-    parties: { label: "name" },
-    items: { label: "name", data: { price: "sale_price", cost: "cost_price", box: "box_size_qty" } },
-    areas: { label: "name" },
-    sections: { label: "name" },
-    companies: { label: "name" },
-    bookers: { label: "name" },
-    partyTypes: { label: "name" },
-    invoiceTypes: { label: "name" },
-    paymentTypes: { label: "name" },
-  };
-
-  // The nine lists defined by app/sql/refs.sql, in one client place: derived from the spec so the
-  // store list and the label/attribute map cannot drift from each other. (`/data/refs` serves the
-  // same keys; adding a list there without adding it here means it is simply not cached.)
-  var TABLES = Object.keys(TABLE_SPEC);
 
   var cache = null; // table -> array of rows, once ready
   var dbPromise = null;
@@ -103,19 +96,18 @@
     });
   }
 
-  // The stored VALUE, not the whole record: the `meta` store is keyPath "key", so `get` resolves
-  // `{key, value}`. Returning the record made the version guard compare an object to a number and
-  // never match, so the cache was re-fetched on every page.
+  // The stored RECORD (`{key, value, rev, spec, alias}`), not just `.value`: the version, the cache
+  // revision and the server spec all have to be readable from one lookup.
   function readMeta(db, key) {
     return new Promise(function (resolve, reject) {
       var request = db.transaction(META_STORE, "readonly").objectStore(META_STORE).get(key);
-      request.onsuccess = function () { resolve(request.result ? request.result.value : null); };
+      request.onsuccess = function () { resolve(request.result || null); };
       request.onerror = function () { reject(request.error); };
     });
   }
 
-  /** Replace every table and the stored version in one transaction. */
-  function replaceAll(db, tables, version) {
+  /** Replace every table, the stored version, the cache revision and the server spec in one transaction. */
+  function replaceAll(db, tables, version, spec, alias) {
     return new Promise(function (resolve, reject) {
       var names = TABLES.concat([META_STORE]);
       var tx = db.transaction(names, "readwrite");
@@ -127,7 +119,7 @@
         var rows = tables[TABLES[i]] || [];
         for (var j = 0; j < rows.length; j++) store.put(rows[j]);
       }
-      tx.objectStore(META_STORE).put({ key: "version", value: version });
+      tx.objectStore(META_STORE).put({ key: "version", value: version, rev: CACHE_REV, spec: spec || null, alias: alias || null });
     });
   }
 
@@ -330,16 +322,23 @@
 
   function load() {
     return open().then(function (db) {
-      return readMeta(db, "version").then(function (stored) {
+      return readMeta(db, "version").then(function (record) {
         var version = pageVersion();
-        // Use the cache when the page's data version is the one it was built from and every store is
-        // present; otherwise refetch. `version` 0 means the page did not carry one — sync, do not
-        // trust the cache.
-        if (stored !== null && version !== 0 && Number(stored) === version) {
+        // Use the cache only when the page's data version is the one it was built from, the CACHE_REV
+        // still matches (so a code/spec deploy invalidates it), and every store is present. `version`
+        // 0 means the page did not carry one — sync, do not trust the cache.
+        var usable = record &&
+          version !== 0 &&
+          Number(record.value) === version &&
+          Number(record.rev) === CACHE_REV;
+        if (usable) {
+          // The server spec travels with the cache, so the cache path uses the same label/data maps
+          // the fetch path does — no client copy to drift.
+          adoptSpec(record.spec, record.alias);
           return Promise.all(TABLES.map(function (t) { return readAll(db, t); })).then(function (lists) {
             var out = {};
             for (var i = 0; i < TABLES.length; i++) out[TABLES[i]] = lists[i];
-            return { tables: out, fromCache: true };
+            return { tables: out, fromCache: true, sameAsPage: true };
           });
         }
         return fetch("/data/refs", { headers: { accept: "application/json" }, credentials: "same-origin" })
@@ -348,8 +347,12 @@
             return response.json();
           })
           .then(function (payload) {
-            return replaceAll(db, payload.tables || {}, payload.version).then(function () {
-              return { tables: payload.tables || {}, fromCache: false };
+            adoptSpec(payload.spec, payload.alias);
+            return replaceAll(db, payload.tables || {}, payload.version, payload.spec, payload.alias).then(function () {
+              // The server already rendered its options from the SAME version this page carries, so the
+              // DOM matches the fetched tables and a full rebuild would recreate identical nodes.
+              var sameAsPage = version !== 0 && Number(payload.version) === version;
+              return { tables: payload.tables || {}, fromCache: false, sameAsPage: sameAsPage };
             });
           });
       });
@@ -359,10 +362,10 @@
   var ready = load()
     .then(function (result) {
       cache = result.tables;
-      // When the cache matched the page's version, the server already rendered the same options from
-      // the same fingerprint — rebuilding every select would duplicate that work. Rebuild only after
-      // a refetch (a version change), where the server's markup may be from the previous version.
-      if (!result.fromCache) applyAll();
+      // When the fetched version is the page's own version, the server already rendered the same
+      // options from the same fingerprint, so rebuilding every select would duplicate that work.
+      // Rebuild only when the markup may be from a different version (`!sameAsPage`).
+      if (!result.fromCache && !result.sameAsPage) applyAll();
       // Observable for tools/tests: did this page load read the cache or the network?
       try { document.documentElement.setAttribute("data-refdb-source", result.fromCache ? "cache" : "network"); } catch (e) { /* no document */ }
       return cache;

@@ -11,31 +11,12 @@
     const user = routeKit.userOf(req);
     if (!user) return routeKit.loginRedirect(req, path);
 
-    const c = await A.baseviews.counts();
-    const tiles = [
-      { label: "Sections", value: c.sections },
-      { label: "Areas", value: c.areas },
-      { label: "Item Companies", value: c.categories },
-      { label: "Parties", value: c.parties },
-      { label: "Order Bookers", value: c.order_bookers },
-      { label: "Items", value: c.items },
-      { label: "Purchase Invoices", value: c.purchase_invoices },
-      { label: "Sale Invoices", value: c.sale_invoices },
-      { label: "Return Invoices", value: c.return_invoices },
-      { label: "Recieving Payments", value: c.recieving_payments },
-      { label: "Sending Payments", value: c.sending_payments },
-    ];
-
+    // The legacy dashboard is the six tiles and nothing else ([[ui-parity-discrepancies-2026-10-08]]);
+    // the "Overview" counters card is gone, so `counts()` and the array it fed are not computed.
     return routeKit.renderRoute(
       req,
       { user, active: "dashboard", title: "Dashboard", template: "dashboard/index.html" },
-      {
-        tiles,
-        shortcuts: [
-          { title: "Reports", target: "reports", tone: "pink" },
-          { title: "Management", target: "management", tone: "gray" },
-        ],
-      }
+      {}
     );
   };
 })();

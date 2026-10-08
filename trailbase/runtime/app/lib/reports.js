@@ -169,9 +169,19 @@ export async function dataVersion() {
  * older than 1.5 s. The page renderer embeds a version on every page, and forcing a probe there put
  * that cost on plain content pages. This never probes: it reads the memo the reconcile job (and any
  * report/ETag request) already warmed. "" means the page carries no version, and the client syncs.
+ *
+ * ⚠️ **The shared stamp is checked, not just the per-thread memo.** The memo is per-thread module
+ * state, so a write on another thread leaves this thread holding a pre-write fingerprint for up to
+ * 1.5 s. Embedding that version would tell the client its equally-pre-write IndexedDB cache is current
+ * — the exact "a party created a moment ago is missing from the dropdown" bug the shared stamp exists
+ * to close ([[fingerprint-memo-is-per-thread-so-a-read-after-a-write-can-be-stale]]). One cheap KV read
+ * (no 17-table probe) detects it and returns "", so the client syncs instead. ASYNC for that read.
  */
-export function dataVersionIfWarm() {
-  return probe.fingerprint ? versionOf(probe.fingerprint) : "";
+export async function dataVersionIfWarm() {
+  if (!probe.fingerprint) return "";
+  const stamp = await kvStamp();
+  if (stamp !== null && probe.stamp !== null && stamp !== probe.stamp) return "";
+  return versionOf(probe.fingerprint);
 }
 
 /**

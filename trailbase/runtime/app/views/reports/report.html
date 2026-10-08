@@ -79,11 +79,9 @@
    It filters the rows ALREADY rendered, so it cannot change a total; a filter that changed a money figure
    would be a second arithmetic path, and this app has exactly one by decision. Rows beyond the render cap
    still need "Show all" below. #}
-{% if not def.filtersModal %}
 <div class="report-filter">
   <label class="field"><span>Find in this report</span><input type="search" data-table-filter="#report-table" autocomplete="off" spellcheck="false"></label>
 </div>
-{% endif %}
 {{ tb.simple(columns, rows, mobile, "report-table") }}
 {% if rowInfo and rowInfo.truncated %}
 <p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>
