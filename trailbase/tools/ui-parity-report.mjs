@@ -28,7 +28,7 @@ const ONLY = arg("--screen", "");
 const norm = (s) => String(s ?? "").replace(/\s+/g, " ").trim().toLowerCase();
 /** Compare as SETS of normalised strings, so order is reported separately from membership. */
 const setOf = (list) => new Set((list ?? []).map(norm).filter(Boolean));
-const METRICS = ["bodyFont", "bodySize", "bodyBg", "linkColor", "buttonBg", "thTransform", "thBorder", "tdBorder"];
+const METRICS = ["bodyFont", "bodySize", "bodyBg", "navLinkColor", "contentLinkColor", "rawAnchorColor", "buttonBg", "thTransform", "thBorder", "tdBorder"];
 
 function load(system, name) {
   const p = join(ROOT, system, `${name}.structure.json`);
@@ -67,13 +67,16 @@ for (const name of names) {
     const gOrder = (gList ?? []).map(norm), lOrder = (lList ?? []).map(norm);
     const sameOrder = !ordered || gOrder.join("|") === lOrder.join("|");
     if (onlyGuest.length || onlyLegacy.length || !sameOrder) {
-      rows.push({ field, onlyGuest, onlyLegacy, sameOrder, guestCount: gs.size, legacyCount: ls.size });
+      rows.push({ field, onlyGuest, onlyLegacy, sameOrder, gOrder, lOrder, guestCount: gs.size, legacyCount: ls.size });
     }
   };
 
+  // `nav` first: the rail's items and their order are compared like any other ordered list.
+  add("nav", g.nav, l.nav, true);
   add("tiles", g.tiles, l.tiles, true);
   add("headings", g.headings, l.headings, false);
   add("buttons", g.buttons, l.buttons, false);
+  add("links", g.links, l.links, true);
   add("tableHeaders", g.tableHeaders, l.tableHeaders, true);
   add("formLabels", g.formLabels, l.formLabels, true);
   add("inputs", g.inputs, l.inputs, false);
@@ -93,6 +96,10 @@ for (const name of names) {
   for (const r of rows) {
     if (r.field === "rowCount") { console.log(`  rows: guest ${r.guest} vs legacy ${r.legacy}`); continue; }
     console.log(`  ${r.field}: guest ${r.guestCount} / legacy ${r.legacyCount}${r.sameOrder ? "" : "  (ORDER DIFFERS)"}`);
+    if (!r.sameOrder) {
+      console.log(`      guest  order: ${r.gOrder.slice(0, 12).join(" | ")}`);
+      console.log(`      legacy order: ${r.lOrder.slice(0, 12).join(" | ")}`);
+    }
     if (r.onlyGuest.length) console.log(`      only guest : ${r.onlyGuest.slice(0, 8).join(" | ")}`);
     if (r.onlyLegacy.length) console.log(`      only legacy: ${r.onlyLegacy.slice(0, 8).join(" | ")}`);
   }

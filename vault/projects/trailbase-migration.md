@@ -6,7 +6,7 @@ created: 2026-09-26
 updated: 2026-10-08
 tags: [pos, trailbase, migration, workstream]
 belongs_to: "[[aa-point-of-sale]]"
-related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[features-as-native-web-components]]"]
+related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[ui-parity-discrepancies-2026-10-08]]", "[[features-as-native-web-components]]"]
 ---
 
 # TrailBase migration
@@ -78,6 +78,15 @@ Memo tile glyph corrected; and report dates became `<aa-date-input>`
 `grid-preview-check` 14, `route-snapshot` 49/0). Evidence and the residual list:
 [[ui-parity-restyle-progress-2026-10-08]]. **Next: A2 continues — the report filter modal and the
 per-screen shape differences — plus the unbuilt return/difference invoice entry.**
+
+**2026-10-08 (later) — the UI was diffed 1-1 against the live legacy bundle.** Operator-supplied
+credentials (`user`/`admin`) let `ui-capture.mjs --system both` capture all 28 screens from BOTH apps
+for the first time, so the comparison is no longer guest-vs-stored-capture. The rail is now compared by
+membership and order: the live legacy rail carries **six** destinations including **Orders** (the
+earlier "five" was wrong), the management hub is ordered the **reverse** of the guest's, and legacy
+`/app/invoices` is a **five-tile hub** where the guest has a list. Exact list and the actionable
+residuals: [[ui-parity-discrepancies-2026-10-08]]; raw diff
+`vault/attachments/ui-capture/parity.json`.
 
 **2026-10-07 — the mandate changed and Part B shipped.** [[parity-reinstates-the-legacy-look-with-defect-fixes]]
 puts the legacy look back on the critical path (step 7 reopened), and

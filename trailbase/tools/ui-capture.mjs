@@ -78,6 +78,9 @@ const STRUCTURE = `(function () {
   var vis = function (el) { var r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
   var take = function (list, n) { return list.filter(Boolean).slice(0, n); };
   var css = function (el, p) { return el ? getComputedStyle(el)[p] : null; };
+  // The last non-empty path segment of a href, so the two systems' route prefixes do not matter:
+  // legacy links to /app/dashboard, the guest to /dashboard, and both reduce to "dashboard".
+  var seg = function (href) { var parts = String(href || "").split("?")[0].split("/").filter(Boolean); return parts.length ? parts[parts.length - 1] : ""; };
   var boxes = take([...document.querySelectorAll("main, [role=main], .mantine-AppShell-main, body > div")].filter(vis), 1)[0] || document.body;
   var clickable = take([...document.querySelectorAll("a, button, [role=button]")].filter(vis).map(txt), 24);
   var inputs = take([...document.querySelectorAll("input, select, textarea")].filter(vis).map(function (e) {
@@ -93,6 +96,14 @@ const STRUCTURE = `(function () {
     }).map(function (e) { var svg = e.querySelector("svg"); return (txt(e).slice(0, 28) || (svg ? "[icon]" : "[?]")); }), 24),
     buttons: take([...document.querySelectorAll("button, [role=button], a.btn, button[type=submit]")].filter(vis).map(txt), 16),
     links: take([...document.querySelectorAll("main a, [role=main] a")].filter(vis).map(txt), 16),
+    // The rail, in DOM order: each destination as seg:<last path segment> and each trailer control as
+    // btn:<title|aria-label|text>. This is what lets the diff compare the ORDER of the rail and the
+    // membership of its extras — the guest's foot-menu links live inside the same nav, so they show up
+    // here exactly as the extra destinations they are.
+    nav: take([...document.querySelectorAll("nav a[href], nav button")].filter(vis).map(function (e) {
+      if (e.tagName === "A") return "seg:" + seg(e.getAttribute("href"));
+      return "btn:" + (e.getAttribute("title") || e.getAttribute("aria-label") || txt(e) || "").slice(0, 20);
+    }), 24),
     tableHeaders: take([...document.querySelectorAll("th")].filter(vis).map(txt), 18),
     formLabels: take([...document.querySelectorAll("label")].filter(vis).map(txt)
       // A Mantine <label> wraps its whole control, so a select's label carries every option —
@@ -107,11 +118,15 @@ const STRUCTURE = `(function () {
       bodyFont: css(document.body, "fontFamily"),
       bodySize: css(document.body, "fontSize"),
       bodyBg: css(document.body, "backgroundColor"),
-      // The base anchor colour, sampled from a throwaway link rather than the first anchor on the page.
-      // The first anchor is not comparable between the two apps: the guest header wraps the business
-      // name in an a.brand and its hubs lead with tile/button links, so the same selector measured a
-      // different KIND of element on each side.
-      linkColor: (function () {
+      // Link colours, sampled from elements that exist on BOTH systems and mean the same thing:
+      //   navLinkColor     — the rail destination links (both draw them from the same nav);
+      //   contentLinkColor — the first anchor in the main region;
+      //   rawAnchorColor   — a throwaway <a> in the body, i.e. the page's BASE anchor rule.
+      // The base rule is the one place the two apps differ by construction: the guest sets a global
+      // anchor colour, the legacy sets none and lets a raw anchor fall to the browser's default blue.
+      navLinkColor: css(document.querySelector("nav a[href]"), "color"),
+      contentLinkColor: css(document.querySelector("main a[href], [role=main] a[href]"), "color"),
+      rawAnchorColor: (function () {
         var p = document.createElement("a"); p.href = "#";
         p.style.position = "absolute"; p.style.visibility = "hidden";
         (document.body || document.documentElement).appendChild(p);

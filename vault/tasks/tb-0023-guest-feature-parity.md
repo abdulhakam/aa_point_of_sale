@@ -7,7 +7,7 @@ created: 2026-09-27
 updated: 2026-10-08
 tags: [guest, ui, parity, legacy, cutover, autocomplete, usability]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[parity-is-functional-not-visual]]", "[[guest-frontend-feature-parity-gaps]]", "[[legacy-ui-reference-captures]]", "[[ui-parity-discrepancies-2026-10-05]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[features-as-native-web-components]]", "[[runtime-js-guest-platform]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]", "[[sale-price-adjustment]]"]
+related_to: ["[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[parity-is-functional-not-visual]]", "[[guest-frontend-feature-parity-gaps]]", "[[legacy-ui-reference-captures]]", "[[ui-parity-discrepancies-2026-10-05]]", "[[ui-parity-discrepancies-2026-10-08]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[features-as-native-web-components]]", "[[runtime-js-guest-platform]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]", "[[sale-price-adjustment]]"]
 ---
 
 # Guest feature parity — every legacy capability, plus a better UI
@@ -131,6 +131,26 @@ Plus the client-side reference store:
       `POST /quick-create` for the no-reload create (form fallback kept), and
       `tools/refdb-check.mjs` (**11 passed**). `invoices` deferred with its reason (its only
       dropdown is a computed unpaid/balance list over `payments`).
+
+## Re-measured 1-1 against the live legacy, 2026-10-08
+
+With operator-supplied legacy credentials (`user`/`admin`), both apps were captured side by side for
+the first time (`ui-capture --system both`), and the rail's membership **and order** are now compared.
+The full exact list is [[ui-parity-discrepancies-2026-10-08]]; the raw diff is
+`vault/attachments/ui-capture/parity.json`. It corrects the earlier "five rail destinations" claim —
+the legacy rail carries **six including Orders** — and shows a **reversed management-hub order** and a
+**hub-vs-list `/invoices`** mismatch that the earlier one-sided diffs could not see.
+
+- [x] **Check the UI parity 1-1** and record the exact differences. Done 2026-10-08.
+- [ ] **Report filter modal** — add the legacy "Filter Data" dialog (stockreport, difference) as a
+      reusable component ([[features-as-native-web-components]]).
+- [ ] **Report filter labels** — `date from`/`date to`; review the autocomplete label text.
+- [ ] **Management `Created` column** and the items/bookers column sets.
+- [ ] **Management hub order** — sections, areas, parties, companies, bookers, items.
+- [ ] **Invoices hub vs list** — legacy `/app/invoices` is a five-tile hub; the guest is a list.
+- [ ] **Cash-memo tile set/labels** — da entry-purchases / crv / cpv / payments / expenses.
+- [ ] **Rail** — the Orders decision and the foot-menu extras.
+- [ ] **Colours** — active rail link (guest blue, legacy gray) and raw/tile anchor colour.
 
 ## Already done, and still standing
 
