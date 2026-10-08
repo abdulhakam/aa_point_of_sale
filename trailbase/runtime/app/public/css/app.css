@@ -205,7 +205,10 @@ h1, h2, h3 { font-weight: 700; }
 }
 .tile:hover { box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15); transform: scale(1.05); }
 .tile .ti { display: block; }
-.tile-label { display: block; margin-top: 7px; font-size: 0.875rem; color: var(--blue-6); line-height: 1.25; }
+/* The legacy tile is a raw `<a>`, so its label is the browser's default link blue — measured as
+ * rgb(0,0,238) on every hub (dashboard, cash-memo, reports). Blue-6 (#228be6) was close but not the
+ * same colour ([[ui-parity-discrepancies-2026-10-08]], metric contentLinkColor). */
+.tile-label { display: block; margin-top: 7px; font-size: 0.875rem; color: #0000ee; line-height: 1.25; }
 
 /* tile icon colours — Mantine colour[6] (hubs) and colour[4] (dashboard), as legacy renders */
 .c-blue { color: var(--blue-6); }
