@@ -24,7 +24,7 @@
   <div class="qc-fields">
     <label class="field"><span>Name</span><input type="text" name="party_new_name" autocomplete="off" spellcheck="false"></label>
     <label class="field"><span>Area</span>
-      <select name="party_new_area" data-searchable>
+      <select name="party_new_area" data-searchable data-ref="areas">
         <option value="">No area</option>
         {% for a in areas %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}
       </select>
@@ -33,7 +33,10 @@
     <label class="field"><span>Address</span><input type="text" name="party_new_address" autocomplete="off" spellcheck="false"></label>
   </div>
   <div class="form-actions">
-    <button class="btn primary" type="submit">Create and use</button>
+    {# `data-qc-create` is the hook refdb-create.js uses to POST /quick-create and inject the row
+       without a reload. Without JavaScript the attribute is inert and this button submits the invoice
+       form, so the create rides in that submit as before. #}
+    <button class="btn primary" type="submit" data-qc-create>Create party</button>
     <button class="btn" type="button" data-qc-cancel>Cancel</button>
   </div>
 </div>
@@ -45,7 +48,7 @@
   <div class="qc-fields">
     <label class="field"><span>Name</span><input type="text" name="item_new_name" autocomplete="off" spellcheck="false"></label>
     <label class="field"><span>Company</span>
-      <select name="item_new_category" data-searchable>
+      <select name="item_new_category" data-searchable data-ref="companies">
         <option value="">No company</option>
         {% for c in companies %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
       </select>
@@ -55,7 +58,9 @@
     <label class="field"><span>Carton Size</span><input type="number" step="any" name="item_new_box_size_qty" value="0"></label>
   </div>
   <div class="form-actions">
-    <button class="btn primary" type="submit">Create and add line</button>
+    {# Creates the item and selects it; the line is then added by the form's own ADD LINE, so the
+       numbers the operator sets win. See refdb-create.js. #}
+    <button class="btn primary" type="submit" data-qc-create>Create item</button>
     <button class="btn" type="button" data-qc-cancel>Cancel</button>
   </div>
 </div>

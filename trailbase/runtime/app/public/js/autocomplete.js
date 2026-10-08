@@ -50,14 +50,20 @@
     for (var i = 0; i < fields.length; i++) fields[i].disabled = inert;
   }
 
-  function enhance(select) {
-    if (select.multiple || select.dataset.acReady === "1") return;
+  /** The select's own options as `{value,label}`, in document order, blanks dropped. */
+  function readOptions(select) {
     var options = [];
     for (var i = 0; i < select.options.length; i++) {
       var o = select.options[i];
       if (o.value === "") continue;
       options.push({ value: o.value, label: (o.textContent || "").replace(/\s+/g, " ").trim() });
     }
+    return options;
+  }
+
+  function enhance(select) {
+    if (select.multiple || select.dataset.acReady === "1") return;
+    var options = readOptions(select);
     if (options.length < MIN_OPTIONS) return;
     select.dataset.acReady = "1";
 
@@ -411,6 +417,26 @@
 
     // If something else in the app changes the select (an item pick filling a form), keep the text true.
     wrap.addEventListener("ac:sync", function () { input.value = currentLabel(); });
+
+    // refdb changed the select's options. When it reports WHICH row moved, update this control's
+    // array incrementally instead of re-reading and re-normalising all ~1,000 labels — the DOM option
+    // is already correct. A whole-list event (a hydrate) still re-reads.
+    select.addEventListener("refdb:select", function (event) {
+      var detail = event && event.detail;
+      if (detail && detail.row) {
+        var value = String(detail.row.id);
+        options = options.filter(function (entry) { return entry.value !== value; });
+        if (detail.action !== "remove") {
+          var option = null;
+          for (var i = 0; i < select.options.length; i++) { if (select.options[i].value === value) { option = select.options[i]; break; } }
+          if (option) options.unshift({ value: value, label: (option.textContent || "").replace(/\s+/g, " ").trim() });
+        }
+      } else {
+        options = readOptions(select);
+      }
+      if (open) refresh();
+      else input.value = currentLabel();
+    });
   }
 
   function init() {

@@ -28,10 +28,17 @@ related_to: ["[[parity-is-functional-not-visual]]", "[[runtime-js-guest-platform
 > legacy printout header, which is a business identity, not a look
 > ([[environment]]).
 >
-> The rest of this note is kept **as it was written on 2026-09-27**, because a withdrawn claim that has
+ > The rest of this note is kept **as it was written on 2026-09-27**, because a withdrawn claim that has
 > been deleted is indistinguishable from a claim that was never made — and this one was acted on for
 > eight days. What it caused is recorded in [[parity-is-functional-not-visual]] and measured in
 > [[ui-parity-discrepancies-2026-10-05]].
+>
+> ## ⚠️ Partly reinstated 2026-10-07
+>
+> The **look half of this decision is back**, in modified form: parity reinstates the legacy look but
+> **fixes legacy defects rather than copying them** — [[parity-reinstates-the-legacy-look-with-defect-fixes]].
+> The byte-faithful clause ("same look … same labels, same tiles, same print output") remains
+> withdrawn; `BOX_SIZE_QTY`-style headers and `<th>`-less tables are still not copied.
 
 ## Decision (as written 2026-09-27)
 

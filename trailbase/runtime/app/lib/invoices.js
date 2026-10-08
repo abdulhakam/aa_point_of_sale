@@ -100,10 +100,26 @@ function filteredQuery(filters) {
   };
 }
 
-export async function listInvoices(db, filters = {}) {
+/** Clamp a caller-supplied page number to a safe integer; anything unusable falls back. */
+function clampInt(value, fallback, min, max) {
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(Math.max(n, min), max);
+}
+
+/**
+ * One page of the invoice list, newest first.
+ *
+ * `paging` is `{ limit, offset }`. LIMIT/OFFSET are inlined rather than bound: they are computed
+ * integers, never user text, and the guest's parameter binding is text-only. The default is a 300-row
+ * page so callers that pass no paging (the open-invoice picker) keep their old shape.
+ */
+export async function listInvoices(db, filters = {}, paging = {}) {
+  const limit = clampInt(paging.limit, 300, 1, 1000);
+  const offset = clampInt(paging.offset, 0, 0, 1000000000);
   const { sql: filtered, params } = filteredQuery(filters);
   const where = filters.unpaid === 'on' ? ' WHERE total - paid > 0.005' : '';
-  const rows = await db.all(filtered + where + ' ORDER BY invoiceNo DESC, id DESC LIMIT 300', params);
+  const rows = await db.all(filtered + where + ' ORDER BY invoiceNo DESC, id DESC LIMIT ' + limit + ' OFFSET ' + offset, params);
   return rows.map(named(LIST_COLUMNS)).map((r) => {
     const total = round2(r.total);
     const paid = round2(r.paid);

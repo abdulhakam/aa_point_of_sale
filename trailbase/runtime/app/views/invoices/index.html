@@ -17,7 +17,7 @@
   <label class="field"><span>From</span><input type="date" name="from" value="{{ filters.from }}"></label>
   <label class="field"><span>To</span><input type="date" name="to" value="{{ filters.to }}"></label>
   <label class="field"><span>Party</span>
-    <select name="party" data-searchable>
+    <select name="party" data-searchable data-ref="parties">
       <option value="">All</option>
       {% for p in parties %}<option value="{{ p.id }}"{% if filters.party == p.id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
     </select>
@@ -31,13 +31,20 @@
 
 <section class="card">
   <div class="list-toolbar">
-    <h2>Invoices ({{ rows|length }})</h2>
+    <h2>Invoices ({{ totals.count }})</h2>
     <div class="stat-grid">
       <div class="stat"><div class="stat-value">{{ totals.totalText }}</div><div class="stat-label">Billed</div></div>
       <div class="stat"><div class="stat-value">{{ totals.paidText }}</div><div class="stat-label">Paid</div></div>
       <div class="stat"><div class="stat-value">{{ totals.balanceText }}</div><div class="stat-label">Balance</div></div>
     </div>
   </div>
+  {% if pageCount > 1 %}
+  <div class="pager">
+    {% if page > 1 %}<a class="btn" href="?{{ baseQuery }}&page={{ page - 1 }}">← Prev</a>{% else %}<span class="btn disabled">← Prev</span>{% endif %}
+    <span class="pager-info">Page {{ page }} of {{ pageCount }} · showing {{ (page - 1) * pageSize + 1 }}–{{ (page - 1) * pageSize + rows|length }} of {{ totals.count }}</span>
+    {% if page < pageCount %}<a class="btn" href="?{{ baseQuery }}&page={{ page + 1 }}">Next →</a>{% else %}<span class="btn disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
   <div class="tablewrap">
   <table class="data" data-mobile="cards">
     <thead><tr>
@@ -61,5 +68,12 @@
     </tbody>
   </table>
   </div>
+  {% if pageCount > 1 %}
+  <div class="pager">
+    {% if page > 1 %}<a class="btn" href="?{{ baseQuery }}&page={{ page - 1 }}">← Prev</a>{% else %}<span class="btn disabled">← Prev</span>{% endif %}
+    <span class="pager-info">Page {{ page }} of {{ pageCount }} · showing {{ (page - 1) * pageSize + 1 }}–{{ (page - 1) * pageSize + rows|length }} of {{ totals.count }}</span>
+    {% if page < pageCount %}<a class="btn" href="?{{ baseQuery }}&page={{ page + 1 }}">Next →</a>{% else %}<span class="btn disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
 </section>
 {% endblock %}

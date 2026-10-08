@@ -46,6 +46,10 @@ function shellContext(shell, data) {
     title: shell.title ?? shell.appName,
     flash: shell.flash ?? null,
     nav: shell.nav ?? {},
+    // The current data version, for the client's IndexedDB reference cache (refdb.js). Empty when a
+    // page is rendered by a path that does not carry it, which makes the client sync rather than
+    // trust a stale cache. See [[reference-lists-come-from-indexeddb]].
+    refdbVersion: shell.refdbVersion ?? "",
     // Which paper this page prints on. A5 for an invoice or a voucher, A4 landscape for a report,
     // and blank for everything else so the print media query does not apply a size to, say, the
     // dashboard. The stylesheet keys off this attribute rather than guessing from the route.

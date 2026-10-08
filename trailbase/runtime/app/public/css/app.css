@@ -830,3 +830,9 @@ kbd {
 .filters .ac { min-width: 10rem; }
 
 @media print { .ac-list { display: none !important; } }
+
+/* ── list pager (the /invoices list, which used to stop hard at 300 rows) ──────────────────────── */
+.pager { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 10px 0; }
+.pager-info { color: var(--grey-6, #495057); font-size: 0.9em; }
+.btn.disabled { opacity: 0.5; pointer-events: none; }
+@media print { .pager { display: none !important; } }

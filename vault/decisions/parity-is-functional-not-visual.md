@@ -1,16 +1,31 @@
 ---
 title: Parity with legacy is functional, not visual
 type: decision
-status: accepted
+status: superseded
+superseded_by: "[[parity-reinstates-the-legacy-look-with-defect-fixes]]"
 decided_on: 2026-10-05
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-07
 tags: [frontend, guest, parity, ui, cutover, legacy, mandate, supersedes]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[guest-ui-is-a-direct-shift-of-legacy]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0023-guest-feature-parity]]", "[[legacy-ui-reference-captures]]", "[[ui-parity-discrepancies-2026-10-05]]", "[[runtime-js-guest-platform]]", "[[keep-legacy-stack-in-production]]", "[[mobile-layout-is-additive-to-the-legacy-look]]"]
+related_to: ["[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[guest-ui-is-a-direct-shift-of-legacy]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0023-guest-feature-parity]]", "[[legacy-ui-reference-captures]]", "[[ui-parity-discrepancies-2026-10-05]]", "[[runtime-js-guest-platform]]", "[[keep-legacy-stack-in-production]]", "[[mobile-layout-is-additive-to-the-legacy-look]]"]
 ---
 
 # Parity with legacy is functional, not visual
+
+> ## ⚠️ SUPERSEDED 2026-10-07 — the VISUAL-FREEDOM half only
+>
+> **Withdrawn:** *"and may be organised, laid out and styled however it does the job better. It does
+> **not** have to look like the legacy app."*
+>
+> **Replaced by** [[parity-reinstates-the-legacy-look-with-defect-fixes]]: the owner asked for the
+> legacy **look** to be reinstated on 2026-10-07, with legacy defects fixed rather than copied. The
+> housekeeping that made "freedom" attractive (not shipping `BOX_SIZE_QTY` headers or `<th>`-less
+> tables) survives as an explicit **defect-fix carve-out** in the new decision.
+>
+> **Still in force from this decision:** the **capability-inventory test** — parity is "every legacy
+> capability has a home", counted rather than felt — and this note's measured evidence of *why* the
+> naive copy failed, which is what produced the carve-out. The rest of this note is kept as written.
 
 ## Decision
 

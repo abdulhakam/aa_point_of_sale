@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title }} · {{ appName }}</title>
+{# The data version the client's IndexedDB reference cache syncs against. Empty means "sync now". #}
+<meta name="aa-refdb-version" content="{{ refdbVersion }}">
 <link rel="icon" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
@@ -26,9 +28,19 @@
    so it can be reasoned about, tested and dropped without touching the app's own enhancements.
    `?` lists everything it can do on this page. #}
 <script src="/static/js/hotkeys.js" defer></script>
+{# The IndexedDB reference cache. Loaded before autocomplete.js so a select it repopulates is seen by
+   the control; refdb dispatches `refdb:select` on a select whose options it changed, which the
+   control listens for, so order is not load-bearing. Server-rendered options stay in the markup, so
+   a page with no JavaScript is unchanged. See [[reference-lists-come-from-indexeddb]]. #}
+<script src="/static/js/refdb.js" defer></script>
 {# The searchable control for long selects. It keeps the native <select> in the form, so a page with no
    JavaScript is still a working form — this only replaces how the control looks and how it is picked
    from. Loaded after app.js because it reads the selects app.js has already enhanced line editors on. #}
 <script src="/static/js/autocomplete.js" defer></script>
+{# The "Create …" panel's no-reload path: POST /quick-create, put the row in the refdb cache and
+   select it. Falls back to the panel's normal form submit if the cache is absent or the fetch fails,
+   so the form path is never lost. Loaded after autocomplete.js because it relies on the control's
+   Escape-to-close gesture. See [[reference-lists-come-from-indexeddb]]. #}
+<script src="/static/js/refdb-create.js" defer></script>
 </body>
 </html>

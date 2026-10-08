@@ -4,10 +4,10 @@ type: task
 status: doing
 priority: high
 created: 2026-09-27
-updated: 2026-10-05
+updated: 2026-10-07
 tags: [guest, ui, parity, legacy, cutover, autocomplete, usability]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[parity-is-functional-not-visual]]", "[[guest-frontend-feature-parity-gaps]]", "[[legacy-ui-reference-captures]]", "[[ui-parity-discrepancies-2026-10-05]]", "[[runtime-js-guest-platform]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]", "[[sale-price-adjustment]]"]
+related_to: ["[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[parity-is-functional-not-visual]]", "[[guest-frontend-feature-parity-gaps]]", "[[legacy-ui-reference-captures]]", "[[ui-parity-discrepancies-2026-10-05]]", "[[runtime-js-guest-platform]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]", "[[sale-price-adjustment]]"]
 ---
 
 # Guest feature parity — every legacy capability, plus a better UI
@@ -21,10 +21,24 @@ Make the guest ([[runtime-js-guest-platform]]) able to do **everything the legac
 
 ## Mandate
 
-**Functional parity, visual freedom.** The test is a **capability inventory** — for each legacy screen,
-the actions, fields, filters, columns and states it offers — not a screenshot. Visual differences are
-recorded, not fixed; [[legacy-ui-reference-captures]] is now a *capability* reference.
-[[ui-parity-discrepancies-2026-10-05]] is evidence and a record of accepted differences, not a work list.
+**Retargeted 2026-10-07: the legacy look is required again, with legacy defects fixed.**
+
+The owner asked for the guest to **look and behave exactly like the legacy app** while keeping the
+SQL calculation layer — [[parity-reinstates-the-legacy-look-with-defect-fixes]]. This **supersedes
+the visual-freedom half** of [[parity-is-functional-not-visual]]; its **capability-inventory test
+survives** and is still how coverage is counted. [[ui-parity-discrepancies-2026-10-05]] becomes a
+work list again, with a **defect-fix carve-out**: friendly column labels, real `<th>` cells, the full
+action heading, the searchable autocomplete and the create-from-the-invoice affordance stay.
+
+Plan and sequence: `.kilo/plans/1791404570000-legacy-look-and-indexeddb-refs.md`. Alongside the
+restyle, the owner asked for an IndexedDB reference store behind the dropdowns —
+[[reference-lists-come-from-indexeddb]].
+
+> **Prior mandate (2026-10-05 → 2026-10-07), kept on record.** *Functional parity, visual freedom.*
+> The test was a **capability inventory** — for each legacy screen, the actions, fields, filters,
+> columns and states it offers — not a screenshot; visual differences were recorded, not fixed. The
+> capability-inventory half still stands; the visual-freedom half is withdrawn by the 2026-10-07
+> decision above.
 
 ## Requested 2026-10-05
 
@@ -77,6 +91,35 @@ From [[ui-parity-discrepancies-2026-10-05]] Part 1. Under functional parity thes
 | G | the Cash Memo tile uses the wrong glyph | **CLOSED as accepted** |
 | H | the dashboard keeps an `Overview` counters card legacy lacks | **CLOSED as accepted**, and the smoke assertion that protected a divergence should be revisited on its own terms |
 | I | the rail carries extra utility items | **DONE — the "fewer rail buttons" item above** |
+
+## Reopened 2026-10-07 (legacy look reinstated)
+
+Under [[parity-reinstates-the-legacy-look-with-defect-fixes]], the pixel-only items closed on
+2026-10-05 are work again, minus the defect-fix carve-out:
+
+- [ ] **A — management screens.** Move the inline create form off the list page; match legacy's bare
+      filter row and table (no headings, no count badge, no card wrappers).
+- [ ] **C — management cards.** Remove the nested bordered cards; legacy is borderless except the
+      table grid.
+- [ ] **D — report date inputs.** Replace the native `input[type=date]` (browser calendar button) with
+      a legacy-like date control.
+- [ ] **G — Cash Memo tile glyph.** Match legacy's filled blue € circle.
+- [ ] **H — dashboard `Overview` counters card.** Remove it and fix the `guest-smoke` assertion that
+      protects a divergence.
+- [ ] **Rail.** Reduce to legacy's six icons (including Logout at the foot); move Pages, Plugins and
+      the refresh dot behind the foot menu.
+- [ ] **Body link colour** to legacy grey `rgb(73,80,87)` on every screen.
+- [ ] **Report filter modal** behind the glyph, in addition to the inline row.
+- [ ] **Shared shell** fonts/spacing/metrics to match Mantine's rendering.
+
+Plus the client-side reference store:
+
+- [x] **IndexedDB ref store** for the nine dropdown lists — [[reference-lists-come-from-indexeddb]].
+      Done 2026-10-07: `GET /data/refs` (98 KB, ETag/304), `public/js/refdb.js`, an
+      `autocomplete.js` in-place refresh on `refdb:select`, `public/js/refdb-create.js` +
+      `POST /quick-create` for the no-reload create (form fallback kept), and
+      `tools/refdb-check.mjs` (**11 passed**). `invoices` deferred with its reason (its only
+      dropdown is a computed unpaid/balance list over `payments`).
 
 ## Already done, and still standing
 

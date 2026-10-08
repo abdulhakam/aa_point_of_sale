@@ -85,6 +85,9 @@ export function formFields(entity, row, options, links) {
       const selected = row?.[field.name];
       return {
         ...base,
+        // `source` is carried so the template can emit `data-ref` and the client cache (refdb) can
+        // serve this select; it was only used internally to build `options` before.
+        source: field.source,
         type: "select",
         options: [{ value: "", label: "—" }, ...(options[field.source] ?? []).map((o) => ({ ...o, selected: String(selected ?? "") === o.value }))],
       };
@@ -93,6 +96,9 @@ export function formFields(entity, row, options, links) {
       const selected = row?.[field.name];
       return {
         ...base,
+        // `source` is carried so the template can emit `data-ref` and the client cache (refdb) can
+        // serve this select; it was only used internally to build `options` before.
+        source: field.source,
         type: "select",
         options: [{ value: "", label: "—" }, ...(options[field.source] ?? []).map((o) => ({ ...o, selected: String(selected ?? "") === o.value }))],
       };
@@ -100,6 +106,7 @@ export function formFields(entity, row, options, links) {
     const current = new Set(links[field.name]?.[row?.id] ?? []);
     return {
       ...base,
+      source: field.source,
       type: "select",
       multiple: true,
       options: (options[field.source] ?? []).map((o) => ({ ...o, selected: current.has(o.value) })),

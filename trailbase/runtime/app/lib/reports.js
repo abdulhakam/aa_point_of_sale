@@ -147,8 +147,8 @@ export async function fingerprint() {
  * which is double-encoded junk. So it is folded to a 31-bit FNV-1a instead: cheap, no dependency, and it
  * keeps `version` a NUMBER, which is the shape `/p/<slug>/data` has always published.
  */
-export async function dataVersion() {
-  const fp = await currentFingerprint();
+/** FNV-1a of the fingerprint string, folded to a 31-bit positive integer. */
+function versionOf(fp) {
   let h = 0x811c9dc5;
   for (let i = 0; i < fp.length; i++) {
     h ^= fp.charCodeAt(i);
@@ -156,6 +156,22 @@ export async function dataVersion() {
     h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
   }
   return h & 0x7fffffff;
+}
+
+export async function dataVersion() {
+  return versionOf(await currentFingerprint());
+}
+
+/**
+ * Public: the data version IF the fingerprint memo is already warm, else "".
+ *
+ * `dataVersion()` reads the shared KV stamp on every call and re-probes 17 tables once the memo is
+ * older than 1.5 s. The page renderer embeds a version on every page, and forcing a probe there put
+ * that cost on plain content pages. This never probes: it reads the memo the reconcile job (and any
+ * report/ETag request) already warmed. "" means the page carries no version, and the client syncs.
+ */
+export function dataVersionIfWarm() {
+  return probe.fingerprint ? versionOf(probe.fingerprint) : "";
 }
 
 /**

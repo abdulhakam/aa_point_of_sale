@@ -214,7 +214,20 @@ try {
   check("...and the report renders", followed.rows > 0, `${followed.rows} rows`);
 
   /* ── the invoice grid: 37 comboboxes on one page must not break anything ────────────────────── */
-  await cdp.goto("/invoices/AaEHwKG8d-GQBvJxC_yFuQ/grid");
+  // Discover the invoice rather than pinning an id: the previous hard-coded id no longer exists on a
+  // depot re-imported since, so the grid 404'd and both checks below failed for a reason that had
+  // nothing to do with the code. A pinned id is a claim about the data, and the data moves.
+  await cdp.goto("/invoices");
+  const gridInvoice = await cdp.ev(`(function () {
+    var links = document.querySelectorAll('a[href^="/invoices/"]');
+    for (var i = 0; i < links.length; i++) {
+      var h = links[i].getAttribute("href");
+      if (/\\/invoices\\/[^\\/?]+$/.test(h)) return h;
+    }
+    return "";
+  })()`);
+  if (!gridInvoice) throw new Error("no invoice found on /invoices to open as a grid");
+  await cdp.goto(gridInvoice + "/grid");
   for (let i = 0; i < 120; i++) { if (await cdp.ev("document.documentElement.getAttribute('data-hk-ready')==='1'").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
   const grid = await cdp.ev(`(function () {
     var sels = [...document.querySelectorAll('[data-grid] select[name="item"]')];

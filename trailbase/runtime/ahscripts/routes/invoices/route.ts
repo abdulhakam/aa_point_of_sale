@@ -21,8 +21,18 @@
       party: routeKit.pick(query.party, ""),
       unpaid: routeKit.flag(query.unpaid),
     };
-    const rows = await A.invoices.listInvoices(db, filters);
+    // Totals over the WHOLE filtered set, which also gives the true match count for paging and the
+    // heading. The table itself is one page (the old hard 300-row cap is now the page size).
     const totals = await A.invoices.sumInvoices(db, filters);
+    const pageSize = 100;
+    const pageCount = Math.max(1, Math.ceil(totals.count / pageSize));
+    const page = Math.min(Math.max(Math.floor(Number(routeKit.pick(query.page, "1"))) || 1, 1), pageCount);
+    const rows = await A.invoices.listInvoices(db, filters, { limit: pageSize, offset: (page - 1) * pageSize });
+
+    // The filter part of the pager links, encoded once here so the template only appends `&page=N`.
+    const baseQuery = ["type", "from", "to", "party"]
+      .map((k) => k + "=" + encodeURIComponent(String(filters[k] || "")))
+      .join("&") + (filters.unpaid ? "&unpaid=on" : "");
 
     return routeKit.renderRoute(
       req,
@@ -34,6 +44,10 @@
         selectedType: Number(filters.type || -1),
         parties: refs.parties ?? [],
         totals,
+        page,
+        pageCount,
+        pageSize,
+        baseQuery,
       }
     );
   };

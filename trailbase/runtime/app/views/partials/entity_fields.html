@@ -2,7 +2,7 @@
 {% for f in fields -%}
 {% if f.type == 'select' -%}
 <label class="field"><span>{{ f.label }}</span>
-<select name="{{ f.name }}"{% if f.multiple %} multiple size="6"{% endif %}{% if f.required %} required{% endif %}>
+<select name="{{ f.name }}"{% if f.multiple %} multiple size="6"{% endif %}{% if not f.multiple and f.source %} data-ref="{{ f.source }}"{% endif %}{% if f.required %} required{% endif %}>
 {% if not f.multiple %}<option value="">—</option>{% endif %}
 {% for o in f.options %}<option value="{{ o.value }}"{% if o.selected %} selected{% endif %}>{{ o.label }}</option>{% endfor %}
 </select></label>

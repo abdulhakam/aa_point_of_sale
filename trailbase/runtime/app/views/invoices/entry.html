@@ -13,7 +13,7 @@
   <form method="post" action="/invoices/new">
     <input type="hidden" name="type" value="{{ type }}">
     <label class="field"><span>Party</span>
-      <select name="party" data-searchable data-create="#qc-party">
+      <select name="party" data-searchable data-ref="parties" data-create="#qc-party">
         <option value="">No party</option>
         {% for p in parties %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
       </select>
@@ -59,7 +59,7 @@
   <form class="entity-form" method="post" action="/invoices/{{ invoice.id }}/header">
     <label class="field"><span>Date</span><input type="date" name="dated" value="{{ invoice.dated }}"></label>
     <label class="field"><span>Party</span>
-      <select name="party" data-searchable data-create="#qc-party">
+      <select name="party" data-searchable data-ref="parties" data-create="#qc-party">
         <option value="">No party</option>
         {% for p in parties %}<option value="{{ p.id }}"{% if invoice.party == p.id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
       </select>
@@ -68,7 +68,7 @@
        the date and booker that were being typed are not lost. #}
     {{ qc.party(type, areas) }}
     <label class="field"><span>Booker</span>
-      <select name="booker" data-searchable>
+      <select name="booker" data-searchable data-ref="bookers">
         <option value="">No booker</option>
         {% for b in bookers %}<option value="{{ b.id }}"{% if invoice.booker == b.id %} selected{% endif %}>{{ b.name }}</option>{% endfor %}
       </select>
@@ -90,7 +90,7 @@
        ([[invoice-entry-freshness-and-writes]]). #}
     <input type="hidden" name="opKey" value="{{ opKey }}">
     <label class="field"><span>Item</span>
-      <select name="item" data-searchable data-create="#qc-item" required>
+      <select name="item" data-searchable data-ref="items" data-create="#qc-item" required>
         <option value="">Choose an item…</option>
         {% for it in items %}<option value="{{ it.id }}" data-price="{{ it.price }}" data-cost="{{ it.costPrice }}" data-box="{{ it.boxSizeQty }}">{{ it.name }}</option>{% endfor %}
       </select>

@@ -52,7 +52,7 @@
     {% if editRow %}<input type="hidden" name="id" value="{{ editRow.id }}">{% endif %}
     <label class="field"><span>Name</span><input type="text" name="name" value="{{ editRow.name if editRow else '' }}" required></label>
     <label class="field"><span>Company</span>
-      <select name="category" data-searchable>
+      <select name="category" data-searchable data-ref="companies">
         <option value="">No company</option>
         {% for c in companies %}<option value="{{ c.id }}"{% if editRow and editRow.companyId == c.id %} selected{% endif %}>{{ c.name }}</option>{% endfor %}
       </select>

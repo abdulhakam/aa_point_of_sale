@@ -36,13 +36,13 @@
     <label class="field"><span>Date</span><input type="date" name="dated" value="{{ invoice.dated }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
     <label class="field"><span>Due date</span><input type="date" name="duedate" value="{{ invoice.duedate }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
     <label class="field"><span>Party</span>
-      <select name="party" data-searchable{% if not invoice.canWrite %} disabled{% endif %}>
+      <select name="party" data-searchable data-ref="parties"{% if not invoice.canWrite %} disabled{% endif %}>
         <option value="">No party</option>
         {% for p in parties %}<option value="{{ p.id }}"{% if invoice.party == p.id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
       </select>
     </label>
     <label class="field"><span>Booker</span>
-      <select name="booker" data-searchable{% if not invoice.canWrite %} disabled{% endif %}>
+      <select name="booker" data-searchable data-ref="bookers"{% if not invoice.canWrite %} disabled{% endif %}>
         <option value="">No booker</option>
         {% for b in bookers %}<option value="{{ b.id }}"{% if invoice.booker == b.id %} selected{% endif %}>{{ b.name }}</option>{% endfor %}
       </select>
@@ -91,7 +91,7 @@
                one. It rides inside the item cell rather than in a cell of its own, so the column
                count still matches the header. The blank row's empty id is what makes it an append. #}
             <input type="hidden" name="line" value="{{ l.id }}">
-            <select name="item" data-searchable>
+            <select name="item" data-searchable data-ref="items">
               <option value="">—</option>
               {% for it in items %}<option value="{{ it.id }}" data-price="{{ it.price }}" data-cost="{{ it.costPrice }}" data-box="{{ it.boxSizeQty }}"{% if l.item == it.id %} selected{% endif %}>{{ it.name }}</option>{% endfor %}
             </select>
@@ -130,7 +130,7 @@
       <tr data-line="">
         <td data-label="Item" data-lead>
           <input type="hidden" name="line" value="">
-          <select name="item" data-searchable>
+          <select name="item" data-searchable data-ref="items">
             <option value="">Choose an item…</option>
             {% for it in items %}<option value="{{ it.id }}" data-price="{{ it.price }}" data-cost="{{ it.costPrice }}" data-box="{{ it.boxSizeQty }}">{{ it.name }}</option>{% endfor %}
           </select>

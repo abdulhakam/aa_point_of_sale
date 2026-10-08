@@ -25,7 +25,7 @@
 // Base64 is 3 bytes -> 4 sextets and the final partial group is PADDED, not filled: a 16-byte id
 // is 22 characters plus "=". Verified: 01A0EBFD3E2176D294C5C5797E90A6E5 -> AaDr_T4hdtKUxcV5fpCm5Q
 
-import { invalidate, fingerprint } from "./reports.js";
+import { invalidate, fingerprint, dataVersionIfWarm } from "./reports.js";
 
 /**
  * Resolve a static mount from `/app/manifests/static-mounts.json`.
@@ -173,6 +173,11 @@ export async function renderRoute(req, options, data) {
         active: opts.active ?? "",
         title: opts.title ?? "",
         paper: opts.paper ?? "",
+        // The data version the client's IndexedDB reference cache syncs against. `dataVersionIfWarm`
+        // never probes — the reconcile job and report/ETag requests keep the memo warm — so embedding
+        // it costs nothing on a plain content page. An empty value makes the client sync, not trust a
+        // stale cache. See [[reference-lists-come-from-indexeddb]].
+        refdbVersion: dataVersionIfWarm(),
       },
       opts.template,
       data

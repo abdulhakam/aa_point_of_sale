@@ -64,6 +64,9 @@
       active: "reports",
       title: "Supply Summary",
       paper: "a4",
+      // This route renders through `A.http.page` directly rather than `renderRoute`, so it carries the
+      // refdb version itself. `dataVersionIfWarm` never probes; an empty value makes the client sync.
+      refdbVersion: A.service.dataVersionIfWarm(),
     };
 
     // The columns come from the page manifest — the single definition — not a second copy here.

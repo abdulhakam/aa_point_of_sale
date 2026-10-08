@@ -3,10 +3,10 @@ title: TrailBase migration
 type: project
 status: active
 created: 2026-09-26
-updated: 2026-10-05
+updated: 2026-10-07
 tags: [pos, trailbase, migration, workstream]
 belongs_to: "[[aa-point-of-sale]]"
-related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]"]
+related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]"]
 ---
 
 # TrailBase migration
@@ -32,13 +32,13 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 1. **Production data lives in a TrailBase depot**, migrated with ids and enum codes translated
    ([[pos-0027-migrate-production-data-to-trailbase]]).
 2. **A UI that staff accept covers the whole working day** — invoices, printing and cash memo
-   included — and is **functionally equal to the legacy UI**: everything the legacy app could do, the
-   guest can do, and it may look however it does the job better
-   ([[parity-is-functional-not-visual]]). ⚠️ **2026-10-05: this was "and looks like the legacy UI"
-   ([[guest-ui-is-a-direct-shift-of-legacy]]) and that visual half was withdrawn.** "Looks like" was
-   replaced by "does everything legacy does", because a byte-faithful copy was reproducing the legacy's
-   defects (`BOX_SIZE_QTY` as a column heading, report tables with no `<th>` at all) and was refusing the
-   improvements the operator asked for.
+   included — and **looks and behaves like the legacy UI**, with the legacy's own defects fixed rather
+   than copied ([[parity-reinstates-the-legacy-look-with-defect-fixes]], 2026-10-07). The capability
+   test is still an inventory — everything legacy could do has a home — but the visual half is
+   required again. ⚠️ **History:** 2026-10-05 → 2026-10-07 this was "functionally equal, may look
+   however it does the job better" ([[parity-is-functional-not-visual]]); before that, "looks like the
+   legacy UI" ([[guest-ui-is-a-direct-shift-of-legacy]]). The current rule is the 2026-10-07 decision:
+   match the look, fix the defects (`BOX_SIZE_QTY` headers and `<th>`-less tables are still not copied).
 3. **The legacy pair is no longer a live system**, and what remains is documented as a frozen oracle
    with its rollback stated.
 
@@ -65,6 +65,16 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
   [[cutover-is-guest-only]].
 
 ## Sequence
+
+**2026-10-07 — the mandate changed and Part B shipped.** [[parity-reinstates-the-legacy-look-with-defect-fixes]]
+puts the legacy look back on the critical path (step 7 reopened), and
+[[reference-lists-come-from-indexeddb]] adds a client IndexedDB reference store. Built and verified:
+`GET /data/refs` (98 KB, ETag/304), `public/js/refdb.js`, the `autocomplete.js` in-place refresh,
+`data-ref` on every searchable select, `POST /quick-create` + `public/js/refdb-create.js` for the
+no-reload create, and `tools/refdb-check.mjs` (**11 passed**); `autocomplete-check` 39 passed and
+`route-snapshot` 49 routes / 0 erroring after. Next: **A0** (rebuild the UI capture diff against the
+live legacy bundle), then **A1** (shared shell), then the screen-by-screen restyle. Plan:
+`.kilo/plans/1791404570000-legacy-look-and-indexeddb-refs.md`.
 
 **Step 7 is the live work and is now effectively complete** (2026-10-05). Every requested item and every
 capability gap in [[tb-0023-guest-feature-parity]] has a guest equivalent: the create-from-the-invoice
@@ -261,6 +271,8 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | Compiled artifacts are generic capabilities; all app/data logic stays in runtime files | [[compiled-artifacts-are-generic-capabilities]] |
 | Rendered report pages are cached by the live data fingerprint | [[rendered-page-cache]] |
 | Report pages cap rendered rows (1,000; `?all=1` for the full page) | [[report-render-row-cap]] |
+| Parity reinstates the legacy look, with legacy defects fixed rather than copied (**supersedes** the visual-freedom half of [[parity-is-functional-not-visual]]) | [[parity-reinstates-the-legacy-look-with-defect-fixes]] |
+| Dropdown reference lists come from an IndexedDB store synced from the server | [[reference-lists-come-from-indexeddb]] |
 
 ## Known friction in the migration
 

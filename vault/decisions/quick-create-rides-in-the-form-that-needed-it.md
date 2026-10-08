@@ -5,10 +5,10 @@ type: decision
 status: accepted
 decided_on: 2026-10-05
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-07
 tags: [invoices, parties, items, guest, forms, legacy-parity, client-js]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[the-searchable-autocomplete]]", "[[tb-0023-guest-feature-parity]]", "[[runtime-js-minimal-file-authoring-contract]]", "[[v1-categories-map-to-companies]]", "[[guest-writes-via-sql]]", "[[money-is-2dp-everywhere]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]"]
+related_to: ["[[the-searchable-autocomplete]]", "[[reference-lists-come-from-indexeddb]]", "[[tb-0023-guest-feature-parity]]", "[[runtime-js-minimal-file-authoring-contract]]", "[[v1-categories-map-to-companies]]", "[[guest-writes-via-sql]]", "[[money-is-2dp-everywhere]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]"]
 ---
 
 # Quick-create rides in the form that needed it
@@ -119,6 +119,26 @@ missing, not both. Recorded rather than half-built.
 
 **Not on cash memos, payments or the report filters.** The legacy had this on the invoice screen;
 those screens have no create form to host it.
+
+## Added 2026-10-07: a no-reload path, with the form path kept
+
+The owner asked for a created product/party to land in the searchable select **without a page
+reload** ([[reference-lists-come-from-indexeddb]]). The section above chose one submit — create and
+save the invoice together — which is a page load. Both are now available:
+
+- **With JavaScript and the refdb cache present**, the panel's button POSTs `POST /quick-create`
+  (`ahscripts/routes/quick-create/route.ts`), which creates the row through the same
+  `A.quickCreate.*FromForm` calls, and `public/js/refdb-create.js` puts the row in the cache and
+  selects it in the control that opened the panel. The invoice is **not** saved by this POST; the
+  operator then saves the header, or adds the line, as a separate, normal submit — which is what the
+  legacy screen did (create-and-select, then save).
+- **Without JavaScript, or if the fetch fails**, the button submits the invoice form exactly as
+  before, and the create rides in that submit. The form path is the fallback, so a create is never
+  lost.
+- The buttons are now labelled **"Create party"** and **"Create item"** rather than "…and use" /
+  "…and add line", because the JS path does not add the line; the ADD LINE button does.
+- Decision 2 (the panel is inert while closed), decision 3 (`required` handover) and decision 7
+  (`management.createRow`) are unchanged.
 
 ## Evidence
 
