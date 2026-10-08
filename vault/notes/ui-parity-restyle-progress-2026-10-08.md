@@ -55,6 +55,28 @@ Two test/tooling corrections were needed and are deliberate:
   (`a.brand`, black) and not a content link on the legacy side. It now samples a throwaway `<a>` for
   the base anchor colour, which is comparable across both apps.
 
+## Second increment (2026-10-08, later): the "Filter Data" dialog
+
+The user's ask was that the guest look exactly the same **including when and where a dialog opens**.
+`stockreport` and `difference` open their filters in a centered Mantine "Filter Data" dialog
+([[ui-parity-discrepancies-2026-10-08]] §3); the guest showed the same fields inline.
+
+- New reusable component **`<aa-modal>`** (`app/public/js/components/modal.js`) — the 440px white card,
+  a 60% overlay, an H2 title with an X, Escape and overlay-click to close, and `[data-modal-open]` /
+  `[data-modal-close]` declarative wiring. It MOVES the authored children into the dialog, so with no
+  JavaScript the form still renders inline and works ([[features-as-native-web-components]]).
+- The two reports declare `"filtersModal": true` in their `meta.json`; `normalizeMeta` now passes that
+  flag through (it did not pass unknown keys). `reports/report.html` renders those filters inside the
+  dialog with an **OK** submit and hides the inline row and the "find in this report" box, and the
+  dialog starts open when no `company` is chosen.
+- `autocomplete.js`'s blank-option label now reads as its own label ("All") rather than an empty box,
+  matching the legacy select; two `autocomplete-check` assertions that encoded the old empty-box
+  divergence were updated to expect the label.
+
+Gates after this increment: `guest-smoke` 115/115, `autocomplete-check` 39/0, `hotkey-check` 62/0,
+`route-snapshot` 49 routes / 0 erroring. Verified in-browser: the dialog is 440×150, title `<h2>`
+"Filter Data", the select reads "All".
+
 ## Still open (the rest of A2 and the reopened list)
 
 - **Report filter modal** behind the glyph, in addition to the inline row.

@@ -36,6 +36,7 @@
   "filters": [
     "company"
   ],
+  "filtersModal": true,
   "columns": [
     {
       "key": "company",

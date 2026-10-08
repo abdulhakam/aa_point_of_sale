@@ -875,6 +875,43 @@ aa-date-input.aa-date-show .aa-date-native { opacity: 1; pointer-events: auto; }
 aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
 .filter-dates aa-date-input { max-width: 14rem; }
 
+/* ── modal (components/modal.js, <aa-modal>) ────────────────────────────────────────────────────────
+   The legacy dialogs are Mantine `Modal`s: a centered white 440px card on a 60% black overlay, a header
+   with the title on the left and an X on the right, and the content below. Measured off the live
+   `/app/reports/stockreport` "Filter Data" dialog ([[ui-parity-discrepancies-2026-10-08]]). */
+.aa-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.aa-modal-dialog {
+  width: 440px; max-width: 100%;
+  background: #fff; border-radius: var(--radius);
+  box-shadow: rgba(0, 0, 0, 0.05) 0 1px 3px 0, rgba(0, 0, 0, 0.05) 0 36px 28px -7px, rgba(0, 0, 0, 0.04) 0 17px 17px -7px;
+}
+.aa-modal-header { display: flex; align-items: center; justify-content: space-between; min-height: 60px; padding: 16px 11px 16px 16px; }
+.aa-modal-title { margin: 0; font-size: 1rem; font-weight: 600; }
+.aa-modal-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; padding: 0;
+  border: 1px solid var(--gray-4); border-radius: var(--radius);
+  background: #fff; color: var(--gray-7); cursor: pointer;
+}
+.aa-modal-close:hover { background: var(--gray-0); }
+.aa-modal-body { padding: 0 16px 16px; }
+/* The dialog stacks its controls, each full width, as the legacy modal does. */
+.aa-modal-body .field { display: block; margin-bottom: 4px; }
+.aa-modal-body .field > span { display: block; margin-bottom: 4px; }
+.aa-modal-body .field select,
+.aa-modal-body .field input,
+.aa-modal-body .field aa-date-input { width: 100%; max-width: none; }
+/* A `data-searchable` select is wrapped by `autocomplete.js` in `<span class="ac">`; inside the dialog
+   that wrapper (and the control it draws) must fill the width like the legacy modal's select does. */
+.aa-modal-body .field .ac { display: block; width: 100%; }
+.aa-modal-body .field .ac > * { width: 100%; }
+.modal-actions { margin-top: 16px; }
+
 /* ── list pager (the /invoices list, which used to stop hard at 300 rows) ──────────────────────── */
 .pager { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 10px 0; }
 .pager-info { color: var(--grey-6, #495057); font-size: 0.9em; }

@@ -168,6 +168,10 @@ export function normalizeMeta(meta, presets) {
     // every manifest but consumed nowhere — which is how the general ledger's opening balances came to
     // render as 0.00 for every input.
     spool: meta?.spool && typeof meta.spool === "object" ? meta.spool : null,
+    // The legacy opens a few reports' filters in a "Filter Data" dialog rather than an inline row, so a
+    // manifest may declare that its filters render in a modal (`app/views/reports/report.html`). It is
+    // exposed as a plain boolean here because normalizeMeta does not pass unknown keys through.
+    filtersModal: meta?.filtersModal === true,
     filters,
     // `fields` is the server-rendered report template's name for the same list; both are exposed so
     // neither template has to know which host is asking.

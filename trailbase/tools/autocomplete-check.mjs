@@ -141,10 +141,12 @@ try {
 
   /* ── rule 3: a value that is not on the list is never submitted ─────────────────────────────── */
   // Two cases, because they are two different contracts and the first version of this test asserted
-  // the wrong one. On a control with **nothing** selected, nonsense text must leave it empty. On a
-  // control that **already** holds a choice, nonsense text must fall back to that choice — reverting
-  // to the last valid selection is what every combobox does, and silently clearing an operator's
-  // existing selection because they typed a stray character would be worse than useless.
+  // the wrong one. On a control with **nothing** selected, nonsense text must not be submitted and the
+  // box must show the control's own blank label — which is legacy's `All`, not an empty box
+  // ([[ui-parity-discrepancies-2026-10-08]]). On a control that **already** holds a choice, nonsense
+  // text must fall back to that choice — reverting to the last valid selection is what every combobox
+  // does, and silently clearing an operator's existing selection because they typed a stray character
+  // would be worse than useless.
   await cdp.goto("/reports/profit");
   for (let i = 0; i < 80; i++) { if (await cdp.ev("document.documentElement.getAttribute('data-hk-ready')==='1'").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
   await cdp.ev(`(function(){var w=document.querySelector('select[name="party"]').closest(".ac");var i=w.querySelector(".ac-input");i.focus();i.value="";})()`);
@@ -154,7 +156,7 @@ try {
   await new Promise((r) => setTimeout(r, 250));
   const fresh = await cdp.ev(`(function(){var s=document.querySelector('select[name="party"]');return {value:s.value, text:s.closest(".ac").querySelector(".ac-input").value};})()`);
   check("on an empty control, text that matches nothing submits nothing", fresh.value === "", `value="${fresh.value}" text="${fresh.text}"`);
-  check("...and the visible text is cleared", fresh.text === "", `text="${fresh.text}"`);
+  check("...and the visible text shows the control's own label (legacy's All)", fresh.text === "All", `text="${fresh.text}"`);
 
   // Now give it a real selection and type nonsense over it.
   await cdp.ev(`(function(){var i=document.querySelector('select[name="party"]').closest(".ac").querySelector(".ac-input");i.focus();i.value="";})()`);
@@ -361,7 +363,7 @@ try {
     })()`);
     check("Cancel closes the panel and disables it again", closed.hidden && closed.disabled, JSON.stringify(closed));
     check("...without submitting anything", closed.selectValue === "", `value="${closed.selectValue}"`);
-    check("...and the box goes back to the select's own label", closed.shown === "", `shown="${closed.shown}"`);
+    check("...and the box goes back to the select's own label", closed.shown === "No party", `shown="${closed.shown}"`);
 
     // Escape, from inside the panel, means the panel — not the global layer's row cursor.
     await cdp.ev(`(function(){var i=document.querySelector('select[name="party"]').closest(".ac").querySelector(".ac-input");i.focus();})()`);

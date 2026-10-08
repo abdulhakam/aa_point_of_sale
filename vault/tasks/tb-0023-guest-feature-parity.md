@@ -142,8 +142,11 @@ the legacy rail carries **six including Orders** — and shows a **reversed mana
 **hub-vs-list `/invoices`** mismatch that the earlier one-sided diffs could not see.
 
 - [x] **Check the UI parity 1-1** and record the exact differences. Done 2026-10-08.
-- [ ] **Report filter modal** — add the legacy "Filter Data" dialog (stockreport, difference) as a
-      reusable component ([[features-as-native-web-components]]).
+- [x] **Report filter modal** — add the legacy "Filter Data" dialog (stockreport, difference) as a
+      reusable component ([[features-as-native-web-components]]). **Done 2026-10-08** — `<aa-modal>`
+      (Mantine 440px card, H2 title, X, overlay, Escape), auto-open on an empty `company`, OK submits;
+      the two reports declare `filtersModal` in their meta. Progress:
+      [[ui-parity-discrepancies-2026-10-08]].
 - [ ] **Report filter labels** — `date from`/`date to`; review the autocomplete label text.
 - [ ] **Management `Created` column** and the items/bookers column sets.
 - [ ] **Management hub order** — sections, areas, parties, companies, bookers, items.

@@ -101,11 +101,13 @@
     list.id = listId;
     input.setAttribute("aria-controls", listId);
 
-    /** What is shown while nothing is selected — the first option reads as the current value. */
+    /** What the control shows for the current selection. The blank option — legacy's `All` — reads as
+     *  its own label rather than as an empty box, so a report filter with nothing chosen still says how
+     *  it will behave ([[ui-parity-discrepancies-2026-10-08]]). */
     function currentLabel() {
       var opt = select.options[select.selectedIndex];
-      if (opt && opt.value !== "") return (opt.textContent || "").replace(/\s+/g, " ").trim();
-      return "";
+      if (!opt) return "";
+      return (opt.textContent || "").replace(/\s+/g, " ").trim();
     }
 
     var filtered = options.slice();

@@ -10,11 +10,28 @@
    APPLY: a small printer glyph above the filters, top left. RESET is a new-side addition and PRINT's
    labelled twin is new as well, so both are gone from here; printing is still reachable from that glyph
    and from the keyboard layer's `p`. See [[ui-parity-discrepancies-2026-10-05]]. #}
+{% import 'partials/icons.html' as icons %}
 {% if not print %}
 <div class="report-tools no-print">
-  <button class="btn icon" type="button" data-print title="Print this report" aria-label="Print this report">{% import 'partials/icons.html' as icons %}{{ icons.svg('printer', 18) }}</button>
+  <button class="btn icon" type="button" data-print title="Print this report" aria-label="Print this report">{{ icons.svg('printer', 18) }}</button>
+  {% if def.filtersModal %}<button class="btn icon" type="button" data-modal-open="#report-filter-modal" title="Filter data" aria-label="Filter data">{{ icons.svg('search', 18) }}</button>{% endif %}
 </div>
 {% endif %}
+{% if def.filtersModal %}
+{# The legacy opens these reports' filters in a centered "Filter Data" dialog rather than an inline row
+   ([[ui-parity-discrepancies-2026-10-08]] §3). It starts open when no filter has been chosen yet, so a
+   first visit asks for one; OK submits the same GET the inline form would. `[data-modal-open]` on the
+   printer glyph reopens it, and the dialog closes on OK, the X, Escape or an overlay click. #}
+<aa-modal id="report-filter-modal" title="Filter Data"{% if not filters.company %} open{% endif %}>
+  <form class="filters modal-filters" method="get" action="{{ basePath }}">
+{% for field in def.fields %}{{ fl.render_field(field, filters, options) }}
+{% endfor %}
+    <div class="modal-actions">
+      <button class="btn primary" type="submit">OK</button>
+    </div>
+  </form>
+</aa-modal>
+{% else %}
 <form class="filters" method="get" action="{{ basePath }}">
 {# The two date fields share one row above the selects, as the legacy filter block does
    (`09-reports-profit.png`). They are emitted into their own wrapper rather than left to wrap by width,
@@ -29,6 +46,7 @@
     <button class="btn primary" type="submit">APPLY</button>
   </div>
 </form>
+{% endif %}
 
 {% if missing|length %}
 <p class="notice">Please select a {{ missing[0] }} to view this report.</p>
@@ -61,9 +79,11 @@
    It filters the rows ALREADY rendered, so it cannot change a total; a filter that changed a money figure
    would be a second arithmetic path, and this app has exactly one by decision. Rows beyond the render cap
    still need "Show all" below. #}
+{% if not def.filtersModal %}
 <div class="report-filter">
   <label class="field"><span>Find in this report</span><input type="search" data-table-filter="#report-table" autocomplete="off" spellcheck="false"></label>
 </div>
+{% endif %}
 {{ tb.simple(columns, rows, mobile, "report-table") }}
 {% if rowInfo and rowInfo.truncated %}
 <p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>

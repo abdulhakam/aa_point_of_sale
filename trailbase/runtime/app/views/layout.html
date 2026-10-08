@@ -30,6 +30,10 @@
    keeping the native `<input type="date">` as the submitted value. Loaded with `defer` so the DOM is
    parsed before upgrade. #}
 <script src="/static/js/components/date-input.js" defer></script>
+{# `modal.js` gives `<aa-modal>` the legacy Mantine dialog — the centered card, the header with its X,
+   the overlay and Escape-to-close. It degrades to the authored children shown inline when it is not
+   upgraded, so a dialog's form still works with no JavaScript. #}
+<script src="/static/js/components/modal.js" defer></script>
 {# The keyboard layer is a separate file on purpose: it is an accelerator for markup that already works,
    so it can be reasoned about, tested and dropped without touching the app's own enhancements.
    `?` lists everything it can do on this page. #}
