@@ -148,12 +148,22 @@ the legacy rail carries **six including Orders** — and shows a **reversed mana
       the two reports declare `filtersModal` in their meta. Progress:
       [[ui-parity-discrepancies-2026-10-08]].
 - [ ] **Report filter labels** — `date from`/`date to`; review the autocomplete label text.
-- [ ] **Management `Created` column** and the items/bookers column sets.
-- [ ] **Management hub order** — sections, areas, parties, companies, bookers, items.
+- [x] **Management `Created` column** and the items/bookers column sets. **Partly done 2026-10-08** —
+      `created` added to sections/areas/companies/bookers (the imported tables carry it in the exact
+      legacy format), bookers' "Companies"→"Company", items reordered to Company/Name/Cost price/Sale
+      price/Carton Size. **Still missing:** the items **Qty** column (it is computed stock, not a column
+      on the table — a small follow-up).
+- [x] **Management hub order** — sections, areas, parties, companies, bookers, items. **Done 2026-10-08**
+      (order + lowercase key labels; "bookers" not "order bookers").
 - [ ] **Invoices hub vs list** — legacy `/app/invoices` is a five-tile hub; the guest is a list.
-- [ ] **Cash-memo tile set/labels** — da entry-purchases / crv / cpv / payments / expenses.
+      **Deferred**: the hub's Return and Difference tiles need the unbuilt return/difference entry, so
+      this waits on those.
+- [x] **Cash-memo tile set/labels** — da entry-purchases / crv / cpv / payments / expenses. **Done
+      2026-10-08** — five legacy tiles, legacy order/labels/colours; the guest-only summary card, date
+      filter and crumb removed.
 - [ ] **Rail** — the Orders decision and the foot-menu extras.
-- [ ] **Colours** — active rail link (guest blue, legacy gray) and raw/tile anchor colour.
+- [x] **Colours** — active rail link (guest blue, legacy gray). **Done 2026-10-08** (active glyph back
+      to gray-7 on the blue-0 chip). Raw/tile anchor colour still open.
 
 ## Already done, and still standing
 

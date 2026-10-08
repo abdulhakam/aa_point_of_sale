@@ -1,38 +1,22 @@
 {% extends 'layout.html' %}
 {% import 'partials/icons.html' as icons %}
 {% block body %}
-{# The cash memo hub. The legacy app had five separate screens here; the data for all of them is
-   `payments` plus `expenses`, so this is one index over four working screens rather than five
-   near-duplicates. Payments made against an invoice live on the invoice; this is the cash side. #}
-<h1 class="page-title">Cash memo</h1>
-<p class="crumbs"><a href="/payments">← All payments</a></p>
+{# ⚠️ The legacy cash-memo hub is a single grey card titled CASH MEMO holding FIVE tiles, in this
+   order and with these labels (measured off the live `/app/cashmemo`): DA Entry - Purchases,
+   CRV - Cash Recieve Voucher, CPV - Cash Payment Voucher, Payments, Expenses
+   ([[ui-parity-discrepancies-2026-10-08]] §2). The guest had four differently-named tiles plus a
+   summary card, a date filter and a "all payments" crumb; the legacy has none of those, so they are
+   gone. The tiles point at the guest's same four working screens plus the payments list.
 
-<section class="card">
-  <div class="stat-grid">
-    <div class="stat"><div class="stat-value">{{ totals.recievedText }}</div><div class="stat-label">Recieved</div></div>
-    <div class="stat"><div class="stat-value">{{ totals.sentText }}</div><div class="stat-label">Sent</div></div>
-    <div class="stat"><div class="stat-value">{{ totals.expenseText }}</div><div class="stat-label">Expenses</div></div>
-    <div class="stat"><div class="stat-value">{{ totals.netText }}</div><div class="stat-label">Cash in hand</div></div>
+   "Recieve" is the legacy's spelling, kept verbatim so the label matches. #}
+<section class="card hub">
+  <div class="hub-title upper">Cash memo</div>
+  <div class="tiles">
+    <a class="tile" href="/cashmemo/da"><span class="c-blue">{{ icons.svg('pencil', 64) }}</span><span class="tile-label">DA Entry - Purchases</span></a>
+    <a class="tile" href="/cashmemo/vouchers?type=1"><span class="c-green">{{ icons.svg('arrow-down', 64) }}</span><span class="tile-label">CRV - Cash Recieve Voucher</span></a>
+    <a class="tile" href="/cashmemo/vouchers?type=0"><span class="c-red">{{ icons.svg('arrow-up', 64) }}</span><span class="tile-label">CPV - Cash Payment Voucher</span></a>
+    <a class="tile" href="/payments"><span class="c-grape">{{ icons.svg('coin-euro-filled', 64) }}</span><span class="tile-label">Payments</span></a>
+    <a class="tile" href="/cashmemo/expenses"><span class="c-red">{{ icons.svg('report-money', 64) }}</span><span class="tile-label">Expenses</span></a>
   </div>
-  <p class="muted">Cash in hand is every settled payment recieved less every payment sent less
-     expenses, over the range below. It is a shop measure, not a ledger balance — the general
-     ledger is the authority. The DA and voucher screens below are the <em>standalone</em> entries:
-     money that moved with no invoice behind it.</p>
 </section>
-
-<form class="filters" method="get" action="/cashmemo">
-  <label class="field"><span>From</span><input type="date" name="from" value="{{ filters.from }}"></label>
-  <label class="field"><span>To</span><input type="date" name="to" value="{{ filters.to }}"></label>
-  <div class="filter-actions">
-    <button class="btn primary" type="submit">APPLY</button>
-    <a class="btn" href="/cashmemo">RESET</a>
-  </div>
-</form>
-
-<div class="tiles">
-  <a class="tile" href="/cashmemo/vouchers?type=0"><span class="c-blue-4">{{ icons.svg('receipt', 64) }}</span><span class="tile-label">Payment vouchers</span></a>
-  <a class="tile" href="/cashmemo/vouchers?type=1"><span class="c-green">{{ icons.svg('receipt', 64) }}</span><span class="tile-label">Receive vouchers</span></a>
-  <a class="tile" href="/cashmemo/da"><span class="c-orange-4">{{ icons.svg('wallet', 64) }}</span><span class="tile-label">DA entry</span></a>
-  <a class="tile" href="/cashmemo/expenses"><span class="c-pink-4">{{ icons.svg('report', 64) }}</span><span class="tile-label">Expenses</span></a>
-</div>
 {% endblock %}

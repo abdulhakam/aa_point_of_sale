@@ -77,6 +77,32 @@ Gates after this increment: `guest-smoke` 115/115, `autocomplete-check` 39/0, `h
 `route-snapshot` 49 routes / 0 erroring. Verified in-browser: the dialog is 440×150, title `<h2>`
 "Filter Data", the select reads "All".
 
+## Third increment (2026-10-08, later): management and cash-memo hubs
+
+Worked the self-contained groups of the actionable list in
+[[ui-parity-discrepancies-2026-10-08]].
+
+- **Management hub** — order is now sections, areas, parties, companies, bookers, items (the legacy
+  order; the guest was reversed), and each link shows its lowercase KEY, so "bookers" not
+  "order bookers". `app/views/management/index.html`, `app/manifests/entities.json`.
+- **Management list columns** — added the legacy **Created** column to sections, areas, companies and
+  bookers (the imported `created` TEXT is in exactly the legacy format, e.g.
+  `2024-01-31 09:50:40.038Z`); bookers' multi-column relabelled "Company"; items reordered to Company,
+  Name, Cost price, Sale price, Carton Size with Display ID/Barcode dropped. **Items Qty is still
+  missing** (it is computed stock, not a table column).
+- **Cash-memo hub** — now the legacy grey "CASH MEMO" card with the five legacy tiles in legacy order:
+  DA Entry - Purchases, CRV - Cash Recieve Voucher, CPV - Cash Payment Voucher, Payments, Expenses
+  (added `arrow-down`/`arrow-up` icons). The guest-only summary card, date filter and crumb are gone.
+- **Active rail link colour** — back to gray-7 on the blue-0 chip (the guest had made the active glyph
+  blue-9).
+
+**Deferred:** the **invoices hub** — legacy `/app/invoices` is a five-tile hub whose Return and
+Difference tiles need the unbuilt return/difference entry, so restructuring `/invoices` waits on those;
+and the **rail** (the missing Orders destination and the foot-menu extras) is a capability decision,
+not a pure restyle.
+
+Gates: `guest-smoke` 115/115, `route-snapshot` 49 routes / 0 erroring.
+
 ## Still open (the rest of A2 and the reopened list)
 
 - **Report filter modal** behind the glyph, in addition to the inline row.
