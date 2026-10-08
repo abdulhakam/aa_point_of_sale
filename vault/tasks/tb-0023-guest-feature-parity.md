@@ -4,10 +4,10 @@ type: task
 status: doing
 priority: high
 created: 2026-09-27
-updated: 2026-10-07
+updated: 2026-10-08
 tags: [guest, ui, parity, legacy, cutover, autocomplete, usability]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[parity-is-functional-not-visual]]", "[[guest-frontend-feature-parity-gaps]]", "[[legacy-ui-reference-captures]]", "[[ui-parity-discrepancies-2026-10-05]]", "[[runtime-js-guest-platform]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]", "[[sale-price-adjustment]]"]
+related_to: ["[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[parity-is-functional-not-visual]]", "[[guest-frontend-feature-parity-gaps]]", "[[legacy-ui-reference-captures]]", "[[ui-parity-discrepancies-2026-10-05]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[features-as-native-web-components]]", "[[runtime-js-guest-platform]]", "[[mobile-layout-is-additive-to-the-legacy-look]]", "[[tb-0021-invoices-cashmemos-printing]]", "[[screen-parity-against-the-legacy-bundle-2026-10-04]]", "[[keyboard-layer-and-the-two-bugs-a-real-keystroke-found]]", "[[sale-price-adjustment]]"]
 ---
 
 # Guest feature parity — every legacy capability, plus a better UI
@@ -97,20 +97,31 @@ From [[ui-parity-discrepancies-2026-10-05]] Part 1. Under functional parity thes
 Under [[parity-reinstates-the-legacy-look-with-defect-fixes]], the pixel-only items closed on
 2026-10-05 are work again, minus the defect-fix carve-out:
 
-- [ ] **A — management screens.** Move the inline create form off the list page; match legacy's bare
-      filter row and table (no headings, no count badge, no card wrappers).
-- [ ] **C — management cards.** Remove the nested bordered cards; legacy is borderless except the
-      table grid.
-- [ ] **D — report date inputs.** Replace the native `input[type=date]` (browser calendar button) with
-      a legacy-like date control.
-- [ ] **G — Cash Memo tile glyph.** Match legacy's filled blue € circle.
-- [ ] **H — dashboard `Overview` counters card.** Remove it and fix the `guest-smoke` assertion that
-      protects a divergence.
-- [ ] **Rail.** Reduce to legacy's six icons (including Logout at the foot); move Pages, Plugins and
-      the refresh dot behind the foot menu.
-- [ ] **Body link colour** to legacy grey `rgb(73,80,87)` on every screen.
+- [x] **A — management screens.** Move the inline create form off the list page; match legacy's bare
+      filter row and table (no headings, no count badge, no card wrappers). **Done 2026-10-08** —
+      `views/management/list.html`, the create panel behind `?new=1`.
+- [x] **C — management cards.** Remove the nested bordered cards; legacy is borderless except the
+      table grid. **Done 2026-10-08** with A. The management table border was also corrected to black
+      (the earlier comment wrongly claimed only report tables were black; `ui-parity-report` metric
+      `thBorder` measured legacy `rgb(0,0,0)`).
+- [x] **D — report date inputs.** Replace the native `input[type=date]` (browser calendar button) with
+      a legacy-like date control. **Done 2026-10-08** — `<aa-date-input>`
+      ([[features-as-native-web-components]]).
+- [x] **G — Cash Memo tile glyph.** Match legacy's filled blue € circle. **Done 2026-10-08** —
+      `coin-euro-filled`.
+- [x] **H — dashboard `Overview` counters card.** Remove it and fix the `guest-smoke` assertion that
+      protects a divergence. **Done 2026-10-08** — card gone, `guest-smoke.mjs:287` now asserts
+      "Cash Memo".
+- [x] **Rail.** Reduce to legacy's six icons (including Logout at the foot); move Pages, Plugins and
+      the refresh dot behind the foot menu. **Done 2026-10-08** — five legacy destinations in legacy
+      order + Logout; Payments/Inventory/Print also moved behind the foot menu.
+- [x] **Body link colour** to legacy grey `rgb(73,80,87)` on every screen. **Done 2026-10-08** —
+      `a { color: gray-7 }`; the `linkColor` metric no longer differs.
 - [ ] **Report filter modal** behind the glyph, in addition to the inline row.
-- [ ] **Shared shell** fonts/spacing/metrics to match Mantine's rendering.
+- [x] **Shared shell** fonts/spacing/metrics to match Mantine's rendering. **Font stack, link colour,
+      table border and the date control done 2026-10-08**; per-screen spacing/layout continues (A2).
+
+Progress and the fresh discrepancy list: [[ui-parity-restyle-progress-2026-10-08]].
 
 Plus the client-side reference store:
 

@@ -2,57 +2,48 @@
 {% import 'partials/entity_fields.html' as ef %}
 {% import 'partials/icons.html' as icons %}
 {% block body %}
-<h1 class="page-title">{{ entity.label }}</h1>
-<p class="crumbs"><a href="/management">← Manage</a></p>
-
+{# ⚠️ The list page is the legacy screen: a bare filter row and a table, no heading, no count badge,
+   no card wrappers ([[tb-0023-guest-feature-parity]] items A and C). The create/edit form is a
+   separate affordance (`?new=1`, or a row's pencil) and only then is a panel shown. #}
+{% if isNew or editRow %}
 <section class="card">
   <h2>{% if editRow %}Edit {{ entity.singular }}{% else %}New {{ entity.singular }}{% endif %}</h2>
-  {% if editRow %}
-  <form class="entity-form" method="post" action="/management/{{ entityKey }}/{{ editRow.id }}/update">
+  <form class="entity-form" method="post" action="{% if editRow %}/management/{{ entityKey }}/{{ editRow.id }}/update{% else %}/management/{{ entityKey }}/create{% endif %}">
     {{ ef.render(fields) }}
     <div class="form-actions">
-      <button class="btn primary" type="submit">Save</button>
+      <button class="btn primary" type="submit">{% if editRow %}Save{% else %}Create{% endif %}</button>
       <a class="btn" href="/management/{{ entityKey }}">Cancel</a>
     </div>
   </form>
-  {% else %}
-  <form class="entity-form" method="post" action="/management/{{ entityKey }}/create">
-    {{ ef.render(fields) }}
-    <div class="form-actions">
-      <button class="btn primary" type="submit">Create</button>
-    </div>
-  </form>
-  {% endif %}
 </section>
+{% endif %}
 
-<section class="card">
-  <div class="list-toolbar">
-    <label class="field"><span>Search</span><input type="search" data-table-filter="#mgmt-table" autocomplete="off"></label>
-    <h2>All {{ entity.label }} ({{ rows|length }})</h2>
-  </div>
-  <div class="tablewrap">
-  <table class="data" id="mgmt-table" data-mobile="cards" data-sortable>
-    <thead><tr>
-      {% for c in columns %}<th class="{{ c.align }}" data-sort="{{ c.key }}"><button type="button" class="th-sort">{{ c.label }}</button></th>{% endfor %}
-      <th class="right">Actions</th>
-    </tr></thead>
-    <tbody>
-    {% for r in rows %}
-      <tr{% if editRow and editRow.id == r.id %} class="editing"{% endif %}>
-        {% for c in columns %}<td class="{{ c.align }}" data-label="{{ c.label }}"{% if loop.first %} data-lead{% endif %}>{{ r.cells[c.key] }}</td>{% endfor %}
-        <td class="row-actions" data-label="Actions">
-          <a class="icon-view" href="/management/{{ entityKey }}?edit={{ r.id }}" title="View">{{ icons.svg('eye', 16) }}</a>
-          <a class="icon-edit" href="/management/{{ entityKey }}?edit={{ r.id }}" title="Edit">{{ icons.svg('pencil', 16) }}</a>
-          <form method="post" action="/management/{{ entityKey }}/{{ r.id }}/delete" data-confirm="Delete this record?">
-            <button class="icon-del" type="submit" title="Delete">{{ icons.svg('trash', 16) }}</button>
-          </form>
-        </td>
-      </tr>
-    {% else %}
-      <tr><td class="empty" colspan="{{ columns|length + 1 }}">No records yet.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-</section>
+<div class="mgmt-toolbar">
+  <label class="field"><span>Search</span><input type="search" data-table-filter="#mgmt-table" autocomplete="off"></label>
+  <a class="btn primary" href="/management/{{ entityKey }}?new=1">New {{ entity.singular }}</a>
+</div>
+<div class="tablewrap">
+<table class="data" id="mgmt-table" data-mobile="cards" data-sortable>
+  <thead><tr>
+    {% for c in columns %}<th class="{{ c.align }}" data-sort="{{ c.key }}"><button type="button" class="th-sort">{{ c.label }}</button></th>{% endfor %}
+    <th class="right">Row actions</th>
+  </tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr{% if editRow and editRow.id == r.id %} class="editing"{% endif %}>
+      {% for c in columns %}<td class="{{ c.align }}" data-label="{{ c.label }}"{% if loop.first %} data-lead{% endif %}>{{ r.cells[c.key] }}</td>{% endfor %}
+      <td class="row-actions" data-label="Row actions">
+        <a class="icon-view" href="/management/{{ entityKey }}?edit={{ r.id }}" title="View">{{ icons.svg('eye', 16) }}</a>
+        <a class="icon-edit" href="/management/{{ entityKey }}?edit={{ r.id }}" title="Edit">{{ icons.svg('pencil', 16) }}</a>
+        <form method="post" action="/management/{{ entityKey }}/{{ r.id }}/delete" data-confirm="Delete this record?">
+          <button class="icon-del" type="submit" title="Delete">{{ icons.svg('trash', 16) }}</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td class="empty" colspan="{{ columns|length + 1 }}">No records yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
 {% endblock %}

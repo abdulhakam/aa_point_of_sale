@@ -3,10 +3,10 @@ title: TrailBase migration
 type: project
 status: active
 created: 2026-09-26
-updated: 2026-10-07
+updated: 2026-10-08
 tags: [pos, trailbase, migration, workstream]
 belongs_to: "[[aa-point-of-sale]]"
-related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]"]
+related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[features-as-native-web-components]]"]
 ---
 
 # TrailBase migration
@@ -65,6 +65,19 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
   [[cutover-is-guest-only]].
 
 ## Sequence
+
+**2026-10-08 — restyle increment A0/A1 + the cheap A2 items.** Part B was committed first (the
+IndexedDB ref store; gates re-run green: `guest-smoke` 115/115, `refdb-check` 12/12). Then: the guest
+capture set was refreshed and diffed against the frozen legacy captures (`ui-parity-report` — 28
+screens, 28 still differing, but the specific groups narrowed); the shared shell was aligned (link
+colour `gray-7`, the emoji font faces, black management table borders); the rail was cut to the five
+legacy destinations + Logout with the extras behind the foot menu; the management list became a bare
+search row + table with create behind `?new=1`; the dashboard `Overview` card was removed and the Cash
+Memo tile glyph corrected; and report dates became `<aa-date-input>`
+([[features-as-native-web-components]]). All gates green (`autocomplete-check` 39, `hotkey-check` 62,
+`grid-preview-check` 14, `route-snapshot` 49/0). Evidence and the residual list:
+[[ui-parity-restyle-progress-2026-10-08]]. **Next: A2 continues — the report filter modal and the
+per-screen shape differences — plus the unbuilt return/difference invoice entry.**
 
 **2026-10-07 — the mandate changed and Part B shipped.** [[parity-reinstates-the-legacy-look-with-defect-fixes]]
 puts the legacy look back on the critical path (step 7 reopened), and
@@ -273,6 +286,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | Report pages cap rendered rows (1,000; `?all=1` for the full page) | [[report-render-row-cap]] |
 | Parity reinstates the legacy look, with legacy defects fixed rather than copied (**supersedes** the visual-freedom half of [[parity-is-functional-not-visual]]) | [[parity-reinstates-the-legacy-look-with-defect-fixes]] |
 | Dropdown reference lists come from an IndexedDB store synced from the server | [[reference-lists-come-from-indexeddb]] |
+| Interactive features are reusable native web components that enhance working markup | [[features-as-native-web-components]] |
 
 ## Known friction in the migration
 

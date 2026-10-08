@@ -107,7 +107,16 @@ const STRUCTURE = `(function () {
       bodyFont: css(document.body, "fontFamily"),
       bodySize: css(document.body, "fontSize"),
       bodyBg: css(document.body, "backgroundColor"),
-      linkColor: css(document.querySelector("a[href]"), "color"),
+      // The base anchor colour, sampled from a throwaway link rather than the first anchor on the page.
+      // The first anchor is not comparable between the two apps: the guest header wraps the business
+      // name in an a.brand and its hubs lead with tile/button links, so the same selector measured a
+      // different KIND of element on each side.
+      linkColor: (function () {
+        var p = document.createElement("a"); p.href = "#";
+        p.style.position = "absolute"; p.style.visibility = "hidden";
+        (document.body || document.documentElement).appendChild(p);
+        var c = getComputedStyle(p).color; p.remove(); return c;
+      })(),
       buttonBg: css(document.querySelector("button"), "backgroundColor"),
       thTransform: css(document.querySelector("th"), "textTransform"),
       thBorder: css(document.querySelector("th"), "borderBottom"),

@@ -8,25 +8,19 @@
      Inventory, Reports, Management: **Cash Memo was missing** even though `/cashmemo` exists and is in
      the rail, and Reports had moved to fourth. The legacy four now lead, in the legacy order, and the
      two new-side additions follow so nothing the guest offers is hidden. The icon colours follow the
-     legacy capture — pink report, orange invoice, blue cash-memo, grey management. #}
+     legacy capture — pink report, orange invoice, blue cash-memo, grey management.
+
+     The Cash Memo glyph is the legacy's **filled blue € circle** (`coin-euro-filled`), not the Tabler
+     card outline it used to carry ([[tb-0023-guest-feature-parity]] item G). #}
   <div class="tiles dashboard">
     <a class="tile" href="/reports"><span class="c-pink-4">{{ icons.svg('report', 64) }}</span><span class="tile-label">Reports</span></a>
     <a class="tile" href="/invoices"><span class="c-orange-4">{{ icons.svg('file-invoice', 64) }}</span><span class="tile-label">Invoices</span></a>
-    <a class="tile" href="/cashmemo"><span class="c-blue">{{ icons.svg('cash', 64) }}</span><span class="tile-label">Cash Memo</span></a>
+    <a class="tile" href="/cashmemo"><span class="c-blue">{{ icons.svg('coin-euro-filled', 64) }}</span><span class="tile-label">Cash Memo</span></a>
     <a class="tile" href="/management"><span class="c-gray-4">{{ icons.svg('settings', 64) }}</span><span class="tile-label">Management</span></a>
     <a class="tile" href="/payments"><span class="c-green">{{ icons.svg('cash', 64) }}</span><span class="tile-label">Payments</span></a>
     <a class="tile" href="/inventory"><span class="c-orange-4">{{ icons.svg('trolley', 64) }}</span><span class="tile-label">Inventory</span></a>
   </div>
 </section>
-
-{# New-side addition: the legacy dashboard has no counters, but the runtime exposes them and the
-   smoke suite asserts the "Overview" heading, so it stays as a Mantine-style card below the tiles. #}
-<section class="card">
-  <h2>Overview</h2>
-  <div class="stat-grid">
-  {% for s in tiles %}
-    <div class="stat"><div class="stat-value">{{ s.value }}</div><div class="stat-label">{{ s.label }}</div></div>
-  {% endfor %}
-  </div>
-</section>
+{# The legacy dashboard has no counters, so the guest's `Overview` card is gone (item H). The counts
+   are still reachable from every management list; a test must not assert a divergence. #}
 {% endblock %}

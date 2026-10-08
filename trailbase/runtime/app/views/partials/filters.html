@@ -1,6 +1,6 @@
 {% macro render_field(field, filters, options) -%}
 {% if field.type == 'date' -%}
-<label class="field"><span>{{ field.label }}</span><input type="date" name="{{ field.name }}" value="{{ filters[field.name] }}"></label>
+<label class="field"><span>{{ field.label }}</span><aa-date-input><input type="date" name="{{ field.name }}" value="{{ filters[field.name] }}"></aa-date-input></label>
 {% elif field.type == 'select' -%}
 <label class="field"><span>{{ field.label }}</span>
 <select name="{{ field.name }}" data-searchable data-ref="{{ field.source }}">

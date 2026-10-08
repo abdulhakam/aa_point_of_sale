@@ -24,6 +24,12 @@
 {% if user %}</div>{% endif %}
 </div>
 <script src="/static/js/app.js" defer></script>
+{# Web components. Each is progressive enhancement over markup that already works — a custom element
+   that has not been upgraded leaves a normal form control in place. `date-input.js` gives every
+   `<aa-date-input>` the legacy Mantine `DateInput` look (text field, no browser calendar glyph) while
+   keeping the native `<input type="date">` as the submitted value. Loaded with `defer` so the DOM is
+   parsed before upgrade. #}
+<script src="/static/js/components/date-input.js" defer></script>
 {# The keyboard layer is a separate file on purpose: it is an accelerator for markup that already works,
    so it can be reasoned about, tested and dropped without touching the app's own enhancements.
    `?` lists everything it can do on this page. #}

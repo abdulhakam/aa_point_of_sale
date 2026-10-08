@@ -238,7 +238,7 @@
   function fields() {
     var scope = document.querySelector("main form") || document;
     return Array.prototype.slice
-      .call(scope.querySelectorAll("input:not([type=hidden]):not([disabled]), textarea, select"))
+      .call(scope.querySelectorAll("input:not([type=hidden]):not([disabled]):not(.aa-date-native), textarea, select"))
       .filter(function (el) {
         return el.offsetParent !== null || el.getClientRects().length;
       });

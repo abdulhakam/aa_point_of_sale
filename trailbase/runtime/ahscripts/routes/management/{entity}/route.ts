@@ -40,6 +40,10 @@
     const links = await A.management.loadLinks(entity);
     const editId = String(query.edit || "");
     const editRow = editId ? all.find((r: any) => r.id === editId) ?? null : null;
+    // The create form lives behind its own affordance rather than on the list page, so the list is the
+    // bare filter row + table the legacy screen is ([[tb-0023-guest-feature-parity]] item A). `?new=1`
+    // opens it; a row's pencil (`?edit=<id>`) opens the same panel prefilled.
+    const isNew = /^(1|true|on|yes)$/i.test(String(query.new || ""));
 
     return routeKit.renderRoute(
       req,
@@ -51,6 +55,7 @@
         rows: A.management.displayRows(entity, visible, refs, links),
         fields: A.management.formFields(entity, editRow, options, links),
         editRow,
+        isNew,
         status: query.status || "",
         message: query.message || "",
       }

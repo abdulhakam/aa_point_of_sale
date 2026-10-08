@@ -314,6 +314,10 @@ check("help lists the row cursor", helpText.includes("Next row"));
   // comparison could never match. The vacuous assertion is why that survived.
   //
   // Start from a field KNOWN to be inside the form, so this measures movement rather than entry.
+  // The management list page is a bare table now, with no form on it ([[tb-0023-guest-feature-parity]]
+  // item A); the create panel behind its "New" affordance is where that page keeps a form, so the
+  // field-navigation assertion drives that.
+  await cdp.goto("/management/parties?new=1");
   await cdp.evaluate(`(function () {
     var scope = document.querySelector('main form');
     var list = scope ? [].slice.call(scope.querySelectorAll('input:not([type=hidden]):not([disabled]), textarea, select'))

@@ -284,7 +284,7 @@ async function main() {
     check("session cookie is set", cookies.cookie.includes("auth_token"), cookies.cookie.slice(0, 40));
 
     const pages = [
-      ["/dashboard", "Overview"],
+      ["/dashboard", "Cash Memo"],
       ["/reports", "Reports"],
       ["/reports/ledgers", "Ledgers"],
       ["/management", "Management"],

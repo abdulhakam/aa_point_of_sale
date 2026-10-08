@@ -8,9 +8,15 @@
 
 :root {
   /* Mantine 7 default palette (light scheme) — the values the legacy app renders with. */
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* The legacy stack appends the emoji faces to the system stack; the live comparison measured the
+     difference (`ui-parity-report.mjs`, metric bodyFont), so it is copied verbatim. */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   --text: #000000;
   --muted: #868e96;
+
+  /* Mantine's gray-3 border, under a shorter name used by the combobox, quick-create panel and
+     date control. It was referenced but never defined, so those borders were invisible. */
+  --line: #dee2e6;
 
   --blue-0: #e7f5ff;
   --blue-4: #4dabf7;
@@ -58,7 +64,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-a { color: var(--blue-6); }
+/* Legacy body links are Mantine gray-7 (`rgb(73, 80, 87)`), not blue — measured on every screen
+ * (`ui-parity-report.mjs`, metric linkColor). Tile labels (`.tile-label`), report links
+ * (`.report-link`) and subtle buttons set their own colour, so the blue affordances stay blue. */
+a { color: var(--gray-7); }
 
 h1, h2, h3 { font-weight: 700; }
 
@@ -280,7 +289,11 @@ h1, h2, h3 { font-weight: 700; }
 /* ----------------------------------------------------------------- tables */
 
 table.data { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.75rem; }
-table.data th, table.data td { border: 1px solid var(--gray-3); padding: 7px 12px; text-align: left; vertical-align: middle; }
+/* ⚠️ Black cell borders, not gray-3. The fresh parity diff (`ui-parity-report.mjs`, metric thBorder
+ * on `management-parties`) measured the legacy management table at `1px solid rgb(0, 0, 0)` — the
+ * same grid the legacy report draws. The comment here used to claim only the report tables were
+ * black; the live capture says the management tables are too, so the base rule carries it. */
+table.data th, table.data td { border: 1px solid #000; padding: 7px 12px; text-align: left; vertical-align: middle; }
 table.data thead th { font-weight: 700; }
 table.data td.right, table.data th.right { text-align: right; font-variant-numeric: tabular-nums; }
 table.data td.empty { text-align: center; color: var(--muted); padding: 24px; }
@@ -382,6 +395,12 @@ button.job[aria-busy="true"] { cursor: progress; }
 
 .list-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; margin-bottom: 12px; }
 .list-toolbar h2 { margin: 0 0 8px; }
+
+/* The management list's bare filter row: Search on the left, the create affordance on the right,
+   directly above the table. No card, no count badge, no page heading — the legacy screen is the row
+   and the grid ([[tb-0023-guest-feature-parity]] items A and C). */
+.mgmt-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.mgmt-toolbar .field input { min-width: 16rem; }
 
 .entity-form { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
 .form-actions { flex-basis: 100%; display: flex; gap: 8px; margin-top: 4px; }
@@ -830,6 +849,31 @@ kbd {
 .filters .ac { min-width: 10rem; }
 
 @media print { .ac-list { display: none !important; } }
+
+/* ── date input (components/date-input.js, <aa-date-input>) ────────────────────────────────────────
+   The legacy report filter is a Mantine `DateInput` that reads "April 11, 2026" with no visible
+   picker glyph; the guest was a native `<input type="date">`, whose control — and calendar button —
+   belong to the browser. The custom element keeps the native input in the form (name, value,
+   required, disabled all unchanged, and the only thing a no-JavaScript page shows) and renders the
+   Mantine-looking field on top of it. The element is `display: block` and the two controls overlap,
+   which is why the native input is absolutely positioned. */
+aa-date-input { position: relative; display: block; }
+.aa-date-text {
+  font: inherit; font-size: 0.875rem; width: 100%; height: 36px;
+  padding: 0 12px; border: 1px solid var(--gray-4); border-radius: var(--radius);
+  background: #fff; color: var(--text); cursor: pointer;
+}
+.aa-date-text:focus { outline: 2px solid var(--blue-6); outline-offset: -1px; border-color: var(--blue-6); }
+/* The native control sits under the text field, invisible but still the submitted value. It is shown
+   (`aa-date-show`) only for the beat between a click and the browser opening its picker, which is the
+   fallback path where `showPicker()` does not exist. */
+.aa-date-native {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; pointer-events: none; border: 0; padding: 0;
+}
+aa-date-input.aa-date-show .aa-date-native { opacity: 1; pointer-events: auto; }
+aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
+.filter-dates aa-date-input { max-width: 14rem; }
 
 /* ── list pager (the /invoices list, which used to stop hard at 300 rows) ──────────────────────── */
 .pager { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 10px 0; }
