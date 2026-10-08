@@ -295,6 +295,10 @@
     function openPanel(name) {
       if (!panel) return false;
       hide();
+      // Remember WHICH control opened this panel. Several selects can point at one panel (every row of
+      // the invoice grid points at `#qc-item`), so "the select to fill in" cannot be found by
+      // `document.querySelector` after the fact — `refdb-create.js` reads this instead.
+      panel.__aaSelect = select;
       panel.hidden = false;
       panel.classList.add("is-open");
       setPanelInert(panel, false);

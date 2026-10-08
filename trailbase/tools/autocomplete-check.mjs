@@ -219,12 +219,13 @@ try {
   // Discover the invoice rather than pinning an id: the previous hard-coded id no longer exists on a
   // depot re-imported since, so the grid 404'd and both checks below failed for a reason that had
   // nothing to do with the code. A pinned id is a claim about the data, and the data moves.
-  await cdp.goto("/invoices");
+  // `/invoices` is the legacy hub now; the list (and its invoice-id links) is at `/invoices/all`.
+  await cdp.goto("/invoices/all");
   const gridInvoice = await cdp.ev(`(function () {
     var links = document.querySelectorAll('a[href^="/invoices/"]');
     for (var i = 0; i < links.length; i++) {
       var h = links[i].getAttribute("href");
-      if (/\\/invoices\\/[^\\/?]+$/.test(h)) return h;
+      if (/\\/invoices\\/[^\\/?]+$/.test(h) && !/\\/invoices\\/(new|all)$/.test(h)) return h;
     }
     return "";
   })()`);
@@ -289,10 +290,10 @@ try {
   // Nothing in this section submits. The CREATE itself is exercised end to end in `guest-smoke.mjs`,
   // which runs against a throw-away depot; this is the live depot and a create here would be a real
   // party in the operator's data.
-  await cdp.goto("/invoices");
+  await cdp.goto("/invoices/all");
   const firstInvoice = await cdp.ev(`(function () {
     var a = [].slice.call(document.querySelectorAll('a[href^="/invoices/"]')).filter(function (el) {
-      return !/\\/invoices\\/(new|$)/.test(el.getAttribute("href"));
+      return !/\\/invoices\\/(new|all|$)/.test(el.getAttribute("href"));
     });
     return a.length ? a[0].getAttribute("href") : "";
   })()`);

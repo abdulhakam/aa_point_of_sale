@@ -92,12 +92,14 @@ try {
   // An existing invoice's screen has a party combobox, a booker combobox and item comboboxes — every
   // shape the store serves, including the item options whose data attributes app.js reads. (The
   // *new-invoice start form* has only a party + area; the item select lives on the invoice itself.)
-  await cdp.goto("/invoices");
+  // `/invoices` is the legacy five-tile hub now; the list is at `/invoices/all`, and its rows are
+  // where an invoice id to open lives ([[ui-parity-discrepancies-2026-10-08]]).
+  await cdp.goto("/invoices/all");
   const invoiceHref = await cdp.ev(`(function(){
     var links = document.querySelectorAll('a[href^="/invoices/"]');
     for (var i = 0; i < links.length; i++) {
       var href = links[i].getAttribute('href');
-      if (/^\\/invoices\\/[^\\/?]+$/.test(href)) return href; // an invoice id, not /invoices/new
+      if (/^\\/invoices\\/[^\\/?]+$/.test(href) && !/^\\/invoices\\/(new|all)$/.test(href)) return href; // an invoice id, not /invoices/new or /invoices/all
     }
     return null;
   })()`);

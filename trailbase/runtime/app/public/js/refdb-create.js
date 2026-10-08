@@ -77,7 +77,11 @@
       })
       .then(function (result) {
         return refdb.upsert(result.table, result.row).then(function () {
-          var select = document.querySelector('select[data-create="#' + panel.id + '"]');
+          // The control that OPENED the panel is the one to select the new row in. On the invoice grid
+          // every row's item select points at the same panel, so the first match from
+          // `querySelector` would put a newly created item into whichever row happens to be first;
+          // `autocomplete.js` records the opener on the panel instead.
+          var select = panel.__aaSelect || document.querySelector('select[data-create="#' + panel.id + '"]');
           if (select) {
             select.value = result.id;
             select.dispatchEvent(new Event("change", { bubbles: true }));

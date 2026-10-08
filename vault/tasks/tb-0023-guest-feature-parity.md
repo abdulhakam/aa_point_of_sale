@@ -148,16 +148,18 @@ the legacy rail carries **six including Orders** — and shows a **reversed mana
       the two reports declare `filtersModal` in their meta. Progress:
       [[ui-parity-discrepancies-2026-10-08]].
 - [ ] **Report filter labels** — `date from`/`date to`; review the autocomplete label text.
-- [x] **Management `Created` column** and the items/bookers column sets. **Partly done 2026-10-08** —
-      `created` added to sections/areas/companies/bookers (the imported tables carry it in the exact
-      legacy format), bookers' "Companies"→"Company", items reordered to Company/Name/Cost price/Sale
-      price/Carton Size. **Still missing:** the items **Qty** column (it is computed stock, not a column
-      on the table — a small follow-up).
+- [x] **Management `Created` column** and the items/bookers column sets. **Done 2026-10-08** —
+      `created` on sections/areas/companies/bookers, bookers' "Companies"→"Company", and items now
+      `Company / Name / Cost price / Sale price / Qty / Carton Size` with the legacy **Qty** display
+      (`165 (1 ctn 21 units)`, signed stock read from the same `itemsReport` view the stock report and
+      `/inventory` use).
 - [x] **Management hub order** — sections, areas, parties, companies, bookers, items. **Done 2026-10-08**
       (order + lowercase key labels; "bookers" not "order bookers").
-- [ ] **Invoices hub vs list** — legacy `/app/invoices` is a five-tile hub; the guest is a list.
-      **Deferred**: the hub's Return and Difference tiles need the unbuilt return/difference entry, so
-      this waits on those.
+- [x] **Invoices hub vs list** — legacy `/app/invoices` is a five-tile hub; the guest is a list.
+      **Done 2026-10-08** — `/invoices` is now the five-tile hub (Purchase, Sale, Print Invoices,
+      Return, Difference); the list moved to `/invoices/all`. The entry route accepts all four
+      `invoice_types` (it had coerced every create to 0/1 and ignored the form's own type), so the
+      **Difference** and **Return** entries exist.
 - [x] **Cash-memo tile set/labels** — da entry-purchases / crv / cpv / payments / expenses. **Done
       2026-10-08** — five legacy tiles, legacy order/labels/colours; the guest-only summary card, date
       filter and crumb removed.

@@ -10,7 +10,11 @@
     const user = routeKit.userOf(req);
     if (!user) return routeKit.loginRedirect(req, path);
     const query = routeKit.parsePairs(String(req.query || ""));
-    const type = routeKit.pick(query.type, "1") === "0" ? 0 : 1;
+    // 0 purchase, 1 sale, 2 return, 3 difference — the four `invoice_types`. The legacy hub leads with
+    // a tile for each, and choosing one starts that entry screen, so all four are accepted here
+    // ([[ui-parity-discrepancies-2026-10-08]]). Anything else falls back to a sale.
+    const rawType = Number(routeKit.pick(query.type, "1"));
+    const type = rawType in A.invoices.INVOICE_TYPES ? rawType : 1;
     const refs = await routeKit.refs();
 
     return routeKit.renderRoute(
@@ -40,7 +44,11 @@
     if (!user) return routeKit.loginRedirect(req, path);
     const query = routeKit.parsePairs(String(req.query || ""));
     const form = routeKit.parsePairs(String(req.body || ""));
-    const type = routeKit.pick(query.type, "1") === "0" ? 0 : 1;
+    // The entry form carries its type in a hidden field (`entry.html`); the tile links pass it in the
+    // query. Both are accepted, so a purchase started from the tile is created as a purchase rather
+    // than the sale this used to default to (it read only the query, which the form's action omits).
+    const rawType = Number(routeKit.pick(form.type, routeKit.pick(query.type, "1")));
+    const type = rawType in A.invoices.INVOICE_TYPES ? rawType : 1;
     const userHex = routeKit.userHex(req);
 
     // A key from the form makes a repeated submit return the same invoice instead of a second one.

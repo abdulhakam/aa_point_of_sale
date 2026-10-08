@@ -36,7 +36,24 @@
     const refs = await routeKit.refs();
     const options = A.management.optionLists(refs);
     const all = A.management.sortRows(await A.data.readTable(entity.api), entity.sort);
-    const visible = all.filter((row: any) => !entity.softDelete || !row.deleted);
+    let visible = all.filter((row: any) => !entity.softDelete || !row.deleted);
+
+    // ⚠️ The items list shows the legacy `Qty` column — "165 (1 ctn 21 units)" — which is the item's
+    // signed stock, not a column on `items`. It is read from the SAME `itemsReport` view the stock
+    // report and `/inventory` use ([[inventory]]), so the list, the report and the inventory screen
+    // cannot disagree about a quantity. Keyed by id; the display is `<qty> (<ctns/units>)`.
+    if (entityKey === "items") {
+      const stock = await A.baseviews.itemsReport();
+      const byId = new Map(stock.map((r: any) => [String(r.id), r]));
+      visible = visible.map((row: any) => {
+        const s = byId.get(String(row.id));
+        if (!s) return row;
+        const qty = Number(s.qty) || 0;
+        const rounded = Math.round((qty + Number.EPSILON) * 100) / 100;
+        return { ...row, qtyText: `${rounded} (${A.format.qtyDisplay(s.box_size_qty, qty)})` };
+      });
+    }
+
     const links = await A.management.loadLinks(entity);
     const editId = String(query.edit || "");
     const editRow = editId ? all.find((r: any) => r.id === editId) ?? null : null;

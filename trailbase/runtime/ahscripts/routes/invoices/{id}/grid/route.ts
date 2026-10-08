@@ -45,6 +45,9 @@
         parties: refs.parties ?? [],
         bookers: refs.bookers ?? [],
         items: routeKit.editorItems(refs),
+        // The item quick-create panel's company list: the grid now carries the same create-from-the-
+        // invoice affordance the single-line form does ([[quick-create-rides-in-the-form-that-needed-it]]).
+        companies: refs.companies ?? [],
       }
     );
   };

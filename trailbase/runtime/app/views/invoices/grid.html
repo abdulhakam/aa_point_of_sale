@@ -1,5 +1,6 @@
 {% extends 'layout.html' %}
 {% import 'partials/icons.html' as icons %}
+{% import 'partials/quick-create.html' as qc %}
 {% block body %}
 {# The invoice grid. `data-editable` is 0 when another device holds the lease, and the cells are
    then disabled with the owner named — a read-only grid, not a dead form. The `data-*` attributes
@@ -91,7 +92,7 @@
                one. It rides inside the item cell rather than in a cell of its own, so the column
                count still matches the header. The blank row's empty id is what makes it an append. #}
             <input type="hidden" name="line" value="{{ l.id }}">
-            <select name="item" data-searchable data-ref="items">
+            <select name="item" data-searchable data-ref="items" data-create="#qc-item">
               <option value="">—</option>
               {% for it in items %}<option value="{{ it.id }}" data-price="{{ it.price }}" data-cost="{{ it.costPrice }}" data-box="{{ it.boxSizeQty }}"{% if l.item == it.id %} selected{% endif %}>{{ it.name }}</option>{% endfor %}
             </select>
@@ -130,7 +131,7 @@
       <tr data-line="">
         <td data-label="Item" data-lead>
           <input type="hidden" name="line" value="">
-          <select name="item" data-searchable data-ref="items">
+          <select name="item" data-searchable data-ref="items" data-create="#qc-item">
             <option value="">Choose an item…</option>
             {% for it in items %}<option value="{{ it.id }}" data-price="{{ it.price }}" data-cost="{{ it.costPrice }}" data-box="{{ it.boxSizeQty }}">{{ it.name }}</option>{% endfor %}
           </select>
@@ -151,6 +152,11 @@
     </div>
 
     {% if invoice.canWrite %}
+    {# The create-item panel, inside the grid's own form. Choosing "Create …" in any row's item select
+       opens it; `refdb-create.js` POSTs the new item and selects it IN THAT ROW, so SAVE LINES then
+       saves the line normally. On the grid the create is a JavaScript path only — with no JS the
+       combobox never offers "Create …" in the first place. #}
+    {{ qc.item(companies) }}
     <div class="pagebar" style="margin-top:12px">
       <button class="btn primary" type="submit" name="op" value="save">SAVE LINES</button>
       <span class="muted">A negative quantity is a return. The server recomputes every amount; the

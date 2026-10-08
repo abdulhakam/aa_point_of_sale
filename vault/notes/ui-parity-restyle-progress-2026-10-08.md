@@ -103,6 +103,28 @@ not a pure restyle.
 
 Gates: `guest-smoke` 115/115, `route-snapshot` 49 routes / 0 erroring.
 
+## Fourth increment (2026-10-08, later): invoices hub, items Qty, grid create
+
+The four items the owner asked for next.
+
+- **Invoices hub** — `/invoices` is now the legacy five-tile hub (Purchase, Sale, Print Invoices,
+  Return, Difference); the list moved to `/invoices/all`. The entry route used to coerce every create
+  to a sale (it read only the query, ignoring the form's hidden `type`) — it now accepts all four
+  `invoice_types`, so **Return** and **Difference** entries exist. `views/invoices/index.html`,
+  `all.html`, `routes/invoices/{route.ts,all/route.ts,new/route.ts}`.
+- **Items Qty column** — the items list shows the legacy `165 (1 ctn 21 units)`, the signed stock read
+  from the SAME `itemsReport` view the stock report and `/inventory` use, so the three cannot disagree.
+  `routes/management/{entity}/route.ts`, `app/manifests/entities.json`.
+- **Create-from-invoice on the grid** — the grid form now carries the item quick-create panel and every
+  row's item select points at it. `autocomplete.js` records which select opened the panel
+  (`panel.__aaSelect`) and `refdb-create.js` selects the new item IN THAT ROW, so SAVE LINES saves it
+  normally. JS-only, which is fine: with no JS the combobox never offers "Create …".
+- Test harnesses that found their page on `/invoices` now use `/invoices/all`
+  (`autocomplete-check`, `refdb-check`).
+
+Gates: `guest-smoke` 115/115, `autocomplete-check` 39/0, `hotkey-check` 62/0, `grid-preview-check` 14/0,
+`refdb-check` 12/12, `route-snapshot` 49/0.
+
 ## Still open (the rest of A2 and the reopened list)
 
 - **Report filter modal** behind the glyph, in addition to the inline row.
