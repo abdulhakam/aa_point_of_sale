@@ -13,7 +13,7 @@
 // (`doc.party_name` / `doc.booker_name`) because resolving them again from refs dropped the Party and
 // Booker from the sheet entirely — the defect that fix closed.
 
-// Legacy: `+ SALE INVOICE` / `+ PURCHASE INVOICE` / `+ RETURN INVOICE` — the sign is constant.
+// Legacy: `SALE INVOICE` / `PURCHASE INVOICE` / `RETURN INVOICE` / `DIFFERENCE INVOICE` — no sign.
 const TYPE_WORD = { 0: "PURCHASE", 1: "SALE", 2: "RETURN", 3: "DIFFERENCE" };
 
 /**
@@ -43,7 +43,7 @@ export async function buildSheet(A, id) {
   const bookers = byHex(refs.bookers ?? []);
   const items = byHex(refs.items ?? []);
 
-  const typeLabel = "+ " + (TYPE_WORD[Number(doc.type)] ?? "INVOICE") + " INVOICE";
+  const typeLabel = (TYPE_WORD[Number(doc.type)] ?? "INVOICE") + " INVOICE";
 
   // The legacy sheet renders Address and Booker ONLY on a sale invoice; a purchase/return/difference
   // sheet shows neither, even when the party happens to have an area or the invoice a booker.
@@ -65,11 +65,24 @@ export async function buildSheet(A, id) {
   const bookerName = isSale ? String(doc.booker_name ?? bookerRow?.name ?? "") : "";
   const bookerPhone = isSale ? String(bookerRow?.phone ?? "") : "";
 
-  // Legacy header date/time: `Apr 11, 2026` and a 12-hour time. The TIME on the legacy sheet comes
-  // from the invoice's `created`, which the import overwrites with the import timestamp
-  // ([[guest-depot-created-is-import-time]]), so the time here is the dated time instead.
-  const invDate = A.dates.printDate(doc.dated);
-  const invTime = A.dates.printTime(doc.dated);
+  // Legacy header date/time: `Apr 11, 2026` and a 12-hour time, both read from the invoice's
+  // `created` and rendered in the shop's local time (PKT). Every imported invoice on a direct-imported
+  // depot carries the same `created` as v1 (verified 2026-10-09 against all 8,927 shared invoices), so
+  // `created` is the right source — the legacy sheet uses it, not `dated`. NB `created` is verbatim v1
+  // only on the direct-import path; a record-API load stamps it with the import time
+  // ([[guest-depot-created-is-import-time]]), so this assumes a direct-imported depot.
+  const invDate = A.dates.printDate(doc.created);
+  const invTime = A.dates.printTime(doc.created);
+
+  // Legacy prints a Due Date only when the due date is later than the invoice's own date; it is
+  // otherwise blank. 21 imported documents carry an EMPTY `dated`, so the fallback to `created` must
+  // be a truthy one (`||`, not `??`) or those invoices lose a due date the legacy sheet prints.
+  const dueRaw = String(doc.duedate ?? "").slice(0, 10);
+  const refRaw = String(doc.dated || doc.created || "").slice(0, 10);
+  const dueDate = dueRaw && refRaw && dueRaw > refRaw ? dueRaw : "";
+
+  // `PRINT TIME:` is the current clock on the shop's wall, not the invoice time.
+  const now = A.dates.shopNow();
 
   // Per-line values. `d1`/`d2`/`drs` ride along because the legacy sheet prints a DISCOUNTS group when
   // any line carries one, and dropping them was a regression from the previous guest sheet.
@@ -124,6 +137,9 @@ export async function buildSheet(A, id) {
     invoiceNo: String(doc.invoiceNo ?? ""),
     invDate,
     invTime,
+    dueDate,
+    nowTime: now.time,
+    nowDate: now.date,
     lines,
     hasLineDiscounts,
     totals: {

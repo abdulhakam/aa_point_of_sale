@@ -5,7 +5,7 @@ status: active
 created: 2026-10-08
 updated: 2026-10-08
 tags: [guest, ui, parity, legacy, evidence, restyle, discrepancies]
-related_to: ["[[ui-parity-discrepancies-2026-10-05]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[tb-0023-guest-feature-parity]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[legacy-ui-reference-captures]]", "[[features-as-native-web-components]]"]
+related_to: ["[[ui-parity-discrepancies-2026-10-05]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[ui-parity-run-2026-10-09]]", "[[tb-0023-guest-feature-parity]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[legacy-ui-reference-captures]]", "[[features-as-native-web-components]]"]
 ---
 
 # UI parity discrepancies, 2026-10-08 (1-1 against the live legacy bundle)

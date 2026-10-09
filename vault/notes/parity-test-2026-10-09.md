@@ -3,6 +3,7 @@ title: "1:1 parity test against the legacy bundle, 2026-10-09"
 type: note
 status: active
 created: 2026-10-09
+updated: 2026-10-09
 system: new
 tags: [parity, reports, print, ui, responsive, migration, guest, legacy, trailbase]
 belongs_to: "[[trailbase-migration]]"
@@ -47,32 +48,61 @@ The extras are **post-cutover entries made on the new system**, not migration dr
 8607–8609 (dated 2026-10-08) with their transaction, and one party named "Difference" created
 2026-09-29. If "Difference" was a test artefact it should be reviewed and deleted by the operator.
 
-## Reports parity, April 2026 window — in flight
+## Reports parity, April 2026 window — captured, but not comparable as-is
 
-`tools/report-parity.mjs --from 2026-04-01 --to 2026-04-30` (results appended here when the legacy
-arm completes; legacy pages PocketBase 500 rows per request, so the heavy reports take minutes).
-Guest side: all 14 screens render in 3–4 s warm; ledgers/party and ledgers/booker correctly show 0
-rows without a party/booker filter.
+`tools/report-parity.mjs --from 2026-04-01 --to 2026-04-30` completed (14 guest + 14 legacy + print
+captures in `vault/attachments/report-parity-2026-10-09-april`). Guest rows are the April window; the
+legacy arm is NOT — **`report-parity.mjs` hardcodes the legacy lower bound to `January 1, 2001`**
+(`LEGACY_LEGACYFROM`) and ignores `--from`, so the legacy captures are the full ledger (e.g. payments
+26,536 legacy vs 341 guest, itemsales 21,820 vs 598). The row counts therefore differ by the filter,
+not the arithmetic, and this run does not evidence report calculation parity.
 
-## Print parity — multipage invoice verified
+Guest side measured: all 14 screens render in ~3 s warm; ledgers/party and ledgers/booker correctly
+show 0 rows without a party/booker filter. A valid April-window comparison needs the harness to type
+the real `--from` (and an upper bound) into the legacy Mantine `DateInput`; that is a harness change,
+not a report defect. The earlier `2001` lower bound was chosen so the legacy arm saw all data.
 
-Invoice **8603** (24 line items, the largest April invoice) printed to A5 PDF from both systems:
+## Print parity — fixed 2026-10-09 (owner supplied a guest/legacy pair of the same invoice)
 
-- **Both produce exactly 2 A5 pages** — pagination parity.
-- All 24 line items identical: quantities, box sizes, unit/CTN prices, row totals to the paisa.
-- Totals block identical: 4550.00 / 0.00% / 0.00% / 0.00 / 4550.00.
+The owner placed a printed copy of the same invoice from each system in
+`legacyforparity/zprintsforparity/` (`guestpurchaseinvoice.pdf`, `legacypurchaseinvoice.pdf` — purchase
+invoice 229). The guest paper did not match the legacy paper. Fixed in the guest sheet
+(`runtime/app/views/partials/invoice-sheet.html`, `runtime/app/lib/invoice-sheet.js`,
+`runtime/app/lib/dates.js`, `runtime/app/public/css/app.css`):
 
-**Divergences found:**
+1. **Invoice Time was read from the wrong field in the wrong zone.** Legacy prints the invoice's
+   `created` in the shop's local time (PKT, UTC+5): `3:48:33 PM`. The guest printed `dated`'s UTC time
+   raw (`10:48:25 AM`). Fixed: `dates.js` now shifts `created` by +05:00 (`shopParts`/`shopNow`) and the
+   sheet sources `created`. Verified across all 8,927 shared invoices that the guest's `created` is
+   byte-identical to v1's, so `created` is the correct source (this also **corrects** the earlier
+   "import overwrites created" claim — that is false on this depot).
+2. **`+` prefix removed.** The title is `<TYPE> INVOICE`, not `+ <TYPE> INVOICE`.
+3. **Header/footer bands added.** The centred business block with `PRINT TIME:` and the
+   `Checked By / Delivered By` band are now rendered (print-only), matching legacy.
+4. **Layout restructured** to the legacy order — centred header band, then the title, the
+   Party/Address/Booker/Remarks block beside the boxed Invoice #/Date/Time block, an `<hr>`, the line
+   grid, then the totals in a bordered box (legacy labels `TOTAL AMOUNT` / `DISCOUNT 1` / `DISCOUNT 2`
+   / `DISCOUNT cash` / `PAYABLE AMOUNT`). The earlier claim that legacy omits the address/phone was a
+   misread — legacy prints them and so does the guest now.
 
-1. **Invoice Time is wrong on the guest.** Legacy prints `created` converted to local time
-   (09:55:31Z → 2:55:31 PM PKT); the guest prints the `dated` field's UTC time raw
-   (9:55:10 AM). Both the source field and the timezone handling differ.
-2. The guest print preview shows the app rail and "← Invoices Edit" links on screen (`?print=1`
-   drops the nav in the harness comment, but the capture shows it); legacy shows only its print
-   controls. Whether these survive on actual paper depends on `@media print` — flagged for
-   verification, not yet a paper-level defect.
-3. The guest document adds the shop address and phone lines ("123 Sample Street…");
-   the legacy document does not print them.
+Post-review fixes (same day): the new sheet CSS is scoped to `[data-invoice-doc]` (only the invoice
+macro carries it) rather than `.invoice-doc`, because the cash-memo voucher is also
+`article.invoice-doc[data-voucher]` and was being restyled; and the Due-Date fallback uses `doc.dated
+|| doc.created` rather than `??`, since 21 documents carry an empty-string `dated` that `??` does not
+fall back over (3 invoices lost a due date legacy prints).
+
+Reproduced with `node "$env:TEMP\kilo\cmpprint.mjs"` (guest `/invoices/<id>/view?print=1&paper=a5`
+vs legacy `/app/invoices/print?invoiceId=…`) and rendered with pymupdf. Purchase invoice 229 now
+matches the legacy paper; sale invoice 8603 paginates to the same 2 A5 pages with identical money.
+
+**Remaining multipage difference (known):** legacy repeats the business header band and the
+Check-Band at the top/bottom of EVERY page. The guest repeats the line-table column header on every
+page (browser `thead` repetition) but prints the header/footer bands once. The legacy uses
+`position: fixed` bands; in this deployment's print engine a fixed band lands over the page-2 content
+(the engine treats `fixed` as content-relative here), so a fixed band was rejected in favour of a
+non-overlapping in-flow band. Getting exact band repetition needs the `thead`/`tfoot` technique with
+the title/parties moved into the table, which changes the on-screen document; deferred pending a
+decision rather than shipped overlapping.
 
 Artifacts: `vault/attachments/print-parity-2026-10-09/print-8603-{guest,legacy}.png` and
 `…/{guest,legacy}-8603-a5.pdf`, reproduced with `trailbase/tools/print-parity-pdf.mjs`.
@@ -89,7 +119,11 @@ Legacy-only functionality worth adding (cheap, not ugly):
   paymentsbycompany filters, and Clear on ledgers/party, ledgers/booker, ledgers/area. The guest
   only has Apply. A single reset affordance per filter panel is a small, invisible addition.
 - **Company filter** — legacy has a company select on difference, stockreport, itemsales, profit
-  and paymentsbycompany. The guest has none of these.
+  and paymentsbycompany. ~~The guest has none of these.~~ **CORRECTED 2026-10-09 by
+  [[ui-parity-run-2026-10-09]]: this is wrong.** The guest has a `Company` filter on all five of those
+  screens; the fresh both-systems capture (same day, same code) shows the guest label
+  `Company All SOFI TRADERS …` on difference, stockreport, itemsales, profit and paymentsbycompany.
+  The claim was carried from the 2026-10-08 ledger without re-checking the fresh capture.
 - **Cash Memo payments filters** — legacy offers type / invoice / original invoices / area /
   section / party / booker filter buttons there; the guest screen has few.
 - **Item drill-down links** — on difference and stockreport, legacy item names are links into the
@@ -114,5 +148,7 @@ and the payments report (341 rows). Verdict: **the guest is responsive**.
 ## Related
 
 - [[reports-parity-and-e2e-2026-09-29]] — the previous full-range parity + benchmark note.
+- [[ui-parity-run-2026-10-09]] — the focused UI + feature parity run that re-checks and corrects
+  this note's UI item list.
 - [[ui-parity-discrepancies-2026-10-08]] — the running UI discrepancy ledger this extends.
 - [[guest-frontend-feature-parity-gaps]] — functional gaps ledger.

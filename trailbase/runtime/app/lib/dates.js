@@ -108,26 +108,66 @@ export function legacyDate(value) {
 }
 
 /**
+ * The shop's wall clock is Pakistan Standard Time, UTC+05:00, with no daylight saving.
+ *
+ * The legacy print renders the invoice's `created` and the current time with the BROWSER's local
+ * time — on the till that is PKT. The guest renders on the server, whose clock is UTC (a container),
+ * so the offset is applied explicitly here instead of being left to the host's timezone: the same
+ * document must print `3:48:33 PM` wherever the server runs.
+ */
+const SHOP_OFFSET_MINUTES = 5 * 60;
+
+/** The UTC wall-clock fields of `value` shifted into shop time, or `null` when it does not parse. */
+function shopParts(value) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(String(value ?? ""));
+  if (!m) return null;
+  const t = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4] ?? 0), Number(m[5] ?? 0), Number(m[6] ?? 0)));
+  const s = new Date(t.getTime() + SHOP_OFFSET_MINUTES * 60_000);
+  return {
+    y: s.getUTCFullYear(),
+    m: s.getUTCMonth(),
+    d: s.getUTCDate(),
+    hh: s.getUTCHours(),
+    mm: s.getUTCMinutes(),
+    ss: s.getUTCSeconds(),
+  };
+}
+
+/** `2:33:45 PM` for a shop-time part set. */
+function clockText(p) {
+  const h = p.hh % 12 || 12;
+  return `${h}:${String(p.mm).padStart(2, "0")}:${String(p.ss).padStart(2, "0")} ${p.hh >= 12 ? "PM" : "AM"}`;
+}
+
+/**
  * The invoice sheet's date, `Apr 11, 2026` (month name, day, year) — the legacy print header's shape,
  * not the report period line's `11-Apr-2026`. Same text-first rule and the same MONTHS table as
  * `legacyDate`, so the month names are spelled once.
+ *
+ * The value is a UTC timestamp (`created`); it is shifted into shop time first, so an invoice created
+ * after 7pm PKT prints the shop's own day rather than the UTC day.
  */
 export function printDate(value) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(value ?? ""));
-  if (!m) return String(value ?? "").slice(0, 10);
-  return `${MONTHS[Number(m[2]) - 1] ?? m[2]} ${Number(m[3])}, ${m[1]}`;
+  const p = shopParts(value);
+  if (!p) return String(value ?? "").slice(0, 10);
+  return `${MONTHS[p.m] ?? p.m + 1} ${p.d}, ${p.y}`;
 }
 
 /**
  * The invoice sheet's 12-hour time, `2:33:45 PM`. The legacy sheet sources this from the invoice's v1
- * `created`; the import overwrites `created` with the import timestamp
- * ([[guest-depot-created-is-import-time]]), so callers pass the invoice's `dated` instead and the time
- * is the dated time.
+ * `created`; every imported invoice carries the SAME `created` as v1 (verified 2026-10-09 across all
+ * 8,927 shared invoices), so callers pass `created` and the time matches the legacy paper.
  */
 export function printTime(value) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?/.exec(String(value ?? ""));
-  if (!m) return "";
-  const hh = Number(m[4]);
-  const h = hh % 12 || 12;
-  return `${h}:${m[5]}:${String(m[6] ?? "00")} ${hh >= 12 ? "PM" : "AM"}`;
+  const p = shopParts(value);
+  return p ? clockText(p) : "";
+}
+
+/**
+ * The current shop time, for the sheet's `PRINT TIME:` block — `{date: "Oct 9, 2026", time: "11:15:59 AM"}`.
+ * `at` overrides "now" for tests.
+ */
+export function shopNow(at) {
+  const p = shopParts(new Date(at ? at : Date.now()).toISOString());
+  return p ? { date: `${MONTHS[p.m] ?? p.m + 1} ${p.d}, ${p.y}`, time: clockText(p) } : { date: "", time: "" };
 }

@@ -124,7 +124,11 @@ const guestSet = new Set(guest);
  * derived by grepping for `path === "…"`, which cannot see a route served any other way.
  */
 const GENERIC = new Set(["app", "reports", "report", "ledgers", "ledger", "page", "views", "view", "p", "data", "new", "auth"]);
-const tail = (r) => r.replace(/^\/app\/?/, "").replace(/\/+$/, "").toLowerCase();
+// Normalise BOTH sides to the same shape before comparing. The earlier version stripped the `/app`
+// prefix (with its trailing slash) from a legacy route but left the guest's leading slash in place, so
+// `/app/dashboard` normalised to `dashboard` while `/dashboard` normalised to `/dashboard` — they never
+// matched, every legacy screen fell through to `candidate`, and `exact`/`renamed` could not fire at all.
+const tail = (r) => r.replace(/^\/+/, "").replace(/^app\/?/, "").replace(/\/+$/, "").toLowerCase();
 const byTail = new Map();
 for (const g of guest) byTail.set(tail(g), g);
 
