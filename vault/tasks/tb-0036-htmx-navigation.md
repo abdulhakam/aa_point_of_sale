@@ -101,6 +101,24 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14,
       `print-queue-check` 14/14.
 
+## Slice 6 — invoice grid save (2026-10-09)
+
+- [x] Extracted `invoices.gridView(A, req, idB64, message, status)` — the `/invoices/<id>/grid` screen
+      (lease/`canWrite`/`heldBy` resolved inside) — shared by the grid GET route and the grid save.
+- [x] `/invoices/<id>/lines` answers an htmx request by re-rendering the grid (flash included) instead
+      of a 303; the **error** path re-renders the grid with the message as a red flash
+      (`status: "error"`) because htmx does not swap a bare 4xx body. A plain POST still 303-redirects.
+- [x] `views/invoices/grid.html`: the grid form is `hx-boost` into `#app-main` with `hx-push-url="false"`;
+      the grid's client recalc re-inits on the swap via `htmx:afterSwap` (already wired). No submit
+      listener existed in `enhanceGrid`, so htmx and the recalc do not conflict.
+- [x] Browser-verified on a real difference invoice: SAVE LINES → flash "Saved", shell node live,
+      navigation count 1, URL unchanged, `[data-grid]` still present. Captured the POST body: htmx
+      **includes the clicked submitter** (`op=save`), so the row `remove:…` buttons carry their `op`
+      too (the remove path was **not** run destructively — it appends a cancelling row, so it was left
+      to the gate rather than polluting the ledger).
+- [x] Gates green: `guest-smoke` 116/116, `route-snapshot` 50/0, `grid-preview-check` 14/14,
+      `refdb-check` 12/12, `autocomplete-check` 39/39, `hotkey-check` 62/62, `print-queue-check` 14/14.
+
 ## Follow-ups (not done)
 
 - [x] **Stale document title** — fixed 2026-10-09: the fragment emits a hidden `data-aa-title` marker
@@ -119,8 +137,8 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       pre-existing 28/28 restyle differences (rail membership, `<th>` styling) — not caused by this
       change. `guest-smoke`/`route-snapshot` were re-run after the title-marker fix.
 - [ ] **Convert the remaining writes** the same way — an htmx write that re-renders its region. Left:
-      the **invoice grid save** (`/invoices/<id>/lines`, which also carries the grid's remove op and
-      needs the grid's client recalc re-init), **payments** and **cash memo**. This is the rest of "C".
+      **payments** and **cash memo** (and the invoice **new** create, which navigates to the entry page
+      and is arguably fine as a full load). This is the rest of "C".
 - [ ] Decide whether to grow the host's header allowlist to include `hx-request`, so the
       `X-Requested-With` workaround can be retired.
 - [ ] **Measure** the render-time saved vs a full page (the change is currently justified by structure

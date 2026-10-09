@@ -344,3 +344,51 @@ export async function entryView(A, idB64, message) {
     },
   };
 }
+
+/**
+ * Everything the `/invoices/<id>/grid` screen renders, as `{ options, data }` for
+ * `routeKit.renderRoute` — the same builder shape as `entryView`, shared by the grid GET route and the
+ * grid's save (`/invoices/<id>/lines`) so a save's screen and the GET's screen cannot drift.
+ *
+ * Writing needs the lease, so `canWrite` is resolved here from `lifecycle.readState`; a mismatch names
+ * the holder rather than presenting a dead form. Returns null when the invoice does not exist.
+ * `message`/`status` carry the flash an htmx write sends back (status `"error"` renders the flash red).
+ */
+export async function gridView(A, req, idB64, message, status) {
+  const routeKit = A.routeKit;
+  const db = (globalThis).sqlite;
+  const hex = routeKit.b64ToHex(String(routeKit.decode(idB64)));
+  if (!hex) return null;
+  const state = await A.lifecycle.readState(db, hex);
+  if (!state) return null;
+  const userHex = routeKit.userHex(req);
+  const canWrite = state.lease === null || (state.lease.user ?? "").toUpperCase() === userHex;
+  const refs = await routeKit.refs();
+  const invoice = await readInvoice(db, routeKit.decode(idB64));
+  if (!invoice) return null;
+  return {
+    options: { active: "invoices", title: "Invoice #" + invoice.invoiceNo, template: "invoices/grid.html" },
+    data: {
+      invoice: {
+        ...invoice,
+        canWrite,
+        // Every saved invoice is editable, so the committed lines are inputs whenever the writer holds
+        // the lease ([[no-draft-invoices-published-on-save]]).
+        lineInputs: canWrite,
+        editable: canWrite,
+        // Somebody else holding the lease is named, so a read-only grid says why.
+        heldBy:
+          state.lease && String(state.lease.user ?? "").toUpperCase() !== userHex
+            ? state.lease.device || "another device"
+            : "",
+        paymentTypeHint: invoice.type === 0 ? 0 : 1,
+      },
+      parties: refs.parties ?? [],
+      bookers: refs.bookers ?? [],
+      items: routeKit.editorItems(refs),
+      companies: refs.companies ?? [],
+      message: message ?? "",
+      status: status ?? "",
+    },
+  };
+}

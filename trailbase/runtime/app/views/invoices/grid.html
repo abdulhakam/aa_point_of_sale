@@ -70,7 +70,10 @@
      negative quantity; removing a line appends a cancelling row rather than erasing the original.</p>
   {% endif %}
 
-  <form method="post" action="/invoices/{{ invoice.id }}/lines"
+  {# The grid save is htmx: `hx-boost` posts the whole sheet through htmx and the server answers with
+     the grid fragment, which the client recalc re-inits on the swap (`htmx:afterSwap`). A plain POST
+     still 303s to the grid. `hx-push-url="false"` stops the boost pushing its POST action into the URL. #}
+  <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="/invoices/{{ invoice.id }}/lines"
         data-grid data-path="/invoices/{{ invoice.id }}"
         data-editable="{{ '1' if invoice.editable else '0' }}"
         data-d1="{{ invoice.discount1 }}" data-d2="{{ invoice.discount2 }}">

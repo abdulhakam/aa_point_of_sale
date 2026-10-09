@@ -66,6 +66,17 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — invoice grid save is htmx (no reload).** Extracted `invoices.gridView()` and made the
+grid save `/invoices/<id>/lines` (SAVE LINES and the row remove op) re-render the grid fragment on an
+htmx request, with the failure path re-rendering the grid and showing the message as a red flash (htmx
+does not swap a bare 4xx body). The grid's client recalc re-inits on the swap. Browser-verified a
+no-op save on a real invoice (flash, shell live, navigation count 1, URL unchanged); the request body
+confirmed htmx includes the clicked submitter, so the remove op travels too. Gates green
+(`guest-smoke` 116/116, `route-snapshot` 50/0, `grid-preview-check` 14/14, `refdb-check` 12/12,
+`autocomplete-check` 39/39, `hotkey-check` 62/62, `print-queue-check` 14/14). **Next: payments and cash
+memo writes; then `<aa-money>` and the invoice-entry component.**
+[[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]].
+
 **2026-10-09 — invoice entry writes are htmx (no reload).** Extracted `invoices.entryView()` and made
 the entry writes — line add, line remove, header save, complete/reopen — re-render the entry screen
 (flash included) on an htmx request instead of a 303; a plain POST still 303-redirects. The entry page

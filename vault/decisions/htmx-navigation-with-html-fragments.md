@@ -94,12 +94,16 @@ for the day the allowlist grows to include it, `X-Requested-With` for today.
 - **Flash messages** now appear without a reload on **management** and **invoice-entry** writes
   (2026-10-09): an htmx write re-renders the list/entry fragment — which contains the flash region —
   into `#app-main`, so no separate out-of-band swap is needed. The remaining full-load writes are the
-  **invoice grid save** (`/invoices/<id>/lines`), **payments** and **cash memo** (`tb-0036`).
-- **A write re-uses the screen builder.** `management.listView()` and `invoices.entryView()` are shared
-  by the GET route and the write routes, so a write's screen and the GET's screen cannot drift. The
-  invoice entry writes converted are `/invoices/<id>/line` (add), `…/line/<lineId>/delete`,
-  `…/header` and `…/complete` — everything that redirected to the entry page; the entry page is what
-  `/invoices/new` lands on.
+  **payments** and **cash memo** writes (`tb-0036`).
+- **A write re-uses the screen builder.** `management.listView()`, `invoices.entryView()` and
+  `invoices.gridView()` are shared by their GET route and their write routes, so a write's screen and
+  the GET's screen cannot drift. Converted entry writes: `/invoices/<id>/line` (add),
+  `…/line/<lineId>/delete`, `…/header`, `…/complete` (everything that redirected to the entry page,
+  which is what `/invoices/new` lands on); and the grid save `/invoices/<id>/lines` (SAVE LINES and the
+  row remove op), which redirects to the grid.
+- **A grid save's error is a swap, not a bare 409.** The grid save's failure path re-renders the grid
+  with the message as the flash (`status: "error"`), because htmx does not swap a 4xx body by default —
+  a bare `409` would have shown the operator nothing.
 - **A write re-uses the list builder.** `management.listView()` is shared by the GET route and the
   create/update/delete routes, so the write's list and the GET's list cannot drift. An htmx write
   answers with the body fragment; a plain POST still 303s, so the form works with no JavaScript.

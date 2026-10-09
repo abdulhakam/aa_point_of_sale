@@ -63,9 +63,21 @@
           }
         }
       });
+      // htmx save: re-render the grid (flash included) into `#app-main`; the grid's client recalc
+      // re-inits on the swap. A plain POST still 303-redirects to the grid.
+      if (A.http.isFragment(req)) {
+        const view = await A.invoices.gridView(A, req, idB64, "Saved", "");
+        if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+      }
       return { redirect: "/invoices/" + idB64 + "/grid?status=ok", status: 303 };
     } catch (e: any) {
       const why = e && e.message ? e.message : typeof e === "string" ? e : Object.prototype.toString.call(e);
+      // htmx error: re-render the grid with the message as the flash (`status: "error"` paints it red)
+      // rather than a bare 409 body, which htmx does not swap by default — the operator must see why.
+      if (A.http.isFragment(req)) {
+        const view = await A.invoices.gridView(A, req, idB64, `Cannot save the line [${step}]: ${why}`, "error");
+        if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+      }
       return { text: `Cannot save the line [${step}]: ${why}`, status: e?.status ?? 409 };
     }
   };
