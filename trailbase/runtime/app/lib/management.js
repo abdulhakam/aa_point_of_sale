@@ -108,7 +108,10 @@ export function formFields(entity, row, options, links, mode) {
     }
     if (field.type === "number") {
       const value = row?.[field.name];
-      return { ...base, type: "input", inputType: "number", value: value === undefined || value === null ? "" : String(value), step: "any" };
+      // `money: "rate"` marks a unit price/cost — a rate, not an amount — so the template wraps it in
+      // `<aa-money rate>`, which keeps the stored precision and sets `step="any"`
+      // ([[money-is-2dp-everywhere]], [[client-side-live-recalculation]]).
+      return { ...base, type: "input", inputType: "number", money: field.money, value: value === undefined || value === null ? "" : String(value), step: "any" };
     }
     if (field.type === "enum") {
       const selected = row?.[field.name];

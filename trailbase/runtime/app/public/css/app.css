@@ -1058,5 +1058,35 @@ aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
   .pq-doc, .invoice-doc { break-inside: avoid; }
 }
 
+/* ── component wrappers (public/js/components/) ───────────────────────────────────────────────────────
+   The newest components are LIGHT-DOM wrappers around markup the server already renders, so they must
+   not change layout: `display: contents` makes the wrapper box vanish and leaves its children in the
+   flow exactly as before the tag was added ([[components-consume-server-descriptors]]). */
+aa-money, aa-entity-form, aa-invoice-entry, aa-flash { display: contents; }
+
+/* `<aa-money>` — the input is the form control; nothing visual to add. A rate is left exactly as the
+   server rendered it; an amount is normalised by the element, not styled here. */
+
+/* `<aa-entity-form>` — inline validation messages and the in-flight state. */
+.field-error { display: block; color: var(--danger); font-size: 0.8rem; margin-top: 4px; }
+[aria-invalid="true"] { border-color: #c92a2a; }
+.form-error {
+  padding: 8px 12px; margin-bottom: 12px; border-radius: var(--radius);
+  border: 1px solid #ffc9c9; background: #fff5f5; color: #c92a2a; font-size: 0.875rem;
+}
+form[aria-busy="true"] button[type="submit"], form[aria-busy="true"] input[type="submit"] { cursor: progress; opacity: 0.7; }
+
+/* `<aa-flash>` — a dismiss control on the server-rendered banner, and a fade before it is removed. */
+.flash { position: relative; padding-right: 34px; transition: opacity 0.3s ease; }
+.flash-close {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; padding: 0; border: 0; border-radius: var(--radius);
+  background: transparent; color: inherit; opacity: 0.7; cursor: pointer;
+}
+.flash-close:hover { opacity: 1; background: rgba(0, 0, 0, 0.06); }
+.flash.flash-out { opacity: 0; }
+
+
 
 

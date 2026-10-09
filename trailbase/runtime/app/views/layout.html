@@ -68,8 +68,21 @@
    upgraded, so a dialog's form still works with no JavaScript. #}
 <script src="/static/js/components/modal.js" defer></script>
 {# `<aa-live-time>` is the ticking header clock. The header's `.header-clock` slot is the element
-   itself, so the slot renders nothing until this upgrades. #}
+    itself, so the slot renders nothing until this upgrades. #}
 <script src="/static/js/components/live-time.js" defer></script>
+{# `<aa-money>` normalises an amount to 2 dp and, in `rate` mode, never reduces a unit price/cost below
+    its stored precision — the ledger-rewriting defect of [[minimise-client-side-calculation]]. It also
+    gives a rate `step="any"`, which its `step="0.01"` counterpart could not (see components/money.js). #}
+<script src="/static/js/components/money.js" defer></script>
+{# `<aa-entity-form>` wraps a server-rendered write form: inline required-field messages, an inline
+    surface for a bare 4xx/5xx htmx would not swap, and disabled-during-flight. #}
+<script src="/static/js/components/entity-form.js" defer></script>
+{# `<aa-flash>` gives the write-feedback banner a lifetime — it clears a success, and offers a dismiss
+    on an error — without changing the `.flash` markup the server renders. #}
+<script src="/static/js/components/flash.js" defer></script>
+{# `<aa-invoice-entry>` is the entry screen's container: it consumes the server descriptor and owns the
+    item→price fill, which used to live in app.js. #}
+<script src="/static/js/components/invoice-entry.js" defer></script>
 {# The keyboard layer is a separate file on purpose: it is an accelerator for markup that already works,
    so it can be reasoned about, tested and dropped without touching the app's own enhancements.
    `?` lists everything it can do on this page. #}

@@ -7,7 +7,7 @@ created: 2026-10-09
 updated: 2026-10-09
 tags: [guest, ui, frontend, web-components, dx]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[components-consume-server-descriptors]]", "[[features-as-native-web-components]]", "[[tb-0036-htmx-navigation]]"]
+related_to: ["[[components-consume-server-descriptors]]", "[[features-as-native-web-components]]", "[[money-inputs-distinguish-amounts-from-rates]]", "[[component-library-2026-10-09]]", "[[tb-0036-htmx-navigation]]"]
 ---
 
 # Native component library (light DOM, server descriptors)
@@ -32,18 +32,35 @@ stylesheet, consuming server descriptors. Rule and rationale: [[components-consu
       instead of sleeping a fixed 1.2 s, which raced the htmx APPLY round-trip), `grid-preview-check`
       14/14, `print-queue-check` 14/14.
 
+## Done (2026-10-09, continued) — the component slice
+
+- [x] **`<aa-money>`** (`public/js/components/money.js`) — amount mode normalises to 2 dp, `rate` mode
+      keeps the stored precision and sets `step="any"`. Wired through the invoice grid, entry, payments,
+      expenses, inventory, quick-create, the general-ledger openings and the management `items` prices
+      (`entities.json` `"money": "rate"`). Rule: [[money-inputs-distinguish-amounts-from-rates]].
+- [x] **`<aa-entity-form>`** (`public/js/components/entity-form.js`) — inline required messages, an
+      inline surface for a bare 4xx/5xx, and disabled-during-flight. Wrapped around the management,
+      payments, expenses, inventory and invoice write forms.
+- [x] **`<aa-flash>`** (`public/js/components/flash.js`) — a lifetime and a dismiss control for the
+      server-rendered `.flash` banner; the markup is unchanged.
+- [x] **Invoice entry component `<aa-invoice-entry>`** (`public/js/components/invoice-entry.js`) —
+      wraps `views/invoices/entry.html`, consumes the server `type`/`can-write` descriptor, and owns
+      the item→price fill (replacing `app.js` `enhanceLineEditor`, now removed). It never switches on
+      the type for data — the server already rendered the type's fields.
+- [x] **Fixed a latent no-JS `stepMismatch`**: a rate input rendered `step="0.01"` while stored rates
+      are not 2 dp; now `step="any"` in the markup as well as in the component.
+- [x] **New gate `tools/component-check.mjs`** — 19 checks in real Chrome; it found **two defects** on
+      first run (the `decimals` default and the entity-form message never showing).
+- [x] Gates green: `component-check` 19/19, `guest-smoke` 116/116, `grid-preview-check` 14/14,
+      `autocomplete-check` 39/39, `refdb-check` 12/12, `hotkey-check` 62/62, `print-queue-check` 14/14,
+      `route-snapshot` 50/0. Evidence: [[component-library-2026-10-09]].
+
 ## Planned (not done)
 
-- [ ] **`<aa-entity-form>`** — submit the server-rendered entity form over htmx, disabled-during-flight,
-      inline error surface. Pairs with the **write surface** conversion ([[tb-0036-htmx-navigation]]
-      follow-up C) and flash OOB.
-- [ ] **`<aa-money>`** — a 2 dp money input, centralising [[money-is-2dp-everywhere]]; the invoice
-      grid's client recalc already needs it.
-- [ ] **`<aa-flash>` / `<aa-toast>`** — render the out-of-band flash a write response returns.
 - [ ] **`<aa-dirty-guard>`** — confirm before leaving an unsaved form (the legacy had confirm-on-navigate;
-      more relevant now that the shell survives a nav).
-- [ ] **Invoice entry component** — unify purchase/sale/return/difference entry **after** C, consuming
-      a server `type` descriptor; never a client-side type→table switch.
+      more relevant now that the shell survives a nav). **Deferred with a reason:** it interacts with
+      every browser gate that types into a form and then navigates, and needs dialog handling in the
+      harnesses first. See [[component-library-2026-10-09]].
 - [ ] Consider extending `entities.json` usage of `disabled` to a real immutable field once a business
       rule is agreed (currently only `view` exercises it). `hidden` is supported but no entity uses it
       yet.

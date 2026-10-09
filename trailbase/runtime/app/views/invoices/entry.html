@@ -12,12 +12,18 @@
    passes `type` for both the loaded and the new screen. #}
 {% if isNew %}{% set invType = type %}{% else %}{% set invType = invoice.type %}{% endif %}
 
+{# The entry screen's container. It consumes the server's `type`/`can-write` descriptor and owns the
+   item→price fill (moved out of app.js). It does NOT switch on the type for data — the server already
+   rendered the type's fields; see components/invoice-entry.js. #}
+<aa-invoice-entry data-type="{{ invType }}" data-can-write="{{ '1' if (isNew or invoice.canWrite) else '0' }}">
+
 <h1 class="inv-type-title">{{ (typeLabel if isNew else invoice.typeLabel)|upper }} INVOICE</h1>
 <hr class="inv-rule">
 
 {% if error %}<div class="notice" data-state="error">{{ error }}</div>{% endif %}
 
 {% if isNew %}
+<aa-entity-form>
 <form class="invoice-head" method="post" action="/invoices/new">
   <input type="hidden" name="type" value="{{ invType }}">
   <label class="ih-field"><span>INVOICE NO:</span><input type="text" value="new" readonly tabindex="-1"></label>
@@ -50,6 +56,7 @@
   <button class="btn primary ih-go" type="submit" title="Create invoice">Create</button>
   <a class="ih-print" href="/print" title="Print invoices">{{ icons.svg('printer', 20) }}</a>
 </form>
+</aa-entity-form>
 {# ⚠️ The create dialog is OUTSIDE the header form. A `<form>` inside a `<form>` is invalid HTML and
    the parser drops the inner one, which would put the dialog's fields back into the header's submit;
    `<aa-modal>` moves this to the body on upgrade anyway, so its authored position is cosmetic. #}
@@ -59,6 +66,7 @@
 {# The loaded-invoice writes are htmx: `hx-boost` posts through htmx and the server answers with the
    entry fragment (see the invoice write routes), so the screen updates in place. `hx-push-url="false"`
    stops a boosted form pushing its POST action into the address bar. Without htmx the POST 303s. #}
+<aa-entity-form>
 <form class="invoice-head" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="/invoices/{{ invoice.id }}/header">
   <label class="ih-field"><span>INVOICE NO:</span><input type="text" value="{{ invoice.invoiceNo }}" readonly tabindex="-1"></label>
   <label class="ih-field"><span>INVOICE DATE</span><aa-date-input><input type="date" name="dated" value="{{ invoice.dated }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-date-input></label>
@@ -92,12 +100,13 @@
      on the header form so the same submit saves them. #}
   <div class="ih-row2">
     <label class="ih-field wide"><span>Description</span><input type="text" name="description" value="{{ invoice.description }}" autocomplete="off"{% if not invoice.canWrite %} disabled{% endif %}></label>
-    <label class="ih-field"><span>Discount %</span><input type="number" step="0.01" name="discount_1" value="{{ invoice.discount1 }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
-    <label class="ih-field"><span>Discount 2 %</span><input type="number" step="0.01" name="discount_2" value="{{ invoice.discount2 }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
-    <label class="ih-field"><span>Discount Rs</span><input type="number" step="0.01" name="discount_rs" value="{{ invoice.discountRs }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
+    <label class="ih-field"><span>Discount %</span><aa-money rate><input type="number" step="any" name="discount_1" value="{{ invoice.discount1 }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-money></label>
+    <label class="ih-field"><span>Discount 2 %</span><aa-money rate><input type="number" step="any" name="discount_2" value="{{ invoice.discount2 }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-money></label>
+    <label class="ih-field"><span>Discount Rs</span><aa-money><input type="number" step="0.01" name="discount_rs" value="{{ invoice.discountRs }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-money></label>
     <label class="ih-field"><span>Due date</span><aa-date-input><input type="date" name="duedate" value="{{ invoice.duedate }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-date-input></label>
   </div>
 </form>
+</aa-entity-form>
 {# The create dialog sits outside every form; see the note on the new-invoice branch above. #}
 {{ qc.party(invType, areas) }}
 
@@ -120,6 +129,7 @@
 <section class="card">
   <h2>Lines</h2>
   {% if not invoice.completed %}
+  <aa-entity-form>
   <form class="entity-form" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="/invoices/{{ invoice.id }}/line">
     {# A key rendered with the form makes a double submit return the same line instead of two
        ([[invoice-entry-freshness-and-writes]]). #}
@@ -131,12 +141,13 @@
       </select>
     </label>
     <label class="field"><span>Qty</span><input type="number" step="any" name="qty" value="1" required></label>
-    <label class="field"><span>Price</span><input type="number" step="0.01" name="price" value="0" required></label>
-    <label class="field"><span>Discount Rs</span><input type="number" step="0.01" name="discount_rs" value="0"></label>
+    <label class="field"><span>Price</span><aa-money rate><input type="number" step="any" name="price" value="0" required></aa-money></label>
+    <label class="field"><span>Discount Rs</span><aa-money><input type="number" step="0.01" name="discount_rs" value="0"></aa-money></label>
     <div class="form-actions">
       <button class="btn primary" type="submit">ADD LINE</button>
     </div>
   </form>
+  </aa-entity-form>
   {# Outside the line form: see the note on the create dialog above. #}
   {{ qc.item(companies) }}
   {% endif %}
@@ -202,4 +213,5 @@
 </section>
 {% endif %}
 {% endif %}
+</aa-invoice-entry>
 {% endblock %}

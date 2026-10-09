@@ -1,5 +1,5 @@
 {
-  "$comment": "Management-screen entity definitions: which record API backs each screen, which fields the form edits, and how list columns render. GENERATED from app/lib/entities.js on 2026-10-03 and read back by it, so there is one declaration. `order` is the hub's display order and lives here because splitting it from the table is how the two drifted apart as separate literals before. A field may also carry `hidden` and/or `disabled`, each true/false, a mode ('create'|'edit'|'view'), or an array of modes; `management.formFields()` resolves them per mode and the `view` mode disables every field (see app/lib/management.js).",
+  "$comment": "Management-screen entity definitions: which record API backs each screen, which fields the form edits, and how list columns render. GENERATED from app/lib/entities.js on 2026-10-03 and read back by it, so there is one declaration. `order` is the hub's display order and lives here because splitting it from the table is how the two drifted apart as separate literals before. A field may also carry `hidden` and/or `disabled`, each true/false, a mode ('create'|'edit'|'view'), or an array of modes; `management.formFields()` resolves them per mode and the `view` mode disables every field (see app/lib/management.js). A `number` field may also carry `money` (`\"rate\"` or `\"amount\"`): a `rate` (a unit price/cost) is rendered as `<aa-money rate>`, which keeps the stored precision, while an `amount` is normalised to 2 dp.",
   "$generated_from": "app/lib/entities.js",
   "order": [
     "sections",
@@ -255,12 +255,14 @@
         {
           "name": "cost_price",
           "label": "Cost Price",
-          "type": "number"
+          "type": "number",
+          "money": "rate"
         },
         {
           "name": "sale_price",
           "label": "Sale Price",
-          "type": "number"
+          "type": "number",
+          "money": "rate"
         },
         {
           "name": "box_size_qty",

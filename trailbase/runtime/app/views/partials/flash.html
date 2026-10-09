@@ -1,2 +1,5 @@
-{% if flash %}<div class="flash {{ flash.kind }}">{{ flash.message }}</div>
-{% elif message %}<div class="flash {{ status }}">{{ message }}</div>{% endif %}
+{# The write-feedback banner. `<aa-flash>` gives it a lifetime — a success clears itself, an error can
+   be dismissed — while the `.flash <kind>` markup below is unchanged, so a selector or gate that reads
+   it still finds it. Without JavaScript the banner simply stays, exactly as rendered. #}
+{% if flash %}<aa-flash><div class="flash {{ flash.kind }}">{{ flash.message }}</div></aa-flash>
+{% elif message %}<aa-flash><div class="flash {{ status }}">{{ message }}</div></aa-flash>{% endif %}

@@ -8,6 +8,7 @@
 <section class="card">
   {# The payment save is htmx: on success the server re-renders the payments list into `#app-main`; on
      failure it re-renders this form with the error. A plain POST still 303s. #}
+  <aa-entity-form>
   <form class="entity-form" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="/payments" action="/payments">
     {% if invoice %}
     <p class="muted">Against invoice #{{ invoice.invoiceNo }} — balance {{ invoice.balanceText }}</p>
@@ -28,7 +29,7 @@
         {% for t in types %}<option value="{{ t.code }}"{% if selectedType == t.code %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
       </select>
     </label>
-    <label class="field"><span>Amount</span><input type="number" step="0.01" name="amount" value="{{ amount }}" required></label>
+    <label class="field"><span>Amount</span><aa-money><input type="number" step="0.01" name="amount" value="{{ amount }}" required></aa-money></label>
     <label class="field"><span>Date</span><input type="date" name="date" value="{{ today }}" required></label>
     <label class="field"><span>Party</span>
       <select name="party" data-searchable data-ref="parties">
@@ -48,5 +49,6 @@
       <a class="btn" href="/payments">Cancel</a>
     </div>
   </form>
+  </aa-entity-form>
 </section>
 {% endblock %}

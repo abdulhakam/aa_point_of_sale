@@ -72,8 +72,10 @@ server-provided descriptors — they never own a schema or a type/table mapping.
 - New components follow: light DOM, global CSS class names, a server descriptor as input, a no-JS
   fallback. A component that needs new data asks the server for it; it does not invent the shape.
 - The entity schema is the one place a field's visibility/availability is declared.
-- The invoice entry UI can be unified in a component **after** the write surface is converted, taking a
-  server `type` descriptor — never a client type→table switch.
+- The invoice entry UI was unified in `<aa-invoice-entry>` on 2026-10-09, taking the server `type`
+  descriptor — never a client type→table switch ([[component-library-2026-10-09]]). It is the container
+  of `views/invoices/entry.html` and owns only the client behaviour (the item→price fill); the server
+  still renders the type's fields.
 
 ## Related
 

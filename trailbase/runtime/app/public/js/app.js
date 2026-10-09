@@ -191,29 +191,10 @@
     });
   }
 
-  /**
-   * The invoice line editor: choosing an item fills the price from the item's own, and a carton
-   * size offers the "whole cartons" shortcut. Purely a convenience — the fields stay editable, so
-   * the form still works with this file absent.
-   */
-  function enhanceLineEditor(root) {
-    root.querySelectorAll('form select[name="item"]').forEach(function (select) {
-      var form = select.closest("form");
-      if (!form) return;
-      var price = form.querySelector('input[name="price"]');
-      var qty = form.querySelector('input[name="qty"]');
-      var apply = function () {
-        var option = select.options[select.selectedIndex];
-        if (!option || !option.dataset.price || !price) return;
-        if (!price.value || Number(price.value) === 0) price.value = option.dataset.price;
-        if (qty && option.dataset.box && (!qty.value || Number(qty.value) === 1)) {
-          qty.dataset.suggested = option.dataset.box;
-        }
-      };
-      select.addEventListener("change", apply);
-      if (qty && qty.dataset.suggested) qty.value = qty.dataset.suggested;
-    });
-  }
+  // The invoice line editor (choosing an item fills the price from the item's own) is now
+  // `<aa-invoice-entry>` (components/invoice-entry.js): it is the same behaviour, declared by a tag in
+  // the entry template instead of applied to every `form select[name="item"]` on the page. The grid's
+  // item cells keep their richer version inside `enhanceGrid` below.
 
   // ---------------------------------------------------------------- money, mirrored
   //
@@ -541,7 +522,6 @@
     enhanceConfirm(root);
     enhanceTableFilter(root);
     enhanceTableSort(root);
-    enhanceLineEditor(root);
     enhanceGrid(root);
   }
 

@@ -33,6 +33,7 @@
 
 <section class="card">
   <h2>Header</h2>
+  <aa-entity-form>
   <form class="entity-form" method="post" action="/invoices/{{ invoice.id }}/header">
     <label class="field"><span>Date</span><input type="date" name="dated" value="{{ invoice.dated }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
     <label class="field"><span>Due date</span><input type="date" name="duedate" value="{{ invoice.duedate }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
@@ -49,13 +50,14 @@
       </select>
     </label>
     <label class="field"><span>Description</span><input type="text" name="description" value="{{ invoice.description }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
-    <label class="field"><span>Discount %</span><input type="number" step="0.01" name="discount_1" value="{{ invoice.discount1 }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
-    <label class="field"><span>Discount 2 %</span><input type="number" step="0.01" name="discount_2" value="{{ invoice.discount2 }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
-    <label class="field"><span>Discount Rs</span><input type="number" step="0.01" name="discount_rs" value="{{ invoice.discountRs }}"{% if not invoice.canWrite %} disabled{% endif %}></label>
+    <label class="field"><span>Discount %</span><aa-money rate><input type="number" step="any" name="discount_1" value="{{ invoice.discount1 }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-money></label>
+    <label class="field"><span>Discount 2 %</span><aa-money rate><input type="number" step="any" name="discount_2" value="{{ invoice.discount2 }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-money></label>
+    <label class="field"><span>Discount Rs</span><aa-money><input type="number" step="0.01" name="discount_rs" value="{{ invoice.discountRs }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-money></label>
     {% if invoice.canWrite %}
     <div class="form-actions"><button class="btn primary" type="submit">Save header</button></div>
     {% endif %}
   </form>
+  </aa-entity-form>
 </section>
 
 <section class="card">
@@ -73,6 +75,7 @@
   {# The grid save is htmx: `hx-boost` posts the whole sheet through htmx and the server answers with
      the grid fragment, which the client recalc re-inits on the swap (`htmx:afterSwap`). A plain POST
      still 303s to the grid. `hx-push-url="false"` stops the boost pushing its POST action into the URL. #}
+  <aa-entity-form>
   <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="/invoices/{{ invoice.id }}/lines"
         data-grid data-path="/invoices/{{ invoice.id }}"
         data-editable="{{ '1' if invoice.editable else '0' }}"
@@ -102,10 +105,10 @@
           </td>
           <td class="right" data-label="Qty"><input type="number" step="any" name="qty" value="{{ l.qtyText }}"></td>
           <td class="right" data-label="Qty as" data-qty-display>{{ l.qtyAs }}</td>
-          <td class="right" data-label="Price"><input type="number" step="0.01" name="price" value="{{ l.priceText }}"><span class="price-baseline" data-price-baseline></span></td>
-          <td class="right" data-label="D1 %"><input type="number" step="0.01" name="discount_1" value="{{ l.discount1 }}"></td>
-          <td class="right" data-label="D2 %"><input type="number" step="0.01" name="discount_2" value="{{ l.discount2 }}"></td>
-          <td class="right" data-label="Disc Rs"><input type="number" step="0.01" name="discount_rs" value="{{ l.discountRs }}"></td>
+          <td class="right" data-label="Price"><aa-money rate><input type="number" step="any" name="price" value="{{ l.priceText }}"></aa-money><span class="price-baseline" data-price-baseline></span></td>
+          <td class="right" data-label="D1 %"><aa-money rate><input type="number" step="any" name="discount_1" value="{{ l.discount1 }}"></aa-money></td>
+          <td class="right" data-label="D2 %"><aa-money rate><input type="number" step="any" name="discount_2" value="{{ l.discount2 }}"></aa-money></td>
+          <td class="right" data-label="Disc Rs"><aa-money><input type="number" step="0.01" name="discount_rs" value="{{ l.discountRs }}"></aa-money></td>
           <td class="right" data-label="Free"><input type="number" step="any" name="scheme" value="{{ l.scheme }}"></td>
           <td class="right" data-label="Amount" data-amount>{{ l.amountText }}</td>
           <td class="row-actions" data-label="">
@@ -141,10 +144,10 @@
         </td>
         <td class="right" data-label="Qty"><input type="number" step="any" name="qty" value="1"></td>
         <td class="right" data-label="Qty as" data-qty-display></td>
-        <td class="right" data-label="Price"><input type="number" step="0.01" name="price" value="0"><span class="price-baseline" data-price-baseline></span></td>
-        <td class="right" data-label="D1 %"><input type="number" step="0.01" name="discount_1" value="0"></td>
-        <td class="right" data-label="D2 %"><input type="number" step="0.01" name="discount_2" value="0"></td>
-        <td class="right" data-label="Disc Rs"><input type="number" step="0.01" name="discount_rs" value="0"></td>
+        <td class="right" data-label="Price"><aa-money rate><input type="number" step="any" name="price" value="0"></aa-money><span class="price-baseline" data-price-baseline></span></td>
+        <td class="right" data-label="D1 %"><aa-money rate><input type="number" step="any" name="discount_1" value="0"></aa-money></td>
+        <td class="right" data-label="D2 %"><aa-money rate><input type="number" step="any" name="discount_2" value="0"></aa-money></td>
+        <td class="right" data-label="Disc Rs"><aa-money><input type="number" step="0.01" name="discount_rs" value="0"></aa-money></td>
         <td class="right" data-label="Free"><input type="number" step="any" name="scheme" value="0"></td>
         <td class="right" data-label="Amount" data-amount>0.00</td>
         <td class="row-actions" data-label=""></td>
@@ -162,6 +165,7 @@
     </div>
     {% endif %}
   </form>
+  </aa-entity-form>
   {# The create dialog lives OUTSIDE the grid form: a `<form>` inside a `<form>` is invalid HTML and the
      parser drops the inner one, which would put the dialog's fields back into SAVE LINES. `<aa-modal>`
      moves it to the body on upgrade, so its authored position is cosmetic. #}

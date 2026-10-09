@@ -3,7 +3,7 @@ title: TrailBase migration
 type: project
 status: active
 created: 2026-09-26
-updated: 2026-10-08
+updated: 2026-10-09
 tags: [pos, trailbase, migration, workstream]
 belongs_to: "[[aa-point-of-sale]]"
 related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[ui-parity-discrepancies-2026-10-08]]", "[[features-as-native-web-components]]"]
@@ -54,10 +54,13 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
   attributed to a chosen `_user` without a session. Verified on a depot copy: 60,245 / 60,245, 0
   failures, 31 s, with per-collection counts and dates matching
   ([[v1-direct-import-tool]], [[tb-0035-direct-sqlite-v1-importer]]).
-- Step 2 is **mostly done**: the read-heavy surfaces, the management screens, invoice entry for sale
-  and purchase, payments, inventory, the cash-memo module and the print queue all exist. What remains
-  is that the guest UI is **not yet the legacy look**, and that **return** and **difference** invoice
-  entry are unbuilt. Orders were **withdrawn, not deferred** ([[no-draft-invoices-published-on-save]]).
+- Step 2 is **mostly done**: the read-heavy surfaces, the management screens, invoice entry for all
+  four types, payments, inventory, the cash-memo module and the print queue all exist. What remains
+  is that the guest UI is **not yet the legacy look**. Orders were **withdrawn, not deferred**
+  ([[no-draft-invoices-published-on-save]]). ⚠️ **Corrected 2026-10-09:** this line read "return and
+  difference invoice entry are unbuilt"; that was stale — the 2026-10-08 legacy-hub restyle made all
+  four `invoice_types` creatable ([[invoice-hub-offers-four-types]]), and their write path is now
+  verified by `tools/invoice-check.mjs` ([[invoice-type-write-verification-2026-10-09]]).
 - Step 3 was **resolved differently than planned** on 2026-10-03. The plan assumed the legacy stack
   would stay live until parity and then be retired by a cutover. Instead its source was deleted, so
   there was nothing to retire: the legacy stack keeps running from `legacyforparity/` as the frozen,
@@ -65,6 +68,33 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
   [[cutover-is-guest-only]].
 
 ## Sequence
+
+**2026-10-09 — the component slice: `<aa-money>`, `<aa-entity-form>`, `<aa-flash>`,
+`<aa-invoice-entry>`.** The component work named as next. Four light-DOM custom elements, one file
+each, consuming server descriptors ([[components-consume-server-descriptors]]). `<aa-money>` has two
+modes so a **rate** is never rounded to 2 dp while an **amount** is — the historical-precision rule
+from [[minimise-client-side-calculation]] is now enforced by a component, not by convention
+([[money-inputs-distinguish-amounts-from-rates]]); it also fixes a latent no-JS `stepMismatch` on rate
+inputs. `<aa-entity-form>` wraps every write form (inline validation, in-flight disable).
+`<aa-invoice-entry>` replaces `app.js`'s `enhanceLineEditor` and consumes the server `type` descriptor
+without a client type→table switch. A new gate `tools/component-check.mjs` found **two defects** the
+moment it ran (the money decimals default; the entity-form message never appearing). Gates: 
+`component-check` 19/19, `guest-smoke` 116/116, `grid-preview-check` 14/14, `autocomplete-check` 39/39,
+`refdb-check` 12/12, `hotkey-check` 62/62, `print-queue-check` 14/14, `route-snapshot` 50/0. Evidence:
+[[component-library-2026-10-09]], [[tb-0037-component-library]]. **Next: `<aa-dirty-guard>` (deferred
+pending harness dialog handling), true offset paging, and the render-time measurement.**
+
+**2026-10-09 — return (2) and difference (3) invoice entry verified; a stale gate corrected.** The
+2026-10-08 legacy-hub restyle made all four `invoice_types` creatable, but `tools/invoice-check.mjs`
+only ever created `type = 1`, so the return/difference write path was unverified and the vault
+contradicted itself about whether these were built. Extended the tool with 16 checks over both types
+(own `count+1` sequence, negative quantity stored verbatim, difference creates with no party, prices
+at 2 dp) — **all green** against a throw-away depot built from a fresh `trail backups trigger`
+snapshot. The tool also had a pre-existing red check asserting a persisted `completed` flag that the
+withdrawn lifecycle no longer writes; corrected to assert what the design guarantees. Recorded the
+2026-10-08 reversal of [[returns-are-negative-quantities]] as a decision
+([[invoice-hub-offers-four-types]]) and corrected the stale route comment. Evidence:
+[[invoice-type-write-verification-2026-10-09]].
 
 **2026-10-09 — invoice lookup cache (the `invoices` slice).** The owner recalled the deferred
 `invoices` cache from [[reference-lists-come-from-indexeddb]]; built it now that the payment picker
@@ -102,8 +132,9 @@ general ledger (26,613 rows): Load more took the table 1000 → 2000 rows with t
 pushed. It is a windowed step, not offset paging — true append remains a follow-up. Gates green
 (`guest-smoke` 116/116, `route-snapshot` 50/0, `verify-spool-reports` 75 binds, `refdb-check` 12/12,
 `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14, `print-queue-check`
-14/14). **Next: the component work (`<aa-money>` handled with the historical-precision footgun in mind,
-`<aa-entity-form>`, the invoice-entry component) and true offset paging.**
+14/14). **Next: the component work is done (`<aa-money>`, `<aa-entity-form>`, `<aa-flash>`,
+`<aa-invoice-entry>`); what remains is `<aa-dirty-guard>` (deferred pending harness dialog handling),
+true offset paging, and the render-time measurement.**
 [[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]].
 
 **2026-10-09 — cash-memo expenses writes are htmx; the write surface is complete.** Extracted
@@ -501,6 +532,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | [[tb-0026-attribute-imported-invoice-maker-to-logged-in-user]] | attribute imported invoice authorship |
 | [[tb-0035-direct-sqlite-v1-importer]] | **done 2026-10-06** — standalone TUI that writes `main.db` directly, preserving `created`/`updated` and attributing `invoice_maker` to a chosen `_user` ([[v1-direct-import-tool]]) |
 | [[tb-0036-htmx-navigation]] | **doing 2026-10-09** — htmx boosted navigation over server-rendered fragments; slice 1 built and browser-verified, follow-ups open |
+| [[tb-0037-component-library]] | **doing 2026-10-09** — `<aa-money>`, `<aa-entity-form>`, `<aa-flash>` and `<aa-invoice-entry>` built, wired and gated ([[component-library-2026-10-09]]); `<aa-dirty-guard>` deferred |
 | ~~[[tb-0015-integer-cents-for-money]]~~ | **declined**; money is 2 dp everywhere |
 | ~~[[pos-0027-migrate-production-data-to-trailbase]]~~ | **done** 2026-09-29 |
 | ~~[[pos-0028-decide-cutover-plan]]~~ | **done** 2026-10-03 — [[cutover-is-guest-only]] |

@@ -54,16 +54,18 @@
 
 <section class="card">
   <h2>{% if editRow %}Edit expense{% else %}New expense{% endif %}</h2>
+  <aa-entity-form>
   <form class="entity-form" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="/cashmemo/expenses" action="/cashmemo/expenses/save">
     {% if editRow %}<input type="hidden" name="id" value="{{ editRow.id }}">{% endif %}
     <label class="field"><span>Date</span><input type="date" name="date" value="{{ editRow.date if editRow else today }}" required></label>
     <label class="field"><span>Name</span><input type="text" name="name" value="{{ editRow.name if editRow else '' }}" placeholder="Rent, fuel, chai…" required></label>
-    <label class="field"><span>Amount</span><input type="number" step="0.01" name="amount" value="{{ editRow.amount if editRow else '0' }}" required></label>
+    <label class="field"><span>Amount</span><aa-money><input type="number" step="0.01" name="amount" value="{{ editRow.amount if editRow else '0' }}" required></aa-money></label>
     <label class="field"><span>Note</span><input type="text" name="description" value="{{ editRow.description if editRow else '' }}"></label>
     <div class="form-actions">
       <button class="btn primary" type="submit">{% if editRow %}SAVE EXPENSE{% else %}ADD EXPENSE{% endif %}</button>
       {% if editRow %}<a class="btn" href="/cashmemo/expenses">Cancel</a>{% endif %}
     </div>
   </form>
+  </aa-entity-form>
 </section>
 {% endblock %}

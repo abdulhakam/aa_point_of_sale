@@ -13,6 +13,7 @@
      closes the panel without a document reload. Without htmx the form POSTs and 303s as before. #}
   {# `hx-push-url` is the LIST url, not `false`: after a save the address bar shows the list rather than
      the POST action or a lingering `?new=1`, so a refresh reloads the list. #}
+  <aa-entity-form>
   <form class="entity-form" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="/management/{{ entityKey }}" action="{% if editRow %}/management/{{ entityKey }}/{{ editRow.id }}/update{% elif viewRow %}/management/{{ entityKey }}{% else %}/management/{{ entityKey }}/create{% endif %}">
     {{ ef.render(fields) }}
     <div class="form-actions">
@@ -25,6 +26,7 @@
       {% endif %}
     </div>
   </form>
+  </aa-entity-form>
 </section>
 {% endif %}
 
