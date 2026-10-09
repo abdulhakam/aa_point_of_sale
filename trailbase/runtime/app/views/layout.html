@@ -24,6 +24,10 @@
 {% if user %}</div>{% endif %}
 </div>
 <script src="/static/js/app.js" defer></script>
+{# The print queue: the legacy browser-side queue (localStorage `print-queue`) behind "Add to Print
+   Queue" on the invoice sheet and the Queue rail on `/print`. Loaded before the other components so
+   the click delegation is registered early; it is progressive enhancement, so absence is safe. #}
+<script src="/static/js/print-queue.js" defer></script>
 {# Web components. Each is progressive enhancement over markup that already works — a custom element
    that has not been upgraded leaves a normal form control in place. `date-input.js` gives every
    `<aa-date-input>` the legacy Mantine `DateInput` look (text field, no browser calendar glyph) while

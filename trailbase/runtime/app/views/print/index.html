@@ -1,48 +1,42 @@
 {% extends 'layout.html' %}
+{% import 'partials/icons.html' as icons %}
 {% block body %}
-{# The print queue. Printing itself is the browser's dialog over a server-rendered page; what this
-   screen owns is the server-side run — a set of slips that must exist as materialised documents
-   before they can be printed, and a record of what was printed. A single reprint is the same form
-   with one invoice named. #}
-<h1 class="page-title">Print queue</h1>
-<p class="crumbs"><a href="/invoices">← Invoices</a></p>
+{# The legacy print picker (`/app/invoices/printinvoice`): Invoice Type + Invoice No selects, a "View
+   Invoice" button, a live preview of the chosen invoice, and the Print Queue rail. The queue itself
+   lives in the browser's localStorage (managed by `app/public/js/print-queue.js`); "Print Invoices"
+   opens `/print/queue`, which renders and prints it. See
+   vault/notes/print-queue-is-the-legacy-picker-and-queue.md. #}
+<h1 class="page-title">Print Invoices</h1>
 
-{% if query.status == 'queued' %}
-<div class="notice" data-state="ok">Queued. The poller runs it within a minute; watch
-  <a href="/jobs/{{ query.job }}">the job</a>.</div>
-{% endif %}
-
-<section class="card">
-  <h2>Print a range of invoices</h2>
-  <form class="entity-form" method="post" action="/print">
-    <label class="field"><span>From</span><input type="date" name="from" value="{{ today }}"></label>
-    <label class="field"><span>To</span><input type="date" name="to" value="{{ today }}"></label>
-    <div class="form-actions">
-      <button class="btn primary" type="submit" name="reason" value="batch">QUEUE PRINT RUN</button>
+<div class="pq-grid">
+  <aside class="pq-rail">
+    <div class="pq-actions">
+      <button type="button" class="btn primary" data-pq-goto>{{ icons.svg('printer', 18) }} Print Invoices</button>
+      <button type="button" class="btn" data-pq-clear>{{ icons.svg('printer-off', 18) }} Clear Queue</button>
     </div>
-  </form>
-  <p class="muted">Open invoices dated in the range, newest first, up to 200 slips. A run of more
-     than that is a job for the night, not a form post.</p>
-</section>
+    <div class="pq-list" data-print-queue></div>
+  </aside>
 
-<section class="card">
-  <h2>Recent runs</h2>
-  <div class="tablewrap">
-  <table class="data" data-mobile="cards">
-    <thead><tr><th>Queued</th><th>State</th><th class="right">Requested</th><th class="right">Job</th></tr></thead>
-    <tbody>
-    {% for r in recent %}
-      <tr>
-        <td data-label="Queued" data-lead>{{ r.created }}</td>
-        <td data-label="State">{{ r.state }}</td>
-        <td class="right" data-label="Requested">{{ r.count }}</td>
-        <td class="right" data-label="Job"><a href="/jobs/{{ r.id }}">open</a></td>
-      </tr>
-    {% else %}
-      <tr><td class="empty" colspan="4">Nothing has been queued yet.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  </div>
-</section>
+  <section class="pq-main">
+    <form class="pq-picker" method="get" action="/print" data-print-picker>
+      <label class="field"><span>Invoice Type:</span>
+        <select name="type" data-print-type>
+          {% for t in types %}<option value="{{ t.code }}"{% if selectedType == t.code %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
+        </select>
+      </label>
+      <label class="field"><span>Invoice No:</span>
+        <select name="invoice" data-searchable data-print-invoice>
+          {% for inv in invoices %}<option value="{{ inv.id }}"{% if selected == inv.id %} selected{% endif %}>{{ inv.invoiceNo }}</option>{% endfor %}
+        </select>
+      </label>
+      <button class="btn primary" type="submit">View Invoice</button>
+      <a class="btn" data-print-open target="_blank"{% if selected %} href="/invoices/{{ selected }}/view"{% else %} hidden{% endif %}>Open in new tab</a>
+    </form>
+
+    <div class="pq-preview">
+      <iframe data-print-frame title="Invoice preview"{% if selected %} src="/invoices/{{ selected }}/view"{% endif %}></iframe>
+      <p class="muted pq-hint"{% if selected %} hidden{% endif %}>Choose an invoice number to preview it.</p>
+    </div>
+  </section>
+</div>
 {% endblock %}

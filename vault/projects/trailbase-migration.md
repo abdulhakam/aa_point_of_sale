@@ -66,6 +66,19 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-08 — the print queue was rebuilt to match legacy.** `/print` is now the legacy picker
+(Invoice Type + Invoice No → View Invoice, a preview iframe, and a Queue rail) and `/print/queue` is
+the legacy queue page; the queue is **browser-local** (`localStorage` `print-queue`), exactly as
+legacy's was, and the sheet carries the legacy "Print Invoice Now" + "Add to Print Queue" actions.
+The old server-side batch (the `print.run` durable job and the "Recent runs" form) was removed. The
+single view and the queued batch now render from one sheet builder (`app/lib/invoice-sheet.js` +
+`partials/invoice-sheet.html`), so a printed sheet cannot diverge from the on-screen one. `guest-smoke`
+**116/116**, `route-snapshot` **50/0**, and a new real-browser harness
+`tools/print-queue-check.mjs` **14/14** drives the whole flow (preview, add, dedupe, rail, print, remove,
+clear). Evidence: [[print-queue-parity-fix-2026-10-08]]; the decision:
+[[print-queue-is-browser-local-like-legacy]]. **Next: A2 continues — the report filter modal and the
+per-screen shape differences — plus the unbuilt return/difference invoice entry.**
+
 **2026-10-08 — restyle increment A0/A1 + the cheap A2 items.** Part B was committed first (the
 IndexedDB ref store; gates re-run green: `guest-smoke` 115/115, `refdb-check` 12/12). Then: the guest
 capture set was refreshed and diffed against the frozen legacy captures (`ui-parity-report` — 28

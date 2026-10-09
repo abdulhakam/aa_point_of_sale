@@ -123,7 +123,8 @@ report/ledger pages with 72 binds ([[guest-app-host-port]]).
 
 Management CRUD, the KV report cache, fingerprint refresh, jobs and the app's own login work. The
 invoice cycle is built and verified: entry for sale and purchase, the cash-memo module (vouchers, DA
-entry, expenses), the print queue, inventory and payments
+entry, expenses), the print queue (the legacy picker + browser-local queue,
+[[print-queue-is-browser-local-like-legacy]]), inventory and payments
 ([[tb-0021-invoices-cashmemos-printing]], [[tb-0028-guest-transactional-screens-and-mobile]]).
 
 ⚠️ **The 14/14 report differential can no longer be re-run against the legacy app** — the legacy

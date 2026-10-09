@@ -86,6 +86,11 @@ the screens.
 - **A5 for receipts, A4 for reports.**
 - A **print queue** (job over the durable queue, `print_job` table, idempotent steps) is for
   batch/reprint workflows, not the interactive print ([[jobs-in-process-durable-queue]]).
+  ⚠️ **SUPERSEDED 2026-10-08.** The print queue was built to match legacy instead: a
+  **browser-local** queue (`localStorage` `print-queue`) behind a picker (`/print`) and a queue page
+  (`/print/queue`), with the sheet carrying "Add to Print Queue". The `print.run` durable job was
+  removed. See [[print-queue-is-browser-local-like-legacy]] and
+  [[print-queue-parity-fix-2026-10-08]].
 
 ### 7. Writes
 

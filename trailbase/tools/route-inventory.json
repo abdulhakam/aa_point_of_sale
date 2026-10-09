@@ -632,16 +632,13 @@
       ]
     },
     {
-      "method": "POST",
-      "path": "/print",
+      "method": "GET",
+      "path": "/print/queue",
       "probe": {
-        "auth": true,
-        "body": {}
+        "auth": true
       },
       "expect": [
-        200,
-        303,
-        400
+        200
       ]
     },
     {

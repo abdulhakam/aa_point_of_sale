@@ -36,7 +36,7 @@ Every screen this note listed as missing now answers 200 on the running server:
 | DA entry | `/cashmemo/da` 200 |
 | Expenses | `/cashmemo/expenses` 200 |
 | Cash-memo payments | `/payments`, `/payments/new` 200 |
-| Invoice printing + print queue | `/print`, `/jobs/<id>` 200 |
+| Invoice printing + print queue | `/print`, `/print/queue` 200 |
 
 Two paths in the list were wrong rather than missing: `/invoices/entry` never existed (the route is
 `/invoices/new`), and `/app/cashmemo/payments` is served as `/payments`.

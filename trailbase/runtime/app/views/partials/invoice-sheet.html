@@ -1,0 +1,79 @@
+{# The invoice sheet body, as a macro so the single-invoice view (`invoices/document.html`) and the
+   queued batch (`print/queue.html`) render from ONE source. Pass the `data` object that
+   `app/lib/invoice-sheet.js` returns.
+
+   The screen and the printout are the same artefact: printing is a stylesheet over this, not a
+   second renderer. Mirrors the LEGACY print (`/app/invoices/print?invoiceId=…`) — header block,
+   legacy line columns (BOX SIZE, CTN/UNTS/FREE, UNIT/CTN price, TOTAL) and legacy totals labels. #}
+{% macro sheet(d) %}
+<article class="invoice-doc" data-invoice-doc>
+  <header class="doc-head">
+    <div>
+      <div class="doc-business">{{ d.businessName }}</div>
+      <div class="doc-address">{{ d.businessAddress }}</div>
+      <div class="doc-phone">{{ d.businessPhone }}</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-type">{{ d.typeLabel }}</div>
+    </div>
+  </header>
+
+  <section class="doc-parties">
+    <div><span class="doc-label">Party</span><span class="doc-value">{{ d.partyName }} ({{ d.partyPhone }})</span></div>
+    {% if d.partyAddress %}<div><span class="doc-label">Address</span><span class="doc-value">{{ d.partyAddress }}</span></div>{% endif %}
+    {% if d.bookerName %}<div><span class="doc-label">Booker</span><span class="doc-value">{{ d.bookerName }} ({{ d.bookerPhone }})</span></div>{% endif %}
+    <div><span class="doc-label">Remarks</span><span class="doc-value">{{ d.remarks }}</span></div>
+    <div><span class="doc-label">Invoice #:</span><span class="doc-value">{{ d.invoiceNo }}</span></div>
+    <div><span class="doc-label">Invoice Date:</span><span class="doc-value">{{ d.invDate }}</span></div>
+    {% if d.invTime %}<div><span class="doc-label">Invoice Time:</span><span class="doc-value">{{ d.invTime }}</span></div>{% endif %}
+  </section>
+
+  {# Legacy column layout: BOX SIZE, QUANTITY (CTN / UNTS / FREE), PRICES (UNIT / CTN), TOTAL.
+     CTN price is box size x unit price, which is the figure the legacy sheet prints. #}
+  <table class="data doc-lines">
+    <thead>
+      <tr>
+        <th rowspan="2">#</th><th rowspan="2">Item</th><th rowspan="2" class="right">Box Size</th>
+        <th colspan="3" class="center">Quantity</th>
+        <th colspan="2" class="right">Prices</th>
+        <th rowspan="2" class="right">Total</th>
+        {# The legacy sheet adds a DISCOUNTS group only when some line carries a discount. #}
+        {% if d.hasLineDiscounts %}<th colspan="3" class="right">Discounts</th>{% endif %}
+      </tr>
+      <tr>
+        <th class="right">CTN</th><th class="right">UNTS</th><th class="right">FREE</th>
+        <th class="right">UNIT</th><th class="right">CTN</th>
+        {% if d.hasLineDiscounts %}<th class="right">1(%)</th><th class="right">2(%)</th><th class="right">IN RS</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+    {% for l in d.lines %}
+      <tr>
+        <td data-label="#">{{ l.index }}</td>
+        <td data-label="Item" data-lead>{{ l.itemName }}</td>
+        <td class="right" data-label="Box Size">{{ l.boxSize }}</td>
+        <td class="right" data-label="CTN">{{ l.ctn }}</td>
+        <td class="right" data-label="UNTS">{{ l.units }}</td>
+        <td class="right" data-label="FREE">{{ l.free }}</td>
+        <td class="right" data-label="UNIT">{{ l.unitPrice }}</td>
+        <td class="right" data-label="CTN">{{ l.ctnPrice }}</td>
+        <td class="right" data-label="Total">{{ l.total }}</td>
+        {% if d.hasLineDiscounts %}<td class="right" data-label="1(%)">{{ l.d1Text }}</td><td class="right" data-label="2(%)">{{ l.d2Text }}</td><td class="right" data-label="IN RS">{{ l.drsText }}</td>{% endif %}
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="{% if d.hasLineDiscounts %}12{% else %}9{% endif %}">This document has no lines.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <section class="doc-totals">
+    <table class="totals-table">
+      <tr><th>Total Amount</th><td class="right">{{ d.totals.totalAmountText }}</td></tr>
+      <tr><th>Discount 1</th><td class="right">{{ d.totals.d1Text }}</td></tr>
+      <tr><th>Discount 2</th><td class="right">{{ d.totals.d2Text }}</td></tr>
+      <tr><th>Discount cash</th><td class="right">{{ d.totals.cashText }}</td></tr>
+      <tr class="doc-grand"><th>Payable Amount</th><td class="right">{{ d.totals.payableText }}</td></tr>
+    </table>
+  </section>
+</article>
+{% endmacro %}

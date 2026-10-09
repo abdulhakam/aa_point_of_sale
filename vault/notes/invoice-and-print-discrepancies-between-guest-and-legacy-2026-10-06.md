@@ -42,6 +42,13 @@ Ledgers, Stock, Profit, Difference, Outstanding Payments, Product Sale, Daily Sa
 - **Legacy** `/app/invoices/printinvoice`: a **single-invoice picker** (Invoice Type + Invoice No →
   `View Invoice`) plus a separate queue page `/app/invoices/printinvoice/queue`.
 
+**CLOSED 2026-10-08.** The guest `/print` is now the legacy picker (Type + Invoice No + preview + a
+Queue rail) and `/print/queue` is the legacy queue page; the queue is browser-local
+(`localStorage` `print-queue`), as legacy's was, and the sheet carries the legacy "Print Invoice Now"
+and "Add to Print Queue" actions. The server-side batch job (`print.run`) was removed. See
+[[print-queue-parity-fix-2026-10-08]] and
+[[print-queue-is-browser-local-like-legacy]].
+
 ## Print preview — was different, now aligned to legacy
 
 The guest sheet (`/invoices/<id>/view?print=1&paper=a5`) previously used its own column set

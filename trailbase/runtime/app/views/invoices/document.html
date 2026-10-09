@@ -1,91 +1,25 @@
 {% extends 'layout.html' %}
+{% import 'partials/icons.html' as icons %}
+{% import 'partials/invoice-sheet.html' as sheetdoc %}
 {% block body %}
-{# The standalone invoice document, rendered from the materialised `inv_doc` JSON document.
-   The screen and the printout are the same artefact: printing is a stylesheet over this, not a second
-   renderer. The sheet mirrors the LEGACY print (`/app/invoices/print?invoiceId=…`) so browser printing
-   produces the same paper — header block (Party/Address/Booker/Remarks/Invoice #/Date/Time), the legacy
-   line columns (BOX SIZE, CTN/UNTS/FREE, UNIT/CTN price, TOTAL) and the legacy totals labels. A
-   `?print=1` request drops the navigation so the page is the document and nothing else. #}
-{% if print %}<p class="crumbs no-print"><a href="/invoices">← Invoices</a> <a href="/invoices/{{ invoice.id }}/grid">Edit</a></p>{% endif %}
-<article class="invoice-doc" data-invoice-doc>
-  <header class="doc-head">
-    <div>
-      <div class="doc-business">{{ businessName }}</div>
-      <div class="doc-address">{{ businessAddress }}</div>
-      <div class="doc-phone">{{ businessPhone }}</div>
-    </div>
-    <div class="doc-meta">
-      <div class="doc-type">{{ typeLabel }}</div>
-    </div>
-  </header>
-
-  <section class="doc-parties">
-    <div><span class="doc-label">Party</span><span class="doc-value">{{ partyName }} ({{ partyPhone }})</span></div>
-    {% if partyAddress %}<div><span class="doc-label">Address</span><span class="doc-value">{{ partyAddress }}</span></div>{% endif %}
-    {% if bookerName %}<div><span class="doc-label">Booker</span><span class="doc-value">{{ bookerName }} ({{ bookerPhone }})</span></div>{% endif %}
-    <div><span class="doc-label">Remarks</span><span class="doc-value">{{ remarks }}</span></div>
-    <div><span class="doc-label">Invoice #:</span><span class="doc-value">{{ invoiceNo }}</span></div>
-    <div><span class="doc-label">Invoice Date:</span><span class="doc-value">{{ invDate }}</span></div>
-    {% if invTime %}<div><span class="doc-label">Invoice Time:</span><span class="doc-value">{{ invTime }}</span></div>{% endif %}
-  </section>
-
-  {# Legacy column layout: BOX SIZE, QUANTITY (CTN / UNTS / FREE), PRICES (UNIT / CTN), TOTAL.
-     CTN price is box size x unit price, which is the figure the legacy sheet prints. #}
-  <table class="data doc-lines">
-    <thead>
-      <tr>
-        <th rowspan="2">#</th><th rowspan="2">Item</th><th rowspan="2" class="right">Box Size</th>
-        <th colspan="3" class="center">Quantity</th>
-        <th colspan="2" class="right">Prices</th>
-        <th rowspan="2" class="right">Total</th>
-        {# The legacy sheet adds a DISCOUNTS group only when some line carries a discount. #}
-        {% if hasLineDiscounts %}<th colspan="3" class="right">Discounts</th>{% endif %}
-      </tr>
-      <tr>
-        <th class="right">CTN</th><th class="right">UNTS</th><th class="right">FREE</th>
-        <th class="right">UNIT</th><th class="right">CTN</th>
-        {% if hasLineDiscounts %}<th class="right">1(%)</th><th class="right">2(%)</th><th class="right">IN RS</th>{% endif %}
-      </tr>
-    </thead>
-    <tbody>
-    {% for l in lines %}
-      <tr>
-        <td data-label="#">{{ l.index }}</td>
-        <td data-label="Item" data-lead>{{ l.itemName }}</td>
-        <td class="right" data-label="Box Size">{{ l.boxSize }}</td>
-        <td class="right" data-label="CTN">{{ l.ctn }}</td>
-        <td class="right" data-label="UNTS">{{ l.units }}</td>
-        <td class="right" data-label="FREE">{{ l.free }}</td>
-        <td class="right" data-label="UNIT">{{ l.unitPrice }}</td>
-        <td class="right" data-label="CTN">{{ l.ctnPrice }}</td>
-        <td class="right" data-label="Total">{{ l.total }}</td>
-        {% if hasLineDiscounts %}<td class="right" data-label="1(%)">{{ l.d1Text }}</td><td class="right" data-label="2(%)">{{ l.d2Text }}</td><td class="right" data-label="IN RS">{{ l.drsText }}</td>{% endif %}
-      </tr>
-    {% else %}
-      <tr><td class="empty" colspan="{% if hasLineDiscounts %}12{% else %}9{% endif %}">This document has no lines.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-
-  <section class="doc-totals">
-    <table class="totals-table">
-      <tr><th>Total Amount</th><td class="right">{{ totals.totalAmountText }}</td></tr>
-      <tr><th>Discount 1</th><td class="right">{{ totals.d1Text }}</td></tr>
-      <tr><th>Discount 2</th><td class="right">{{ totals.d2Text }}</td></tr>
-      <tr><th>Discount cash</th><td class="right">{{ totals.cashText }}</td></tr>
-      <tr class="doc-grand"><th>Payable Amount</th><td class="right">{{ totals.payableText }}</td></tr>
-    </table>
-  </section>
-</article>
+{# The standalone invoice document, rendered from the materialised `inv_doc` JSON document via the
+   shared `partials/invoice-sheet.html` macro (which `print/queue.html` also uses). The screen and the
+   printout are the same artefact: printing is a stylesheet over this, not a second renderer. The sheet
+   mirrors the LEGACY print (`/app/invoices/print?invoiceId=…`) so browser printing produces the same
+   paper. A `?print=1` request drops the navigation and the action bar so the page is the document and
+   nothing else. #}
+{% if print %}<p class="crumbs no-print"><a href="/invoices">← Invoices</a> <a href="/invoices/{{ actions.id }}/grid">Edit</a></p>{% endif %}
+{{ sheetdoc.sheet(sheet) }}
 
 {% if not print %}
+{# The legacy print page's two actions, then the guest extras (Edit, the A4 copy). `data-print` with an
+   href opens the `?print=1` page and prints it, so "Print Invoice Now" is the same A5 sheet; "Add to
+   Print Queue" is the localStorage queue the picker and `/print/queue` read. #}
 <p class="pagebar no-print">
-  <a class="btn" href="/invoices/{{ invoice.id }}/grid">Edit</a>
-  {# Two sheets, because a till slip and a filed copy are not the same size. Both print the SAME
-     document; only the paper differs. #}
-  <a class="btn primary" href="/invoices/{{ invoice.id }}/view?print=1" data-print="a5">PRINT A5 RECEIPT</a>
-  <a class="btn" href="/invoices/{{ invoice.id }}/view?print=1&amp;paper=a4" data-print="a4">PRINT A4 COPY</a>
-  <a class="btn" href="/invoice-doc/rebuild?reconcile=1">Rebuild all documents</a>
+  <a class="btn primary" href="/invoices/{{ actions.id }}/view?print=1" data-print="a5">{{ icons.svg('printer', 18) }} Print Invoice Now</a>
+  <button class="btn" type="button" data-pq-add data-id="{{ actions.id }}" data-no="{{ actions.invoiceNo }}" data-type="{{ actions.type }}">{{ icons.svg('printer', 18) }} + Add to Print Queue</button>
+  <a class="btn" href="/invoices/{{ actions.id }}/grid">Edit</a>
+  <a class="btn" href="/invoices/{{ actions.id }}/view?print=1&amp;paper=a4" data-print="a4">Print A4 copy</a>
 </p>
 {% endif %}
 {% endblock %}

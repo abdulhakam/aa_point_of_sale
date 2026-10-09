@@ -200,7 +200,7 @@ Side-by-side with [[runtime-js-guest-platform]]: [[route-map]].
 | Payment & receive vouchers | ✅ | ✅ | `/cashmemo/vouchers` 200 |
 | DA entry | ✅ | ✅ | `/cashmemo/da` 200 |
 | Expenses | ✅ | ✅ | `/cashmemo/expenses` 89 rows, amounts populated |
-| Invoice printing + print queue | ✅ | ✅ | `/print` 200 — [[guest-invoice-lifecycle]] |
+| Invoice printing + print queue | ✅ | ✅ | legacy picker + browser-local queue: `/print`, `/print/queue` 200 — [[print-queue-parity-fix-2026-10-08]] |
 | Inventory (live stock, item edit) | ➖ | ➕ **guest-only** | `/inventory` 208 rows |
 | Dashboard | ✅ | ✅ | master data correct; tile *content* is the open item |
 | Reports | ✅ 11 | ✅ **10** | 10 spool keys, all 200 with rows |

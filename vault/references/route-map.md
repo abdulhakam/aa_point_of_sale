@@ -78,7 +78,7 @@ error is itself the worked example behind [[settle-structural-claims-with-the-ow
 | Return invoices | `/app/invoices/return` | — | ❌ not built |
 | Difference invoices | `/app/invoices/difference` | — | ❌ not built |
 | Orders | `/app/invoices/orders` | — | ❌ dropped with the draft lifecycle |
-| Invoice print | `/app/invoices/print`, `/printinvoice`, `/printinvoice/queue` | `/print` | ✅ print queue rebuilt |
+| Invoice print | `/app/invoices/print`, `/printinvoice`, `/printinvoice/queue` | `/print`, `/print/queue` | ✅ print queue rebuilt — legacy picker + browser-local queue ([[print-queue-is-browser-local-like-legacy]]) |
 | Cash memo hub | `/app/cashmemo` | `/cashmemo` | ✅ |
 | Payment / receive vouchers | `/app/cashmemo/cash_payment_vouchers`, `/cash_recieve_vouchers` | `/cashmemo/vouchers` | ✅ |
 | DA entry | `/app/cashmemo/da_entry` | `/cashmemo/da` | ✅ |

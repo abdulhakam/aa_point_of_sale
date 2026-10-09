@@ -1,70 +1,56 @@
-// /print — the print queue, from a route FOLDER (tb-0030 step 5).
+// /print — the legacy print PICKER, from a route FOLDER.
 //
-// GET lists recent print jobs; POST enqueues a batch (every open invoice in a date range, or the one
-// named). Printing is a browser dialog over a server-rendered page; there is no printer driver.
+// This replaces the previous server-side "batch by date range" form. The legacy app
+// (`/app/invoices/printinvoice`) is a single-invoice picker: an Invoice Type select and an Invoice No
+// select, a "View Invoice" button, a live preview of the chosen invoice, and a Print Queue rail. The
+// actual queue is the browser's `localStorage` under the key `print-queue` (managed by
+// `app/public/js/print-queue.js`); the separate `/print/queue` page renders and prints it.
+//
+// The queue is populated by "Add to Print Queue" on the invoice sheet (`/invoices/<id>/view`), exactly
+// as legacy populates it from `/app/invoices/print`. Nothing is POSTed: the queue never leaves the
+// browser, so this route owns GET only.
 (function () {
   (globalThis as any).GET = async (req: any) => {
     const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
+
     const path = routeKit.normalizePath(String(req.path || "/"));
     const user = routeKit.userOf(req);
     if (!user) return routeKit.loginRedirect(req, path);
     const query = routeKit.parsePairs(String(req.query || ""));
 
-    const recent = await db.all(
-      'SELECT hex("id") hx, "name", "input", "state", "created" FROM "job" ' +
-        'WHERE "name" = ? ORDER BY "created" DESC LIMIT 20',
-      ["print.run"]
+    // Legacy's picker listed only purchase and sale; the guest now builds return and difference too, so
+    // the picker lists every invoice type the app can produce. Default matches legacy (`purchase`).
+    const types = Object.keys(A.invoices.INVOICE_TYPES).map((code) => ({ code, label: A.invoices.INVOICE_TYPES[code] }));
+    const type = routeKit.pick(query.type, "0");
+    const typeCode = String(Number(type) in A.invoices.INVOICE_TYPES ? Number(type) : 0);
+
+    // Every non-deleted invoice of the chosen type, newest number first. Ids are the URL-safe base64 the
+    // bridge hands out (and the form the `<option value>` and every `/invoices/<id>/…` link use).
+    const rows = await db.all(
+      'SELECT "id" AS id, "invoiceNo" AS invoiceNo FROM invoices ' +
+        'WHERE "deleted" = 0 AND "type" = ? ORDER BY "invoiceNo" DESC',
+      [typeCode]
     );
+    const invoices = (rows ?? []).map((r: any) => ({ id: r[0], invoiceNo: Number(r[1]) || 0 }));
+
+    // A chosen invoice drives the legacy preview iframe; it is only honoured when it is in the list, so
+    // a stale or hand-crafted id cannot point the iframe at an arbitrary path.
+    const chosen = routeKit.pick(query.invoice, "");
+    const selected = chosen && invoices.some((i: any) => String(i.id) === String(chosen)) ? String(chosen) : "";
 
     return routeKit.renderRoute(
       req,
-      { user, active: "print", title: "Print queue", template: "print/index.html" },
+      { user, active: "print", title: "Print Invoices", template: "print/index.html" },
       {
-        recent: recent.map((r: any) => {
-          // `input` is the job's JSON payload; the count is what the table wants, so it is parsed
-          // here rather than in the template. The id is read as hex and shown in the base64 form
-          // every other link in the app uses.
-          let count = 0;
-          try {
-            count = (JSON.parse(String(r[2] ?? "{}")).invoices ?? []).length;
-          } catch {
-            count = 0;
-          }
-          return { id: routeKit.hexToB64(String(r[0] ?? "")), state: r[3], created: String(r[4] ?? "").slice(0, 19), count };
-        }),
-        query,
-        today: A.format.dateOnly(new Date().toISOString()),
+        types,
+        // A STRING, so the template's `selectedType == t.code` compares like with like — minijinja does
+        // not coerce `"0"` to `0`, and a mismatch would silently fall back to the first option.
+        selectedType: String(typeCode),
+        invoices,
+        selected,
       }
     );
-  };
-
-  (globalThis as any).POST = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
-    const routeKit = A.routeKit;
-    const db = (globalThis as any).sqlite;
-    const path = routeKit.normalizePath(String(req.path || "/"));
-    const user = routeKit.userOf(req);
-    if (!user) return routeKit.loginRedirect(req, path);
-    const form = routeKit.parsePairs(String(req.body || ""));
-
-    // A batch: every open invoice in the date range, or the one named. Ids are carried as hex,
-    // because a BLOB column is matched with unhex(?) rather than against a base64 text parameter.
-    const ids: string[] = [];
-    if (form.invoice) {
-      ids.push(routeKit.b64ToHex(String(form.invoice)));
-    } else {
-      const rows = await db.all(
-        'SELECT hex("id") hx FROM invoices WHERE "status" = \'open\' AND "deleted" = 0 ' +
-          'AND date("dated") >= date(?) AND date("dated") <= date(?) ORDER BY "dated" DESC LIMIT 200',
-        [String(form.from || "1970-01-01"), String(form.to || "2999-12-31")]
-      );
-      for (const r of rows) ids.push(String(r[0]));
-    }
-    if (!ids.length) return { text: "No invoices in that range to print", status: 400 };
-    // enqueue answers with the job's hex id, which the job links want in base64.
-    const jobHex = await A.jobs.enqueue(db, "print.run", { invoices: ids, reason: String(form.reason || "batch") });
-    return { redirect: "/print?status=queued&job=" + routeKit.hexToB64(String(jobHex)), status: 303 };
   };
 })();

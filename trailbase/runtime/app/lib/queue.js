@@ -74,46 +74,11 @@
       },
     },
 
-    // A print run: one step per document, so a batch of 200 slips is 200 leased steps rather than
-    // one that fails as a unit. The "printing" is server-side render bookkeeping, not a printer
-    // driver: each step confirms the materialised document exists and is current, and records the
-    // run. A real printer integration would read the same records.
-    //
-    // A reprint of one invoice is this job with a single id, which is why reprint is not a separate
-    // kind. The step is idempotent through `ctx.record`, so the at-least-once poller cannot print
-    // the same slip twice — a reprinted till receipt is a real cost, not a cosmetic one.
-    "print.run": {
-      steps(input) {
-        const ids = Array.isArray(input?.invoices) ? input.invoices.filter(Boolean) : [];
-        return ids.map((id) => ({ name: "slip", input: { id, reason: input?.reason || "batch" } }));
-      },
-      async runStep(step, ctx) {
-        const id = String(step.input?.id || "");
-        if (!id) throw new Error("print.run: no invoice id");
-        // Ids travel as hex, so the document is matched with unhex() rather than against a base64
-        // text parameter — the same rule every other relation read in this codebase follows.
-        // `db` is NOT in scope in a job handler: the engine passes the step and a context whose
-        // `record` is how a step reports its effect. The connection is the ambient bridge, which
-        // is how the invdoc handler reaches its module.
-        const rows = await globalThis.sqlite.all('SELECT "readable_id", "invoice_no" FROM "inv_doc" WHERE "id" = unhex(?)', [id]);
-        if (!rows || !rows.length) {
-          // Not an error: the document may not be materialised yet. A reprint of an unmaterialised
-          // invoice is a no-op, and the caller sees the count.
-          await ctx.record(JSON.stringify({ id, skipped: "no materialised document" }));
-          return { id, skipped: true };
-        }
-        await ctx.record(JSON.stringify({ id, readableId: rows[0][0] ?? rows[0][1] }));
-        return { id, readableId: rows[0][0] ?? null, invoiceNo: rows[0][1] ?? null };
-      },
-      reduce(results) {
-        const printed = results.filter((r) => !r.skipped);
-        return {
-          requested: results.length,
-          printed: printed.length,
-          skipped: results.length - printed.length,
-        };
-      },
-    },
+    // NOTE: the `print.run` durable job was removed 2026-10-08. The print queue is no longer a
+    // server-side batch: it is the LEGACY browser-side queue (localStorage `print-queue`), populated
+    // from the invoice sheet and printed from `/print/queue`. See `app/public/js/print-queue.js` and
+    // `vault/notes/print-queue-is-the-legacy-picker-and-queue.md`. The queue engine itself is
+    // unchanged — `demo.count` and `invdoc.rebuild` above still exercise and use it.
   };
 
   /** Whether `enqueue` would accept this name. Lets a route answer 400 instead of throwing. */

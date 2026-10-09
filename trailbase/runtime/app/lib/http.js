@@ -50,7 +50,8 @@ function shellContext(shell, data) {
     // page is rendered by a path that does not carry it, which makes the client sync rather than
     // trust a stale cache. See [[reference-lists-come-from-indexeddb]].
     refdbVersion: shell.refdbVersion ?? "",
-    // Which paper this page prints on. A5 for an invoice or a voucher, A4 landscape for a report,
+    // Which paper this page prints on. A5 for an invoice or a voucher, A4 for a report, both
+    // portrait by default (the operator chooses Landscape in the browser's print dialog),
     // and blank for everything else so the print media query does not apply a size to, say, the
     // dashboard. The stylesheet keys off this attribute rather than guessing from the route.
     paper: shell.paper ?? "",

@@ -1,0 +1,29 @@
+{% extends 'layout.html' %}
+{% import 'partials/icons.html' as icons %}
+{% import 'partials/invoice-sheet.html' as sheetdoc %}
+{% block body %}
+{# The legacy print-queue page (`/app/invoices/printinvoice/queue`): Print Invoices + Clear Queue, then
+   every queued invoice rendered as its own sheet, each with a remove button. The queue lives in the
+   browser's localStorage; `print-queue.js` syncs the ids into `?ids=` so the server can render them.
+   On paper the buttons and the remove controls are hidden and each sheet is one A5 page. See
+   vault/notes/print-queue-is-the-legacy-picker-and-queue.md. #}
+<div data-pq-queue-page data-ids="{{ ids }}">
+  <h1 class="page-title">Print queue</h1>
+  <div class="pq-actions no-print">
+    <button type="button" class="btn primary" data-pq-print>{{ icons.svg('printer', 18) }} Print Invoices</button>
+    <button type="button" class="btn" data-pq-clear>{{ icons.svg('printer-off', 18) }} Clear Queue</button>
+    <a class="btn" href="/print">← Print Invoices</a>
+  </div>
+
+  {% for s in sheets %}
+  <div class="pq-doc">
+    <p class="pq-doc-remove no-print">
+      <button type="button" class="btn" data-pq-remove="{{ s.id }}">{{ icons.svg('trash', 16) }} Remove</button>
+    </p>
+    {{ sheetdoc.sheet(s.data) }}
+  </div>
+  {% else %}
+  <p class="muted">Nothing in queue</p>
+  {% endfor %}
+</div>
+{% endblock %}

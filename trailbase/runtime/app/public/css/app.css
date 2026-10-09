@@ -586,10 +586,15 @@ table.grid select { min-width: 12rem; }
 
 /* -------------------------------------------------------------------- print
    Two paper sizes, because a till receipt and a report are not the same artefact:
-     A5  — the invoice itself, portrait, one document per sheet
-     A4  — a report, landscape, repeated table header on every page
-   The page is chosen by the `data-paper` attribute on <body>, which the print route sets, rather
-   than by a media query, so one stylesheet serves both and neither is a guess. */
+     A5  — the invoice itself, one document per sheet
+     A4  — a report, repeated table header on every page
+   Both print PORTRAIT by default; the operator switches to Landscape in the browser's print
+   dialog (a CSS `size` sets the default layout, it is not a lock).
+   The paper is chosen by the `data-paper` attribute on <body>, which the print route sets.
+   `@page` is document-scoped, so it cannot be selected by a body attribute, and two bare
+   `@page { size }` rules cascade with the last winning for EVERY page — which is what made every
+   print landscape. The sizes are therefore NAMED pages (`a5`, `a4`) selected through the `page`
+   property on <body>; a bare `@page` supplies the default margins for a page without one. */
 
 .print-head { display: none; }
 .print-head-title { font-size: 1.25rem; font-weight: 700; text-align: center; }
@@ -636,6 +641,16 @@ table.grid select { min-width: 12rem; }
   .report table.data tr { break-inside: avoid; }
 }
 
+/* Paper per `data-paper`, as named pages. A bare `@page` is the default for any page without one,
+   so a page that sets no `data-paper` (the dashboard) prints on the printer's own paper, portrait. */
+@media print {
+  @page { margin: 10mm; }
+  @page a5 { size: A5 portrait; margin: 6mm; }
+  @page a4 { size: A4 portrait; margin: 10mm; }
+  body[data-paper="a5"] { page: a5; }
+  body[data-paper="a4"] { page: a4; }
+}
+
 /* An A5 receipt: one invoice per sheet, narrow, no wasted furniture. */
 @media print {
   body[data-paper="a5"] { font-size: 9.5pt; }
@@ -644,13 +659,11 @@ table.grid select { min-width: 12rem; }
   body[data-paper="a5"] .doc-no { font-size: 1.2rem; }
   body[data-paper="a5"] .doc-totals { width: 62%; }
   body[data-paper="a5"] .doc-parties { gap: 10px; font-size: 0.8rem; }
-  @page { size: A5 portrait; margin: 6mm; }
 }
 
-/* A4 landscape for a report, which is wider than it is tall in practice. */
+/* A report on A4, portrait to match the legacy printout. The operator can choose Landscape. */
 @media print {
   body[data-paper="a4"] .report table.data { min-width: 0; font-size: 8.5pt; }
-  @page { size: A4 landscape; margin: 10mm; }
 }
 
 
@@ -969,3 +982,36 @@ aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
 }
 .invoice-head .ih-field.wide { flex: 1 1 18rem; }
 .invoice-head .ih-field.wide input { width: 100%; min-width: 0; }
+
+/* ───────────────────────────────────────────────────────────── print picker + queue ────────────────
+   The legacy print surface: a picker (`/print`) with a Queue rail on the left and a live preview on the
+   right, and the queue page (`/print/queue`). The queue is browser localStorage; these rules only lay
+   the two screens out. On paper the rail, the action buttons and the remove controls are hidden and
+   each queued sheet is one A5 page. */
+.pq-grid { display: flex; gap: 16px; align-items: flex-start; }
+.pq-rail { flex: 0 0 auto; width: 28vw; max-width: 360px; min-width: 200px; }
+.pq-main { flex: 1 1 auto; min-width: 0; }
+.pq-actions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.pq-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+.pq-list {
+  border: 1px solid var(--border); border-radius: var(--radius); background: #fff;
+  padding: 6px 8px; min-height: 56px; max-height: 74vh; overflow: auto;
+}
+.pq-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px; border-bottom: 1px solid var(--gray-3); }
+.pq-item:last-child { border-bottom: 0; }
+.pq-item a { font-variant-numeric: tabular-nums; }
+.pq-remove { border: 0; background: none; color: #c92a2a; cursor: pointer; padding: 0 4px; font-size: 0.9rem; line-height: 1; }
+.pq-picker { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin: 0 0 12px; }
+.pq-picker .field { margin: 0; }
+.pq-picker .btn { display: inline-flex; align-items: center; gap: 6px; }
+.pq-preview { border: 1px solid var(--border); border-radius: var(--radius); height: 80vh; overflow: hidden; position: relative; }
+.pq-preview iframe { width: 100%; height: 100%; border: 0; }
+.pq-hint { padding: 12px; }
+.pq-doc-remove { display: flex; justify-content: flex-end; margin: 12px 0 4px; }
+
+@media print {
+  /* One A5 page per queued sheet, and no trailing blank page after the last one. */
+  body[data-paper="a5"] .pq-doc + .pq-doc { break-before: page; }
+  .pq-doc, .invoice-doc { break-inside: avoid; }
+}
+

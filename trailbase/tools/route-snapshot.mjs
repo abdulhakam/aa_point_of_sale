@@ -78,6 +78,7 @@ const ROUTES = [
   ['cashmemo expenses', '/cashmemo/expenses', 'GET'],
   ['inventory', '/inventory', 'GET'],
   ['print', '/print', 'GET'],
+  ['print queue', '/print/queue', 'GET'],
   ['plugins', '/plugins', 'GET'],
   ['pages index', '/p', 'GET'],
   ['page profit', '/p/reports/profit', 'GET'],

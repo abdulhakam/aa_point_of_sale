@@ -98,7 +98,8 @@
 <p class="notice">No rows between {{ filters.from }} and {{ filters.to }}.</p>
   {% endif %}
 {% endif %}
-{# Printing a report: A4 landscape (the page sets `paper`), carrying the filters that are on
+{# Printing a report: A4 portrait by default (the page sets `paper`; the operator may choose
+   Landscape in the browser's print dialog), carrying the filters that are on
    screen, so the sheet is the report the operator was looking at. The button is hidden by the
    print stylesheet, so it cannot appear on the paper. The printer glyph at the top of the page
    (above) is the legacy's own control and opens the same printable document. #}

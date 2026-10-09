@@ -57,8 +57,12 @@ Printing is the browser's dialog over a **server-rendered** page; there is no pr
 nothing here prints without the operator confirming the dialog.
 
 - [x] **Paper is chosen by the page, not guessed.** `layout.html` emits `<body data-paper="a5">`
-      or `a4`, `app.css` sizes `@page` from it. A5 portrait for an invoice or a voucher, A4
-      landscape for a report — a till slip and a filed copy are different artefacts.
+      or `a4`, and `app.css` selects a NAMED page (`@page a5` / `@page a4`) through the `page`
+      property. A5 for an invoice or a voucher, A4 for a report — a till slip and a filed copy are
+      different artefacts. Both default **portrait**; the operator picks Landscape in the print
+      dialog. *(Corrected 2026-10-09: this line previously claimed the sizes were sized from the
+      attribute — they were bare `@page { size }` rules that cascaded to A4 landscape on every
+      page. See [[every-guest-page-prints-a4-landscape]].)*
 - [x] **One renderer for screen and paper.** `/invoices/{id}/view?print=1` is the *same*
       materialised document the screen shows, so a printout cannot diverge from what was on screen.
       `&paper=a4` gives the other size.
@@ -70,6 +74,16 @@ nothing here prints without the operator confirming the dialog.
       steps rather than one that fails as a unit. A reprint is the same job with one id. Verified:
       200 requested, 200 printed, 0 skipped.
 - [x] **`/print`** — queue a range, see recent runs, follow a job.
+
+> **CORRECTED 2026-10-08 — the print queue was rebuilt to match legacy.**
+> The batch form ("queue a range", the `print.run` durable job, the "Recent runs" table) was
+> **removed**. `/print` is now the legacy picker (Invoice Type + Invoice No → View Invoice, a
+> preview, and a Queue rail) and `/print/queue` is the legacy queue page. The queue is
+> **browser-local** (`localStorage` `print-queue`), exactly as legacy's was, and the sheet carries
+> the legacy "Print Invoice Now" + "Add to Print Queue" actions. The `print.run` job spec is gone
+> from `app/lib/queue.js`. See [[print-queue-parity-fix-2026-10-08]] and
+> [[print-queue-is-browser-local-like-legacy]]. The "printer-driver integration" caveat below still
+> stands (printing is the browser's dialog over a server-rendered sheet).
 
 ### Cash memo — done (2026-09-30)
 
@@ -92,8 +106,9 @@ four working screens rather than five near-duplicates.
 ### Remaining
 
 - [ ] Nothing outstanding for printing or the cash memo. The one thing deliberately left is a
-      **printer-driver integration**: `/print` records a run and confirms each slip exists as a
-      document, but a real printer would read those same records.
+      **printer-driver integration**: printing is the browser's dialog over a server-rendered A5
+      sheet, and the queue is browser-local ([[print-queue-parity-fix-2026-10-08]]); a real printer
+      would read the same documents.
 
 
 Re-measured 2026-09-29 after [[tb-0028-guest-transactional-screens-and-mobile]] landed the first
