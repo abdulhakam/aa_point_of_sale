@@ -205,10 +205,27 @@
     }
   });
 
+  /**
+   * Another tab (or the `/print` preview iframe) changed `localStorage`. The queue is browser state
+   * shared across documents, but it is only painted at load and on a change made HERE — so without this
+   * an already-open `/print` rail stayed stale until a reload, which is exactly the reported bug. The
+   * `storage` event fires in every OTHER same-origin window (including a parent from its iframe, and a
+   * sibling tab), never in the one that made the change, so same-document changes are already covered
+   * by the direct `paint()` calls and are not doubled here.
+   */
+  function onStorage(event) {
+    if (event.key && event.key !== KEY) return;
+    paint();
+    // On the queue page, a cross-tab change means the server-rendered sheets are out of date; nudge the
+    // page to the current ids (and to bare `/print/queue` when it was cleared elsewhere).
+    syncQueuePage();
+  }
+
   function init() {
     paint();
     syncQueuePage();
     enhancePicker();
+    window.addEventListener("storage", onStorage);
     // A marker a harness can wait on: the controls exist in the initial HTML, so a test that dispatches
     // `change` as soon as the select is found can race this file and see nothing happen. `hotkeys.js`
     // sets `data-hk-ready` for the same reason.

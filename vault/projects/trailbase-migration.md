@@ -66,6 +66,15 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — print queue now syncs across tabs; "searchable select" explained.** Fixed the print queue
+not updating on an open `/print` page until a reload: `print-queue.js` now listens for the `storage`
+event (it fires in every other same-origin window, including a parent from the preview iframe) and
+repaints ([[print-queue-no-cross-context-sync]]). Also answered the "why isn't this a searchable select"
+report: the `autocomplete.js` component is fine — a caused-by-declaration/threshold/scoping note is in
+[[why-some-selects-are-not-comboboxes]] (the report's Invoice filter is a text field by declaration; the
+print picker is one invoice type and native below 12 options; the report Party filter *is* a combobox).
+Gates green (`guest-smoke` 116/116, `route-snapshot` 50/0, `print-queue-check` 14/14).
+
 **2026-10-09 — reports get a windowed "Load more".** The truncated report notice now offers "Load more"
 (the current row window plus one cap) beside "Show all", both swapping the body; `reportInfo.moreHref`
 reuses the existing `maxRows` query, so no server or spool change was needed. Browser-verified on the
