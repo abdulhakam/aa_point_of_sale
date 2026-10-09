@@ -66,6 +66,17 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — reports get a windowed "Load more".** The truncated report notice now offers "Load more"
+(the current row window plus one cap) beside "Show all", both swapping the body; `reportInfo.moreHref`
+reuses the existing `maxRows` query, so no server or spool change was needed. Browser-verified on the
+general ledger (26,613 rows): Load more took the table 1000 → 2000 rows with the shell kept and the URL
+pushed. It is a windowed step, not offset paging — true append remains a follow-up. Gates green
+(`guest-smoke` 116/116, `route-snapshot` 50/0, `verify-spool-reports` 75 binds, `refdb-check` 12/12,
+`autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14, `print-queue-check`
+14/14). **Next: the component work (`<aa-money>` handled with the historical-precision footgun in mind,
+`<aa-entity-form>`, the invoice-entry component) and true offset paging.**
+[[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]].
+
 **2026-10-09 — cash-memo expenses writes are htmx; the write surface is complete.** Extracted
 `expenses.listView()` and made the expense save (`/cashmemo/expenses/save`) and delete
 (`/cashmemo/expenses/<id>/delete`) re-render the expenses list on an htmx request (the save's error

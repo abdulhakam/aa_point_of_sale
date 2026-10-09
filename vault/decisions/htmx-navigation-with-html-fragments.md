@@ -119,8 +119,10 @@ for the day the allowlist grows to include it, `X-Requested-With` for today.
   that URL (`hx-push-url="/management/<entity>"`, `hx-push-url="/payments"`), so a refresh reloads the
   list. This replaces the earlier `?new=1` residue.
 - **Report filters APPLY as fragments** and the row-cap "Show all" / "latest period" links are boosted
-  (2026-10-09). **True load-more pagination is not built** — "Show all" still renders every row, so
-  the 1,000-row cliff (`report-render-row-cap`) is unchanged.
+  (2026-10-09). A windowed **"Load more"** (`rowInfo.moreHref`, the current window + one cap) replaces
+  the single "Show all" cliff, which rendered every row at once (2026-10-09). It re-renders the window
+  rather than appending, so it is bounded per click but not O(1) in total — **true offset paging is a
+  follow-up** (`report-render-row-cap`).
 - **`<aa-modal>` is now swap-safe** (2026-10-09): it moves its children into a `<body>`-level overlay,
   and `disconnectedCallback` now removes that overlay with the host. Without this, any htmx swap of a
   modal-bearing page left the overlay behind — a stuck backdrop when the dialog was open. Any future

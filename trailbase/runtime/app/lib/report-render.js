@@ -234,6 +234,15 @@ export async function renderReportPage(A, db, req, user, path, query, key, pageD
   const total = Number(totals.rowCount || 0);
   const shown = maxRows < 0 ? total : Math.min(total, maxRows);
   const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows)).key }];
+  // "Load more" steps the window (`maxRows`) by one cap instead of jumping to every row at once — the
+  // "Show all" cliff. The current `maxRows`/`all` are dropped from the query first, or a second click
+  // would append a second `maxRows` and the server would read the first. A windowed step, not offset
+  // paging: it re-renders the window, so it is bounded per click but not O(1) in total.
+  const keepQuery = String(rawQuery || "")
+    .split("&")
+    .filter((p) => p && !/^(maxRows|all)=/.test(p))
+    .join("&");
+  const moreHref = `${path}?${keepQuery ? keepQuery + "&" : ""}maxRows=${shown + RENDER_MAX_ROWS}`;
   const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4", fragment }, view, {
     ...frame,
     rowInfo: {
@@ -241,6 +250,7 @@ export async function renderReportPage(A, db, req, user, path, query, key, pageD
       total,
       truncated: shown < total,
       allHref,
+      moreHref,
       // Resolved only when the window is empty, and it is what lets the page say WHICH period has data
       // instead of only that this one does not. One fingerprint-cached probe.
       latest: missing.length || total > 0 ? null : await latestPeriod(A, pageDef.filters.find((f) => f.dateSource)?.dateSource),

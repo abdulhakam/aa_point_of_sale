@@ -50,9 +50,8 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 - [x] Both report filter forms (inline and `filtersModal`) APPLY via `hx-get` into `#app-main` with
       `hx-push-url`, so applying a filter swaps the report instead of reloading the document and the
       URL stays shareable.
-- [x] The "Show all" and "latest period" notice links are boosted (fragment, not a reload). True
-      load-more pagination is **not** done — "Show all" still renders every row (the 1,000-row cliff
-      is unchanged).
+- [x] The "Show all" and "latest period" notice links are boosted (fragment, not a reload). A windowed
+      **"Load more"** was added in Slice 9; true offset paging is still not done.
 - [x] **Fixed a swap bug the navigation exposed:** `<aa-modal>` moves its children into a
       `<body>`-level overlay, so removing its host (which any htmx swap of the page does) left the
       overlay behind — a stuck backdrop when the dialog was open. `disconnectedCallback` now removes
@@ -158,6 +157,24 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 - [x] **This completes the write surface ("C"):** management, invoice entry, invoice grid, payments and
       cash-memo expenses all write over htmx. The only write still on a full load is the invoice **new**
       create, which navigates to the entry page.
+
+## Slice 9 — report "Load more" (2026-10-09)
+
+- [x] `report-render.js` adds `rowInfo.moreHref`: the current window plus one `RENDER_MAX_ROWS`, with
+      the existing `maxRows`/`all` dropped from the query first so a second click does not append a
+      second `maxRows`.
+- [x] `views/reports/report.html`: the truncated notice is now **"Load N more" · "Show all"**; "Load
+      more" is `hx-boost` into `#app-main`, so it swaps the body (filters + notice + table) with the
+      larger window and pushes the URL.
+- [x] Browser-verified on the general ledger (wide period, 26,613 rows): Load more → rows 1000 → 2000,
+      shell node live, navigation count 1, URL gains `maxRows=2000`, a new "Load more" appears. The
+      HTTP path matches (`maxRows=2000` → "Showing first 2000 …", next `maxRows=3000`).
+- [x] Gates green: `guest-smoke` 116/116, `route-snapshot` 50/0, `verify-spool-reports` (75 binds, 16
+      totals proven exact), `refdb-check` 12/12, `autocomplete-check` 39/39, `hotkey-check` 62/62,
+      `grid-preview-check` 14/14, `print-queue-check` 14/14.
+- [ ] **Not offset paging.** "Load more" re-renders the whole window (1000 → 2000 → …), so it is bounded
+      per click but not O(1) in total; true offset append (a rows-only fragment + `LIMIT n OFFSET m`)
+      remains a follow-up. It replaces the single "SHOW ALL" cliff, which rendered every row at once.
 
 ## Follow-ups (not done)
 
