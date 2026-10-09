@@ -139,6 +139,26 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14,
       `print-queue-check` 14/14.
 
+## Slice 8 — cash-memo expenses writes; write surface complete (2026-10-09)
+
+- [x] Extracted `expenses.listView()` (the `/cashmemo/expenses` screen) shared by its GET route and the
+      write routes.
+- [x] `/cashmemo/expenses/save` (create/update) answers an htmx request with the list fragment (flash
+      included); a bad value re-renders the list with a red flash rather than a bare 400.
+      `/cashmemo/expenses/<id>/delete` re-renders the list. Plain POSTs still 303.
+- [x] `views/cashmemo/expenses.html`: the filter APPLYs as a fragment, the row delete is
+      `hx-boost` + `hx-confirm`, the row edit link is boosted, and the save form is `hx-boost` with
+      `hx-push-url="/cashmemo/expenses"`.
+- [x] Browser-verified: add expense → flash "Saved", row present, shell node live, navigation count 1,
+      URL `/cashmemo/expenses`; delete → flash "Deleted", row gone (net zero; the table has no `deleted`
+      column, so remove means remove). No console errors.
+- [x] Gates green: `guest-smoke` 116/116, `route-snapshot` 50/0, `refdb-check` 12/12,
+      `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14,
+      `print-queue-check` 14/14.
+- [x] **This completes the write surface ("C"):** management, invoice entry, invoice grid, payments and
+      cash-memo expenses all write over htmx. The only write still on a full load is the invoice **new**
+      create, which navigates to the entry page.
+
 ## Follow-ups (not done)
 
 - [x] **Stale document title** — fixed 2026-10-09: the fragment emits a hidden `data-aa-title` marker
@@ -156,9 +176,9 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       `feature-parity` exit 0, `ui-capture` 28 screens none gated. `ui-parity-report` still shows the
       pre-existing 28/28 restyle differences (rail membership, `<th>` styling) — not caused by this
       change. `guest-smoke`/`route-snapshot` were re-run after the title-marker fix.
-- [ ] **Convert the remaining writes** the same way — an htmx write that re-renders its region. Left:
-      **cash memo** (and the invoice **new** create, which navigates to the entry page and is arguably
-      fine as a full load). This is the rest of "C".
+- [x] **Convert the writes** — done across slices 4–8 (management, invoice entry, invoice grid,
+      payments, cash-memo expenses). The only write still on a full load is the invoice **new** create,
+      which navigates to the entry page; leaving it is acceptable.
 - [ ] Decide whether to grow the host's header allowlist to include `hx-request`, so the
       `X-Requested-With` workaround can be retired.
 - [ ] **Measure** the render-time saved vs a full page (the change is currently justified by structure

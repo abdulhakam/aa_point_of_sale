@@ -93,16 +93,20 @@ for the day the allowlist grows to include it, `X-Requested-With` for today.
   re-renders the current URL as a fragment into `#app-main` instead of `window.location.reload()`.
 - **Flash messages** now appear without a reload on **management** and **invoice-entry** writes
   (2026-10-09): an htmx write re-renders the list/entry fragment — which contains the flash region —
-  into `#app-main`, so no separate out-of-band swap is needed. The remaining full-load writes are the
-  **cash memo** writes (`tb-0036`).
+  into `#app-main`, so no separate out-of-band swap is needed. **The write surface is converted** —
+  management, invoice entry (line add/remove, header, complete), invoice grid save, payments and
+  cash-memo expenses all answer htmx with a fragment. The one remaining full load on a write is the
+  **invoice new create** (`POST /invoices/new`), which navigates to the entry page and is arguably fine
+  as a full load (`tb-0036`).
 - **A write re-uses the screen builder.** `management.listView()`, `invoices.entryView()`,
-  `invoices.gridView()`, `payments.listView()` and `payments.newView()` are shared by their GET route
-  and their write routes, so a write's screen and the GET's screen cannot drift. Converted entry writes:
-  `/invoices/<id>/line` (add), `…/line/<lineId>/delete`, `…/header`, `…/complete` (everything that
-  redirected to the entry page, which is what `/invoices/new` lands on); the grid save
-  `/invoices/<id>/lines` (SAVE LINES and the row remove op); and the payment create (`POST /payments`,
-  which on a bad value re-renders the form with the error rather than a bare 400) and delete
-  (`/payments/<id>/delete`).
+  `invoices.gridView()`, `payments.listView()`, `payments.newView()` and `expenses.listView()` are
+  shared by their GET route and their write routes, so a write's screen and the GET's screen cannot
+  drift. Converted entry writes: `/invoices/<id>/line` (add), `…/line/<lineId>/delete`, `…/header`,
+  `…/complete` (everything that redirected to the entry page, which is what `/invoices/new` lands on);
+  the grid save `/invoices/<id>/lines`; the payment create (`POST /payments`, which on a bad value
+  re-renders the form with the error rather than a bare 400) and delete (`/payments/<id>/delete`); and
+  the expense save (`/cashmemo/expenses/save`, same error handling) and delete
+  (`/cashmemo/expenses/<id>/delete`).
 - **A grid save's error is a swap, not a bare 409.** The grid save's failure path re-renders the grid
   with the message as the flash (`status: "error"`), because htmx does not swap a 4xx body by default —
   a bare `409` would have shown the operator nothing.

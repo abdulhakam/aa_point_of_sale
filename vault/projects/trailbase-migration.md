@@ -66,6 +66,18 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — cash-memo expenses writes are htmx; the write surface is complete.** Extracted
+`expenses.listView()` and made the expense save (`/cashmemo/expenses/save`) and delete
+(`/cashmemo/expenses/<id>/delete`) re-render the expenses list on an htmx request (the save's error
+path shows a red flash rather than a bare 400). With this, management, invoice entry, invoice grid,
+payments and cash-memo expenses all write over htmx; the only write still on a full load is the invoice
+**new** create, which navigates to the entry page. Gates green (`guest-smoke` 116/116, `route-snapshot`
+50/0, `refdb-check` 12/12, `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check`
+14/14, `print-queue-check` 14/14). **Next: the component work — `<aa-money>`, then `<aa-entity-form>`
+and the invoice-entry component (consuming server descriptors); plus report load-more pagination and
+the render-time measurement.** [[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]],
+[[tb-0037-component-library]].
+
 **2026-10-09 — payments writes are htmx (no reload).** Extracted `payments.listView()`/`newView()` and
 made the payment create (`POST /payments`) and delete (`/payments/<id>/delete`) re-render the list on
 an htmx request — the create's failure path re-renders the new form with the error rather than a bare

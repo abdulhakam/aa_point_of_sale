@@ -9,24 +9,8 @@
     if (!user) return routeKit.loginRedirect(req, path);
     const query = routeKit.parsePairs(String(req.query || ""));
 
-    const filters = { from: routeKit.pick(query.from, ""), to: routeKit.pick(query.to, ""), q: routeKit.pick(query.q, "") };
-    const [rows, totals] = await Promise.all([
-      A.expenses.listExpenses(db, filters),
-      A.expenses.sumExpenses(db, filters),
-    ]);
-    const editId = String(query.edit || "");
-
-    return routeKit.renderRoute(
-      req,
-      { user, active: "cashmemo", title: "Expenses", template: "cashmemo/expenses.html" },
-      {
-        rows,
-        filters,
-        query,
-        totals,
-        editRow: editId ? rows.find((r: any) => String(r.id) === editId) ?? null : null,
-        today: A.format.dateOnly(new Date().toISOString()),
-      }
-    );
+    // One builder, shared with the expense writes (save/delete) so an htmx write renders the same list.
+    const view = await A.expenses.listView(A, req, query, "", "");
+    return routeKit.renderRoute(req, { user, ...view.options }, view.data);
   };
 })();

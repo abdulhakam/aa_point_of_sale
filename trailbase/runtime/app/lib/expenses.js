@@ -93,3 +93,35 @@ export async function deleteExpense(db, publicId) {
   if (!hex) return 0;
   return db.execute('DELETE FROM "expenses" WHERE "id" = unhex(?)', [hex]);
 }
+
+/**
+ * The `/cashmemo/expenses` screen as `{ options, data }` for `routeKit.renderRoute`.
+ *
+ * Extracted so the expense WRITES (save, delete) can re-render the list on an htmx request instead of
+ * a 303. `query` carries the filters, the optional `edit` id, and (for a write) a `status`/`message`
+ * flash — an error is passed as `status: "error"` so the layout flash paints it red.
+ */
+export async function listView(A, req, query, status, message) {
+  const routeKit = A.routeKit;
+  const db = (globalThis).sqlite;
+  const filters = {
+    from: routeKit.pick(query.from, ""),
+    to: routeKit.pick(query.to, ""),
+    q: routeKit.pick(query.q, ""),
+  };
+  const [rows, totals] = await Promise.all([listExpenses(db, filters), sumExpenses(db, filters)]);
+  const editId = String(query.edit || "");
+  return {
+    options: { active: "cashmemo", title: "Expenses", template: "cashmemo/expenses.html" },
+    data: {
+      rows,
+      filters,
+      query,
+      totals,
+      editRow: editId ? rows.find((r) => String(r.id) === editId) ?? null : null,
+      today: A.format.dateOnly(new Date().toISOString()),
+      status: status ?? "",
+      message: message ?? "",
+    },
+  };
+}
