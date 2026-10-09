@@ -8,7 +8,10 @@
 {% if isNew or editRow or viewRow %}
 <section class="card">
   <h2>{% if viewRow %}View {{ entity.singular }}{% elif editRow %}Edit {{ entity.singular }}{% else %}New {{ entity.singular }}{% endif %}</h2>
-  <form class="entity-form" method="post" action="{% if editRow %}/management/{{ entityKey }}/{{ editRow.id }}/update{% elif viewRow %}/management/{{ entityKey }}{% else %}/management/{{ entityKey }}/create{% endif %}">
+  {# `hx-boost` submits through htmx using the form's own action/method, and the server answers an htmx
+     write with the list fragment (see the management write routes), so a save swaps `#app-main` and
+     closes the panel without a document reload. Without htmx the form POSTs and 303s as before. #}
+  <form class="entity-form" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="{% if editRow %}/management/{{ entityKey }}/{{ editRow.id }}/update{% elif viewRow %}/management/{{ entityKey }}{% else %}/management/{{ entityKey }}/create{% endif %}">
     {{ ef.render(fields) }}
     <div class="form-actions">
       {% if viewRow %}
@@ -40,7 +43,9 @@
       <td class="row-actions" data-label="Row actions">
         <a class="icon-view" href="/management/{{ entityKey }}?view={{ r.id }}" title="View">{{ icons.svg('eye', 16) }}</a>
         <a class="icon-edit" href="/management/{{ entityKey }}?edit={{ r.id }}" title="Edit">{{ icons.svg('pencil', 16) }}</a>
-        <form method="post" action="/management/{{ entityKey }}/{{ r.id }}/delete" data-confirm="Delete this record?">
+        {# `hx-confirm` is htmx's own confirm (window.confirm), replacing `data-confirm` here so the
+           cancel happens BEFORE the request rather than as a listener racing htmx's submit. #}
+        <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Delete this record?" action="/management/{{ entityKey }}/{{ r.id }}/delete">
           <button class="icon-del" type="submit" title="Delete">{{ icons.svg('trash', 16) }}</button>
         </form>
       </td>

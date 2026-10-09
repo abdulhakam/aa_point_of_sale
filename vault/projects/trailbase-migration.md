@@ -66,6 +66,17 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — management write surface is htmx (create/update/delete without a reload).** The
+create/update/delete routes now answer an htmx request with the list **fragment** (flash included)
+instead of a 303, sharing one `management.listView()` builder with the GET route so the write's list
+and the GET's list cannot drift; a plain POST still 303-redirects. The entity form and row delete form
+are `hx-boost` into `#app-main` with `hx-push-url="false"` and htmx's own `hx-confirm`. Flash now
+appears without a reload on management writes. Gates green (`guest-smoke` 116/116, `route-snapshot`
+50/0, `refdb-check` 12/12, `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check`
+14/14, `print-queue-check` 14/14). **Next: convert the invoice/payments/cash-memo writes the same way
+and build `<aa-entity-form>` on it, then `<aa-money>`.**
+[[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]], [[tb-0037-component-library]].
+
 **2026-10-09 — native component library started; entity field conditions.** The owner proposed
 schema-driven, reusable components; the platform already declares entities in `entities.json`, so the
 work is to extend that model and add thin light-DOM components that consume server descriptors

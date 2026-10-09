@@ -28,6 +28,12 @@
       await A.management.updateRow(db, entity, form, idHex);
       await A.management.syncLinks(db, entity, idHex, form);
     });
+
+    // htmx write: re-render the list with the flash (see the create route).
+    if (A.http.isFragment(req)) {
+      const view = await A.management.listView(A, entity, entityKey, { status: "ok", message: "Updated" });
+      return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+    }
     return { redirect: `/management/${entityKey}?status=ok&message=Updated`, status: 303 };
   };
 })();

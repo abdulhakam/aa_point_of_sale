@@ -30,6 +30,14 @@
       const newHex = await A.management.createRow(db, entity, form);
       await A.management.syncLinks(db, entity, newHex, form);
     });
+
+    // htmx write: re-render the list (with the flash) into `#app-main` so the panel closes and the new
+    // row appears without a document reload. A plain POST still 303-redirects, so the form is never
+    // broken without JavaScript.
+    if (A.http.isFragment(req)) {
+      const view = await A.management.listView(A, entity, entityKey, { status: "ok", message: "Created" });
+      return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+    }
     return { redirect: `/management/${entityKey}?status=ok&message=Created`, status: 303 };
   };
 })();

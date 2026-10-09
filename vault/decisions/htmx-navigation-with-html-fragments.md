@@ -91,8 +91,16 @@ for the day the allowlist grows to include it, `X-Requested-With` for today.
   opt-in, not a blanket `hx-boost` on `#app-main` (which would capture the write `<form>`s).
 - **The job indicator's manual refresh reloaded the whole document.** **Fixed 2026-10-09**: it
   re-renders the current URL as a fragment into `#app-main` instead of `window.location.reload()`.
-- **Flash messages** still require a full load to appear after a write, because the writes are still
-  POST→303. They become OOB when the write surface is converted (deferred, see `tb-0036`).
+- **Flash messages** now appear without a reload on a **management** write (2026-10-09): an htmx
+  create/update/delete re-renders the list fragment — which contains the flash region — into
+  `#app-main`, so no separate out-of-band swap is needed. The **invoice / payments / cash-memo** writes
+  are still POST→303 and full-load; converting them is the remaining write-surface work (`tb-0036`).
+- **A write re-uses the list builder.** `management.listView()` is shared by the GET route and the
+  create/update/delete routes, so the write's list and the GET's list cannot drift. An htmx write
+  answers with the body fragment; a plain POST still 303s, so the form works with no JavaScript.
+- **The write forms carry `hx-push-url="false"`** — a boosted form would otherwise push its POST action
+  (`/management/sections/create`) into the address bar. The URL is left as-is after a write (a small
+  residue: `?new=1` stays until the next navigation).
 - **Report filters APPLY as fragments** and the row-cap "Show all" / "latest period" links are boosted
   (2026-10-09). **True load-more pagination is not built** — "Show all" still renders every row, so
   the 1,000-row cliff (`report-render-row-cap`) is unchanged.

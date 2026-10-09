@@ -33,55 +33,9 @@
     const entity = A.entities.ENTITIES[entityKey];
     if (!entity) return { text: "Unknown entity", status: 404 };
 
-    const refs = await routeKit.refs();
-    const options = A.management.optionLists(refs);
-    const all = A.management.sortRows(await A.data.readTable(entity.api), entity.sort);
-    let visible = all.filter((row: any) => !entity.softDelete || !row.deleted);
-
-    // ⚠️ The items list shows the legacy `Qty` column — "165 (1 ctn 21 units)" — which is the item's
-    // signed stock, not a column on `items`. It is read from the SAME `itemsReport` view the stock
-    // report and `/inventory` use ([[inventory]]), so the list, the report and the inventory screen
-    // cannot disagree about a quantity. Keyed by id; the display is `<qty> (<ctns/units>)`.
-    if (entityKey === "items") {
-      const stock = await A.baseviews.itemsReport();
-      const byId = new Map(stock.map((r: any) => [String(r.id), r]));
-      visible = visible.map((row: any) => {
-        const s = byId.get(String(row.id));
-        if (!s) return row;
-        const qty = Number(s.qty) || 0;
-        const rounded = Math.round((qty + Number.EPSILON) * 100) / 100;
-        return { ...row, qtyText: `${rounded} (${A.format.qtyDisplay(s.box_size_qty, qty)})` };
-      });
-    }
-
-    const links = await A.management.loadLinks(entity);
-    const editId = String(query.edit || "");
-    const editRow = editId ? all.find((r: any) => r.id === editId) ?? null : null;
-    // `?view=<id>` opens the SAME panel read-only — the legacy's eye icon, distinct from the pencil's
-    // `?edit=`. The mode drives `formFields`, which disables every field while viewing.
-    const viewId = String(query.view || "");
-    const viewRow = viewId ? all.find((r: any) => r.id === viewId) ?? null : null;
-    const mode = viewRow ? "view" : editRow ? "edit" : "create";
-    // The create form lives behind its own affordance rather than on the list page, so the list is the
-    // bare filter row + table the legacy screen is ([[tb-0023-guest-feature-parity]] item A). `?new=1`
-    // opens it; a row's pencil (`?edit=<id>`) opens the same panel prefilled.
-    const isNew = /^(1|true|on|yes)$/i.test(String(query.new || ""));
-
-    return routeKit.renderRoute(
-      req,
-      { user, active: "management", title: entity.label, template: "management/list.html" },
-      {
-        entity,
-        entityKey,
-        columns: entity.columns,
-        rows: A.management.displayRows(entity, visible, refs, links),
-        fields: A.management.formFields(entity, viewRow || editRow, options, links, mode),
-        editRow,
-        viewRow,
-        isNew,
-        status: query.status || "",
-        message: query.message || "",
-      }
-    );
+    // One builder, shared with the write routes so a create/update/delete htmx response renders the
+    // same list this GET does (see `management.listView`). The shell/active/title come back with it.
+    const view = await A.management.listView(A, entity, entityKey, query);
+    return routeKit.renderRoute(req, { user, ...view.options }, view.data);
   };
 })();

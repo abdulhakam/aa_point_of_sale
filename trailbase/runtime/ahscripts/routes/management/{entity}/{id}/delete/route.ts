@@ -23,6 +23,12 @@
       if (entity.softDelete) await A.management.softDeleteRow(db, entity, idHex);
       else await A.management.hardDeleteRow(db, entity, idHex);
     });
+
+    // htmx write: re-render the list with the flash (see the create route).
+    if (A.http.isFragment(req)) {
+      const view = await A.management.listView(A, entity, entityKey, { status: "ok", message: "Deleted" });
+      return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+    }
     return { redirect: `/management/${entityKey}?status=ok&message=Deleted`, status: 303 };
   };
 })();

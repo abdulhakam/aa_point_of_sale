@@ -160,6 +160,67 @@ export async function loadLinks(entity) {
   return out;
 }
 
+/**
+ * Everything the `/management/<entity>` list screen renders, as `{ options, data }` for
+ * `routeKit.renderRoute`.
+ *
+ * Extracted from the GET route so a WRITE can return the same screen: an htmx create/update/delete
+ * re-renders the list (with the flash carried in `query.status`/`query.message`) into `#app-main`,
+ * instead of a 303 the browser follows as a full page. One builder means the write's list and the
+ * GET's list cannot drift — the reason this is a function rather than a copy in each route folder.
+ */
+export async function listView(A, entity, entityKey, query) {
+  const refs = await A.routeKit.refs();
+  const options = optionLists(refs);
+  const all = sortRows(await readTable(entity.api), entity.sort);
+  let visible = all.filter((row) => !entity.softDelete || !row.deleted);
+
+  // The items list shows the legacy `Qty` column — "165 (1 ctn 21 units)" — which is the item's
+  // signed stock, not a column on `items`. It is read from the SAME `itemsReport` view the stock
+  // report and `/inventory` use ([[inventory]]), so the list, the report and the inventory screen
+  // cannot disagree about a quantity. Keyed by id; the display is `<qty> (<ctns/units>)`.
+  if (entityKey === "items") {
+    const stock = await A.baseviews.itemsReport();
+    const byId = new Map(stock.map((r) => [String(r.id), r]));
+    visible = visible.map((row) => {
+      const s = byId.get(String(row.id));
+      if (!s) return row;
+      const qty = Number(s.qty) || 0;
+      const rounded = Math.round((qty + Number.EPSILON) * 100) / 100;
+      return { ...row, qtyText: `${rounded} (${A.format.qtyDisplay(s.box_size_qty, qty)})` };
+    });
+  }
+
+  const links = await loadLinks(entity);
+  const editId = String(query.edit || "");
+  const editRow = editId ? all.find((r) => r.id === editId) ?? null : null;
+  // `?view=<id>` opens the SAME panel read-only — the legacy's eye icon, distinct from the pencil's
+  // `?edit=`. The mode drives `formFields`, which disables every field while viewing.
+  const viewId = String(query.view || "");
+  const viewRow = viewId ? all.find((r) => r.id === viewId) ?? null : null;
+  const mode = viewRow ? "view" : editRow ? "edit" : "create";
+  // The create form lives behind its own affordance rather than on the list page, so the list is the
+  // bare filter row + table the legacy screen is ([[tb-0023-guest-feature-parity]] item A). `?new=1`
+  // opens it; a row's pencil (`?edit=<id>`) opens the same panel prefilled.
+  const isNew = /^(1|true|on|yes)$/i.test(String(query.new || ""));
+
+  return {
+    options: { active: "management", title: entity.label, template: "management/list.html" },
+    data: {
+      entity,
+      entityKey,
+      columns: entity.columns,
+      rows: displayRows(entity, visible, refs, links),
+      fields: formFields(entity, viewRow || editRow, options, links, mode),
+      editRow,
+      viewRow,
+      isNew,
+      status: query.status || "",
+      message: query.message || "",
+    },
+  };
+}
+
 // --------------------------------------------------------------- SQL writes
 
 // The base64url alphabet, which is what the DB bridge emits for a BLOB id.

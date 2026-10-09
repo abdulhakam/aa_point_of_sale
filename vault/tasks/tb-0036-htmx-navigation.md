@@ -64,6 +64,24 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       `autocomplete-check` 39/39, `hotkey-check` 62/62 (one transient first-run timeout on the
       Ctrl+Enter check, green on re-run), `grid-preview-check` 14/14, `print-queue-check` 14/14.
 
+## Slice 4 — management write surface (2026-10-09)
+
+- [x] Extracted `management.listView(A, entity, entityKey, query)` — the list screen as
+      `{ options, data }` — shared by the GET route and the write routes so the write's list and the
+      GET's list cannot drift.
+- [x] The create/update/delete routes answer an htmx request with the list **fragment** (flash
+      included) instead of a 303; a plain POST still 303-redirects, so the forms work without JS.
+- [x] `management/list.html`: the entity form and the row delete form are `hx-boost` into `#app-main`
+      with `hx-push-url="false"`; the delete uses htmx's own `hx-confirm` (replacing `data-confirm`, so
+      the cancel happens before the request rather than as a listener racing htmx's submit).
+- [x] Browser-verified: create → list row appears, panel closes, flash "Created", shell node stays live,
+      navigation count stays 1, URL does **not** become the POST action; delete (confirm auto-accepted)
+      → row removed, flash "Deleted", no reload. Test rows cleaned up. HTTP-verified the plain POST
+      still 303s.
+- [x] Gates green: `guest-smoke` 116/116, `route-snapshot` 50/0, `refdb-check` 12/12,
+      `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14,
+      `print-queue-check` 14/14.
+
 ## Follow-ups (not done)
 
 - [x] **Stale document title** — fixed 2026-10-09: the fragment emits a hidden `data-aa-title` marker
@@ -81,6 +99,9 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       `feature-parity` exit 0, `ui-capture` 28 screens none gated. `ui-parity-report` still shows the
       pre-existing 28/28 restyle differences (rail membership, `<th>` styling) — not caused by this
       change. `guest-smoke`/`route-snapshot` were re-run after the title-marker fix.
+- [ ] **Convert the remaining writes** (invoice line add/delete, payments, cash-memo saves) the same
+      way as the management CRUD — an htmx write that re-renders its region — which is what `<aa-entity-form>`
+      and the invoice-entry component build on. This is the rest of "C".
 - [ ] Decide whether to grow the host's header allowlist to include `hx-request`, so the
       `X-Requested-With` workaround can be retired.
 - [ ] **Measure** the render-time saved vs a full page (the change is currently justified by structure
