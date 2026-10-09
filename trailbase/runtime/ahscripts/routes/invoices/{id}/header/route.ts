@@ -29,6 +29,11 @@
         discount_rs: String(form.discount_rs || ""),
       });
     });
+    // htmx write: re-render the entry screen (see the line-add route).
+    if (A.http.isFragment(req)) {
+      const view = await A.invoices.entryView(A, idB64, "Saved");
+      if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+    }
     return { redirect: "/invoices/" + idB64 + "?status=ok", status: 303 };
   };
 })();

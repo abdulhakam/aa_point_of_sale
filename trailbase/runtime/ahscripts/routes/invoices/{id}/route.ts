@@ -13,29 +13,10 @@
 
     const match = /^\/invoices\/([^\/]+)$/.exec(path);
     if (!match) return { text: "Not found", status: 404 };
-    const refs = await routeKit.refs();
-    const invoice = await A.invoices.readInvoice(db, routeKit.decode(match[1]));
-    if (!invoice) return { text: "No such invoice", status: 404 };
-
-    return routeKit.renderRoute(
-      req,
-      { user, active: "invoices", title: "Invoice #" + invoice.invoiceNo, template: "invoices/entry.html" },
-      {
-        invoice,
-        type: invoice.type,
-        // A sale is paid in, a purchase is paid out.
-        paymentTypeHint: invoice.type === 0 ? 0 : 1,
-        // Fresh per render, so a repeated submit of the same page is one line and a line added
-        // from the reloaded page is a new one.
-        opKey: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e9).toString(36),
-        parties: refs.parties ?? [],
-        bookers: refs.bookers ?? [],
-        items: routeKit.editorItems(refs),
-        // The quick-create panels' option lists; see `/invoices/new`.
-        areas: refs.areas ?? [],
-        companies: refs.companies ?? [],
-        message: query.status === "ok" ? "Saved" : "",
-      }
-    );
+    // One builder, shared with the entry writes (line add/remove, header, complete) so an htmx write
+    // renders the same screen this GET does.
+    const view = await A.invoices.entryView(A, match[1], query.status === "ok" ? "Saved" : "");
+    if (!view) return { text: "No such invoice", status: 404 };
+    return routeKit.renderRoute(req, { user, ...view.options }, view.data);
   };
 })();

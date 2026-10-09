@@ -91,10 +91,15 @@ for the day the allowlist grows to include it, `X-Requested-With` for today.
   opt-in, not a blanket `hx-boost` on `#app-main` (which would capture the write `<form>`s).
 - **The job indicator's manual refresh reloaded the whole document.** **Fixed 2026-10-09**: it
   re-renders the current URL as a fragment into `#app-main` instead of `window.location.reload()`.
-- **Flash messages** now appear without a reload on a **management** write (2026-10-09): an htmx
-  create/update/delete re-renders the list fragment — which contains the flash region — into
-  `#app-main`, so no separate out-of-band swap is needed. The **invoice / payments / cash-memo** writes
-  are still POST→303 and full-load; converting them is the remaining write-surface work (`tb-0036`).
+- **Flash messages** now appear without a reload on **management** and **invoice-entry** writes
+  (2026-10-09): an htmx write re-renders the list/entry fragment — which contains the flash region —
+  into `#app-main`, so no separate out-of-band swap is needed. The remaining full-load writes are the
+  **invoice grid save** (`/invoices/<id>/lines`), **payments** and **cash memo** (`tb-0036`).
+- **A write re-uses the screen builder.** `management.listView()` and `invoices.entryView()` are shared
+  by the GET route and the write routes, so a write's screen and the GET's screen cannot drift. The
+  invoice entry writes converted are `/invoices/<id>/line` (add), `…/line/<lineId>/delete`,
+  `…/header` and `…/complete` — everything that redirected to the entry page; the entry page is what
+  `/invoices/new` lands on.
 - **A write re-uses the list builder.** `management.listView()` is shared by the GET route and the
   create/update/delete routes, so the write's list and the GET's list cannot drift. An htmx write
   answers with the body fragment; a plain POST still 303s, so the form works with no JavaScript.

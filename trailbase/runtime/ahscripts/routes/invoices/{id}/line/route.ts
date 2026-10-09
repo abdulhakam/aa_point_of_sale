@@ -58,6 +58,12 @@
         String(form.opKey || "")
       );
     });
+    // htmx write: re-render the entry screen (flash included) into `#app-main`, so the line appears
+    // and the totals move without a document reload. A plain POST still 303-redirects.
+    if (A.http.isFragment(req)) {
+      const view = await A.invoices.entryView(A, idB64, "Saved");
+      if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+    }
     return { redirect: "/invoices/" + idB64 + "?status=ok", status: 303 };
   };
 })();

@@ -66,6 +66,15 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — invoice entry writes are htmx (no reload).** Extracted `invoices.entryView()` and made
+the entry writes — line add, line remove, header save, complete/reopen — re-render the entry screen
+(flash included) on an htmx request instead of a 303; a plain POST still 303-redirects. The entry page
+is what `/invoices/new` lands on, so this covers the create-then-edit flow. Gates green (`guest-smoke`
+116/116, `route-snapshot` 50/0, `refdb-check` 12/12, `autocomplete-check` 39/39, `hotkey-check` 62/62,
+`grid-preview-check` 14/14, `print-queue-check` 14/14). **Next: the invoice grid save (`/lines`, needs
+the client recalc re-init), then payments and cash memo; then `<aa-money>` and the invoice-entry
+component.** [[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]], [[tb-0037-component-library]].
+
 **2026-10-09 — management write surface is htmx (create/update/delete without a reload).** The
 create/update/delete routes now answer an htmx request with the list **fragment** (flash included)
 instead of a 303, sharing one `management.listView()` builder with the GET route so the write's list

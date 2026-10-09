@@ -309,3 +309,38 @@ export async function readInvoice(db, publicId) {
     paidPayments: payments.filter((p) => p.paid),
   };
 }
+
+/**
+ * Everything the `/invoices/<id>` entry screen renders, as `{ options, data }` for
+ * `routeKit.renderRoute`.
+ *
+ * Extracted so the entry WRITES — line add/remove, header save, complete/reopen — can answer an htmx
+ * request by re-rendering the same screen into `#app-main` instead of a 303. One builder, so the
+ * write's screen and the GET's screen cannot drift. Returns null when the invoice does not exist.
+ */
+export async function entryView(A, idB64, message) {
+  const routeKit = A.routeKit;
+  const db = (globalThis).sqlite;
+  const refs = await routeKit.refs();
+  const invoice = await readInvoice(db, routeKit.decode(idB64));
+  if (!invoice) return null;
+  return {
+    options: { active: "invoices", title: "Invoice #" + invoice.invoiceNo, template: "invoices/entry.html" },
+    data: {
+      invoice,
+      type: invoice.type,
+      // A sale is paid in, a purchase is paid out.
+      paymentTypeHint: invoice.type === 0 ? 0 : 1,
+      // Fresh per render, so a repeated submit of the same page is one line and a line added from the
+      // reloaded page is a new one.
+      opKey: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e9).toString(36),
+      parties: refs.parties ?? [],
+      bookers: refs.bookers ?? [],
+      items: routeKit.editorItems(refs),
+      // The quick-create panels' option lists.
+      areas: refs.areas ?? [],
+      companies: refs.companies ?? [],
+      message: message ?? "",
+    },
+  };
+}

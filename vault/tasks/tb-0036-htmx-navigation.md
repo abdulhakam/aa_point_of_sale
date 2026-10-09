@@ -82,6 +82,25 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14,
       `print-queue-check` 14/14.
 
+## Slice 5 — invoice entry writes (2026-10-09)
+
+- [x] Extracted `invoices.entryView(A, idB64, message)` — the `/invoices/<id>` entry screen as
+      `{ options, data }` — shared by the entry GET route and the entry write routes.
+- [x] `/invoices/<id>/line` (add), `…/line/<lineId>/delete`, `…/header` and `…/complete` answer an
+      htmx request by re-rendering the entry screen (flash included) instead of a 303; a plain POST
+      still 303-redirects. These are exactly the writes that redirected to the entry page, which is
+      where `/invoices/new` lands.
+- [x] `views/invoices/entry.html`: the header form, the ADD LINE form, the per-line delete form and the
+      complete/reopen form are `hx-boost` into `#app-main` with `hx-push-url="false"`; the line delete
+      uses htmx's `hx-confirm`.
+- [x] Browser-verified on a real invoice: header save → flash "Saved", shell node live, navigation
+      count 1, URL unchanged; add a line then remove it → line count 21 → 22 → 21 (net zero; the line
+      delete is a hard `DELETE`, so the test left the ledger lines unchanged), shell live throughout.
+      No console errors.
+- [x] Gates green: `guest-smoke` 116/116, `route-snapshot` 50/0, `refdb-check` 12/12,
+      `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14,
+      `print-queue-check` 14/14.
+
 ## Follow-ups (not done)
 
 - [x] **Stale document title** — fixed 2026-10-09: the fragment emits a hidden `data-aa-title` marker
@@ -99,9 +118,9 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       `feature-parity` exit 0, `ui-capture` 28 screens none gated. `ui-parity-report` still shows the
       pre-existing 28/28 restyle differences (rail membership, `<th>` styling) — not caused by this
       change. `guest-smoke`/`route-snapshot` were re-run after the title-marker fix.
-- [ ] **Convert the remaining writes** (invoice line add/delete, payments, cash-memo saves) the same
-      way as the management CRUD — an htmx write that re-renders its region — which is what `<aa-entity-form>`
-      and the invoice-entry component build on. This is the rest of "C".
+- [ ] **Convert the remaining writes** the same way — an htmx write that re-renders its region. Left:
+      the **invoice grid save** (`/invoices/<id>/lines`, which also carries the grid's remove op and
+      needs the grid's client recalc re-init), **payments** and **cash memo**. This is the rest of "C".
 - [ ] Decide whether to grow the host's header allowlist to include `hx-request`, so the
       `X-Requested-With` workaround can be retired.
 - [ ] **Measure** the render-time saved vs a full page (the change is currently justified by structure

@@ -56,7 +56,10 @@
 {{ qc.party(invType, areas) }}
 {% else %}
 
-<form class="invoice-head" method="post" action="/invoices/{{ invoice.id }}/header">
+{# The loaded-invoice writes are htmx: `hx-boost` posts through htmx and the server answers with the
+   entry fragment (see the invoice write routes), so the screen updates in place. `hx-push-url="false"`
+   stops a boosted form pushing its POST action into the address bar. Without htmx the POST 303s. #}
+<form class="invoice-head" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="/invoices/{{ invoice.id }}/header">
   <label class="ih-field"><span>INVOICE NO:</span><input type="text" value="{{ invoice.invoiceNo }}" readonly tabindex="-1"></label>
   <label class="ih-field"><span>INVOICE DATE</span><aa-date-input><input type="date" name="dated" value="{{ invoice.dated }}"{% if not invoice.canWrite %} disabled{% endif %}></aa-date-input></label>
   {% if invType == 1 %}
@@ -101,12 +104,12 @@
 <div class="pagebar">
   <a class="btn" href="/invoices">← Invoices</a>
   {% if not invoice.completed %}
-  <form method="post" action="/invoices/{{ invoice.id }}/complete" style="display:inline">
+  <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="/invoices/{{ invoice.id }}/complete" style="display:inline">
     <input type="hidden" name="complete" value="1">
     <button class="btn primary" type="submit">COMPLETE INVOICE</button>
   </form>
   {% else %}
-  <form method="post" action="/invoices/{{ invoice.id }}/complete" style="display:inline">
+  <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="/invoices/{{ invoice.id }}/complete" style="display:inline">
     <input type="hidden" name="complete" value="0">
     <button class="btn" type="submit">Reopen</button>
   </form>
@@ -117,7 +120,7 @@
 <section class="card">
   <h2>Lines</h2>
   {% if not invoice.completed %}
-  <form class="entity-form" method="post" action="/invoices/{{ invoice.id }}/line">
+  <form class="entity-form" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" action="/invoices/{{ invoice.id }}/line">
     {# A key rendered with the form makes a double submit return the same line instead of two
        ([[invoice-entry-freshness-and-writes]]). #}
     <input type="hidden" name="opKey" value="{{ opKey }}">
@@ -154,7 +157,7 @@
         <td class="right" data-label="Amount">{{ l.amountText }}</td>
         {% if not invoice.completed %}
         <td class="row-actions" data-label="Actions">
-          <form method="post" action="/invoices/{{ invoice.id }}/line/{{ l.id }}/delete" data-confirm="Remove this line?">
+          <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Remove this line?" action="/invoices/{{ invoice.id }}/line/{{ l.id }}/delete">
             <button class="icon-del" type="submit" title="Remove">{{ icons.svg('trash', 16) }}</button>
           </form>
         </td>
