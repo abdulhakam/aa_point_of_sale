@@ -13,8 +13,10 @@
     // non-numeric type reached the INSERT as the literal string "NaN" and tripped the invoices CHECK
     // constraint — surfacing as an opaque `500`. It is a bad request. Found by `tools/route-coverage.mjs`.
     //
-    // 0 purchase, 1 sale, 2 return, 3 difference ([[data-model]]). The entry screens offer 0 and 1;
-    // return and difference have no guest screen yet, so they are accepted but not reachable from the UI.
+    // 0 purchase, 1 sale, 2 return, 3 difference ([[data-model]]). All four are reachable from the
+    // UI — `/invoices` is the legacy five-tile hub and `/invoices/new?type=N` opens each entry screen
+    // ([[ui-parity-discrepancies-2026-10-08]]) — so the JSON create accepts all four. This comment
+    // previously said return and difference had no screen; that was true when written and is not now.
     const type = Number(body.type);
     if (!Number.isInteger(type) || type < 0 || type > 3) {
       return { error: "invalid invoice type", type: body.type ?? null, allowed: [0, 1, 2, 3] };

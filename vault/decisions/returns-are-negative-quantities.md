@@ -1,15 +1,27 @@
 ---
 title: "Returns are negative quantities, difference is a party — no return or difference invoice type"
 type: decision
-status: accepted
+status: superseded
 decided_on: 2026-09-29
 created: 2026-09-29
+updated: 2026-10-09
 tags: [invoices, returns, difference, stock, data-model, trailbase, guest]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[guest-invoice-lifecycle]]", "[[invoice-lifecycle-draft-open-append-only]]", "[[reports-and-ledgers]]", "[[data-model]]", "[[guest-frontend-feature-parity-gaps]]", "[[tb-0014-point-company-fields-at-companies]]", "[[money-is-2dp-everywhere]]"]
 ---
 
 # Returns are negative quantities, difference is a party — no return or difference invoice type
+
+> **⚠️ SUPERSEDED 2026-10-09 on its central ruling.** This note decided *"Only purchase (0) and sale
+> (1) are offered as new invoice types … the app never creates them."* That stopped being true on
+> **2026-10-08**, when the legacy-look mandate ([[parity-reinstates-the-legacy-look-with-defect-fixes]])
+> rebuilt the invoices hub as the legacy **five tiles** and `/invoices/new` was made to create all
+> four `invoice_types`. The reversal is recorded in [[invoice-hub-offers-four-types]].
+>
+> **What still holds, and is kept:** the negative-quantity convention (a line stores whatever the
+> operator types, negative included — the stock rule reads the sign) and the Difference-party
+> mechanism. What is withdrawn is only the claim that return and difference are not offered as
+> entry types. The two decisions should read together, not as a contradiction.
 
 ## Context
 

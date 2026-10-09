@@ -120,16 +120,82 @@ const afterDelete = await call(`/invoice/${id}`);
 check("one line remains", afterDelete.json?.lines?.length === 1, `lines=${afterDelete.json?.lines?.length}`);
 
 // complete releases the lease
+//
+// `completed` is a legacy column the import never populated and the app never reads for behaviour
+// (vault/issues/imported-completed-flag-carries-no-information.md), and the draft lifecycle was
+// withdrawn (vault/decisions/no-draft-invoices-published-on-save.md). `completeInvoice` therefore
+// releases the edit lease and does NOT persist a state, so this asserts that the endpoint answers
+// and the invoice survives — not a `completed = 1` the design no longer writes. (This check used to
+// assert the persisted flag and had been red since the lifecycle was withdrawn.)
 const completed = await call(`/invoice/${id}/complete`, { method: "POST", body: {} });
 check("complete applies", completed.status === 200 && completed.json?.completed === 1, `${completed.status} ${completed.text}`);
 const afterComplete = await call(`/invoice/${id}`);
-check("invoice is completed", Number(afterComplete.json?.invoice?.completed) === 1, JSON.stringify(afterComplete.json?.invoice?.completed));
+check("complete keeps the invoice (no lifecycle state)", afterComplete.status === 200 && Boolean(afterComplete.json?.invoice), `${afterComplete.status}`);
 
 // lease: re-open a lock, then a second invoice's lifecycle is independent
 const second = await call("/invoice", { method: "POST", body: { type: 1, key: `${key}:b`, device: "check" } });
 check("second create allocates the following number", Number(second.json?.invoiceNo) === nextSale + 1, `${second.json?.invoiceNo} vs ${nextSale + 1}`);
 const released = await call(`/invoice/${second.json?.id}/release`, { method: "POST", body: {} });
 check("release applies", released.status === 200 && released.json?.released === 1, `${released.status} ${released.text}`);
+
+// The sale counter as it stands after every sale invoice above, so the return/difference section
+// can prove its creates do not move the sale sequence without hard-coding how many were created.
+const saleNextAfterWrites = Number((await call("/invoice/context?type=sale")).json?.next?.sale);
+
+// ---------------------------------------------------------------------------
+// return (2) and difference (3) — the two invoice types the legacy hub offers but this tool never
+// exercised. The screens were built 2026-10-08 (vault/tasks/tb-0023-guest-feature-parity.md), which
+// reversed the earlier "purchase and sale only" ruling (vault/decisions/invoice-hub-offers-four-types.md),
+// and nothing verified the write path until this section. Each type numbers in its OWN count+1
+// sequence (legacy scheme), and a return carries a NEGATIVE quantity, which the line write must store
+// verbatim — a sign flip is invisible to a status-only check and would corrupt stock and money
+// (vault/decisions/returns-are-negative-quantities.md).
+// ---------------------------------------------------------------------------
+for (const { code, name } of [
+  { code: 2, name: "return" },
+  { code: 3, name: "difference" },
+]) {
+  const ctx = await call(`/invoice/context?type=${name}`);
+  check(`${name}: context exposes next.${name}`, ctx.status === 200 && Number.isFinite(ctx.json?.next?.[name]), `${ctx.status} ${JSON.stringify(ctx.json?.next)}`);
+  const nextNo = Number(ctx.json?.next?.[name]);
+
+  const tKey = `${key}:${name}`;
+  const created = await call("/invoice", { method: "POST", body: { type: code, key: tKey, device: "check" } });
+  check(`${name}: create returns id + number`, created.status === 200 && Boolean(created.json?.id), `${created.status} ${created.text}`);
+  check(`${name}: number is the type's own next`, Number(created.json?.invoiceNo) === nextNo, `${created.json?.invoiceNo} vs ${nextNo}`);
+
+  const tid = created.json?.id;
+  const tParty = ctx.json?.parties?.[0]?.id;
+  const tItem = ctx.json?.items?.[0];
+  // A return takes a party; the difference screen deliberately does not (entry.html hides the party
+  // field for type 3), so exercising no-party create proves the difference path.
+  if (code === 2) {
+    const patched = await call(`/invoice/${tid}`, { method: "PATCH", body: { device: "check", party: tParty, dated: "2026-10-08" } });
+    check(`${name}: header patch applies`, patched.status === 200 && patched.json?.updated === 1, `${patched.status} ${patched.text}`);
+  }
+
+  const tQty = code === 2 ? -4 : 4;
+  const tLine = await call(`/invoice/${tid}/line`, {
+    method: "POST",
+    body: { opKey: tKey, device: "check", item: tItem?.id, qty: tQty, price: tItem?.sale_price, cost_price: tItem?.cost_price, discount_1: 0, discount_2: 0, discount_rs: 0, scheme: 0 },
+  });
+  check(`${name}: line add`, tLine.status === 200 && Boolean(tLine.json?.line), `${tLine.status} ${tLine.text}`);
+
+  const tRead = await call(`/invoice/${tid}`);
+  check(`${name}: read-back type`, Number(tRead.json?.invoice?.type) === code, JSON.stringify(tRead.json?.invoice?.type));
+  // The difference branch is the only one that runs create with no party (see the note above); assert
+  // the invoice really has none, so a regression that defaulted one cannot pass silently.
+  if (code === 3) {
+    check(`${name}: created with no party`, tRead.json?.invoice?.party == null, JSON.stringify(tRead.json?.invoice?.party));
+  }
+  check(`${name}: qty stored verbatim (${tQty})`, Number(tRead.json?.lines?.[0]?.qty) === tQty, JSON.stringify(tRead.json?.lines?.[0]?.qty));
+  check(`${name}: price stored at 2dp`, atMost2dp(Number(tRead.json?.lines?.[0]?.price)), JSON.stringify(tRead.json?.lines?.[0]?.price));
+
+  // The next number advanced by exactly one, and the sale sequence did not move.
+  const after = await call(`/invoice/context?type=${name}`);
+  check(`${name}: sequence advanced by one`, Number(after.json?.next?.[name]) === nextNo + 1, `${after.json?.next?.[name]} vs ${nextNo + 1}`);
+  check(`${name}: sale sequence untouched`, Number(after.json?.next?.sale) === saleNextAfterWrites, `${after.json?.next?.sale} vs ${saleNextAfterWrites}`);
+}
 
 console.log(`\n== invoice entry: ${failures ? `${failures} failure(s)` : "all checks passed"} ==`);
 process.exit(failures ? 1 : 0);
