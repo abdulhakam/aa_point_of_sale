@@ -183,9 +183,13 @@ try {
 
     console.log("legacy reports:");
     if (!TOKEN_FILE || !existsSync(TOKEN_FILE)) throw new Error("--legacy-token-file is required for the legacy arm");
-    const token = readFileSync(TOKEN_FILE, "utf8").trim();
+    const tokenFile = readFileSync(TOKEN_FILE, "utf8").trim();
+    // The legacy app reads the PocketBase js-sdk auth store, which is a JSON envelope
+    // {token, model} — a bare token string leaves the app on its login wall.
+    let authStore = tokenFile;
+    try { const j = JSON.parse(tokenFile); if (j && j.token) authStore = JSON.stringify({ token: j.token, model: j.model ?? null }); } catch { authStore = JSON.stringify({ token: tokenFile, model: null }); }
     await cdp.goto(`${LEGACY}/app/dashboard`);
-    await cdp.ev(`localStorage.setItem('pocketbase_auth', ${JSON.stringify(token)})`);
+    await cdp.ev(`localStorage.setItem('pocketbase_auth', ${JSON.stringify(authStore)})`);
     for (const r of REPORTS) {
       if (ONLY && !r.name.includes(ONLY)) continue;
       cdp.inflight = 0; cdp.seen = 0;
