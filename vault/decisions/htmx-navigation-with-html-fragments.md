@@ -93,6 +93,13 @@ for the day the allowlist grows to include it, `X-Requested-With` for today.
   re-renders the current URL as a fragment into `#app-main` instead of `window.location.reload()`.
 - **Flash messages** still require a full load to appear after a write, because the writes are still
   POST→303. They become OOB when the write surface is converted (deferred, see `tb-0036`).
+- **Report filters APPLY as fragments** and the row-cap "Show all" / "latest period" links are boosted
+  (2026-10-09). **True load-more pagination is not built** — "Show all" still renders every row, so
+  the 1,000-row cliff (`report-render-row-cap`) is unchanged.
+- **`<aa-modal>` is now swap-safe** (2026-10-09): it moves its children into a `<body>`-level overlay,
+  and `disconnectedCallback` now removes that overlay with the host. Without this, any htmx swap of a
+  modal-bearing page left the overlay behind — a stuck backdrop when the dialog was open. Any future
+  component that appends to `<body>` needs the same cleanup to survive a swap.
 - **The URL is pushed, the scroll/focus behaviour is htmx's default** — acceptable for a nav rail,
   but a form-heavy screen (invoice entry) is deliberately left on full loads.
 

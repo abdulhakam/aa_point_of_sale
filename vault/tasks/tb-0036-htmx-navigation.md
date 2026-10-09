@@ -45,6 +45,25 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14,
       `print-queue-check` 14/14.
 
+## Slice 3 — report filters as fragments + a modal-swap fix (2026-10-09)
+
+- [x] Both report filter forms (inline and `filtersModal`) APPLY via `hx-get` into `#app-main` with
+      `hx-push-url`, so applying a filter swaps the report instead of reloading the document and the
+      URL stays shareable.
+- [x] The "Show all" and "latest period" notice links are boosted (fragment, not a reload). True
+      load-more pagination is **not** done — "Show all" still renders every row (the 1,000-row cliff
+      is unchanged).
+- [x] **Fixed a swap bug the navigation exposed:** `<aa-modal>` moves its children into a
+      `<body>`-level overlay, so removing its host (which any htmx swap of the page does) left the
+      overlay behind — a stuck backdrop when the dialog was open. `disconnectedCallback` now removes
+      the overlay with the host.
+- [x] Browser-verified: inline APPLY (profit) and modal APPLY (stock report) swap the body, push the
+      URL, keep the shell live and close the modal with **no orphan overlay**; navigating away from an
+      open modal leaves **0 overlays**; no console errors.
+- [x] Gates green: `guest-smoke` 116/116, `route-snapshot` 50/0, `refdb-check` 12/12,
+      `autocomplete-check` 39/39, `hotkey-check` 62/62 (one transient first-run timeout on the
+      Ctrl+Enter check, green on re-run), `grid-preview-check` 14/14, `print-queue-check` 14/14.
+
 ## Follow-ups (not done)
 
 - [x] **Stale document title** — fixed 2026-10-09: the fragment emits a hidden `data-aa-title` marker

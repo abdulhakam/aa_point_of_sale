@@ -66,6 +66,17 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — htmx slice 3: report filters as fragments, plus a modal-swap fix.** Applying a report
+filter (inline and the `stockreport`/`difference` Filter Data dialog) now swaps the report into
+`#app-main` with `hx-push-url` instead of reloading, and the "Show all" / "latest period" notice links
+are boosted. The work surfaced a real component bug: `<aa-modal>` appends its overlay to `<body>`, so
+any htmx swap of the page left the overlay behind (a stuck backdrop when the dialog was open);
+`disconnectedCallback` now removes it with the host. All gates green (`guest-smoke` 116/116,
+`route-snapshot` 50/0, `refdb-check` 12/12, `autocomplete-check` 39/39, `hotkey-check` 62/62,
+`grid-preview-check` 14/14, `print-queue-check` 14/14). **Next: true load-more pagination (the "Show
+all" cliff), then measure render time before converting the write surface.**
+[[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]].
+
 **2026-10-09 — htmx slice 2: navigation breadth + OOB chrome.** The link-only hubs and indexes
 (dashboard, reports, ledgers, invoices, cash memo, management) are now `hx-boost`-ed, so tile clicks
 swap the body instead of reloading the document; the job indicator's manual refresh re-renders the

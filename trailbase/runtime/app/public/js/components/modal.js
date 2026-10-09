@@ -81,6 +81,12 @@
 
     disconnectedCallback() {
       if (this._onKey) document.removeEventListener("keydown", this._onKey);
+      // The overlay is appended to <body>, OUTSIDE this element, so removing the host — which is what
+      // an htmx swap of the page does — would otherwise leave the overlay behind: a dialog that
+      // outlives the page it belonged to, and a backdrop that keeps blocking clicks if it was open.
+      // Take it with the host. `_ready` stays true: a node htmx recreates comes back as fresh markup
+      // with its own children, so re-initialising an already-emptied host would show a blank dialog.
+      if (this._overlay && this._overlay.parentNode) this._overlay.parentNode.removeChild(this._overlay);
     }
 
     static get observedAttributes() { return ["open"]; }

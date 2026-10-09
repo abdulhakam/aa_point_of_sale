@@ -23,7 +23,7 @@
    first visit asks for one; OK submits the same GET the inline form would. `[data-modal-open]` on the
    printer glyph reopens it, and the dialog closes on OK, the X, Escape or an overlay click. #}
 <aa-modal id="report-filter-modal" title="Filter Data"{% if not filters.company %} open{% endif %}>
-  <form class="filters modal-filters" method="get" action="{{ basePath }}">
+  <form class="filters modal-filters" method="get" action="{{ basePath }}" hx-get="{{ basePath }}" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="true">
 {% for field in def.fields %}{{ fl.render_field(field, filters, options) }}
 {% endfor %}
     <div class="modal-actions">
@@ -32,7 +32,7 @@
   </form>
 </aa-modal>
 {% else %}
-<form class="filters" method="get" action="{{ basePath }}">
+<form class="filters" method="get" action="{{ basePath }}" hx-get="{{ basePath }}" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="true">
 {# The two date fields share one row above the selects, as the legacy filter block does
    (`09-reports-profit.png`). They are emitted into their own wrapper rather than left to wrap by width,
    because "whatever fits" put one date per line here and the row the legacy draws as a single line of
@@ -84,7 +84,7 @@
 </div>
 {{ tb.simple(columns, rows, mobile, "report-table") }}
 {% if rowInfo and rowInfo.truncated %}
-<p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}">Show all</a></p>
+<p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.allHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">Show all</a></p>
 {% endif %}
 {# An empty window is the one result that cannot be read off the table alone: the rows say "no
    data", not which period would have data. Name the period, and offer it, so an operator who typed
@@ -93,7 +93,7 @@
 {% if rowInfo and rowInfo.total == 0 and filters.from %}
   {% if rowInfo.latest %}
 <p class="notice">No rows between {{ filters.from }} and {{ filters.to }}. The most recent period with data is
-  <a href="{{ basePath }}?from={{ rowInfo.latest.from }}&amp;to={{ rowInfo.latest.to }}">{{ rowInfo.latest.from }} to {{ rowInfo.latest.to }}</a>.</p>
+  <a href="{{ basePath }}?from={{ rowInfo.latest.from }}&amp;to={{ rowInfo.latest.to }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">{{ rowInfo.latest.from }} to {{ rowInfo.latest.to }}</a>.</p>
   {% else %}
 <p class="notice">No rows between {{ filters.from }} and {{ filters.to }}.</p>
   {% endif %}
