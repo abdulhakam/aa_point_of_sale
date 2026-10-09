@@ -5,14 +5,19 @@
 {# ⚠️ The list page is the legacy screen: a bare filter row and a table, no heading, no count badge,
    no card wrappers ([[tb-0023-guest-feature-parity]] items A and C). The create/edit form is a
    separate affordance (`?new=1`, or a row's pencil) and only then is a panel shown. #}
-{% if isNew or editRow %}
+{% if isNew or editRow or viewRow %}
 <section class="card">
-  <h2>{% if editRow %}Edit {{ entity.singular }}{% else %}New {{ entity.singular }}{% endif %}</h2>
-  <form class="entity-form" method="post" action="{% if editRow %}/management/{{ entityKey }}/{{ editRow.id }}/update{% else %}/management/{{ entityKey }}/create{% endif %}">
+  <h2>{% if viewRow %}View {{ entity.singular }}{% elif editRow %}Edit {{ entity.singular }}{% else %}New {{ entity.singular }}{% endif %}</h2>
+  <form class="entity-form" method="post" action="{% if editRow %}/management/{{ entityKey }}/{{ editRow.id }}/update{% elif viewRow %}/management/{{ entityKey }}{% else %}/management/{{ entityKey }}/create{% endif %}">
     {{ ef.render(fields) }}
     <div class="form-actions">
+      {% if viewRow %}
+      {# Read-only: `formFields` disabled every field, so there is nothing to submit — only a way back. #}
+      <a class="btn" href="/management/{{ entityKey }}">Back to list</a>
+      {% else %}
       <button class="btn primary" type="submit">{% if editRow %}Save{% else %}Create{% endif %}</button>
       <a class="btn" href="/management/{{ entityKey }}">Cancel</a>
+      {% endif %}
     </div>
   </form>
 </section>
@@ -33,7 +38,7 @@
     <tr{% if editRow and editRow.id == r.id %} class="editing"{% endif %}>
       {% for c in columns %}<td class="{{ c.align }}" data-label="{{ c.label }}"{% if loop.first %} data-lead{% endif %}>{{ r.cells[c.key] }}</td>{% endfor %}
       <td class="row-actions" data-label="Row actions">
-        <a class="icon-view" href="/management/{{ entityKey }}?edit={{ r.id }}" title="View">{{ icons.svg('eye', 16) }}</a>
+        <a class="icon-view" href="/management/{{ entityKey }}?view={{ r.id }}" title="View">{{ icons.svg('eye', 16) }}</a>
         <a class="icon-edit" href="/management/{{ entityKey }}?edit={{ r.id }}" title="Edit">{{ icons.svg('pencil', 16) }}</a>
         <form method="post" action="/management/{{ entityKey }}/{{ r.id }}/delete" data-confirm="Delete this record?">
           <button class="icon-del" type="submit" title="Delete">{{ icons.svg('trash', 16) }}</button>

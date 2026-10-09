@@ -480,9 +480,17 @@ await cdp.key("e");
     if (f) { f.value = "2025-01-01"; f.dispatchEvent(new Event("input", { bubbles: true })); f.focus(); }
   })()`);
   await cdp.key("Enter", { ctrl: true, code: "Enter", keyCode: 13 });
-  await new Promise((r) => setTimeout(r, 1200));
+  // APPLY is an htmx round-trip now: the form swaps the report and pushes the URL only after the
+  // response, so a fixed sleep raced a cold render (green on a warm depot, red on a cold one). Poll the
+  // URL, bounded, so this measures the behaviour rather than how recently the report was cached.
+  let search = "";
+  for (let i = 0; i < 80; i++) {
+    search = String(await cdp.evaluate("location.search"));
+    if (/from=2025-01-01/.test(search)) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
   await cdp.waitForHotkeys();
-  check("Ctrl+Enter applies the report filters", /from=2025-01-01/.test(await cdp.evaluate("location.search")), await cdp.evaluate("location.search"));
+  check("Ctrl+Enter applies the report filters", /from=2025-01-01/.test(search), search);
 
   /* ── the browser keeps its own keys ──────────────────────────────────────────────────────────── */
   // Ctrl+F (find), Ctrl+L (address bar), Ctrl+R (reload) and Ctrl+P (print) are the browser's, not the

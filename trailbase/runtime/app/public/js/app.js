@@ -1,6 +1,5 @@
 /*
  * Minimal progressive enhancement — the app works without this file.
- *  - clock in the top bar
  *  - background refresh indicator (gray idle / blue fetching / red processing / yellow rendering)
  *  - PRINT buttons
  *  - confirmation on destructive forms
@@ -8,17 +7,6 @@
  */
 (function () {
   "use strict";
-
-  function tick() {
-    var el = document.querySelector("[data-clock]");
-    if (!el) return;
-    var now = new Date();
-    // Two lines, like the legacy header: time on top, date below (see .header-clock).
-    el.textContent =
-      now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }) +
-      "\n" +
-      now.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
-  }
 
   /**
    * Printing. A print link points at a real `?print=1` page, so a printout can be opened,
@@ -558,8 +546,8 @@
   }
 
   function init() {
-    tick();
-    setInterval(tick, 30000);
+    // The header clock is `<aa-live-time>` now (components/live-time.js), not a timer here: it belongs
+    // to the element that shows it, and it ticks every second rather than every 30.
     initJobIndicator();
     enhanceContent(document);
     // Seed the reference-cache version the page loaded with, so a swapped fragment's out-of-band

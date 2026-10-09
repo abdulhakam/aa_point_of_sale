@@ -57,6 +57,11 @@
     const links = await A.management.loadLinks(entity);
     const editId = String(query.edit || "");
     const editRow = editId ? all.find((r: any) => r.id === editId) ?? null : null;
+    // `?view=<id>` opens the SAME panel read-only — the legacy's eye icon, distinct from the pencil's
+    // `?edit=`. The mode drives `formFields`, which disables every field while viewing.
+    const viewId = String(query.view || "");
+    const viewRow = viewId ? all.find((r: any) => r.id === viewId) ?? null : null;
+    const mode = viewRow ? "view" : editRow ? "edit" : "create";
     // The create form lives behind its own affordance rather than on the list page, so the list is the
     // bare filter row + table the legacy screen is ([[tb-0023-guest-feature-parity]] item A). `?new=1`
     // opens it; a row's pencil (`?edit=<id>`) opens the same panel prefilled.
@@ -70,8 +75,9 @@
         entityKey,
         columns: entity.columns,
         rows: A.management.displayRows(entity, visible, refs, links),
-        fields: A.management.formFields(entity, editRow, options, links),
+        fields: A.management.formFields(entity, viewRow || editRow, options, links, mode),
         editRow,
+        viewRow,
         isNew,
         status: query.status || "",
         message: query.message || "",

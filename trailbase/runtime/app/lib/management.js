@@ -71,9 +71,38 @@ export function displayRows(entity, rows, refs, links) {
 }
 
 /** Form fields with the current values (or blanks when creating). */
-export function formFields(entity, row, options, links) {
+/**
+ * Resolve a field's `hidden`/`disabled` declaration against the current form mode.
+ *
+ * The declaration in `entities.json` is one of: `true`/`false` (every mode), a mode string, or an
+ * array of modes — where a mode is `"create"`, `"edit"` or `"view"`. So `"disabled": "edit"` locks a
+ * field once the row exists, and `"hidden": ["create", "view"]` shows it only on the edit form. An
+ * absent declaration is false (the field is visible and editable).
+ */
+function applies(decl, mode) {
+  if (decl === true) return true;
+  if (!decl || decl === false) return false;
+  if (Array.isArray(decl)) return decl.includes(mode);
+  return String(decl) === mode;
+}
+
+/**
+ * The form's field descriptors for one mode (`"create"`, `"edit"` or `"view"`).
+ *
+ * `mode` defaults to `edit` when a row is present, else `create`. `view` is read-only: every field is
+ * disabled regardless of its own declaration (a per-field `disabled` can still ADD a disable in
+ * create/edit, but cannot opt back in while viewing). `hidden` follows the field's declaration only.
+ */
+export function formFields(entity, row, options, links, mode) {
+  if (!mode) mode = row ? "edit" : "create";
   return entity.fields.map((field) => {
-    const base = { name: field.name, label: field.label, required: !!field.required };
+    const base = {
+      name: field.name,
+      label: field.label,
+      required: !!field.required,
+      hidden: applies(field.hidden, mode),
+      disabled: mode === "view" || applies(field.disabled, mode),
+    };
     if (field.type === "text") {
       return { ...base, type: "input", inputType: "text", value: row?.[field.name] ?? "" };
     }

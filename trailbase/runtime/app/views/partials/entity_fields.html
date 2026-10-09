@@ -1,13 +1,21 @@
+{# Renders one entity form's fields from the descriptors `management.formFields()` builds.
+   Each descriptor carries `hidden`/`disabled`, already resolved for the current mode
+   (`create`/`edit`/`view`) — see `app/lib/management.js`. A `hidden` field is still submitted (an
+   `<input type="hidden">`), a `disabled` one is not, which is the HTML semantics and the reason a
+   read-only view submits nothing. `hidden` is for scalar values (an id, a code); a visible-but-locked
+   field uses `disabled`. #}
 {% macro render(fields) -%}
 {% for f in fields -%}
-{% if f.type == 'select' -%}
+{% if f.hidden -%}
+<input type="hidden" name="{{ f.name }}" value="{{ f.value }}">
+{% elif f.type == 'select' -%}
 <label class="field"><span>{{ f.label }}</span>
-<select name="{{ f.name }}"{% if f.multiple %} multiple size="6"{% endif %}{% if not f.multiple and f.source %} data-ref="{{ f.source }}"{% endif %}{% if f.required %} required{% endif %}>
+<select name="{{ f.name }}"{% if f.multiple %} multiple size="6"{% endif %}{% if not f.multiple and f.source %} data-ref="{{ f.source }}"{% endif %}{% if f.required %} required{% endif %}{% if f.disabled %} disabled{% endif %}>
 {% if not f.multiple %}<option value="">—</option>{% endif %}
 {% for o in f.options %}<option value="{{ o.value }}"{% if o.selected %} selected{% endif %}>{{ o.label }}</option>{% endfor %}
 </select></label>
 {% else -%}
-<label class="field"><span>{{ f.label }}</span><input type="{{ f.inputType }}" name="{{ f.name }}" value="{{ f.value }}"{% if f.step %} step="{{ f.step }}"{% endif %}{% if f.required %} required{% endif %}></label>
+<label class="field"><span>{{ f.label }}</span><input type="{{ f.inputType }}" name="{{ f.name }}" value="{{ f.value }}"{% if f.step %} step="{{ f.step }}"{% endif %}{% if f.required %} required{% endif %}{% if f.disabled %} disabled{% endif %}></label>
 {% endif -%}
 {% endfor -%}
 {%- endmacro %}

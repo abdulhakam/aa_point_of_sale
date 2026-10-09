@@ -66,6 +66,18 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — native component library started; entity field conditions.** The owner proposed
+schema-driven, reusable components; the platform already declares entities in `entities.json`, so the
+work is to extend that model and add thin light-DOM components that consume server descriptors
+([[components-consume-server-descriptors]]). Shipped: **`<aa-live-time>`** replacing the `app.js`
+clock that painted seconds on a 30 s interval; **entity field `hidden`/`disabled` mode predicates**
+resolved in `management.formFields()`; and a **read-only `view` mode** (`?view=<id>`, the eye icon)
+that disables every field. Gates green (`guest-smoke` 116/116, `route-snapshot` 50/0, `refdb-check`
+12/12, `autocomplete-check` 39/39, `hotkey-check` 62/62 — harness now polls the APPLY URL instead of
+sleeping, `grid-preview-check` 14/14, `print-queue-check` 14/14). **Next: `<aa-entity-form>` with the
+write surface (C) + flash OOB, then `<aa-money>` and the invoice entry component.**
+[[tb-0037-component-library]].
+
 **2026-10-09 — htmx slice 3: report filters as fragments, plus a modal-swap fix.** Applying a report
 filter (inline and the `stockreport`/`difference` Filter Data dialog) now swaps the report into
 `#app-main` with `hx-push-url` instead of reloading, and the "Show all" / "latest period" notice links
@@ -345,6 +357,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | Dropdown reference lists come from an IndexedDB store synced from the server | [[reference-lists-come-from-indexeddb]] |
 | Interactive features are reusable native web components that enhance working markup | [[features-as-native-web-components]] |
 | Navigation is htmx `hx-boost` over server-rendered HTML fragments; the shell renders once | [[htmx-navigation-with-html-fragments]] |
+| UI components are light-DOM custom elements that consume server descriptors (never own schemas) | [[components-consume-server-descriptors]] |
 
 ## Known friction in the migration
 

@@ -67,6 +67,9 @@
    the overlay and Escape-to-close. It degrades to the authored children shown inline when it is not
    upgraded, so a dialog's form still works with no JavaScript. #}
 <script src="/static/js/components/modal.js" defer></script>
+{# `<aa-live-time>` is the ticking header clock. The header's `.header-clock` slot is the element
+   itself, so the slot renders nothing until this upgrades. #}
+<script src="/static/js/components/live-time.js" defer></script>
 {# The keyboard layer is a separate file on purpose: it is an accelerator for markup that already works,
    so it can be reasoned about, tested and dropped without touching the app's own enhancements.
    `?` lists everything it can do on this page. #}

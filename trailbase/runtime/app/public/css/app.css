@@ -89,6 +89,9 @@ h1, h2, h3 { font-weight: 700; }
 
 .brand { font-size: 1.25rem; font-weight: 700; color: #000; text-decoration: none; }
 .header-clock { text-align: center; font-size: 0.75rem; line-height: 1.25; color: #000; white-space: pre-line; }
+/* A custom element is inline by default; the clock needs to be a block so `.header-clock`'s
+   text-align/white-space apply to it rather than to an inline box. */
+aa-live-time { display: block; }
 
 .appbody { display: flex; flex: 1; min-height: 0; }
 
