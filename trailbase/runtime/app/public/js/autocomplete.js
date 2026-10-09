@@ -486,17 +486,28 @@
     });
   }
 
-  function init() {
-    var list = document.querySelectorAll("select[data-searchable]");
+  /**
+   * Enhance every searchable select under `root`. Called with `document` once on load, and again by
+   * `app.js` after an htmx swap with the swapped target (`#app-main`), because a swapped-in select is
+   * a new element and its combobox does not travel with it. `enhance` itself is idempotent
+   * (`dataset.acReady`), so re-running this over content that was not swapped is harmless.
+   */
+  function enhanceAll(root) {
+    var list = root.querySelectorAll("select[data-searchable]");
     for (var i = 0; i < list.length; i++) {
       try { enhance(list[i]); } catch (error) { console.warn("autocomplete: " + (list[i].name || "select") + " left as a native select", error); }
     }
     // Every combobox now exists, including the ones a quick-create panel carries, so a closed panel can
     // be made inert without racing the enhancement order. Done for every panel on the page rather than
     // only those a select points at: a panel nothing opens has no business being submittable either.
-    var panels = document.querySelectorAll(".qc");
+    var panels = root.querySelectorAll(".qc");
     for (var j = 0; j < panels.length; j++) setPanelInert(panels[j], true);
   }
+
+  function init() { enhanceAll(document); }
+
+  // Exposed for the htmx re-init hook in app.js (and for harnesses) to re-scan a swapped subtree.
+  window.__AA_AUTOCOMPLETE__ = { enhanceAll: enhanceAll };
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

@@ -66,6 +66,30 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — htmx slice 2: navigation breadth + OOB chrome.** The link-only hubs and indexes
+(dashboard, reports, ledgers, invoices, cash memo, management) are now `hx-boost`-ed, so tile clicks
+swap the body instead of reloading the document; the job indicator's manual refresh re-renders the
+current page as a fragment rather than `window.location.reload()`; and the `aa-refdb-version` meta is
+updated out-of-band by each fragment, with `__AA_REFDB__.reload()` re-syncing the IndexedDB cache when
+it moves. All gates re-run green (`guest-smoke` 116/116, `route-snapshot` 50/0, `refdb-check` 12/12,
+`autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14, `print-queue-check`
+14/14). Decision and remaining work: [[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]].
+**Next: report filter APPLY + pagination as fragments, then measure render time before converting the
+write surface.**
+
+**2026-10-09 — navigation is htmx over server-rendered fragments (first slice).** Asked whether SSR
+could become a React SPA or htmx, the owner chose **htmx** — it keeps minijinja and the declarative
+page model, adds no build step, and stops the app shell re-rendering on every navigation
+([[htmx-navigation-with-html-fragments]]). Built and browser-verified: `views/layout.html` renders the
+body block only when the request carries `X-Requested-With` (htmx's own `HX-Request` is not in the
+host's header allowlist, so the layout sends `X-Requested-With` via `hx-headers`); the rail and topbar
+brand are boosted into `#app-main`; `app.js` scopes its content enhancers to a root and re-runs them on
+`htmx:afterSwap`, and `autocomplete.js` exposes `enhanceAll(root)`. Measured `/dashboard` 10,901 B →
+**3,034 B** fragment, `/reports/profit` 94,566 → 86,679 B; a real-browser nav click left the shell node
+live and the navigation count at 1; `route-snapshot` **50 routes, 0 erroring**. `tb-0036` carries the
+follow-ups: stale document title, the un-swapped `aa-refdb-version` meta, boosting safe content links,
+and the remaining gates. **Next: those follow-ups, plus the migration's existing UI work.**
+
 **2026-10-08 — the print queue was rebuilt to match legacy.** `/print` is now the legacy picker
 (Invoice Type + Invoice No → View Invoice, a preview iframe, and a Queue rail) and `/print/queue` is
 the legacy queue page; the queue is **browser-local** (`localStorage` `print-queue`), exactly as
@@ -309,6 +333,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | Parity reinstates the legacy look, with legacy defects fixed rather than copied (**supersedes** the visual-freedom half of [[parity-is-functional-not-visual]]) | [[parity-reinstates-the-legacy-look-with-defect-fixes]] |
 | Dropdown reference lists come from an IndexedDB store synced from the server | [[reference-lists-come-from-indexeddb]] |
 | Interactive features are reusable native web components that enhance working markup | [[features-as-native-web-components]] |
+| Navigation is htmx `hx-boost` over server-rendered HTML fragments; the shell renders once | [[htmx-navigation-with-html-fragments]] |
 
 ## Known friction in the migration
 
@@ -357,6 +382,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | [[tb-0032-manifest-first-refactor]] | manifest-first reports; gate it on `route-snapshot.mjs` |
 | [[tb-0026-attribute-imported-invoice-maker-to-logged-in-user]] | attribute imported invoice authorship |
 | [[tb-0035-direct-sqlite-v1-importer]] | **done 2026-10-06** — standalone TUI that writes `main.db` directly, preserving `created`/`updated` and attributing `invoice_maker` to a chosen `_user` ([[v1-direct-import-tool]]) |
+| [[tb-0036-htmx-navigation]] | **doing 2026-10-09** — htmx boosted navigation over server-rendered fragments; slice 1 built and browser-verified, follow-ups open |
 | ~~[[tb-0015-integer-cents-for-money]]~~ | **declined**; money is 2 dp everywhere |
 | ~~[[pos-0027-migrate-production-data-to-trailbase]]~~ | **done** 2026-09-29 |
 | ~~[[pos-0028-decide-cutover-plan]]~~ | **done** 2026-10-03 — [[cutover-is-guest-only]] |

@@ -26,8 +26,8 @@
    * an operator expects from a button labelled PRINT. Without this the link would still work — it
    * would just not print by itself. A link with no href is the plain "print this page" case.
    */
-  function enhancePrint() {
-    document.querySelectorAll("[data-print]").forEach(function (btn) {
+  function enhancePrint(root) {
+    root.querySelectorAll("[data-print]").forEach(function (btn) {
       btn.addEventListener("click", function (event) {
         var href = btn.getAttribute("href");
         if (!href || href.charAt(0) === "#") {
@@ -58,8 +58,8 @@
     });
   }
 
-  function enhanceConfirm() {
-    document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+  function enhanceConfirm(root) {
+    root.querySelectorAll("form[data-confirm]").forEach(function (form) {
       form.addEventListener("submit", function (event) {
         if (!window.confirm(form.getAttribute("data-confirm"))) event.preventDefault();
       });
@@ -142,15 +142,29 @@
           .then(function (res) { return res.ok ? res.json() : null; })
           .then(function (state) { if (state) paint(state); })
           .catch(function () {})
-          .then(function () { window.location.reload(); });
+          .then(function () {
+            // Re-render the current page's CONTENT, not the whole document: after a data refresh the
+            // figures may have moved, but the shell does not need to be rebuilt or its scripts
+            // re-parsed. htmx fetches the same URL as a fragment and the afterSwap hook re-enhances it.
+            // Falls back to a full reload if htmx is absent (no-JS-of-htmx path).
+            if (window.htmx && typeof window.htmx.ajax === "function") {
+              window.htmx.ajax("GET", location.pathname + location.search, {
+                target: "#app-main",
+                swap: "innerHTML",
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+              });
+            } else {
+              window.location.reload();
+            }
+          });
       });
     }
   }
 
   /** Client-side row filter for management tables (legacy has a "Search" box above the grid). */
-  function enhanceTableFilter() {
-    document.querySelectorAll("[data-table-filter]").forEach(function (input) {
-      var table = document.querySelector(input.getAttribute("data-table-filter"));
+  function enhanceTableFilter(root) {
+    root.querySelectorAll("[data-table-filter]").forEach(function (input) {
+      var table = root.querySelector(input.getAttribute("data-table-filter"));
       if (!table || !table.tBodies.length) return;
       var rows = Array.prototype.slice.call(table.tBodies[0].rows);
       var dataRows = rows.filter(function (row) { return !row.querySelector("td.empty"); });
@@ -194,8 +208,8 @@
    * size offers the "whole cartons" shortcut. Purely a convenience — the fields stay editable, so
    * the form still works with this file absent.
    */
-  function enhanceLineEditor() {
-    document.querySelectorAll('form select[name="item"]').forEach(function (select) {
+  function enhanceLineEditor(root) {
+    root.querySelectorAll('form select[name="item"]').forEach(function (select) {
       var form = select.closest("form");
       if (!form) return;
       var price = form.querySelector('input[name="price"]');
@@ -280,8 +294,8 @@
   //
   // Read-only when another device holds the lease: the cells are disabled and the owner is named,
   // rather than a dead form with no reason (vault/decisions/single-writer-per-invoice.md).
-  function enhanceGrid() {
-    var grid = document.querySelector("[data-grid]");
+  function enhanceGrid(root) {
+    var grid = root.querySelector("[data-grid]");
     if (!grid) return;
     var editable = grid.getAttribute("data-editable") === "1";
     var basePath = grid.getAttribute("data-path") || "";
@@ -329,7 +343,7 @@
      * `form[action$="/header"]` because the header inputs carry the SAME names as the per-row inputs, so
      * `input[name="discount_1"]` alone is ambiguous.
      */
-    var headerForm = document.querySelector('form[action$="/header"]');
+    var headerForm = root.querySelector('form[action$="/header"]');
     var headerCell = function (name) {
       return headerForm ? headerForm.querySelector('[name="' + name + '"]') : null;
     };
@@ -355,7 +369,7 @@
      * stat frozen at its server-rendered 180,900.00 — a recalculated line beside a stale invoice total,
      * which is the worst shape an accounting screen can take. Looked up on the document, not the grid.
      */
-    var sumCell = document.querySelector("[data-sum]");
+    var sumCell = root.querySelector("[data-sum]");
 
     /**
      * The item's own sale price, shown beside the editable price so an operator who types over the
@@ -492,7 +506,7 @@
    * a row is still the same element, so the client-side filter (which toggles `hidden` on the same
    * nodes) keeps working, and only visible rows are reordered.
    */
-  function enhanceTableSort() {
+  function enhanceTableSort(root) {
     var cellText = function (row, index) {
       var cell = row.cells && row.cells[index];
       return cell ? (cell.textContent || "").replace(/\s+/g, " ").trim() : "";
@@ -503,7 +517,7 @@
       if (isFinite(na) && isFinite(nb) && a !== "" && b !== "") return na - nb;
       return a < b ? -1 : a > b ? 1 : 0;
     };
-    document.querySelectorAll("table[data-sortable]").forEach(function (table) {
+    root.querySelectorAll("table[data-sortable]").forEach(function (table) {
       var headers = Array.prototype.slice.call(table.querySelectorAll("th[data-sort]"));
       if (!headers.length || !table.tBodies.length) return;
       var tbody = table.tBodies[0];
@@ -526,18 +540,64 @@
     });
   }
 
+  /**
+   * Every enhancement that belongs to the CONTENT area, scoped to `root`.
+   *
+   * `#app-main` is the only element htmx swaps on a boosted navigation, so the content is the only
+   * part that needs re-enhancing. Called once on load with `document`, and again on `htmx:afterSwap`
+   * with the swapped target. The shell-only work (the clock and the job indicator) is deliberately
+   * NOT here — it must run once, and re-running it would stack a second `setInterval`.
+   */
+  function enhanceContent(root) {
+    enhancePrint(root);
+    enhanceConfirm(root);
+    enhanceTableFilter(root);
+    enhanceTableSort(root);
+    enhanceLineEditor(root);
+    enhanceGrid(root);
+  }
+
   function init() {
     tick();
     setInterval(tick, 30000);
     initJobIndicator();
-    enhancePrint();
-    enhanceConfirm();
-    enhanceSelects();
-    enhanceTableFilter();
-    enhanceTableSort();
-    enhanceLineEditor();
-    enhanceGrid();
+    enhanceContent(document);
+    // Seed the reference-cache version the page loaded with, so a swapped fragment's out-of-band
+    // version can be compared against it in the afterSwap hook below.
+    var vmeta = document.getElementById("aa-refdb-version");
+    window.__AA_REFDB_VERSION__ = vmeta ? (vmeta.getAttribute("content") || "") : "";
   }
+
+  // htmx swapped new content into `#app-main`. Re-run the content enhancers on it; custom elements
+  // (aa-date-input, aa-modal) upgrade themselves on insertion, but the listeners app.js and
+  // autocomplete.js attach to plain elements do not survive a swap, so both are re-run here.
+  document.addEventListener("htmx:afterSwap", function (event) {
+    var target = (event.detail && event.detail.target) || event.target;
+    if (!target) return;
+    // The tab title travels in the fragment as a hidden marker (layout.html emits it only when there
+    // is no <head> to carry one), so a boosted nav updates the title instead of leaving the previous
+    // page's. Read from the target, falling back to the document for an out-of-band swap.
+    var marker = (target.querySelector && target.querySelector("[data-aa-title]")) ||
+      document.querySelector("[data-aa-title]");
+    if (marker) document.title = marker.getAttribute("data-aa-title");
+    // The fragment carries the current reference-cache version out-of-band (layout.html). When it
+    // moves, tell refdb to re-sync so the IndexedDB store is not left at the version the last full
+    // page loaded with. A matching version is a no-op.
+    var vmeta = document.getElementById("aa-refdb-version");
+    if (vmeta && window.__AA_REFDB__ && typeof window.__AA_REFDB__.reload === "function") {
+      var version = vmeta.getAttribute("content") || "";
+      if (version && version !== window.__AA_REFDB_VERSION__) {
+        window.__AA_REFDB_VERSION__ = version;
+        window.__AA_REFDB__.reload();
+      }
+    }
+    enhanceContent(target);
+    var ac = window.__AA_AUTOCOMPLETE__;
+    if (ac && typeof ac.enhanceAll === "function") ac.enhanceAll(target);
+  });
+
+  // Exposed so a harness (and the htmx hook above) can re-enhance a subtree without a reload.
+  window.__AA_ENHANCE__ = enhanceContent;
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();

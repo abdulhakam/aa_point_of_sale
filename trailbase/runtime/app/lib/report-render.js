@@ -158,6 +158,11 @@ export async function renderReportPage(A, db, req, user, path, query, key, pageD
   // `filtersFor` honours the manifest's declared defaults when the query does not carry the field.
   const filters = await filtersFor(A, pageDef, query);
 
+  // htmx fragment request (http.js `isFragment`). It gates BOTH what is rendered (body-only vs full
+  // document) and the cache key below, or a boosted nav to a report could be served the cached full
+  // page (or the reverse) — a fragment swapped into `#app-main` would then contain a whole document.
+  const fragment = A.http.isFragment(req);
+
   // Page handlers, resolved relative to the page's own directory. `normalizeMeta` has already rejected
   // absolute paths and `..`, so this cannot escape `app/pages/`. Thirteen of the fourteen pages declare
   // none and pay nothing.
@@ -175,7 +180,7 @@ export async function renderReportPage(A, db, req, user, path, query, key, pageD
   try {
     const fp = await A.service.fingerprint();
     const rev = await A.paths.runtimeRevision();
-    cacheKey = JSON.stringify([rev, fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax]);
+    cacheKey = JSON.stringify([rev, fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax, fragment]);
     const cached = await pageCacheGet(db, cacheKey);
     if (cached !== null) return html(cached);
   } catch {
@@ -229,7 +234,7 @@ export async function renderReportPage(A, db, req, user, path, query, key, pageD
   const total = Number(totals.rowCount || 0);
   const shown = maxRows < 0 ? total : Math.min(total, maxRows);
   const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows)).key }];
-  const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4" }, view, {
+  const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4", fragment }, view, {
     ...frame,
     rowInfo: {
       shown,

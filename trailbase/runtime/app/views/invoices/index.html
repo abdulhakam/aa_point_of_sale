@@ -5,7 +5,7 @@
    Return, Difference — in that order and with those labels (measured off the live legacy hub). Each
    leads to an entry (or print) screen; the list lives at `/invoices/all` now. See
    [[ui-parity-discrepancies-2026-10-08]] §2. #}
-<section class="card hub">
+<section class="card hub" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">
   <div class="hub-title upper">Invoices</div>
   <div class="tiles">
     <a class="tile" href="/invoices/new?type=0"><span class="c-pink-4">{{ icons.svg('file-invoice', 64) }}</span><span class="tile-label">Purchase</span></a>

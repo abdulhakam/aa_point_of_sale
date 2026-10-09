@@ -1,28 +1,57 @@
-<!doctype html>
+{# ──────────────────────────────────────────────────────────────────────────────── the app shell
+   `fragment` is set by `app/lib/http.js` (see `isFragment`): when htmx makes a boosted navigation
+   request the server renders ONLY the body block below — no doctype, head, topbar, nav or script
+   tags — and htmx swaps it into `#app-main`. The shell is therefore rendered once and never
+   re-rendered on a nav click. A browser with no htmx (or a direct GET) gets the whole document,
+   unchanged. `{% block body %}` stays OUTSIDE the guards on purpose: it is the one thing both modes
+   emit, and a block inside `{% if %}` would be conditional for the child templates that inherit it. #}
+{% if not fragment %}<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{ title }} · {{ appName }}</title>
-{# The data version the client's IndexedDB reference cache syncs against. Empty means "sync now". #}
-<meta name="aa-refdb-version" content="{{ refdbVersion }}">
+{# The data version the client's IndexedDB reference cache syncs against. Empty means "sync now".
+   It carries an id so a fragment can update it out-of-band (see the OOB meta in the body below and
+   `__AA_REFDB__.reload()`), keeping the cache honest across a boosted nav without a full load. #}
+<meta id="aa-refdb-version" name="aa-refdb-version" content="{{ refdbVersion }}">
 <link rel="icon" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
 {# `paper` selects the print sheet: a5 for an invoice or a voucher, a4 for a report. See app.css. #}
-<body{% if paper %} data-paper="{{ paper }}"{% endif %}>
+{# htmx does not send a header the guest host passes through (`HX-Request` is not in the host's
+   header allowlist). It does inherit `hx-headers`, so every htmx request from this page carries
+   `X-Requested-With`, which the host DOES expose — see `app/lib/http.js` `isFragment`. Inherited from
+   `<body>` so the rail links, the topbar brand and any future boosted element all send it. #}
+<body{% if paper %} data-paper="{{ paper }}"{% endif %} hx-headers='{"X-Requested-With":"XMLHttpRequest"}'>
 <div class="appshell">
 {% if user %}
 {% include 'partials/topbar.html' %}
 <div class="appbody">
 {% include 'partials/nav.html' %}
 {% endif %}
-<main class="main{% if not user %} main-anon{% endif %}">
+<main id="app-main" class="main{% if not user %} main-anon{% endif %}">
+{% endif %}{# ── end of the full-document shell; a fragment starts here ─────────────────────────────────── #}
+{# A fragment carries no <head>, so the browser tab would keep the previous page's title after a
+   boosted nav. This hidden marker travels with the fragment and `app.js` copies it onto
+   `document.title` on `htmx:afterSwap`. Full-document loads get their title from <head> as before,
+   so the marker is emitted only in fragment mode and never changes the full page. #}
+{% if fragment %}<div hidden data-aa-title="{{ title }} · {{ appName }}"></div>{% endif %}
+{# Out-of-band: the fragment's own data version replaces the head meta, so the client reference cache
+   (`refdb.js`) sees a version change after a boosted nav and re-syncs (`__AA_REFDB__.reload()`, driven
+   from the `htmx:afterSwap` hook). Without this the meta — which lives in `<head>` and is never
+   swapped — would stay at the version the full page loaded with. #}
+{% if fragment %}<meta name="aa-refdb-version" content="{{ refdbVersion }}" hx-swap-oob="outerHTML:#aa-refdb-version">{% endif %}
 {% include 'partials/flash.html' %}
 {% block body %}{% endblock %}
-</main>
+{% if not fragment %}</main>
 {% if user %}</div>{% endif %}
 </div>
+{# htmx, vendored locally (the deployment is offline — no CDN). Boosted navigation keeps the shell and
+   swaps only `#app-main`; without it the `hx-*` attributes are inert and every link behaves normally.
+   Loaded first so `app.js`, which listens for `htmx:afterSwap` to re-enhance swapped content, always
+   finds it loaded. #}
+<script src="/static/js/htmx.min.js" defer></script>
 <script src="/static/js/app.js" defer></script>
 {# The print queue: the legacy browser-side queue (localStorage `print-queue`) behind "Add to Print
    Queue" on the invoice sheet and the Queue rail on `/print`. Loaded before the other components so
@@ -57,4 +86,4 @@
    Escape-to-close gesture. See [[reference-lists-come-from-indexeddb]]. #}
 <script src="/static/js/refdb-create.js" defer></script>
 </body>
-</html>
+</html>{% endif %}

@@ -81,7 +81,7 @@ export async function readStatic(fsPath) {
   }
 }
 import * as refsModule from "./refs.js";
-import { page } from "./http.js";
+import { page, isFragment } from "./http.js";
 
 // Exactly the 64-character URL-safe base64 alphabet: A-Z a-z 0-9 then `-` (62) and `_` (63).
 // A short or misordered alphabet here does not throw — sextet 63 indexes past the end and reads
@@ -173,6 +173,8 @@ export async function renderRoute(req, options, data) {
         active: opts.active ?? "",
         title: opts.title ?? "",
         paper: opts.paper ?? "",
+        // htmx fragment request: render the body block only (see http.js `isFragment`).
+        fragment: isFragment(req),
         // The data version the client's IndexedDB reference cache syncs against. `dataVersionIfWarm`
         // never probes — the reconcile job and report/ETag requests keep the memo warm — so embedding
         // it costs nothing on a plain content page. It DOES read the shared stamp, so a memo left warm

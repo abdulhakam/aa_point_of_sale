@@ -55,8 +55,34 @@ function shellContext(shell, data) {
     // and blank for everything else so the print media query does not apply a size to, say, the
     // dashboard. The stylesheet keys off this attribute rather than guessing from the route.
     paper: shell.paper ?? "",
+    // See `isFragment`. When true, `layout.html` emits only the body block so htmx can swap it into
+    // `#app-main` without re-rendering the app shell (topbar, nav, head, script tags).
+    fragment: shell.fragment === true,
     ...(data || {}),
   };
+}
+
+/**
+ * Is this request an htmx fragment request?
+ *
+ * `layout.html` renders the full document normally, and ONLY the body block (no doctype, head,
+ * topbar, nav or script tags) when this is true. htmx's boosted navigation swaps that fragment into
+ * `#app-main`, so the shell is rendered once and never re-rendered on a nav click.
+ *
+ * ⚠️ The host exposes a FIXED header allowlist (`tb-ah-run-js/src/lib.rs`): content-type, accept,
+ * accept-encoding, if-none-match, cookie, host, referer, x-csrf-token, x-requested-with. htmx's own
+ * `HX-Request` is NOT copied through, so the client also sends `X-Requested-With` — which IS in the
+ * allowlist — via `hx-headers` on the layout's `<body>`. Both are accepted here: `HX-Request` in case
+ * the allowlist grows to include it, `X-Requested-With` for today.
+ *
+ * An absent header means "full page", the safe default — a browser with no htmx, a direct GET, or a
+ * plain XHR from `app.js` (which sends neither) all get the whole document exactly as before.
+ */
+export function isFragment(req) {
+  const headers = (req && req.headers) || {};
+  const hx = String(headers["hx-request"] ?? headers["HX-Request"] ?? "").toLowerCase() === "true";
+  const xrw = String(headers["x-requested-with"] ?? headers["X-Requested-With"] ?? "");
+  return hx || xrw.length > 0;
 }
 
 export function qs(value) {

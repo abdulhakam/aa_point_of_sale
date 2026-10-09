@@ -1,7 +1,7 @@
 {% extends 'layout.html' %}
 {% import 'partials/icons.html' as icons %}
 {% block body %}
-<section class="card hub">
+<section class="card hub" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">
   <div class="hub-title">Dashboard</div>
   {# ⚠️ The legacy dashboard is exactly four tiles in this order — Reports, Invoices, Cash Memo,
      Management (measured off the live legacy dashboard and `vault/attachments/legacy-ui/02-dashboard.png`).

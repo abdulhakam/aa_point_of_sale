@@ -387,6 +387,34 @@
     });
   }
 
+  /**
+   * Re-check the page's data version and re-sync if it moved.
+   *
+   * Called by `app.js` after an htmx swap when the out-of-band `aa-refdb-version` meta changes — a
+   * boosted nav carries the current version, and the cache must not keep serving the previous one.
+   * Serialised behind the initial `ready` so it cannot race the first load. A version that already
+   * matches the cache is a no-op (the server rendered the same options); a version that moved
+   * re-fetches, replaces the store and rebuilds every annotated select.
+   */
+  function reload() {
+    return ready
+      .then(function () {
+        return load().then(function (result) {
+          if (!result) return result;
+          cache = result.tables;
+          if (!result.fromCache) applyAll();
+          try { document.documentElement.setAttribute("data-refdb-source", result.fromCache ? "cache" : "network"); } catch (e) { /* no document */ }
+          return result;
+        });
+      })
+      .catch(function (error) {
+        // No IndexedDB, or the fetch failed: the server-rendered options stand. A degradation, not an
+        // error the user should see (rule 1).
+        if (typeof console !== "undefined" && console.warn) console.warn("refdb: reload used server-rendered options", error);
+        return null;
+      });
+  }
+
   window.__AA_REFDB__ = {
     ready: ready,
     refKey: refKey,
@@ -395,5 +423,6 @@
     upsert: upsert,
     remove: remove,
     applyAll: applyAll,
+    reload: reload,
   };
 })();

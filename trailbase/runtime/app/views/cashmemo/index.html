@@ -9,7 +9,7 @@
    gone. The tiles point at the guest's same four working screens plus the payments list.
 
    "Recieve" is the legacy's spelling, kept verbatim so the label matches. #}
-<section class="card hub">
+<section class="card hub" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">
   <div class="hub-title upper">Cash memo</div>
   <div class="tiles">
     <a class="tile" href="/cashmemo/da"><span class="c-blue">{{ icons.svg('pencil', 64) }}</span><span class="tile-label">DA Entry - Purchases</span></a>
