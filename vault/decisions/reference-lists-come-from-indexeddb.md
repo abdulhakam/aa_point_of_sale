@@ -113,12 +113,26 @@ Also removed the unused `refdb:change` document event and the unused `AA_AUTOCOM
 remove the single changed option instead of rebuilding every matching select (the grid's ~37 item
 selects × 207 options). The JS/no-JS create-workspace difference is deliberate and recorded above.
 
-### `invoices` is deferred, with the reason
+### `invoices` slice — built 2026-10-09
 
-The owner named the `invoices` table for the cache. It is **not in this slice**: its only dropdown is
-`/payments/new`'s open-invoice picker, which is a computed unpaid/balance list over `payments` too —
-caching the base table would not serve that control, and a store with no consumer is dead weight. It
-gets its own slice together with the `payments` list it depends on.
+The owner named the `invoices` table for the cache; it was **deferred** in the first slice because its
+only dropdown was `/payments/new`'s open-invoice picker (a computed unpaid/balance list over `payments`
+too — caching the base table would not serve it, and a store with no consumer is dead weight). It is
+now built, because the picker lists **all** invoices:
+
+- `GET /data/invoices` (`ahscripts/routes/data/invoices/route.ts`) — the invoice lookup rows
+  (`id, invoiceNo, type, paid, partyName, balanceText`) read through `invoices.pickerInvoices`, ETag'd
+  on the data version, auth-gated (unauthenticated → 303). Measured: **1.07 MB / 8,931 rows**.
+- `public/js/invoicedb.js` — IndexedDB `aa-pos-invoices` (its own DB, so the reference payload is not
+  bloated), loaded **lazily** only when a page has a `select[data-invoice-picker]`; cached against
+  `aa-refdb-version`; populates the picker and fires `refdb:select` so the combobox re-reads.
+- The payment form renders only a small fallback (open invoices, 200): `/payments/new` dropped from
+  **925 KB inline → 91 KB**, with the full list from the client store (second load reported
+  `data-invoicedb-source="cache"`, no fetch). This is the concrete fix to the follow-up in
+  [[browser-settings-are-client-side]].
+
+`payments` itself is still not cached — the balance a picker shows comes from the server-rendered row,
+so the base `payments` table has no picker consumer.
 
 ## Evidence
 

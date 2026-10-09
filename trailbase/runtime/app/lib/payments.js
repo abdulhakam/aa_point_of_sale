@@ -257,10 +257,10 @@ export async function newView(A, req, query, error) {
   const db = (globalThis).sqlite;
   const refs = await routeKit.refs();
   const invoice = query.invoice ? await A.invoices.readInvoice(db, String(query.invoice)) : null;
-  // Every invoice, open or paid — the picker lists them all; the client trims to open-only when the
-  // per-browser setting says so (`public/js/settings.js`). A payment with no invoice at all is the
-  // legacy standalone "DA" voucher.
-  const invoices = await A.invoices.pickerInvoices(db);
+  // Server-rendered FALLBACK for no-JS and first paint: the open invoices, capped. The full list (open
+  // or paid) is populated from the client invoice cache (`public/js/invoicedb.js`), so the server does
+  // not ship ~8,900 options. A payment with no invoice at all is the legacy standalone "DA" voucher.
+  const invoices = await A.invoices.listInvoices(db, { unpaid: "on" }, { limit: 200 });
   return {
     options: { active: "payments", title: "New payment", template: "payments/new.html" },
     data: {

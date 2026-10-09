@@ -66,6 +66,16 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — invoice lookup cache (the `invoices` slice).** The owner recalled the deferred
+`invoices` cache from [[reference-lists-come-from-indexeddb]]; built it now that the payment picker
+lists all invoices. `GET /data/invoices` (ETag/version, 8,931 rows, auth-gated) + `public/js/invoicedb.js`
+(IndexedDB `aa-pos-invoices`, lazy, version-keyed) populate the picker; the payment form renders only a
+200-invoice fallback, so `/payments/new` dropped **925 KB → 91 KB**. Second load uses the cache
+(`data-invoicedb-source="cache"`); the `invoicePickerScope` setting trims it live. Gates green
+(`guest-smoke` 116/116, `route-snapshot` 50/0, `autocomplete-check` 39/39, `refdb-check` 12/12,
+`hotkey-check` 62/62, `grid-preview-check` 14/14, `print-queue-check` 14/14).
+[[browser-settings-are-client-side]], [[tb-0039-settings]].
+
 **2026-10-09 — per-browser settings; the payment picker lists all invoices.** Added a `localStorage`
 settings store (`public/js/settings.js`) and a **Settings** screen at `/settings` (linked from the
 management hub) — no backend, per the owner's request ([[browser-settings-are-client-side]]). First

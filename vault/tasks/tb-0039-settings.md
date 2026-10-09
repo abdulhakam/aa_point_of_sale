@@ -33,8 +33,11 @@ Decision: [[browser-settings-are-client-side]].
 
 ## Follow-ups (not done)
 
-- [ ] **The payment picker renders ~8,900 options (~0.9 MB inline).** A lazily-loaded picker (fetch on
-      focus, or the refdb IndexedDB pattern) would remove the cost while keeping "all" available.
+- [x] **The payment picker's ~0.9 MB inline list** — fixed 2026-10-09 with the client invoice cache:
+      `GET /data/invoices` + `public/js/invoicedb.js` (IndexedDB `aa-pos-invoices`, lazy, version-keyed),
+      and the payment form renders only a 200-invoice fallback. `/payments/new` 925 KB → **91 KB**; the
+      full list is populated from the cache (second load `data-invoicedb-source="cache"`) and the scope
+      setting trims it. See [[reference-lists-come-from-indexeddb]] (`invoices` slice).
 - [ ] **The report "Invoice" filter is still a text box** (`page-presets.json` `type:"text"`); making it
       a searchable select is a separate change that must agree with `payments.sql`.
 - [ ] More preferences as they come (only `invoicePickerScope` exists); consider a Reset button (the

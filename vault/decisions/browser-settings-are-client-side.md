@@ -43,12 +43,12 @@ migration for what is really a local choice.
 
 - A preference cannot change what the **server** renders; it acts on the rendered DOM. That is why the
   server sends the full list and the client trims, rather than the reverse.
-- **Cost of "all":** `/payments/new` now renders ~8,900 invoice options (~0.9 MB inline HTML,
-  gzip-friendly). Acceptable on the local/LAN deployment and consistent with the app's large lists,
-  but it is the reason `"open"` exists as a trim — a future lazily-loaded picker (fetch on focus) would
-  remove the cost without losing the option.
-- The render-time of this preference is not measured; if it matters, the picker should paginate or load
-  on demand.
+- **Cost of "all" — fixed the same day.** Listing every invoice inline was ~0.9 MB of HTML per
+  `/payments/new`. It is now a small server fallback (open invoices, 200) plus the **client invoice
+  cache** (`invoicedb.js` / `GET /data/invoices`, the slice deferred by
+  [[reference-lists-come-from-indexeddb]]): `/payments/new` dropped to **91 KB**, the full list comes
+  from IndexedDB after one fetch. The picker is populated client-side from the cache and the
+  `invoicePickerScope` setting trims it (open/all) without a reload.
 
 ## Evidence (2026-10-09)
 

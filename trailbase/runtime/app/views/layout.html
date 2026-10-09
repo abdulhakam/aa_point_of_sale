@@ -92,5 +92,9 @@
    so the form path is never lost. Loaded after autocomplete.js because it relies on the control's
    Escape-to-close gesture. See [[reference-lists-come-from-indexeddb]]. #}
 <script src="/static/js/refdb-create.js" defer></script>
+{# The invoice lookup cache. Loaded LAST so `autocomplete.js` has already built its combobox: this
+   populates the picker from IndexedDB and fires `refdb:select`, which the combobox listens for. Loaded
+   lazily — it only fetches when the page actually has an invoice picker. See `invoicedb.js`. #}
+<script src="/static/js/invoicedb.js" defer></script>
 </body>
 </html>{% endif %}

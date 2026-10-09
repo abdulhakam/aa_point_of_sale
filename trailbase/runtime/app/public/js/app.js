@@ -587,6 +587,10 @@
     enhanceContent(target);
     var ac = window.__AA_AUTOCOMPLETE__;
     if (ac && typeof ac.enhanceAll === "function") ac.enhanceAll(target);
+    // After the combobox exists: repopulate an invoice picker from the invoice cache and let it re-read
+    // (`refdb:select`). Async, so the server-rendered fallback shows first.
+    var idb = window.__AA_INVOICEDB__;
+    if (idb && typeof idb.enhanceAll === "function") idb.enhanceAll(target);
   });
 
   // Exposed so a harness (and the htmx hook above) can re-enhance a subtree without a reload.
