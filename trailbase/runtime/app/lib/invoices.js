@@ -114,6 +114,26 @@ function clampInt(value, fallback, min, max) {
  * integers, never user text, and the guest's parameter binding is text-only. The default is a 300-row
  * page so callers that pass no paging (the open-invoice picker) keep their old shape.
  */
+/**
+ * Every non-deleted invoice, for a picker that must list them all (open OR paid).
+ *
+ * `listInvoices` clamps its page to 1,000 rows, so this pages through it; the result is what the
+ * payment form's invoice select renders (and the client can trim to open-only — see
+ * `public/js/settings.js`). Fields are the ones an option needs: the id, the number, the party and
+ * the balance, plus `paid` so the client can tell the two apart.
+ */
+export async function pickerInvoices(db) {
+  const out = [];
+  for (let offset = 0; offset < 1000000; offset += 1000) {
+    const page = await listInvoices(db, {}, { limit: 1000, offset });
+    for (const r of page) {
+      out.push({ id: r.id, invoiceNo: r.invoiceNo, type: r.type, paid: r.paid, partyName: r.partyName, balanceText: r.balanceText });
+    }
+    if (page.length < 1000) break;
+  }
+  return out;
+}
+
 export async function listInvoices(db, filters = {}, paging = {}) {
   const limit = clampInt(paging.limit, 300, 1, 1000);
   const offset = clampInt(paging.offset, 0, 0, 1000000000);

@@ -6,5 +6,5 @@
    is the entity KEY, which is already the legacy's lowercase word, so "bookers" is not "order bookers". #}
 <div class="mgmt-links" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">
 {% for e in entities %}<a href="/management/{{ e.key }}">{{ e.key }}</a>
-{% endfor %}</div>
+{% endfor %}<a href="/settings">settings</a></div>
 {% endblock %}

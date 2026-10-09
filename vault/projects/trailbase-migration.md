@@ -66,6 +66,16 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — per-browser settings; the payment picker lists all invoices.** Added a `localStorage`
+settings store (`public/js/settings.js`) and a **Settings** screen at `/settings` (linked from the
+management hub) — no backend, per the owner's request ([[browser-settings-are-client-side]]). First
+preference `invoicePickerScope` (default **all**): the payment form's invoice picker now lists every
+non-deleted invoice (8,931; `invoices.pickerInvoices` pages past the 1,000 cap) and the client trims to
+open-only when set. Gates green (`guest-smoke` 116/116, `route-snapshot` 50/0, `autocomplete-check`
+39/39, `refdb-check` 12/12, `hotkey-check` 62/62, `grid-preview-check` 14/14, `print-queue-check`
+14/14). Follow-up in [[tb-0039-settings]]: the ~0.9 MB inline picker should load lazily; the report
+"Invoice" filter is still a text box.
+
 **2026-10-09 — print queue now syncs across tabs; "searchable select" explained.** Fixed the print queue
 not updating on an open `/print` page until a reload: `print-queue.js` now listens for the `storage`
 event (it fires in every other same-origin window, including a parent from the preview iframe) and
@@ -431,6 +441,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | Interactive features are reusable native web components that enhance working markup | [[features-as-native-web-components]] |
 | Navigation is htmx `hx-boost` over server-rendered HTML fragments; the shell renders once | [[htmx-navigation-with-html-fragments]] |
 | UI components are light-DOM custom elements that consume server descriptors (never own schemas) | [[components-consume-server-descriptors]] |
+| Per-browser UI preferences live in localStorage (no backend), edited at `/settings` | [[browser-settings-are-client-side]] |
 
 ## Known friction in the migration
 

@@ -257,13 +257,15 @@ export async function newView(A, req, query, error) {
   const db = (globalThis).sqlite;
   const refs = await routeKit.refs();
   const invoice = query.invoice ? await A.invoices.readInvoice(db, String(query.invoice)) : null;
-  // A payment with no invoice is the legacy standalone "DA" voucher.
-  const open = await A.invoices.listInvoices(db, { unpaid: "on" });
+  // Every invoice, open or paid — the picker lists them all; the client trims to open-only when the
+  // per-browser setting says so (`public/js/settings.js`). A payment with no invoice at all is the
+  // legacy standalone "DA" voucher.
+  const invoices = await A.invoices.pickerInvoices(db);
   return {
     options: { active: "payments", title: "New payment", template: "payments/new.html" },
     data: {
       invoice,
-      openInvoices: open.slice(0, 100),
+      invoices,
       types: routeKit.typeOptions(PAYMENT_TYPES),
       selectedType: Number(routeKit.pick(query.type, invoice && invoice.type === 0 ? "0" : "1")),
       selectedParty: String(routeKit.pick(query.party, invoice ? invoice.party || "" : "")),

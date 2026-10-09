@@ -74,6 +74,10 @@
    so it can be reasoned about, tested and dropped without touching the app's own enhancements.
    `?` lists everything it can do on this page. #}
 <script src="/static/js/hotkeys.js" defer></script>
+{# Per-browser preferences (`localStorage`). Loaded before `autocomplete.js` so a scope-trimmed invoice
+   picker is what the combobox is built from; `app.js` re-applies it on an htmx swap for the same
+   reason. See `settings.js` and the Settings screen at `/settings`. #}
+<script src="/static/js/settings.js" defer></script>
 {# The IndexedDB reference cache. Loaded before autocomplete.js so a select it repopulates is seen by
    the control; refdb dispatches `refdb:select` on a select whose options it changed, which the
    control listens for, so order is not load-bearing. Server-rendered options stay in the markup, so

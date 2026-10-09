@@ -14,9 +14,11 @@
     <input type="hidden" name="invoice" value="{{ invoice.id }}">
     {% else %}
     <label class="field"><span>Invoice (optional)</span>
-      <select name="invoice" data-searchable>
+      {# Every invoice, open or paid; `data-paid` lets the client trim to open-only when the per-browser
+         setting says so (`public/js/settings.js`). Without JavaScript the full list stands. #}
+      <select name="invoice" data-searchable data-invoice-picker>
         <option value="">None — standalone DA entry</option>
-        {% for i in openInvoices %}<option value="{{ i.id }}"{% if invoice and invoice.id == i.id %} selected{% endif %}>#{{ i.invoiceNo }} · {{ i.partyName }} · {{ i.balanceText }}</option>{% endfor %}
+        {% for i in invoices %}<option value="{{ i.id }}" data-paid="{{ '1' if i.paid and i.paid > 0 else '0' }}"{% if invoice and invoice.id == i.id %} selected{% endif %}>#{{ i.invoiceNo }} · {{ i.partyName }} · {{ i.balanceText }}</option>{% endfor %}
       </select>
     </label>
     {% endif %}

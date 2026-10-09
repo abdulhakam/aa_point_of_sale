@@ -568,6 +568,11 @@
     var marker = (target.querySelector && target.querySelector("[data-aa-title]")) ||
       document.querySelector("[data-aa-title]");
     if (marker) document.title = marker.getAttribute("data-aa-title");
+    // Apply per-browser preferences BEFORE re-enhancing: a trimmed invoice picker must be what the
+    // autocomplete combobox is built from (settings.js `apply`/`hydrateForm`).
+    var st = window.__AA_SETTINGS__;
+    if (st && typeof st.apply === "function") st.apply(target);
+    if (st && typeof st.hydrateForm === "function") st.hydrateForm(target);
     // The fragment carries the current reference-cache version out-of-band (layout.html). When it
     // moves, tell refdb to re-sync so the IndexedDB store is not left at the version the last full
     // page loaded with. A matching version is a no-op.

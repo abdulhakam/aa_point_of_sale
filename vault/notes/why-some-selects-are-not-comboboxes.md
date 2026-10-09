@@ -33,7 +33,7 @@ A select must also actually be a `select[data-searchable]`. A field declared as 
 | `/reports/payments` **Party** ("Unified Payments Report") | `select[data-searchable]`, **combobox** (944 options, `data-ac-ready=1`) | it *is* searchable |
 | `/print` **Invoice No** | `select[data-searchable]`, combobox when the type has ≥12 invoices (type 0 → 267) | below 12 it is native; and the list is **one invoice type only** (`WHERE type = ?`) |
 | `/reports/payments` **Invoice** filter | `<input type="text">` | declared `{ "name": "invoice", "type": "text" }` in `manifests/page-presets.json` — there is no dropdown |
-| `/payments/new` **Invoice** | `select[data-searchable]`, combobox (101 options) | lists **open** invoices only, capped at **100** (`openInvoices.slice(0, 100)`) |
+| `/payments/new` **Invoice** | `select[data-searchable]`, combobox (**all** invoices now) | **fixed 2026-10-09**: lists every invoice; the per-browser setting `invoicePickerScope` trims to open-only ([[browser-settings-are-client-side]]) |
 
 So the "searchable select" is not the common cause. Where a control is not a combobox it is because it
 is declared as text, or has fewer than 12 options by design, or is scoped (one invoice type / open
