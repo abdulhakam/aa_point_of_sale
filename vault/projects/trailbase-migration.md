@@ -66,6 +66,16 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-09 — payments writes are htmx (no reload).** Extracted `payments.listView()`/`newView()` and
+made the payment create (`POST /payments`) and delete (`/payments/<id>/delete`) re-render the list on
+an htmx request — the create's failure path re-renders the new form with the error rather than a bare
+400. The payments filter APPLYs as a fragment. Also fixed the earlier URL residue: management and
+payments write forms now push the list URL, so a refresh reloads the list instead of the POST action
+or `?new=1`. Gates green (`guest-smoke` 116/116, `route-snapshot` 50/0, `refdb-check` 12/12,
+`autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14, `print-queue-check`
+14/14). **Next: the cash-memo writes (last of "C"); then `<aa-money>` and the invoice-entry component.**
+[[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]].
+
 **2026-10-09 — invoice grid save is htmx (no reload).** Extracted `invoices.gridView()` and made the
 grid save `/invoices/<id>/lines` (SAVE LINES and the row remove op) re-render the grid fragment on an
 htmx request, with the failure path re-rendering the grid and showing the message as a red flash (htmx

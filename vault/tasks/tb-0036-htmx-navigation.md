@@ -119,6 +119,26 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 - [x] Gates green: `guest-smoke` 116/116, `route-snapshot` 50/0, `grid-preview-check` 14/14,
       `refdb-check` 12/12, `autocomplete-check` 39/39, `hotkey-check` 62/62, `print-queue-check` 14/14.
 
+## Slice 7 — payments writes (2026-10-09)
+
+- [x] Extracted `payments.listView()` (the `/payments` list) and `payments.newView()` (the new-payment
+      form), shared by their GET routes and the write routes.
+- [x] `POST /payments` (create) answers an htmx request with the list fragment (flash included); a bad
+      value re-renders the **new form** with the error rather than a bare 400 htmx would not swap.
+      `/payments/<id>/delete` re-renders the list. Plain POSTs still 303.
+- [x] `views/payments/index.html`: the filter form APPLYs via `hx-get` into `#app-main` with
+      `hx-push-url`; the row delete is `hx-boost` + `hx-confirm`. `views/payments/new.html`: the form is
+      `hx-boost` with `hx-push-url="/payments"`.
+- [x] **Fixed the URL residue from earlier slices:** management and payments write forms now push the
+      **list** URL (`hx-push-url="/management/<entity>"`, `"/payments"`) instead of leaving the POST
+      action or `?new=1` in the address bar; invoice entry/grid keep `hx-push-url="false"` (same screen).
+- [x] Browser-verified: create → flash "Payment saved", list shown, shell node live, navigation count 1,
+      URL becomes `/payments` (the pushed list); delete → flash "Deleted", row gone, net zero; filter
+      APPLY → URL `/payments?type=1…`, no reload. Test rows cleaned up. No console errors.
+- [x] Gates green: `guest-smoke` 116/116, `route-snapshot` 50/0, `refdb-check` 12/12,
+      `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14,
+      `print-queue-check` 14/14.
+
 ## Follow-ups (not done)
 
 - [x] **Stale document title** — fixed 2026-10-09: the fragment emits a hidden `data-aa-title` marker
@@ -137,8 +157,8 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       pre-existing 28/28 restyle differences (rail membership, `<th>` styling) — not caused by this
       change. `guest-smoke`/`route-snapshot` were re-run after the title-marker fix.
 - [ ] **Convert the remaining writes** the same way — an htmx write that re-renders its region. Left:
-      **payments** and **cash memo** (and the invoice **new** create, which navigates to the entry page
-      and is arguably fine as a full load). This is the rest of "C".
+      **cash memo** (and the invoice **new** create, which navigates to the entry page and is arguably
+      fine as a full load). This is the rest of "C".
 - [ ] Decide whether to grow the host's header allowlist to include `hx-request`, so the
       `X-Requested-With` workaround can be retired.
 - [ ] **Measure** the render-time saved vs a full page (the change is currently justified by structure

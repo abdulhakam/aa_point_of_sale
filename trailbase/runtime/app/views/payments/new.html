@@ -6,7 +6,9 @@
 {% if error %}<div class="notice" data-state="error">{{ error }}</div>{% endif %}
 
 <section class="card">
-  <form class="entity-form" method="post" action="/payments">
+  {# The payment save is htmx: on success the server re-renders the payments list into `#app-main`; on
+     failure it re-renders this form with the error. A plain POST still 303s. #}
+  <form class="entity-form" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="/payments" action="/payments">
     {% if invoice %}
     <p class="muted">Against invoice #{{ invoice.invoiceNo }} — balance {{ invoice.balanceText }}</p>
     <input type="hidden" name="invoice" value="{{ invoice.id }}">

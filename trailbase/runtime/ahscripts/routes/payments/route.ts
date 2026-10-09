@@ -13,30 +13,10 @@
     if (!user) return routeKit.loginRedirect(req, path);
     const query = routeKit.parsePairs(String(req.query || ""));
 
-    const refs = await routeKit.refs();
-    const filters = {
-      type: routeKit.pick(query.type, ""),
-      from: routeKit.pick(query.from, ""),
-      to: routeKit.pick(query.to, ""),
-      party: routeKit.pick(query.party, ""),
-      standalone: routeKit.flag(query.standalone),
-      open: routeKit.flag(query.open),
-    };
-    const rows = await A.payments.listPayments(db, filters);
-    const totals = await A.payments.sumPayments(db, filters);
-
-    return routeKit.renderRoute(
-      req,
-      { user, active: "payments", title: "Payments", template: "payments/index.html" },
-      {
-        rows,
-        filters,
-        types: routeKit.typeOptions(A.payments.PAYMENT_TYPES),
-        selectedType: Number(filters.type || -1),
-        parties: refs.parties ?? [],
-        totals,
-      }
-    );
+    // One builder, shared with the payment writes (create/delete) so an htmx write renders the same
+    // list this GET does.
+    const view = await A.payments.listView(A, req, query);
+    return routeKit.renderRoute(req, { user, ...view.options }, view.data);
   };
 
   (globalThis as any).POST = async (req: any) => {
@@ -60,9 +40,26 @@
         description: String(form.description || ""),
         paid: "on",
       }));
+      // htmx create: re-render the list (flash included) into `#app-main`; a plain POST still 303s.
+      if (A.http.isFragment(req)) {
+        const view = await A.payments.listView(A, req, { status: "ok", message: "Payment saved" });
+        if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+      }
       return { redirect: "/payments?status=ok", status: 303 };
     } catch (e: any) {
-      return { text: "Payment not saved: " + (e && e.message ? e.message : String(e)), status: 400 };
+      const why = e && e.message ? e.message : String(e);
+      // htmx error: re-render the NEW form with the operator's values and the error, rather than a bare
+      // 400 body htmx would not swap.
+      if (A.http.isFragment(req)) {
+        const view = await A.payments.newView(
+          A,
+          req,
+          { invoice: form.invoice, type: form.type, party: form.party, amount: form.amount },
+          "Payment not saved: " + why
+        );
+        if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+      }
+      return { text: "Payment not saved: " + why, status: 400 };
     }
   };
 })();

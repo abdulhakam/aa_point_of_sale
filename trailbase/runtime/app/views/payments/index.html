@@ -7,7 +7,9 @@
   <a class="btn" href="/reports/outstanding">Outstanding report</a>
 </div>
 
-<form class="filters" method="get" action="/payments">
+{# APPLY is an htmx fragment: it swaps the list into `#app-main` and pushes the filtered URL, so a
+   filter result is shareable and the shell is not re-rendered (see [[htmx-navigation-with-html-fragments]]). #}
+<form class="filters" method="get" hx-get="/payments" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="true" action="/payments">
   <label class="field"><span>Type</span>
     <select name="type">
       <option value="">All</option>
@@ -55,7 +57,7 @@
         <td data-label="Description">{{ r.description }}</td>
         <td class="right" data-label="Amount">{{ r.amountText }}</td>
         <td class="row-actions" data-label="">
-          <form method="post" action="/payments/{{ r.id }}/delete" data-confirm="Delete this payment?">
+          <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Delete this payment?" action="/payments/{{ r.id }}/delete">
             <button class="icon-del" type="submit" title="Delete">×</button>
           </form>
         </td>

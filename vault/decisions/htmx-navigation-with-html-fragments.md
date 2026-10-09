@@ -94,22 +94,26 @@ for the day the allowlist grows to include it, `X-Requested-With` for today.
 - **Flash messages** now appear without a reload on **management** and **invoice-entry** writes
   (2026-10-09): an htmx write re-renders the list/entry fragment — which contains the flash region —
   into `#app-main`, so no separate out-of-band swap is needed. The remaining full-load writes are the
-  **payments** and **cash memo** writes (`tb-0036`).
-- **A write re-uses the screen builder.** `management.listView()`, `invoices.entryView()` and
-  `invoices.gridView()` are shared by their GET route and their write routes, so a write's screen and
-  the GET's screen cannot drift. Converted entry writes: `/invoices/<id>/line` (add),
-  `…/line/<lineId>/delete`, `…/header`, `…/complete` (everything that redirected to the entry page,
-  which is what `/invoices/new` lands on); and the grid save `/invoices/<id>/lines` (SAVE LINES and the
-  row remove op), which redirects to the grid.
+  **cash memo** writes (`tb-0036`).
+- **A write re-uses the screen builder.** `management.listView()`, `invoices.entryView()`,
+  `invoices.gridView()`, `payments.listView()` and `payments.newView()` are shared by their GET route
+  and their write routes, so a write's screen and the GET's screen cannot drift. Converted entry writes:
+  `/invoices/<id>/line` (add), `…/line/<lineId>/delete`, `…/header`, `…/complete` (everything that
+  redirected to the entry page, which is what `/invoices/new` lands on); the grid save
+  `/invoices/<id>/lines` (SAVE LINES and the row remove op); and the payment create (`POST /payments`,
+  which on a bad value re-renders the form with the error rather than a bare 400) and delete
+  (`/payments/<id>/delete`).
 - **A grid save's error is a swap, not a bare 409.** The grid save's failure path re-renders the grid
   with the message as the flash (`status: "error"`), because htmx does not swap a 4xx body by default —
   a bare `409` would have shown the operator nothing.
 - **A write re-uses the list builder.** `management.listView()` is shared by the GET route and the
   create/update/delete routes, so the write's list and the GET's list cannot drift. An htmx write
   answers with the body fragment; a plain POST still 303s, so the form works with no JavaScript.
-- **The write forms carry `hx-push-url="false"`** — a boosted form would otherwise push its POST action
-  (`/management/sections/create`) into the address bar. The URL is left as-is after a write (a small
-  residue: `?new=1` stays until the next navigation).
+- **The write forms set `hx-push-url` explicitly** — a boosted form would otherwise push its POST action
+  (`/management/sections/create`) into the address bar. Where the write returns the same screen, the
+  forms use `hx-push-url="false"` (invoice entry/grid); where it navigates to a different one, they push
+  that URL (`hx-push-url="/management/<entity>"`, `hx-push-url="/payments"`), so a refresh reloads the
+  list. This replaces the earlier `?new=1` residue.
 - **Report filters APPLY as fragments** and the row-cap "Show all" / "latest period" links are boosted
   (2026-10-09). **True load-more pagination is not built** — "Show all" still renders every row, so
   the 1,000-row cliff (`report-render-row-cap`) is unchanged.

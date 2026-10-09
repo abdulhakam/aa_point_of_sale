@@ -210,3 +210,69 @@ export async function deletePayment(db, publicId) {
   if (!hex) return 0;
   return await db.execute('DELETE FROM payments WHERE "id" = unhex(?)', [hex]);
 }
+
+/**
+ * The `/payments` list screen as `{ options, data }` for `routeKit.renderRoute`.
+ *
+ * Extracted so the payment WRITES (create, delete) can re-render the list on an htmx request instead
+ * of a 303 — one builder, so the write's list and the GET's list cannot drift. `query` carries both
+ * the filters and (for a write) a `status`/`message` flash.
+ */
+export async function listView(A, req, query) {
+  const routeKit = A.routeKit;
+  const db = (globalThis).sqlite;
+  const refs = await routeKit.refs();
+  const filters = {
+    type: routeKit.pick(query.type, ""),
+    from: routeKit.pick(query.from, ""),
+    to: routeKit.pick(query.to, ""),
+    party: routeKit.pick(query.party, ""),
+    standalone: routeKit.flag(query.standalone),
+    open: routeKit.flag(query.open),
+  };
+  const rows = await listPayments(db, filters);
+  const totals = await sumPayments(db, filters);
+  return {
+    options: { active: "payments", title: "Payments", template: "payments/index.html" },
+    data: {
+      rows,
+      filters,
+      types: routeKit.typeOptions(PAYMENT_TYPES),
+      selectedType: Number(filters.type || -1),
+      parties: refs.parties ?? [],
+      totals,
+      status: query.status || "",
+      message: query.message || "",
+    },
+  };
+}
+
+/**
+ * The `/payments/new` screen as `{ options, data }`, shared by its GET route and the create route's
+ * error path (which re-renders the form with the operator's values and the error, rather than a bare
+ * 400 body htmx would not swap). `query` repopulates the fields; `error` is the message to show.
+ */
+export async function newView(A, req, query, error) {
+  const routeKit = A.routeKit;
+  const db = (globalThis).sqlite;
+  const refs = await routeKit.refs();
+  const invoice = query.invoice ? await A.invoices.readInvoice(db, String(query.invoice)) : null;
+  // A payment with no invoice is the legacy standalone "DA" voucher.
+  const open = await A.invoices.listInvoices(db, { unpaid: "on" });
+  return {
+    options: { active: "payments", title: "New payment", template: "payments/new.html" },
+    data: {
+      invoice,
+      openInvoices: open.slice(0, 100),
+      types: routeKit.typeOptions(PAYMENT_TYPES),
+      selectedType: Number(routeKit.pick(query.type, invoice && invoice.type === 0 ? "0" : "1")),
+      selectedParty: String(routeKit.pick(query.party, invoice ? invoice.party || "" : "")),
+      selectedPaidTo: "",
+      amount: String(routeKit.pick(query.amount, invoice ? invoice.balanceText : "")),
+      today: dateOnly(new Date().toISOString()),
+      parties: refs.parties ?? [],
+      bookers: refs.bookers ?? [],
+      error: error ?? "",
+    },
+  };
+}

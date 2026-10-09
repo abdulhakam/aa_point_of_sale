@@ -12,6 +12,11 @@
     if (!match) return { text: "Not found", status: 404 };
 
     await routeKit.write(() => A.payments.deletePayment(db, String(match[1])));
+    // htmx delete: re-render the payments list (flash included); a plain POST still 303s.
+    if (A.http.isFragment(req)) {
+      const view = await A.payments.listView(A, req, { status: "ok", message: "Deleted" });
+      if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+    }
     return { redirect: "/payments?status=ok", status: 303 };
   };
 })();

@@ -10,26 +10,9 @@
     if (!user) return routeKit.loginRedirect(req, path);
     const query = routeKit.parsePairs(String(req.query || ""));
 
-    const refs = await routeKit.refs();
-    const invoice = query.invoice ? await A.invoices.readInvoice(db, String(query.invoice)) : null;
-    const open = await A.invoices.listInvoices(db, { unpaid: "on" });
-
-    return routeKit.renderRoute(
-      req,
-      { user, active: "payments", title: "New payment", template: "payments/new.html" },
-      {
-        invoice,
-        openInvoices: open.slice(0, 100),
-        types: routeKit.typeOptions(A.payments.PAYMENT_TYPES),
-        selectedType: Number(routeKit.pick(query.type, invoice && invoice.type === 0 ? "0" : "1")),
-        selectedParty: String(routeKit.pick(query.party, invoice ? invoice.party || "" : "")),
-        selectedPaidTo: "",
-        amount: String(routeKit.pick(query.amount, invoice ? invoice.balanceText : "")),
-        today: A.format.dateOnly(new Date().toISOString()),
-        parties: refs.parties ?? [],
-        bookers: refs.bookers ?? [],
-        error: "",
-      }
-    );
+    // One builder, shared with the create route's error path so a rejected payment re-renders this
+    // same form with the operator's values.
+    const view = await A.payments.newView(A, req, query, "");
+    return routeKit.renderRoute(req, { user, ...view.options }, view.data);
   };
 })();
