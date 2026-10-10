@@ -299,8 +299,24 @@ export async function readInvoice(db, publicId) {
   // browser copy in `app/public/js/app.js`:
   //   s = Σ round2(line total); afterD1 = s - s·d1/100; unrounded = afterD1 - afterD1·d2/100;
   //   final = round2(unrounded - discount_rs)
+  //
+  // ⚠️ `invoiceTotals`/`lineAmount` read SNAKE_CASE fields (`discount_1`, `discount_2`, `discount_rs`),
+  // but the mapped `lines` above carry them camelCased (`discount1`, …). Passing `lines` directly made
+  // `lineAmount` see no per-line discount at all, so an invoice with a line discount computed its total
+  // without it — e.g. invoice #1001 read 797.50 here while the list and the print document read the
+  // correct 731.00. Project the fields the money chain expects. (This was invisible until a line carried
+  // a discount; the grid's client preview recomputes correctly and masked it on screen.)
   const live = lines.filter((l) => !l.deleted);
-  const totals = invoiceTotals(live, h);
+  const totals = invoiceTotals(
+    live.map((l) => ({
+      qty: l.qty,
+      price: l.price,
+      discount_1: l.discount1,
+      discount_2: l.discount2,
+      discount_rs: l.discountRs,
+    })),
+    h
+  );
   const lineSum = totals.lineSum;
   const total = totals.total;
 

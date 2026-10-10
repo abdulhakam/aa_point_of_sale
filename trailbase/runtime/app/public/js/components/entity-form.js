@@ -141,19 +141,24 @@
     /** A click on a submit control is a submit intent: validate before the browser or htmx acts on it. */
     _onClick(event) {
       if (!isSubmitControl(event.target) || !this._form.contains(event.target.closest("button, input"))) return;
-      this._gate(event);
+      this._gate(event, false);
     }
 
     /** Enter in a text field submits without a click; validate the same way. */
     _onSubmit(event) {
-      this._gate(event);
+      this._gate(event, true);
     }
 
     /**
      * Clear stale messages, then stop the event if any control the server would also reject is invalid.
      * Runs for a valid form too (it clears and, for a non-htmx form, marks busy).
+     *
+     * `markBusy` must be false for the submit CONTROL's click: disabling that button during its own
+     * click cancels the form's native submission (Chrome abandons it once the submitter is disabled),
+     * so a plain form never posted. Busy is set on the `submit` event instead, where the navigation is
+     * already committed and disabling the control cannot cancel it.
      */
-    _gate(event) {
+    _gate(event, markBusy) {
       this._clearMessages();
       var form = this._form;
       var controls = form.querySelectorAll("input, select, textarea");
@@ -175,7 +180,7 @@
 
       // Valid: disable now for a plain form too, so a double click cannot fire two navigations; a
       // boosted form is covered by htmx:beforeRequest.
-      if (!form.hasAttribute("hx-boost") && !form.hasAttribute("hx-post")) this._setBusy(true);
+      if (markBusy && !form.hasAttribute("hx-boost") && !form.hasAttribute("hx-post")) this._setBusy(true);
     }
 
     _markInvalid(control) {

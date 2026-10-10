@@ -69,6 +69,17 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-10 — full-app UI sweep: three real defects.** Drove the whole guest app in Chrome against a
+seeded throw-away depot (every route 200; create/read/update/delete/navigate exercised). Found and fixed
+three bugs no HTTP gate saw: **`readInvoice` dropped per-line discounts from the invoice total**
+(critical — grid/console read 797.50 where the list/document read 731.00;
+[[guest-invoice-total-dropped-line-discounts]]); a **plain `<aa-entity-form>` submit button was cancelled
+on click**, leaving the Inventory CREATE/SAVE buttons dead ([[plain-entity-form-submit-cancelled]]); and a
+**duplicate blank `—` option** in management relation/enum selects
+([[management-select-duplicate-blank-option]]). `tools/invoice-view-check.mjs` gained a line-discount
+assertion (315.00). Evidence: [[full-app-ui-sweep-2026-10-10]]. Gates after the fixes: `guest-smoke`
+**116/116**, `invoice-view-check` **all green**.
+
 **2026-10-10 — the invoice console: one keyboard-first surface.** `GET /invoices/new?type=N` is now
 the keyboard console (`views/invoices/console.html` + `components/invoice-view.js` `<aa-invoice-view>`
 + `components/item-search.js`), with `grid.html` kept as the no-JS fallback. The state machine

@@ -170,14 +170,16 @@ async function main() {
     check("the JSON API shows the line", lines.length === 1, `lines=${lines.length}`);
     const lineId = lines.length ? lines[0].id : "";
     if (lineId) {
-      const patched = await patchJson(`/invoice/${id}/line/${lineId}`, { qty: 5, price: 70, cost_price: 0, discount_1: 0, discount_2: 0, discount_rs: 0, scheme: 0 });
+      // A per-line discount, so the total must drop by it: 5 x 70 x (1 - 10/100) = 315.00. A server
+      // total that ignores the line discount (350.00) is the bug this guards against.
+      const patched = await patchJson(`/invoice/${id}/line/${lineId}`, { qty: 5, price: 70, cost_price: 0, discount_1: 10, discount_2: 0, discount_rs: 0, scheme: 0 });
       check("PATCH line/{lineId} applies", patched.status === 200 && patched.json?.updated === 1, `${patched.status} ${patched.text}`);
     } else {
       check("PATCH line/{lineId} applies", false, "no line to patch");
     }
 
     const opened = await get(`/invoices/new?type=1&invoice=${encodeURIComponent(id)}`);
-    check("console re-renders with the edited total (5 x 70 = 350.00)", /350\.00/.test(opened.body), "");
+    check("console re-renders with the edited total (5 x 70 less 10% = 315.00)", /315\.00/.test(opened.body) && !/350\.00/.test(opened.body), "");
 
     // header save through the console form re-renders the console (surface=console), not entry.html
     const partyId = (JSON.parse((await get("/invoice/context?type=sale")).body).parties || [])[0]?.id || "";
@@ -192,7 +194,7 @@ async function main() {
     // 4. live sheet
     const live = await get(`/invoices/${id}/view?source=live`);
     check("?source=live renders the sheet", live.status === 200 && live.body.includes("Cola") && /SALE INVOICE/.test(live.body), `${live.status}`);
-    check("?source=live reflects the edit (350.00)", /350\.00/.test(live.body), "");
+    check("?source=live reflects the edit (5 x 70 less 10% = 315.00)", /315\.00/.test(live.body), "");
     const liveMissing = await get("/invoices/AAAAAAAAAAAAAAAAAAAAAA/view?source=live");
     check("?source=live 404s for an unknown id", liveMissing.status === 404, `${liveMissing.status}`);
 
