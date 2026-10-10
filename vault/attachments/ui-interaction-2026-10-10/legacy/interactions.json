@@ -1,0 +1,1040 @@
+[
+  {
+    "system": "legacy",
+    "name": "dashboard",
+    "route": "/app/dashboard",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "invoices",
+    "route": "/app/invoices",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "invoices-new-sale",
+    "route": "/app/invoices/sale",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "invoices-new-purchase",
+    "route": "/app/invoices/purchase",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "invoices-new-return",
+    "route": "/app/invoices/return",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "invoices-new-difference",
+    "route": "/app/invoices/difference",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "cashmemo",
+    "route": "/app/cashmemo",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "cashmemo-expenses",
+    "route": "/app/cashmemo/expenses",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "payments",
+    "route": "/app/cashmemo/payments",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "print",
+    "route": "/printinvoice",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "print-queue",
+    "route": "/printinvoice/queue",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "management",
+    "route": "/app/management",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "management-parties",
+    "route": "/app/management/parties",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "legacy",
+    "name": "management-items",
+    "route": "/app/management/items",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": [
+      {
+        "label": "Add New",
+        "href": "",
+        "navigated": false,
+        "overlay": true,
+        "overlayText": "Create New Updated Company Name CP SP Carton Size Create",
+        "urlAfter": "/app/management/items"
+      }
+    ]
+  },
+  {
+    "system": "legacy",
+    "name": "management-bookers",
+    "route": "/app/management/bookers",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": [
+      {
+        "label": "Created",
+        "href": "",
+        "navigated": false,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/app/management/bookers"
+      }
+    ]
+  }
+]

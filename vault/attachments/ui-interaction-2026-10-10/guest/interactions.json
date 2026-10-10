@@ -1,0 +1,1859 @@
+[
+  {
+    "system": "guest",
+    "name": "dashboard",
+    "route": "/dashboard",
+    "keys": [
+      {
+        "key": "?",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/dashboard",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/dashboard",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/dashboard",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/dashboard",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "invoices",
+    "route": "/invoices",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/invoices",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/invoices",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/invoices",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/invoices",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/invoices",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "invoices-new-sale",
+    "route": "/invoices/new?type=1",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=1",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=1",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=1",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=1",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": [
+      {
+        "label": "+",
+        "href": "",
+        "navigated": false,
+        "overlay": true,
+        "overlayText": "Create New Customer Name Area No area KHUWAJA GOTH KATRI 12 MEEL 78 MORI MIRWAH CITY RAJAR",
+        "urlAfter": "/invoices/new?type=1"
+      },
+      {
+        "label": "Create",
+        "href": "",
+        "navigated": false,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/invoices/new?type=1"
+      }
+    ]
+  },
+  {
+    "system": "guest",
+    "name": "invoices-new-purchase",
+    "route": "/invoices/new?type=0",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=0",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=0",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=0",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=0",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": [
+      {
+        "label": "+",
+        "href": "",
+        "navigated": false,
+        "overlay": true,
+        "overlayText": "Create New Supplier Name Area No area KHUWAJA GOTH KATRI 12 MEEL 78 MORI MIRWAH CITY RAJAR",
+        "urlAfter": "/invoices/new?type=0"
+      },
+      {
+        "label": "Create",
+        "href": "",
+        "navigated": false,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/invoices/new?type=0"
+      }
+    ]
+  },
+  {
+    "system": "guest",
+    "name": "invoices-new-return",
+    "route": "/invoices/new?type=2",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=2",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=2",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=2",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=2",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": [
+      {
+        "label": "+",
+        "href": "",
+        "navigated": false,
+        "overlay": true,
+        "overlayText": "Create New Customer Name Area No area KHUWAJA GOTH KATRI 12 MEEL 78 MORI MIRWAH CITY RAJAR",
+        "urlAfter": "/invoices/new?type=2"
+      },
+      {
+        "label": "Create",
+        "href": "",
+        "navigated": false,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/invoices/new?type=2"
+      }
+    ]
+  },
+  {
+    "system": "guest",
+    "name": "invoices-new-difference",
+    "route": "/invoices/new?type=3",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=3",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=3",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=3",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/invoices/new?type=3",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": [
+      {
+        "label": "Create",
+        "href": "",
+        "navigated": false,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/invoices/new?type=3"
+      }
+    ]
+  },
+  {
+    "system": "guest",
+    "name": "invoices-all",
+    "route": "/invoices/all",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/invoices/all",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/invoices/all",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/invoices/all",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/invoices/all",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/invoices/all",
+          "focus": "SELECT:type",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/invoices/all",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/invoices/all",
+          "focus": "SELECT:type",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "cashmemo",
+    "route": "/cashmemo",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo",
+          "focus": "A:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "cashmemo-expenses",
+    "route": "/cashmemo/expenses",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo/expenses",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo/expenses",
+          "focus": "INPUT:q",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo/expenses",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo/expenses",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo/expenses",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo/expenses",
+          "focus": "INPUT:q",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo/expenses",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/cashmemo/expenses",
+          "focus": "INPUT:q",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "payments",
+    "route": "/payments",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/payments",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/payments",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/payments",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/payments",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/payments",
+          "focus": "SELECT:type",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/payments",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/payments",
+          "focus": "SELECT:type",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "payments-new",
+    "route": "/payments/new",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/payments/new",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/payments/new",
+          "focus": "SELECT:invoice",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/payments/new",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/payments/new",
+          "focus": "SELECT:invoice",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "inventory",
+    "route": "/inventory",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/inventory",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": true,
+        "after": {
+          "url": "/inventory",
+          "focus": "INPUT:q",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/inventory",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/inventory",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/inventory",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/inventory",
+          "focus": "INPUT:name",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/inventory",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/inventory",
+          "focus": "INPUT:name",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": [
+      {
+        "label": "CREATE ITEM",
+        "href": "",
+        "navigated": false,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/inventory"
+      }
+    ]
+  },
+  {
+    "system": "guest",
+    "name": "print",
+    "route": "/print",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/print",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": true,
+        "after": {
+          "url": "/print",
+          "focus": "SELECT:type",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/print",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": true,
+        "after": {
+          "url": "/print",
+          "focus": "SELECT:type",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "print-queue",
+    "route": "/print/queue",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/print/queue",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/print/queue",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": []
+  },
+  {
+    "system": "guest",
+    "name": "management",
+    "route": "/management",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/management",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "k",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/management",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": [
+      {
+        "label": "settings",
+        "href": "/settings",
+        "navigated": true,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/settings"
+      }
+    ]
+  },
+  {
+    "system": "guest",
+    "name": "management-parties",
+    "route": "/management/parties",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/management/parties",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": true,
+        "after": {
+          "url": "/management/parties",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/management/parties",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/management/parties",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/management/parties",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/management/parties",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": [
+      {
+        "label": "add new",
+        "href": "/management/parties?new=1",
+        "navigated": true,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/management/parties?new=1"
+      }
+    ]
+  },
+  {
+    "system": "guest",
+    "name": "management-items",
+    "route": "/management/items",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/management/items",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": true,
+        "after": {
+          "url": "/management/items",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/management/items",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/management/items",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/management/items",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/management/items",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": [
+      {
+        "label": "add new",
+        "href": "/management/items?new=1",
+        "navigated": true,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/management/items?new=1"
+      }
+    ]
+  },
+  {
+    "system": "guest",
+    "name": "management-bookers",
+    "route": "/management/bookers",
+    "keys": [
+      {
+        "key": "?",
+        "changed": true,
+        "after": {
+          "url": "/management/bookers",
+          "focus": null,
+          "overlayCount": 1,
+          "overlays": [
+            "Keyboard This list is built from this page, so it only shows shortcuts that work here. A b"
+          ]
+        }
+      },
+      {
+        "key": "escape",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "/",
+        "changed": true,
+        "after": {
+          "url": "/management/bookers",
+          "focus": "INPUT:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "escape2",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "j",
+        "changed": true,
+        "after": {
+          "url": "/management/bookers",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "k",
+        "changed": true,
+        "after": {
+          "url": "/management/bookers",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "g",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "G",
+        "changed": true,
+        "after": {
+          "url": "/management/bookers",
+          "focus": "TR:",
+          "overlayCount": 0,
+          "overlays": []
+        }
+      },
+      {
+        "key": "f",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "ctrl+k",
+        "changed": true,
+        "after": {
+          "url": "/management/bookers",
+          "focus": "INPUT:Jump to",
+          "overlayCount": 1,
+          "overlays": [
+            "Cash memo /cashmemo Inventory /inventory Invoices /invoices Management /management Pages /"
+          ]
+        }
+      },
+      {
+        "key": ":",
+        "changed": false,
+        "after": null
+      },
+      {
+        "key": "alt+down",
+        "changed": false,
+        "after": null
+      }
+    ],
+    "triggers": [
+      {
+        "label": "add new",
+        "href": "/management/bookers?new=1",
+        "navigated": true,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/management/bookers?new=1"
+      },
+      {
+        "label": "Created",
+        "href": "",
+        "navigated": false,
+        "overlay": false,
+        "overlayText": null,
+        "urlAfter": "/management/bookers"
+      }
+    ]
+  }
+]
