@@ -22,7 +22,7 @@ rem Always give the bind address: TrailBase defaults to [::1]:4000 (IPv6 loopbac
 rem which neither a browser at 127.0.0.1 nor one at this machine's LAN address can reach.
 rem 0.0.0.0 serves every interface, so other devices on the LAN can open the app; set
 rem ADDRESS to go back to loopback only:
-rem     set "ADDRESS=127.0.0.1:4000" && RUN.BAT
+set "ADDRESS=127.0.0.1:4000"
 rem Inbound TCP 4000 also has to be allowed in Windows Defender Firewall for LAN clients.
 if not defined ADDRESS set "ADDRESS=0.0.0.0:4000"
 set "ADMIN_USER=admin@localhost"
