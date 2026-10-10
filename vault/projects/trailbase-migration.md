@@ -69,6 +69,22 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-10 — the client page cache: a repeat nav no longer fetches its page.** `pagecache.js` holds
+rendered fragments in IndexedDB keyed on `(CACHE_REV, identity, data version, url)`; a hit intercepts
+the click and performs the swap htmx would, a miss is left to htmx and then cached. Freshness stays
+fingerprint-keyed — a write's OOB meta clears it, `BroadcastChannel` clears other tabs, and a
+`/data/version` probe clears on focus/30 s — so it complements the server's rendered-page cache
+([[rendered-page-cache]]) rather than reintroducing a TTL. Decision: [[guest-page-cache]]; task
+[[tb-0038-client-page-cache]]. Two things fell out: htmx 2.0.4 cancels a boosted link's request only at
+the **click**, not at `beforeRequest` (and has no 304 handling), and **`runtimeRevision()` is unstable
+per request** in this environment ([[runtime-revision-is-unstable]]) — so the client key uses the data
+version, and the server cache deserves a re-measure. Gate `pagecache-check` **14/14**; full suite green
+(`guest-smoke` 116/116, `route-snapshot` 50/0, the rest unchanged). Also added (the owner's ask): a
+**loading spinner** (`#aa-loading`) driven by `hx-indicator` on `<body>`, shown after a ~150 ms delay
+for any htmx request and hidden on settle — a cache hit shows nothing, because it is instant. **Next:
+fix [[runtime-revision-is-unstable]] (it may be defeating the server cache), then re-add the code
+revision to the client key; `<aa-dirty-guard>`; true offset paging.**
+
 **2026-10-09 — the component slice: `<aa-money>`, `<aa-entity-form>`, `<aa-flash>`,
 `<aa-invoice-entry>`.** The component work named as next. Four light-DOM custom elements, one file
 each, consuming server descriptors ([[components-consume-server-descriptors]]). `<aa-money>` has two
@@ -133,8 +149,9 @@ pushed. It is a windowed step, not offset paging — true append remains a follo
 (`guest-smoke` 116/116, `route-snapshot` 50/0, `verify-spool-reports` 75 binds, `refdb-check` 12/12,
 `autocomplete-check` 39/39, `hotkey-check` 62/62, `grid-preview-check` 14/14, `print-queue-check`
 14/14). **Next: the component work is done (`<aa-money>`, `<aa-entity-form>`, `<aa-flash>`,
-`<aa-invoice-entry>`); what remains is `<aa-dirty-guard>` (deferred pending harness dialog handling),
-true offset paging, and the render-time measurement.**
+`<aa-invoice-entry>`) and so is the client page cache ([[tb-0038-client-page-cache]]); what remains is
+[[runtime-revision-is-unstable]] (may be defeating the server cache), `<aa-dirty-guard>` (deferred
+pending harness dialog handling), true offset paging, and the render-time measurement.**
 [[htmx-navigation-with-html-fragments]], [[tb-0036-htmx-navigation]].
 
 **2026-10-09 — cash-memo expenses writes are htmx; the write surface is complete.** Extracted
@@ -533,6 +550,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | [[tb-0035-direct-sqlite-v1-importer]] | **done 2026-10-06** — standalone TUI that writes `main.db` directly, preserving `created`/`updated` and attributing `invoice_maker` to a chosen `_user` ([[v1-direct-import-tool]]) |
 | [[tb-0036-htmx-navigation]] | **doing 2026-10-09** — htmx boosted navigation over server-rendered fragments; slice 1 built and browser-verified, follow-ups open |
 | [[tb-0037-component-library]] | **doing 2026-10-09** — `<aa-money>`, `<aa-entity-form>`, `<aa-flash>` and `<aa-invoice-entry>` built, wired and gated ([[component-library-2026-10-09]]); `<aa-dirty-guard>` deferred |
+| [[tb-0038-client-page-cache]] | **done 2026-10-10** — client fragment cache keyed on the data version ([[guest-page-cache]]); `pagecache-check` 14/14 |
 | ~~[[tb-0015-integer-cents-for-money]]~~ | **declined**; money is 2 dp everywhere |
 | ~~[[pos-0027-migrate-production-data-to-trailbase]]~~ | **done** 2026-09-29 |
 | ~~[[pos-0028-decide-cutover-plan]]~~ | **done** 2026-10-03 — [[cutover-is-guest-only]] |

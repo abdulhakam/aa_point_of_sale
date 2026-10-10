@@ -15,6 +15,9 @@
    It carries an id so a fragment can update it out-of-band (see the OOB meta in the body below and
    `__AA_REFDB__.reload()`), keeping the cache honest across a boosted nav without a full load. #}
 <meta id="aa-refdb-version" name="aa-refdb-version" content="{{ refdbVersion }}">
+{# The signed-in identity, so the client page cache (`pagecache.js`) never serves one user's cached
+    fragments to another on a shared browser. The shell is per-identity; this is the same key material. #}
+<meta id="aa-user" name="aa-user" content="{{ user.email if user else '' }}">
 <link rel="icon" href="/static/favicon.svg">
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
@@ -23,7 +26,17 @@
    header allowlist). It does inherit `hx-headers`, so every htmx request from this page carries
    `X-Requested-With`, which the host DOES expose — see `app/lib/http.js` `isFragment`. Inherited from
    `<body>` so the rail links, the topbar brand and any future boosted element all send it. #}
-<body{% if paper %} data-paper="{{ paper }}"{% endif %} hx-headers='{"X-Requested-With":"XMLHttpRequest"}'>
+<body{% if paper %} data-paper="{{ paper }}"{% endif %} hx-headers='{"X-Requested-With":"XMLHttpRequest"}' hx-indicator="#aa-loading">
+{# The loading spinner. htmx adds its request class to the element named by `hx-indicator` for the
+   duration of every htmx request, and `hx-indicator` is inherited from this `<body>` — so one element
+   covers navigation, filters, sorts and writes. It lives OUTSIDE `#app-main` (in the shell, rendered
+   once) so a swap never removes it. A cache hit is served by `pagecache.js` without an htmx request, so
+   it shows nothing — which is correct, because it is instant. The show is delayed ~150 ms in CSS, so a
+   fast request does not flash it. #}
+<div id="aa-loading" class="aa-loading" role="status" aria-live="polite">
+  <span class="aa-spinner" aria-hidden="true"></span>
+  <span class="aa-loading-text">Loading…</span>
+</div>
 <div class="appshell">
 {% if user %}
 {% include 'partials/topbar.html' %}
@@ -53,6 +66,11 @@
    finds it loaded. #}
 <script src="/static/js/htmx.min.js" defer></script>
 <script src="/static/js/app.js" defer></script>
+{# The client page cache: IndexedDB of rendered fragments keyed on (code revision, data version, url),
+    served on a boosted nav without a request ([[guest-page-cache]]). Loaded after app.js so the
+    `htmx:afterSwap` event it dispatches on a cache hit reaches app.js's re-enhancement listener, which
+    was registered first. Additive and fail-safe: a miss is an ordinary htmx request. #}
+<script src="/static/js/pagecache.js" defer></script>
 {# The print queue: the legacy browser-side queue (localStorage `print-queue`) behind "Add to Print
    Queue" on the invoice sheet and the Queue rail on `/print`. Loaded before the other components so
    the click delegation is registered early; it is progressive enhancement, so absence is safe. #}

@@ -1087,6 +1087,31 @@ form[aria-busy="true"] button[type="submit"], form[aria-busy="true"] input[type=
 .flash-close:hover { opacity: 1; background: rgba(0, 0, 0, 0.06); }
 .flash.flash-out { opacity: 0; }
 
+/* ── the loading spinner (layout.html #aa-loading) ────────────────────────────────────────────────────
+   htmx puts its request class on the element named by `hx-indicator` (inherited from <body>) while a
+   request is open, so one element shows the spinner for a nav, a filter, a sort or a write alike. The
+   show is DELAYED ~150 ms: a request that finishes sooner never flashes it, which is what makes it read
+   as "this is doing something" instead of flicker. A client page-cache hit never reaches htmx, so it
+   shows nothing — correct, because it is instant. Non-blocking: it is `pointer-events: none`. */
+.aa-loading {
+  position: fixed; top: calc(var(--header-h) + 8px); left: 50%; transform: translateX(-50%);
+  z-index: 2000; display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--muted); font-size: 0.8rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+.aa-loading.htmx-request { visibility: visible; animation: aa-loading-show 0.12s ease 0.15s forwards; }
+@keyframes aa-loading-show { to { opacity: 1; } }
+.aa-spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--line); border-top-color: var(--accent);
+  animation: aa-spin 0.7s linear infinite;
+}
+@keyframes aa-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .aa-spinner { animation-duration: 2s; } }
+@media print { .aa-loading { display: none !important; } }
+
 
 
 
