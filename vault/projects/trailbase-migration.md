@@ -3,7 +3,7 @@ title: TrailBase migration
 type: project
 status: active
 created: 2026-09-26
-updated: 2026-10-09
+updated: 2026-10-10
 tags: [pos, trailbase, migration, workstream]
 belongs_to: "[[aa-point-of-sale]]"
 related_to: ["[[trailbase]]", "[[runtime-js-guest-platform]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[reference-lists-come-from-indexeddb]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[ui-parity-discrepancies-2026-10-08]]", "[[features-as-native-web-components]]"]
@@ -68,6 +68,43 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
   [[cutover-is-guest-only]].
 
 ## Sequence
+
+**2026-10-10 — the invoice console: one keyboard-first surface.** `GET /invoices/new?type=N` is now
+the keyboard console (`views/invoices/console.html` + `components/invoice-view.js` `<aa-invoice-view>`
++ `components/item-search.js`), with `grid.html` kept as the no-JS fallback. The state machine
+(picker → booker → party → date → create → line entry → `999` finish) and the `0`/`999`/`000`/`up`
+code contract are the decision [[invoice-console-keyboard-state-machine]]. Backend enablers: a
+**fragment create** on `POST /invoices/new` (the write re-renders the same console), a new
+**`PATCH /invoice/<id>/line/<lineId>`** wired to `lifecycle.editLine`, **`buildSheetFresh` +
+`?source=live`** on the view route ([[invoice-console-preview-is-live-not-materialised]]),
+**composite party labels** (`name - area - section`), and **soft delete** via
+`invoices.deleted` ([[invoices-are-soft-deleted]]). Print parity: A5 margins `0.5cm 0.9cm 0.9cm 0.9cm`
+and `BOX SIZE = 2em` / `UNTS = 1em` ([[invoice-print-sheet-legacy-metrics]]). The console routes its
+writes through the canonical `invoice-lifecycle.js`; `invoicing.js` remains for the older entry
+routes (reconciliation incomplete). Gates: `guest-smoke` **116/116**, new `tools/invoice-view-check.mjs`
+**all green**. Evidence: [[invoice-console-build-2026-10-10]], task [[tb-0040-invoice-console-keyboard-surface]].
+**Next: the headless-Chrome keyboard gate, retiring `invoicing.js`, and the composite label through
+refdb's spec.** A **manual Chrome pass** over the console then corrected **8 UI defects** the HTTP
+gate could not see (nonexistent NEW Enter, unwired walk chains, focus/combobox timing, the missing
+picker action dialog, `000` precedence) — the argument for promoting that pass to an automated gate.
+
+**2026-10-10 — non-report interaction parity: keys and dialogs.** New probe `tools/ui-interaction-capture.mjs`
+(headless CDP) recorded, per non-report screen, what each of `? Esc / j k g G f Ctrl+K : Alt+↓` does and
+which controls open a dialog vs navigate. **The guest has a full keyboard layer (help overlay, command
+palette, row/tile cursor, field moves); legacy has none** — a guest-only addition, by design, not a gap.
+Dialog parity is near: both open a modal from the invoice party `+`; the one real divergence is
+**management create** — legacy opens an "Add New" modal, the guest navigates to an inline `?new=1` panel.
+Legacy live capture was partial (its Mantine app hydrates/re-gates variably); guest is complete. Evidence:
+[[ui-interaction-parity-2026-10-10]].
+
+**2026-10-10 — 1:1 UI parity re-run (28 screens, both systems live).** A fresh `ui-capture --system both`
+against the running pair (guest `:4000`, legacy `:3000`) plus `ui-parity-report`: **28/28 screens still
+differ**, almost entirely accepted carve-outs (rail incl. the withdrawn `orders`; anchor colour; report
+`<th>`; data-window) and two extractor artefacts (option-dump labels, Mantine input counts). The
+actionable residue is the **same four** as 2026-10-09 — item drill-down links on difference/stockreport,
+cash-memo payments filters/columns, report filter label text, and reset/clear — plus two candidates
+(party-list `party type` filter; cash-memo expenses column set). Full evidence and the settle-budget
+operational note: [[ui-parity-run-2026-10-10]].
 
 **2026-10-10 — the client page cache: a repeat nav no longer fetches its page.** `pagecache.js` holds
 rendered fragments in IndexedDB keyed on `(CACHE_REV, identity, data version, url)`; a hit intercepts

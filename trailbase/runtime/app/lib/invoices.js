@@ -23,6 +23,36 @@ export const INVOICE_TYPES = {
 export const typeLabel = (code) => INVOICE_TYPES[Number(code)] ?? "Invoice";
 
 /**
+ * The label a party option shows: `name - area - section`, so two parties with the same name in
+ * different locations can be told apart where an operator picks one (the invoice console). Falls back
+ * to the bare name when the party has no area (or the area no section). The party row carries `area`
+ * (an area id); the area carries `section` — both relation ids are base64 in `readTable`'s output, so
+ * they key the maps here directly.
+ */
+export function partyLabel(party, areas, sections) {
+  const name = String(party?.name ?? "");
+  const area = party?.area ? areas?.get(String(party.area)) : null;
+  const section = area && area.section ? sections?.get(String(area.section)) : null;
+  const parts = [name, area?.name, section?.name]
+    .map((s) => String(s ?? "").trim())
+    .filter(Boolean);
+  return parts.join(" - ") || name;
+}
+
+/** Party options with the composite `label`, for a picker. Keeps `id`/`name` untouched. */
+export function partyOptions(refs) {
+  const areas = new Map((refs?.areas ?? []).map((r) => [String(r.id), r]));
+  const sections = new Map((refs?.sections ?? []).map((r) => [String(r.id), r]));
+  return (refs?.parties ?? []).map((p) => ({
+    id: p.id,
+    name: p.name ?? "",
+    type: p.type,
+    area: p.area ?? "",
+    label: partyLabel(p, areas, sections),
+  }));
+}
+
+/**
  * Name a result set's columns so rows can be read by name. The DB bridge returns positional
  * arrays, and a hand-counted index is a silent-wrong-number bug waiting to happen.
  */
@@ -38,7 +68,7 @@ const LIST_COLUMNS = [
 ];
 
 const HEAD_COLUMNS = [
-  "id", "invoiceNo", "type", "dated", "duedate", "description", "completed", "deleted",
+  "id", "invoiceNo", "type", "dated", "duedate", "description", "created", "completed", "deleted",
   "discount_1", "discount_2", "discount_rs", "partyId", "partyName", "bookerId", "bookerName",
 ];
 
@@ -198,7 +228,7 @@ export async function readInvoice(db, publicId) {
 
   const head = await db.all(
     'SELECT i."id" AS id, i."invoiceNo" AS invoiceNo, i."type" AS type, i."dated" AS dated, ' +
-      'i."duedate" AS duedate, i."description" AS description, i."completed" AS completed, ' +
+      'i."duedate" AS duedate, i."description" AS description, i."created" AS created, i."completed" AS completed, ' +
       'i."deleted" AS deleted, i."discount_1" AS discount_1, i."discount_2" AS discount_2, ' +
       'i."discount_rs" AS discount_rs, i."party" AS partyId, pa."name" AS partyName, ' +
       'i."booker" AS bookerId, bo."name" AS bookerName ' +
@@ -304,6 +334,9 @@ export async function readInvoice(db, publicId) {
     dated: dateOnly(h.dated),
     duedate: dateOnly(h.duedate),
     description: h.description ?? "",
+    // The invoice's creation stamp. The print sheet's Invoice Date/Time comes from `created` (legacy
+    // does the same); included here so the LIVE sheet build has it without a second read.
+    created: String(h.created ?? ""),
     completed: Number(h.completed) === 1,
     deleted: Number(h.deleted) === 1,
     party: h.partyId ?? null,
@@ -409,6 +442,78 @@ export async function gridView(A, req, idB64, message, status) {
       companies: refs.companies ?? [],
       message: message ?? "",
       status: status ?? "",
+    },
+  };
+}
+
+/**
+ * The keyboard invoice console at `/invoices/new?type=N` as `{ options, data }` for
+ * `routeKit.renderRoute`.
+ *
+ * Two modes, one renderer:
+ *   - **picker** (`invoiceId` absent) — State 0: the invoice-number picker lists `NEW` plus this
+ *     type's most recent invoices, and the header/line surface renders empty and disabled.
+ *   - **loaded** (`invoiceId` given) — the invoice is opened and the line surface is live when the
+ *     caller holds the write lease.
+ *
+ * Extracted so the console GET, the fragment CREATE (POST /invoices/new) and the line writes can all
+ * answer with the same screen — the write's screen and the GET's cannot drift (the entryView/gridView
+ * rule). Returns null only when a loaded id does not exist.
+ */
+export async function consoleView(A, req, { type, invoiceId, message, status, actions } = {}) {
+  const routeKit = A.routeKit;
+  const db = (globalThis).sqlite;
+  const refs = await routeKit.refs();
+  const pickerType = Number(type) in INVOICE_TYPES ? Number(type) : 1;
+
+  // The picker: this type's invoices, newest first, capped like the payment picker (`newView`).
+  const pickerRows = await listInvoices(db, { type: pickerType }, { limit: 200 });
+  const picker = pickerRows.map((r) => ({
+    id: r.id,
+    invoiceNo: r.invoiceNo,
+    partyName: r.partyName,
+    dated: r.dated,
+    totalText: r.totalText,
+    label: "#" + r.invoiceNo + " · " + (r.partyName || "No party") + " · " + r.dated + " · " + r.totalText,
+  }));
+
+  let invoice = null;
+  if (invoiceId) {
+    const decoded = routeKit.decode(invoiceId);
+    invoice = await readInvoice(db, decoded);
+    if (!invoice) return null;
+    const hex = routeKit.b64ToHex(String(decoded));
+    const state = hex ? await A.lifecycle.readState(db, hex) : null;
+    const userHex = routeKit.userHex(req);
+    invoice = {
+      ...invoice,
+      canWrite: state ? state.lease === null || (state.lease.user ?? "").toUpperCase() === userHex : true,
+    };
+  }
+
+  return {
+    options: { active: "invoices", title: invoice ? "Invoice #" + invoice.invoiceNo : "New invoice", template: "invoices/console.html" },
+    data: {
+      type: pickerType,
+      typeLabel: typeLabel(pickerType),
+      today: dateOnly(new Date().toISOString()),
+      isNew: !invoice,
+      invoice,
+      picker,
+      // The composite party label (`name - area - section`) reaches the console picker here.
+      parties: partyOptions(refs),
+      bookers: refs.bookers ?? [],
+      items: routeKit.editorItems(refs),
+      // The quick-create panels' option lists.
+      areas: refs.areas ?? [],
+      companies: refs.companies ?? [],
+      user: routeKit.userOf(req),
+      // Fresh per render, so a repeated line submit is one line ([[invoice-entry-freshness-and-writes]]).
+      opKey: "line-" + Date.now().toString(36) + "-" + Math.floor(Math.random() * 1e9).toString(36),
+      message: message ?? "",
+      status: status ?? "",
+      // Open the existing-invoice action dialog on load (the picker selected an invoice).
+      actionsOpen: Boolean(actions),
     },
   };
 }

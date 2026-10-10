@@ -173,6 +173,32 @@ export async function releaseLease(db, invoiceHex, userHex) {
 }
 
 /**
+ * Soft-delete an invoice: set the `deleted` marker and leave the row in place.
+ *
+ * Deletion is SOFT on purpose ([[no-draft-invoices-published-on-save]]): the invoice list already
+ * filters `i.deleted = 0` (`invoices.js filteredQuery`), so a marked row leaves every list and every
+ * picker, while the ledger history and the report engine keep their rows. Nothing hard-deletes an
+ * invoice, and this is the only writer of the marker.
+ *
+ * `alsoLock` takes the lease first, so a delete is refused while another device is editing the
+ * invoice ([[single-writer-per-invoice]]) — the caller passes the id/device it holds.
+ */
+export async function softDeleteInvoice(db, invoiceHex, { userHex = "", device = "" } = {}) {
+  if (!/^[0-9A-F]{32}$/.test(String(invoiceHex ?? "").toUpperCase())) {
+    throw LifecycleError("not an invoice id", 400);
+  }
+  const state = await readState(db, invoiceHex);
+  if (!state) throw LifecycleError("no such invoice", 404);
+  if (userHex) await requireLease(db, invoiceHex, userHex, device);
+  return db.execute('UPDATE "invoices" SET "deleted" = 1 WHERE "id" = unhex(?)', [invoiceHex]);
+}
+
+/** Undo a soft delete — the row was never removed, so this only clears the marker. */
+export async function restoreInvoice(db, invoiceHex) {
+  return db.execute('UPDATE "invoices" SET "deleted" = 0 WHERE "id" = unhex(?)', [invoiceHex]);
+}
+
+/**
  * An invoice must have at least one live line before it counts as a document.
  *
  * There is no commit transition any more — the invoice is published the moment it is saved — so

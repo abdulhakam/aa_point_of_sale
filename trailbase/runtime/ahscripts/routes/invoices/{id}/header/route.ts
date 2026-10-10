@@ -26,11 +26,19 @@
         dated: String(form.dated || ""),
         description: String(form.description || ""),
         discount_1: String(form.discount_1 || ""),
+        discount_2: String(form.discount_2 || ""),
         discount_rs: String(form.discount_rs || ""),
       });
     });
-    // htmx write: re-render the entry screen (see the line-add route).
+    // htmx write: re-render the screen that made it. A console write (`surface=console`) answers with
+    // the console; the older entry screen answers with entry.html. One form field, so a write's screen
+    // cannot drift from the GET that rendered it.
     if (A.http.isFragment(req)) {
+      if (String(form.surface || "") === "console") {
+        const state = await A.lifecycle.readState(db, hex);
+        const view = await A.invoices.consoleView(A, req, { type: state ? state.type : 1, invoiceId: idB64, message: "Saved", status: "ok" });
+        if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+      }
       const view = await A.invoices.entryView(A, idB64, "Saved");
       if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
     }

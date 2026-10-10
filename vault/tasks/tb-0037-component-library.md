@@ -55,6 +55,20 @@ stylesheet, consuming server descriptors. Rule and rationale: [[components-consu
       `autocomplete-check` 39/39, `refdb-check` 12/12, `hotkey-check` 62/62, `print-queue-check` 14/14,
       `route-snapshot` 50/0. Evidence: [[component-library-2026-10-09]].
 
+## Done (2026-10-10) — the invoice-console components
+
+- [x] **`<aa-invoice-view>`** (`public/js/components/invoice-view.js`) — the keyboard invoice console's
+      controller: the picker -> booker -> party -> date -> create walk, the `0`/`999`/`000`/`up` state
+      machine, the line walk and `PATCH`-on-Enter of an edited row. Consumes the server's
+      `data-type`/`data-state`/`data-can-write`/`data-invoice` descriptors; progressive enhancement
+      over forms that already post. Decision: [[invoice-console-keyboard-state-machine]].
+- [x] **`<aa-item-search>`** (`public/js/components/item-search.js`) — the `000` advanced item-search
+      dialog, a client filter over the refdb `items`/`companies` cache (no new endpoint). Opened by the
+      synthetic `000` row `autocomplete.js` now appends (`shown()`/`choose()`, gated on
+      `data-adv-search`).
+- [x] Gate `tools/invoice-view-check.mjs`; `guest-smoke` 116/116. Evidence:
+      [[invoice-console-build-2026-10-10]].
+
 ## Planned (not done)
 
 - [ ] **`<aa-dirty-guard>`** — confirm before leaving an unsaved form (the legacy had confirm-on-navigate;

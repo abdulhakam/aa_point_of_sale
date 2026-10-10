@@ -30,5 +30,7 @@ target/
 
 # Throw-away depot the tools create when they run.
 .tbdemo-guest/
+.tbdemo-invview/
+.tbdemo-ui/
 
 runtime/vaulter-lite/

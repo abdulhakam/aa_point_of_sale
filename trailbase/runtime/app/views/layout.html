@@ -101,6 +101,11 @@
 {# `<aa-invoice-entry>` is the entry screen's container: it consumes the server descriptor and owns the
     item→price fill, which used to live in app.js. #}
 <script src="/static/js/components/invoice-entry.js" defer></script>
+{# `<aa-invoice-view>` is the keyboard invoice console's controller: the 0/999/000/up state machine and
+    focus walk over the server-rendered console. `<aa-item-search>` is the `000` advanced item-search
+    dialog it opens. Both are progressive enhancement over forms that already work. #}
+<script src="/static/js/components/invoice-view.js" defer></script>
+<script src="/static/js/components/item-search.js" defer></script>
 {# The keyboard layer is a separate file on purpose: it is an accelerator for markup that already works,
    so it can be reasoned about, tested and dropped without touching the app's own enhancements.
    `?` lists everything it can do on this page. #}

@@ -35,7 +35,9 @@
       version,
       type,
       items,
-      parties: refs.parties ?? [],
+      // Parties carry the composite `label` (`name - area - section`) so the console's picker and any
+      // client that builds its own party control can tell same-name parties apart.
+      parties: A.invoices.partyOptions(refs),
       bookers: refs.bookers ?? [],
       areas: refs.areas ?? [],
       sections: refs.sections ?? [],

@@ -162,3 +162,17 @@ idempotent line writes, totals recompute, invalidation storms) are listed as F1�
 - [[invoice-entry-freshness-and-writes]] — the settled design.
 - [[legacy-invoice-numbering-is-racy]] — the intended numbering scheme.
 - [[jobs-in-process-durable-queue]] — the print queue's mechanism.
+
+## Addendum 2026-10-10 — the keyboard console
+
+The invoice screen was rebuilt as one keyboard-first surface at `GET /invoices/new?type=N`
+([[invoice-console-keyboard-state-machine]]), with `grid.html` kept as the no-JS fallback. The
+console's writes go through the canonical `invoice-lifecycle.js`; the entry-screen routes still use
+`invoicing.js` for their non-console path, so the two line writers **coexist** — reconciling them
+(retiring `invoicing.js`'s writers) is outstanding. New durable pieces this task did not previously
+cover: a fragment create on `POST /invoices/new`, `PATCH /invoice/<id>/line/<lineId>` (the missing
+single-line edit), `?source=live` on the view route
+([[invoice-console-preview-is-live-not-materialised]]), and soft delete
+([[invoices-are-soft-deleted]]). Gate `tools/invoice-view-check.mjs`; `guest-smoke` 116/116.
+Tracked as [[tb-0040-invoice-console-keyboard-surface]]; evidence
+[[invoice-console-build-2026-10-10]].

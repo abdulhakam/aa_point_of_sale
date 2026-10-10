@@ -58,9 +58,14 @@
         String(form.opKey || "")
       );
     });
-    // htmx write: re-render the entry screen (flash included) into `#app-main`, so the line appears
-    // and the totals move without a document reload. A plain POST still 303-redirects.
+    // htmx write: re-render the screen that made it — the console (`surface=console`) or the entry
+    // screen. One field, so the write's screen cannot drift from the GET that rendered it.
     if (A.http.isFragment(req)) {
+      if (String(form.surface || "") === "console") {
+        const state = await A.lifecycle.readState(db, hex);
+        const view = await A.invoices.consoleView(A, req, { type: state ? state.type : 1, invoiceId: idB64, message: "Line added", status: "ok" });
+        if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
+      }
       const view = await A.invoices.entryView(A, idB64, "Saved");
       if (view) return routeKit.renderRoute(req, { user, ...view.options }, view.data);
     }

@@ -64,7 +64,10 @@
   function enhance(select) {
     if (select.multiple || select.dataset.acReady === "1") return;
     var options = readOptions(select);
-    if (options.length < MIN_OPTIONS) return;
+    // A console field can opt in with `data-force-combo`: its keyboard codes (999/000) need the
+    // combobox's text input, which a native select does not provide. Everywhere else, a short list
+    // stays a native select (rule 4).
+    if (options.length < MIN_OPTIONS && !select.hasAttribute("data-force-combo")) return;
     select.dataset.acReady = "1";
 
     var wrap = document.createElement("span");
@@ -164,9 +167,31 @@
      */
     function shown() {
       var rows = filtered.slice();
+      var adv = advancedRow();
+      if (adv) {
+        // The exact magic code is an action, not a name to create: suppress the "Create …" row so
+        // Enter opens the advanced-search dialog and cannot make an item literally named `000`.
+        rows.push(adv);
+        return rows;
+      }
       var name = creatableName();
       if (name) rows.push({ create: true, label: name });
       return rows;
+    }
+
+    /**
+     * The synthetic "Advanced search" row, appended the same way the create row is.
+     *
+     * ⚠️ The magic code `000` is consumed ONLY as the exact typed value in a select that opted in with
+     * `data-adv-search`. This is deliberate ([[invoice-console-keyboard-state-machine]]): the item list
+     * can legitimately contain an item named/printed `000`, and that item must still be selectable from
+     * the list below this row. Because the row is an entry in the same array the arrows walk and not a
+     * DOM decoration, `Enter` picks it exactly like any option.
+     */
+    function advancedRow() {
+      if (!select.hasAttribute("data-adv-search")) return null;
+      if (typedQuery().replace(/\s+/g, " ").trim() !== "000") return null;
+      return { adv: true, label: "Advanced search…" };
     }
 
     /** Redraw for the CURRENT query. Called on every keystroke, open or not. */
@@ -185,16 +210,18 @@
       }
       var html = "";
       for (var i = 0; i < rows.length; i++) {
-        var cls = "ac-option" + (rows[i].create ? " ac-create" : "");
+        var cls = "ac-option" + (rows[i].create ? " ac-create" : (rows[i].adv ? " ac-adv" : ""));
         html += '<li class="' + cls + '" role="option" id="' + listId + "-" + i + '" aria-selected="false" data-i="' + i + '"></li>';
       }
       list.innerHTML = html;
       for (var j = 0; j < list.children.length; j++) {
         // The create row reads as the action it is, not as a row of data — the quotes are the hint that
-        // the name is a name to make, and the ellipsis that something follows.
+        // the name is a name to make, and the ellipsis that something follows. The advanced-search row
+        // is already a plain action label.
         list.children[j].textContent = rows[j].create ? "Create \u201c" + rows[j].label + "\u201d\u2026" : rows[j].label;
       }
-      if (rows[rows.length - 1].create) list.children[rows.length - 1].classList.add("is-last");
+      var last = rows[rows.length - 1];
+      if (last && (last.create || last.adv)) list.children[rows.length - 1].classList.add("is-last");
     }
 
     function highlight() {
@@ -241,6 +268,14 @@
       // promise ("a value that is not on the list is never submitted") would be broken by the very
       // control that offers to make one.
       if (entry.create) return openPanel(entry.label);
+      // The advanced-search row is likewise an action, not a value. It announces itself on the select
+      // and the screen that opted in (`data-adv-search`) opens its own dialog. The select keeps
+      // whatever it held, so nothing invalid is submitted if the dialog is cancelled.
+      if (entry.adv) {
+        hide();
+        select.dispatchEvent(new CustomEvent("adv-search", { bubbles: true, detail: { query: typedQuery() } }));
+        return true;
+      }
       input.value = entry.label;
       var changed = select.value !== entry.value;
       select.value = entry.value;

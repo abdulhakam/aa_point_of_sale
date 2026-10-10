@@ -152,3 +152,126 @@ export async function buildSheet(A, id) {
   };
   return { data, type: Number(doc.type), invoiceNo: String(doc.invoiceNo ?? "") };
 }
+
+/**
+ * The LIVE variant of `buildSheet`: the same sheet context built from the base tables through
+ * `invoices.readInvoice`, NOT from the materialised `inv_doc` document.
+ *
+ * WHY. The materialised document is kept current by triggers, but it is still a second copy, and the
+ * request behind the console's view dialog is "show the LATEST data (not from cache / invoice_doc)".
+ * `readInvoice` already reads `invoices`/`transactions`/`items` directly, so this maps its output into
+ * the exact `data` shape `buildSheet` produces, and the ONE `partials/invoice-sheet.html` macro renders
+ * both — so the live preview and the queued printout cannot diverge in layout.
+ *
+ * Used by `?source=live` on `/invoices/<id>/view` (the console's view dialog and the finish-flow print
+ * tab). `/print` and `/print/queue` stay on `buildSheet`/`inv_doc` — the materialised tier — on purpose.
+ */
+export async function buildSheetFresh(A, id) {
+  const routeKit = A.routeKit;
+  const db = (globalThis).sqlite;
+  const inv = await A.invoices.readInvoice(db, String(id));
+  if (!inv) return null;
+  const refs = await routeKit.refs();
+
+  const byHex = (list) => {
+    const m = new Map();
+    for (const r of list ?? []) {
+      try { m.set(String(routeKit.b64ToHex(String(r.id))).toUpperCase(), r); } catch { /* non-id key */ }
+    }
+    return m;
+  };
+  const parties = byHex(refs.parties ?? []);
+  const areas = new Map((refs.areas ?? []).map((r) => [String(r.id), r]));
+  const sections = new Map((refs.sections ?? []).map((r) => [String(r.id), r]));
+  const bookers = byHex(refs.bookers ?? []);
+
+  const typeLabel = (TYPE_WORD[Number(inv.type)] ?? "INVOICE") + " INVOICE";
+  const isSale = Number(inv.type) === 1;
+
+  const partyRow = inv.party ? parties.get(String(routeKit.b64ToHex(String(inv.party))).toUpperCase()) : null;
+  const partyName = String(inv.partyName ?? partyRow?.name ?? "");
+  const partyPhone = String(partyRow?.phone ?? "");
+  let partyAddress = "";
+  if (isSale && partyRow) {
+    const area = partyRow.area ? areas.get(String(partyRow.area)) : null;
+    const section = area && area.section ? sections.get(String(area.section)) : null;
+    const addr = [String(partyRow.address ?? ""), String(area?.name ?? ""), String(section?.name ?? "")].join(" - ");
+    if (addr.replace(/[-\s]/g, "")) partyAddress = addr;
+  }
+  const bookerRow = inv.booker ? bookers.get(String(routeKit.b64ToHex(String(inv.booker))).toUpperCase()) : null;
+  const bookerName = isSale ? String(inv.bookerName ?? bookerRow?.name ?? "") : "";
+  const bookerPhone = isSale ? String(bookerRow?.phone ?? "") : "";
+
+  // Legacy header date/time come from the invoice's `created`; fall back to `dated` for a row that
+  // somehow has none. `readInvoice` carries `created` for exactly this.
+  const created = String(inv.created || inv.dated || "");
+  const invDate = A.dates.printDate(created);
+  const invTime = created ? A.dates.printTime(created) : "";
+
+  const dueRaw = String(inv.duedate ?? "").slice(0, 10);
+  const refRaw = String(inv.dated || inv.created || "").slice(0, 10);
+  const dueDate = dueRaw && refRaw && dueRaw > refRaw ? dueRaw : "";
+
+  const now = A.dates.shopNow();
+
+  const lines = (inv.lines ?? []).filter((l) => !l.deleted).map((l, i) => {
+    const box = Number(l.boxSizeQty ?? 0) || 0;
+    const qty = Number(l.qty ?? 0) || 0;
+    const ctn = box ? Math.floor(Math.abs(qty) / box) : 0;
+    const units = box ? Math.abs(qty) % box : Math.abs(qty);
+    const d1 = Number(l.discount1 ?? 0) || 0;
+    const d2 = Number(l.discount2 ?? 0) || 0;
+    const drs = Number(l.discountRs ?? 0) || 0;
+    return {
+      index: i + 1,
+      itemName: l.itemName ?? "",
+      boxSize: box ? String(box) : "",
+      ctn: String(ctn),
+      units: String(units),
+      free: String(Number(l.scheme ?? 0) || 0),
+      unitPrice: A.format.money(l.price),
+      ctnPrice: box ? A.format.money(box * (Number(l.price ?? 0) || 0)) : "",
+      d1Text: d1 ? d1.toFixed(2) : "",
+      d2Text: d2 ? d2.toFixed(2) : "",
+      drsText: drs ? A.format.money(drs) : "",
+      total: A.format.money(l.amount ?? 0),
+    };
+  });
+  const hasLineDiscounts = lines.some((l) => l.d1Text || l.d2Text || l.drsText);
+
+  const biz = globalThis.__AA_BUSINESS__ || {
+    name: "SAMPLE TRADERS",
+    address: "123 Sample Street, Sample City",
+    phone: "000-0000000",
+  };
+
+  const data = {
+    invoice: { id: String(id) },
+    businessName: biz.name,
+    businessAddress: biz.address,
+    businessPhone: biz.phone,
+    typeLabel,
+    partyName,
+    partyPhone,
+    partyAddress,
+    bookerName,
+    bookerPhone,
+    remarks: String(inv.description ?? ""),
+    invoiceNo: String(inv.invoiceNo ?? ""),
+    invDate,
+    invTime,
+    dueDate,
+    nowTime: now.time,
+    nowDate: now.date,
+    lines,
+    hasLineDiscounts,
+    totals: {
+      totalAmountText: A.format.money(inv.lineTotal ?? 0),
+      d1Text: (Number(inv.discount1 ?? 0) || 0).toFixed(2) + "%",
+      d2Text: (Number(inv.discount2 ?? 0) || 0).toFixed(2) + "%",
+      cashText: A.format.money(inv.discountRs ?? 0),
+      payableText: A.format.money(inv.total ?? 0),
+    },
+  };
+  return { data, type: Number(inv.type), invoiceNo: String(inv.invoiceNo ?? "") };
+}

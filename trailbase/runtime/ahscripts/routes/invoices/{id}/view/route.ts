@@ -26,8 +26,21 @@
     const paper = String(query.paper ?? "") || "a5";
     const id = String(routeKit.decode(match[1]));
 
-    const sheet = await (await (globalThis as any).__AA_LOAD__("/app/lib/invoice-sheet.js")).buildSheet(A, id);
-    if (!sheet) return { text: "No materialised document for this invoice yet", status: 404 };
+    // `?source=live` builds the sheet from the BASE TABLES (`buildSheetFresh` -> `readInvoice`),
+    // bypassing the materialised `inv_doc` document. The console's view dialog and its finish-flow
+    // print tab use it so the preview is always the latest data, not the trigger-maintained copy.
+    // Everything else (`/print`, `/print/queue`, a plain bookmark) stays on the materialised tier.
+    const live = String(query.source ?? "") === "live";
+    const sheetMod = await (globalThis as any).__AA_LOAD__("/app/lib/invoice-sheet.js");
+    const sheet = live
+      ? await sheetMod.buildSheetFresh(A, id)
+      : await sheetMod.buildSheet(A, id);
+    if (!sheet) {
+      return {
+        text: live ? "No such invoice" : "No materialised document for this invoice yet",
+        status: 404,
+      };
+    }
 
     return routeKit.renderRoute(
       req,

@@ -620,6 +620,13 @@ table.grid select { min-width: 12rem; }
 .doc-lines th, .doc-lines td { border: 1px solid #999; padding: 3px 6px; text-align: left; }
 .doc-lines th { background: #eee; }
 .doc-lines td.right, .doc-lines th.right { text-align: right; }
+/* Legacy explicit column widths (measured off the bundle): BOX SIZE = 2em, UNTS = 1em; every other
+   column is auto. Body cells are the stable index (header cells have colspans): col 3 = BOX SIZE,
+   col 5 = UNTS. Scoped to the sheet so the cash-memo voucher's table is untouched. */
+[data-invoice-doc] .doc-lines td:nth-child(3),
+[data-invoice-doc] .doc-lines th:nth-child(3) { width: 2em; }
+[data-invoice-doc] .doc-lines td:nth-child(5),
+[data-invoice-doc] .doc-lines th:nth-child(5) { width: 1em; }
 .doc-totals { margin-top: 10px; margin-left: auto; width: 45%; }
 .doc-grand th, .doc-grand td { font-weight: 700; border-top: 2px solid #000; }
 .doc-payments { margin-top: 14px; }
@@ -687,7 +694,9 @@ table.grid select { min-width: 12rem; }
    so a page that sets no `data-paper` (the dashboard) prints on the printer's own paper, portrait. */
 @media print {
   @page { margin: 10mm; }
-  @page a5 { size: A5 portrait; margin: 6mm; }
+  /* The legacy invoice page is A5 portrait with margins 0.5cm 0.9cm 0.9cm 0.9cm (measured off the
+     compiled legacy bundle's `useReactToPrint` pageStyle). */
+  @page a5 { size: A5 portrait; margin: 0.5cm 0.9cm 0.9cm 0.9cm; }
   @page a4 { size: A4 portrait; margin: 10mm; }
   body[data-paper="a5"] { page: a5; }
   body[data-paper="a4"] { page: a4; }
