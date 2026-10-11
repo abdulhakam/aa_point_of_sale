@@ -1,6 +1,7 @@
 {
   "title": "Payments By Company",
   "template": "page.html",
+  "resetLabel": "RESET",
   "hub": {
     "title": "Payments By Company",
     "target": "paymentsbycompany",

@@ -1,6 +1,7 @@
 {
   "title": "Unified Payments Report",
   "template": "page.html",
+  "resetLabel": "RESET",
   "hub": {
     "title": "Unified Payments Report",
     "target": "payments",

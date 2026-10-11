@@ -17,6 +17,8 @@ traildepot/wasm/
 # A hand-taken copy of `data/` before a schema change. `traildepot/backups/` is TrailBase's own and
 # is ignored above, but a copy made by hand lands beside it and is a 95 MB database: never staged.
 traildepot/backup-*/
+# A hand-taken copy of `data/` before a rebuild/import (e.g. `data.pre-parity-<ts>`): a full database.
+traildepot/data.pre-*/
 # The bench orchestrator redirects the server's streams to `*.log.err`, which `*.log` misses.
 traildepot/*.log.*
 
@@ -34,3 +36,10 @@ target/
 .tbdemo-ui/
 
 runtime/vaulter-lite/
+
+# The assembled distributable (dist.ps1 / dist.bat output). Rebuildable, never committed.
+dist/
+
+# The built Go control panel binary; `controlpanel/` is the source and IS committed.
+controlpanel.exe
+controlpanel/controlpanel.exe

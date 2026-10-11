@@ -1,6 +1,7 @@
 {
   "title": "Outstanding Payments Report",
   "template": "page.html",
+  "resetLabel": "RESET",
   "hub": {
     "title": "Outstanding Payments",
     "target": "outstanding",

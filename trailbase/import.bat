@@ -39,7 +39,7 @@ if not exist "%DEST%" (
   )
 )
 
-echo Importing "%SOURCE%" -> "%DEST%"  ^(invoice_maker -^> %ADMIN_USER%, wiping business tables^) ...
+echo Importing "%SOURCE%" -^> "%DEST%"  ^(invoice_maker -^> %ADMIN_USER%, wiping business tables^) ...
 node "%~dp0tools\import-v1-tui.mjs" --source "%SOURCE%" --dest "%DEST%" --user "%ADMIN_USER%" --wipe --yes %*
 
 endlocal & exit /b %errorlevel%

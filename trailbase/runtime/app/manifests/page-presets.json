@@ -14,11 +14,11 @@
       { "name": "to", "label": "Date To", "type": "date", "default": { "fn": "today" } }
     ],
     "company": { "name": "company", "label": "Company", "type": "select", "source": "companies" },
-    "party": { "name": "party", "label": "Party", "type": "select", "source": "parties" },
-    "booker": { "name": "booker", "label": "Booker", "type": "select", "source": "order_bookers" },
-    "area": { "name": "area", "label": "Area", "type": "select", "source": "areas" },
-    "section": { "name": "section", "label": "Section", "type": "select", "source": "sections" },
-    "item": { "name": "item", "label": "Item", "type": "select", "source": "items" },
+    "party": { "name": "party", "label": "Select Party", "type": "select", "source": "parties" },
+    "booker": { "name": "booker", "label": "Select Booker", "type": "select", "source": "order_bookers" },
+    "area": { "name": "area", "label": "Select Area", "type": "select", "source": "areas" },
+    "section": { "name": "section", "label": "Select Section", "type": "select", "source": "sections" },
+    "item": { "name": "item", "label": "Select Item", "type": "select", "source": "items" },
     "invoice": { "name": "invoice", "label": "Invoice", "type": "text" }
   },
   "columns": {

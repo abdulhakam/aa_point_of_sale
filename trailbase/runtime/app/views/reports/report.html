@@ -7,9 +7,12 @@
    template had the title above the filters and a meta line under them ("Date From: … Date To: … Rows:
    …"), so every report opened with its name and then asked for the period, where the legacy screen
    asks for the period and then names what it produced. The legacy also carries ONE control beyond
-   APPLY: a small printer glyph above the filters, top left. RESET is a new-side addition and PRINT's
-   labelled twin is new as well, so both are gone from here; printing is still reachable from that glyph
-   and from the keyboard layer's `p`. See [[ui-parity-discrepancies-2026-10-05]]. #}
+   APPLY: a small printer glyph above the filters, top left. PRINT's labelled twin is a new-side
+   addition, so it is gone; printing is still reachable from that glyph and from the keyboard layer's
+   `p`. ⚠️ **Corrected 2026-10-11:** RESET was removed here as a "new-side addition"
+   ([[ui-parity-discrepancies-2026-10-05]]), but the 2026-10-09/10 live captures show the legacy filter
+   block DOES carry a clear control on several screens (`reset` / `clear`); it is restored below per
+   report via `def.resetLabel`. See [[ui-parity-run-2026-10-11]]. #}
 {% import 'partials/icons.html' as icons %}
 {% if not print %}
 <div class="report-tools no-print">
@@ -44,6 +47,11 @@
 {% block extra_inputs %}{% endblock %}
   <div class="filter-actions">
     <button class="btn primary" type="submit">APPLY</button>
+    {# The legacy inline filter block carries a clear control on the screens that have one — `RESET`
+       on payments/salesreport/dailysale/outstanding/paymentsbycompany, `CLEAR` on the party/booker/area
+       ledgers (`def.resetLabel`). Screens without it (itemsales, profit, the modal-filter reports)
+       omit the button, matching the legacy. See [[ui-parity-run-2026-10-11]]. #}
+    {% if def.resetLabel %}<a class="btn" href="{{ basePath }}">{{ def.resetLabel }}</a>{% endif %}
   </div>
 </form>
 {% endif %}
@@ -83,11 +91,16 @@
   <label class="field"><span>Find in this report</span><input type="search" data-table-filter="#report-table" autocomplete="off" spellcheck="false"></label>
 </div>
 {{ tb.simple(columns, rows, mobile, "report-table") }}
-{% if rowInfo and rowInfo.truncated %}
-{# "Load more" steps the row window by one cap ([[htmx-navigation-with-html-fragments]]); "Show all"
-   jumps straight to every row. Both swap the body, so the filters and this notice re-render with the
-   new window. #}
-<p class="notice">Showing first {{ rowInfo.shown }} of {{ rowInfo.total }} rows. <a href="{{ rowInfo.moreHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">Load {{ (rowInfo.total - rowInfo.shown) if (rowInfo.total - rowInfo.shown) < 1000 else 1000 }} more</a> · <a href="{{ rowInfo.allHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">Show all</a></p>
+{% if rowInfo and rowInfo.pageCount > 1 %}
+{# Offset pager. PREV/NEXT carry the filters and set `page`; SHOW ALL drops the page and renders every
+   row. Each swaps the body ([[htmx-navigation-with-html-fragments]]), so the filters, the table and
+   this pager re-render together and the URL stays shareable. #}
+<div class="pager no-print">
+  {% if rowInfo.prevHref %}<a class="btn" href="{{ rowInfo.prevHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">&larr; Prev</a>{% else %}<span class="btn disabled">&larr; Prev</span>{% endif %}
+  <span class="pager-info">Page {{ rowInfo.page }} of {{ rowInfo.pageCount }} · showing {{ rowInfo.first }}&ndash;{{ rowInfo.last }} of {{ rowInfo.total }}</span>
+  {% if rowInfo.nextHref %}<a class="btn" href="{{ rowInfo.nextHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">Next &rarr;</a>{% else %}<span class="btn disabled">Next &rarr;</span>{% endif %}
+  {% if rowInfo.truncated %}<a class="btn" href="{{ rowInfo.allHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">Show all</a>{% endif %}
+</div>
 {% endif %}
 {# An empty window is the one result that cannot be read off the table alone: the rows say "no
    data", not which period would have data. Name the period, and offer it, so an operator who typed

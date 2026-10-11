@@ -6,50 +6,9 @@
  * `guest-ui-is-a-direct-shift-of-legacy` and the captured legacy reference.
  */
 
-:root {
-  /* Mantine 7 default palette (light scheme) — the values the legacy app renders with. */
-  /* The legacy stack appends the emoji faces to the system stack; the live comparison measured the
-     difference (`ui-parity-report.mjs`, metric bodyFont), so it is copied verbatim. */
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  --text: #000000;
-  --muted: #868e96;
-
-  /* Mantine's gray-3 border, under a shorter name used by the combobox, quick-create panel and
-     date control. It was referenced but never defined, so those borders were invisible. */
-  --line: #dee2e6;
-
-  --blue-0: #e7f5ff;
-  --blue-6: #228be6;
-  --blue-7: #1c7ed6;
-  --blue-9: #1864ab;
-
-  --gray-0: #f8f9fa;
-  --gray-1: #f1f3f5;
-  --gray-3: #dee2e6;
-  --gray-4: #ced4da;
-  --gray-6: #868e96;
-  --gray-7: #495057;
-
-  --pink-4: #f783ac;
-  --pink-6: #e64980;
-  --orange-4: #ffa94d;
-  --orange-6: #fd7e14;
-  --gray-4-tile: #ced4da;
-
-  --danger: #fa5252;
-  --ok: #40c057;
-
-  /* Legacy token aliases: the import-from-v1 plugin styles its own UI with these names, so keep
-     them defined (they map onto the palette above) rather than dropping them in the reskin. */
-  --surface: #ffffff;
-  --border: var(--gray-3);
-  --accent: var(--blue-7);
-  --accent-soft: var(--blue-0);
-
-  --radius: 8px;
-  --header-h: 52px;
-  --nav-w: 80px;
-}
+/* The design tokens (palette + semantic colours, type, shape, chrome dimensions) live in
+ * `theme.css`, loaded before this file — edit THAT file to retheme the app. This sheet is component
+ * layout only and references those tokens; a literal colour here is a theming bug. */
 
 * { box-sizing: border-box; }
 
@@ -59,7 +18,7 @@ body {
   font-size: 16px;
   line-height: 1.55;
   color: var(--text);
-  background: #ffffff;
+  background: var(--white);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -83,12 +42,12 @@ h1, h2, h3 { font-weight: 700; }
   justify-content: space-between;
   gap: 1rem;
   padding: 0 16px;
-  background: #ffffff;
+  background: var(--white);
   border-bottom: 1px solid var(--gray-3);
 }
 
-.brand { font-size: 1.25rem; font-weight: 700; color: #000; text-decoration: none; }
-.header-clock { text-align: center; font-size: 0.75rem; line-height: 1.25; color: #000; white-space: pre-line; }
+.brand { font-size: 1.25rem; font-weight: 700; color: var(--black); text-decoration: none; }
+.header-clock { text-align: center; font-size: 0.75rem; line-height: 1.25; color: var(--black); white-space: pre-line; }
 /* A custom element is inline by default; the clock needs to be a block so `.header-clock`'s
    text-align/white-space apply to it rather than to an inline box. */
 aa-live-time { display: block; }
@@ -98,7 +57,7 @@ aa-live-time { display: block; }
 .navbar {
   width: var(--nav-w);
   flex: 0 0 var(--nav-w);
-  background: #ffffff;
+  background: var(--white);
   border-right: 1px solid var(--gray-3);
   display: flex;
   flex-direction: column;
@@ -140,7 +99,7 @@ aa-live-time { display: block; }
   position: absolute;
   left: 58px;
   bottom: 0;
-  background: #ffffff;
+  background: var(--white);
   border: 1px solid var(--gray-3);
   border-radius: var(--radius);
   padding: 4px;
@@ -152,13 +111,13 @@ aa-live-time { display: block; }
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
-.main { flex: 1; min-width: 0; padding: 16px; background: #ffffff; }
+.main { flex: 1; min-width: 0; padding: 16px; background: var(--white); }
 .main-anon { padding: 0; }
 
 /* ------------------------------------------------------------------ cards */
 
 .card {
-  background: #ffffff;
+  background: var(--white);
   border: 1px solid var(--gray-3);
   border-radius: var(--radius);
   padding: 16px;
@@ -199,7 +158,7 @@ aa-live-time { display: block; }
   width: 10em;
   height: 10em;
   padding: 0.5em;
-  background: #ffffff;
+  background: var(--white);
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
@@ -209,25 +168,25 @@ aa-live-time { display: block; }
   text-decoration: none;
   transition: box-shadow 150ms ease, transform 100ms ease;
 }
-.tile:hover { box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15); transform: scale(1.05); }
+.tile:hover { box-shadow: var(--shadow-1); transform: scale(1.05); }
 .tile .ti { display: block; }
 /* The legacy tile is a raw `<a>`, so its label is the browser's default link blue — measured as
- * rgb(0,0,238) on every hub (dashboard, cash-memo, reports). Blue-6 (#228be6) was close but not the
+ * rgb(0,0,238) on every hub (dashboard, cash-memo, reports). Blue-6 (var(--blue-6)) was close but not the
  * same colour ([[ui-parity-discrepancies-2026-10-08]], metric contentLinkColor). */
-.tile-label { display: block; margin-top: 7px; font-size: 0.875rem; color: #0000ee; line-height: 1.25; }
+.tile-label { display: block; margin-top: 7px; font-size: 0.875rem; color: var(--tile-link); line-height: 1.25; }
 
 /* tile icon colours — Mantine colour[6] (hubs) and colour[4] (dashboard), as legacy renders */
 .c-blue { color: var(--blue-6); }
 .c-pink { color: var(--pink-6); }
-.c-violet { color: #7950f2; }
-.c-red { color: #fa5252; }
-.c-grape { color: #be4bdb; }
-.c-green { color: #40c057; }
+.c-violet { color: var(--violet-6); }
+.c-red { color: var(--danger); }
+.c-grape { color: var(--grape-6); }
+.c-green { color: var(--ok); }
 .c-orange { color: var(--orange-6); }
-.c-yellow { color: #fab005; }
-.c-cyan { color: #15aabf; }
-.c-teal { color: #12b886; }
-.c-indigo { color: #4c6ef5; }
+.c-yellow { color: var(--yellow-6); }
+.c-cyan { color: var(--cyan-6); }
+.c-teal { color: var(--teal-6); }
+.c-indigo { color: var(--indigo-6); }
 .c-gray { color: var(--gray-6); }
 .c-pink-4 { color: var(--pink-4); }
 .c-orange-4 { color: var(--orange-4); }
@@ -236,7 +195,7 @@ aa-live-time { display: block; }
 /* ------------------------------------------------------------------ stats */
 
 .stat-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-.stat { min-width: 9rem; padding: 8px 12px; border: 1px solid var(--gray-3); border-radius: var(--radius); background: #ffffff; }
+.stat { min-width: 9rem; padding: 8px 12px; border: 1px solid var(--gray-3); border-radius: var(--radius); background: var(--white); }
 .stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; }
 .stat-label { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
 
@@ -251,7 +210,7 @@ aa-live-time { display: block; }
 .filter-actions { display: flex; gap: 8px; margin-left: auto; }
 
 .field { display: flex; flex-direction: column; gap: 4px; }
-.field > span { font-size: 0.875rem; color: #000; }
+.field > span { font-size: 0.875rem; color: var(--black); }
 .field input, .field select {
   font: inherit;
   font-size: 0.875rem;
@@ -259,8 +218,8 @@ aa-live-time { display: block; }
   padding: 0 12px;
   border: 1px solid var(--gray-4);
   border-radius: var(--radius);
-  background: #fff;
-  color: #000;
+  background: var(--white);
+  color: var(--black);
   min-width: 10rem;
 }
 .field select[multiple] { height: auto; padding: 4px; min-width: 12rem; }
@@ -278,48 +237,48 @@ aa-live-time { display: block; }
   padding: 0 16px;
   border: 1px solid var(--gray-3);
   border-radius: var(--radius);
-  background: #f1f3f5;
-  color: #000;
+  background: var(--gray-1);
+  color: var(--black);
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
-.btn:hover { background: #e9ecef; }
-.btn.primary { background: var(--blue-6); border-color: var(--blue-6); color: #fff; }
+.btn:hover { background: var(--gray-2); }
+.btn.primary { background: var(--blue-6); border-color: var(--blue-6); color: var(--white); }
 .btn.primary:hover { background: var(--blue-7); }
 .btn.small { height: 28px; padding: 0 10px; font-size: 0.75rem; }
-.btn.danger { color: #fff; background: var(--danger); border-color: var(--danger); }
-.btn.danger:hover { background: #e03131; }
+.btn.danger { color: var(--white); background: var(--danger); border-color: var(--danger); }
+.btn.danger:hover { background: var(--danger-strong); }
 
 .mgmt-links { display: flex; flex-wrap: wrap; gap: 32px; }
 .mgmt-links a { color: var(--blue-6); }
 
 /* ----------------------------------------------------------------- tables */
 
-table.data { width: 100%; border-collapse: collapse; background: #fff; font-size: 0.75rem; }
+table.data { width: 100%; border-collapse: collapse; background: var(--white); font-size: 0.75rem; }
 /* ⚠️ Black cell borders, not gray-3. The fresh parity diff (`ui-parity-report.mjs`, metric thBorder
  * on `management-parties`) measured the legacy management table at `1px solid rgb(0, 0, 0)` — the
  * same grid the legacy report draws. The comment here used to claim only the report tables were
  * black; the live capture says the management tables are too, so the base rule carries it. */
-table.data th, table.data td { border: 1px solid #000; padding: 7px 12px; text-align: left; vertical-align: middle; }
+table.data th, table.data td { border: 1px solid var(--black); padding: 7px 12px; text-align: left; vertical-align: middle; }
 table.data thead th { font-weight: 700; }
 table.data td.right, table.data th.right { text-align: right; font-variant-numeric: tabular-nums; }
 table.data td.empty { text-align: center; color: var(--muted); padding: 24px; }
-table.data tr.editing { background: #fff8e1; }
+table.data tr.editing { background: var(--row-editing-bg); }
 table.data tr.neg td { color: var(--danger); }
 table.data tr.pos td, table.data tr.info td { color: var(--blue-7); }
 
 .tablewrap { overflow: auto; }
 
 /* report tables — the legacy mantine-datatable: black borders, dense, xs type */
-.report table.data th, .report table.data td { border: 1px solid #000; padding: 2px 4px; }
+.report table.data th, .report table.data td { border: 1px solid var(--black); padding: 2px 4px; }
 /* The legacy report tables print their headers in caps — DATE, TYPE, BOOKER… — while its management
  * tables use title case with sort arrows. Measured off `vault/attachments/legacy-ui/09-reports-profit.png`
  * against `25-management-parties.png`, so the transform is scoped to `.report` rather than applied to
  * every `table.data`, which would have broken the management tables that already match. */
-.report table.data thead th { background: #fff; text-transform: uppercase; font-weight: 400; position: sticky; top: var(--header-h); z-index: 1; }
+.report table.data thead th { background: var(--white); text-transform: uppercase; font-weight: 400; position: sticky; top: var(--header-h); z-index: 1; }
 
 /* row actions (legacy eye / pencil / trash icons) */
 .row-actions { white-space: nowrap; text-align: right; }
@@ -327,7 +286,7 @@ table.data tr.pos td, table.data tr.info td { color: var(--blue-7); }
   border: 0; background: none; padding: 2px; cursor: pointer; color: var(--gray-6);
   display: inline-flex; vertical-align: middle;
 }
-.row-actions .icon-view { color: #12b886; }
+.row-actions .icon-view { color: var(--teal-6); }
 .row-actions .icon-edit { color: var(--blue-6); }
 .row-actions .icon-del { color: var(--danger); }
 .row-actions form { display: inline; margin: 0; }
@@ -348,8 +307,8 @@ th[data-sort][data-sort-dir="desc"]::after { content: " ↓"; }
 .report-link:hover { text-decoration: underline; }
 
 .totals { display: flex; gap: 16px; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
-.totals-table { border-collapse: collapse; min-width: 15rem; background: #fff; font-size: 0.75rem; }
-.totals-table th, .totals-table td { border: 1px solid #000; padding: 2px 6px; }
+.totals-table { border-collapse: collapse; min-width: 15rem; background: var(--white); font-size: 0.75rem; }
+.totals-table th, .totals-table td { border: 1px solid var(--black); padding: 2px 6px; }
 .totals-table th { text-align: left; font-weight: 600; }
 .totals-table td.right { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
 
@@ -361,25 +320,25 @@ th[data-sort][data-sort-dir="desc"]::after { content: " ↓"; }
 .tag { display: inline-block; padding: 1px 8px; border: 1px solid var(--gray-3); border-radius: 999px; background: var(--gray-1); color: var(--gray-6); font-size: 0.75rem; }
 
 .notice { padding: 16px; background: var(--gray-0); border: 1px solid var(--gray-3); border-radius: var(--radius); }
-.notice[data-state="ok"] { background: #ebfbee; border-color: #b2f2bb; }
-.notice[data-state="error"] { background: #fff5f5; border-color: #ffc9c9; color: var(--danger); }
+.notice[data-state="ok"] { background: var(--green-0); border-color: var(--green-2); }
+.notice[data-state="error"] { background: var(--red-0); border-color: var(--red-2); color: var(--danger); }
 
 .who-name { color: var(--muted); }
 
 /* ----------------------------------------------------------------- flash */
 
 .flash { padding: 8px 12px; border-radius: var(--radius); margin-bottom: 12px; border: 1px solid var(--gray-3); font-size: 0.875rem; }
-.flash.ok { background: #ebfbee; border-color: #b2f2bb; color: #2b8a3e; }
-.flash.error { background: #fff5f5; border-color: #ffc9c9; color: #c92a2a; }
-.flash.warn { background: #fff9db; border-color: #ffec99; color: #8a6100; }
+.flash.ok { background: var(--green-0); border-color: var(--green-2); color: var(--ok-text); }
+.flash.error { background: var(--red-0); border-color: var(--red-2); color: var(--danger-text); }
+.flash.warn { background: var(--yellow-0); border-color: var(--yellow-2); color: var(--warn-text); }
 
 /* ------------------------------------------------------- background refresh (new-side) */
 /* Small dot kept out of the way in the navbar so the chrome still reads as the legacy UI. */
 button.job { border: 0; background: transparent; padding: 0; cursor: pointer; }
-.job-dot { width: 10px; height: 10px; border-radius: 50%; background: #adb5bd; display: block; }
+.job-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gray-5); display: block; }
 .job--fetch .job-dot { background: var(--blue-6); }
 .job--process .job-dot, .job--error .job-dot { background: var(--danger); }
-.job--render .job-dot { background: #fcc419; }
+.job--render .job-dot { background: var(--yellow-5); }
 .job-text { display: none; }
 .job:focus-visible { outline: 2px solid var(--blue-6); outline-offset: 2px; border-radius: var(--radius); }
 button.job[aria-busy="true"] { cursor: progress; }
@@ -390,7 +349,7 @@ button.job[aria-busy="true"] { cursor: progress; }
 .login {
   width: 28rem;
   max-width: calc(100vw - 32px);
-  background: #fff;
+  background: var(--white);
   border: 1px solid var(--gray-3);
   border-radius: var(--radius);
   padding: 32px;
@@ -435,7 +394,7 @@ table.grid select { min-width: 12rem; }
    `mobile-layout-is-additive-to-the-legacy-look`. */
 
 @media screen and (max-width: 768px) {
-  :root { --header-h: 48px; --nav-w: 0px; }
+  /* The chrome dimensions shrink here too; that lives in `theme.css` beside `--header-h`/`--nav-w`. */
 
   body { font-size: 15px; }
 
@@ -453,7 +412,7 @@ table.grid select { min-width: 12rem; }
     border-top: 1px solid var(--gray-3);
     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.08);
     padding: 2px 0 calc(2px + env(safe-area-inset-bottom, 0px));
-    background: #ffffff;
+    background: var(--white);
     z-index: 30;
   }
   .navbar-main, .navbar-bottom { flex: 1; flex-direction: row; justify-content: space-around; align-items: center; margin-top: 0; }
@@ -474,7 +433,7 @@ table.grid select { min-width: 12rem; }
   /* The "more" menu opens downward from the header group rather than to the right of a rail. */
   .nav-more-menu { left: auto; right: 0; top: 100%; bottom: auto; }
   /* The header carries that fixed group, so it has to stay put while the page scrolls. */
-  .header { position: sticky; top: 0; z-index: 30; background: #fff; }
+  .header { position: sticky; top: 0; z-index: 30; background: var(--white); }
   /* The clock would collide with that group on a 360px screen, and the phone's own status bar
      already shows the time. */
   .header-clock { display: none; }
@@ -526,7 +485,7 @@ table.grid select { min-width: 12rem; }
     border-radius: var(--radius);
     margin: 0 0 8px;
     padding: 2px 0;
-    background: #fff;
+    background: var(--white);
   }
   table.data[data-mobile="cards"] td {
     border: 0;
@@ -574,7 +533,7 @@ table.grid select { min-width: 12rem; }
   .sticky-actions {
     position: sticky;
     bottom: 72px;
-    background: #ffffff;
+    background: var(--white);
     border-top: 1px solid var(--gray-3);
     padding: 8px 0;
     margin-top: 12px;
@@ -605,20 +564,20 @@ table.grid select { min-width: 12rem; }
 
 /* The invoice document, laid out for paper rather than for a screen. */
 .invoice-doc { max-width: none; }
-.doc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid #000; padding-bottom: 8px; margin-bottom: 12px; }
+.doc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid var(--black); padding-bottom: 8px; margin-bottom: 12px; }
 .doc-business { font-size: 1.25rem; font-weight: 700; }
-.doc-address, .doc-phone { font-size: 0.8rem; color: #333; }
+.doc-address, .doc-phone { font-size: 0.8rem; color: var(--doc-muted); }
 .doc-meta { text-align: right; }
 .doc-type { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .doc-no { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .doc-dated { font-size: 0.8rem; }
 .doc-parties { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 10px; font-size: 0.9rem; }
 .doc-parties > div { display: flex; gap: 6px; }
-.doc-label { color: #555; min-width: 4.5em; }
+.doc-label { color: var(--doc-label); min-width: 4.5em; }
 .doc-value { font-weight: 600; }
 .doc-lines { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-.doc-lines th, .doc-lines td { border: 1px solid #999; padding: 3px 6px; text-align: left; }
-.doc-lines th { background: #eee; }
+.doc-lines th, .doc-lines td { border: 1px solid var(--doc-line); padding: 3px 6px; text-align: left; }
+.doc-lines th { background: var(--doc-head-bg); }
 .doc-lines td.right, .doc-lines th.right { text-align: right; }
 /* Legacy explicit column widths (measured off the bundle): BOX SIZE = 2em, UNTS = 1em; every other
    column is auto. Body cells are the stable index (header cells have colspans): col 3 = BOX SIZE,
@@ -628,7 +587,7 @@ table.grid select { min-width: 12rem; }
 [data-invoice-doc] .doc-lines td:nth-child(5),
 [data-invoice-doc] .doc-lines th:nth-child(5) { width: 1em; }
 .doc-totals { margin-top: 10px; margin-left: auto; width: 45%; }
-.doc-grand th, .doc-grand td { font-weight: 700; border-top: 2px solid #000; }
+.doc-grand th, .doc-grand td { font-weight: 700; border-top: 2px solid var(--black); }
 .doc-payments { margin-top: 14px; }
 .no-print { display: revert; }
 
@@ -650,11 +609,11 @@ table.grid select { min-width: 12rem; }
 [data-invoice-doc] .doc-info-left { width: 65%; }
 [data-invoice-doc] .doc-info-right { width: 35%; }
 [data-invoice-doc] .doc-info-right th { font-weight: 600; }
-[data-invoice-doc] .doc-invno { border: 1px solid #000; padding: 0 0.5em; font-weight: 700; font-size: 1rem; }
-[data-invoice-doc] .doc-rule { border: 0; border-top: 1px solid #000; margin: 6px 0; }
+[data-invoice-doc] .doc-invno { border: 1px solid var(--black); padding: 0 0.5em; font-weight: 700; font-size: 1rem; }
+[data-invoice-doc] .doc-rule { border: 0; border-top: 1px solid var(--black); margin: 6px 0; }
 [data-invoice-doc] .doc-totals { display: flex; justify-content: flex-end; margin-top: 8px; }
 [data-invoice-doc] .doc-totals-inner { width: 45%; }
-[data-invoice-doc] .doc-total-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; border: 1px solid #000; }
+[data-invoice-doc] .doc-total-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; border: 1px solid var(--black); }
 [data-invoice-doc] .doc-total-table th, [data-invoice-doc] .doc-total-table td { border: 0; padding: 1px 0.5em; }
 [data-invoice-doc] .doc-total-table th { text-align: left; font-weight: 400; }
 [data-invoice-doc] .doc-total-table td.right { text-align: right; font-variant-numeric: tabular-nums; }
@@ -665,7 +624,7 @@ table.grid select { min-width: 12rem; }
   [data-invoice-doc] .doc-foot { display: flex; justify-content: space-between; margin-top: 16px; font-size: 10pt; }
   [data-invoice-doc] .doc-foot-right { text-align: right; }
   /* The legacy line table is a full black grid and its header row repeats on every page. */
-  [data-invoice-doc] .doc-lines th, [data-invoice-doc] .doc-lines td { border: 1px solid #000; }
+  [data-invoice-doc] .doc-lines th, [data-invoice-doc] .doc-lines td { border: 1px solid var(--black); }
   [data-invoice-doc] .doc-lines th { background: transparent; }
   [data-invoice-doc] .doc-lines thead { display: table-header-group; }
   /* The queue renders several sheets in one print; each keeps its own in-flow band. */
@@ -673,9 +632,9 @@ table.grid select { min-width: 12rem; }
 
 @media print {
   .header, .navbar, .filters, .crumbs, .btn, .notice, .flash, .job, .hub-title, .no-print, .pagebar, .stat-grid, .list-toolbar, .report-filter { display: none !important; }
-  body { background: #fff; }
+  body { background: var(--white); }
   .appshell, .appbody, .main { display: block; padding: 0; margin: 0; }
-  .card { border: 0; padding: 0; margin: 0; background: #fff; }
+  .card { border: 0; padding: 0; margin: 0; background: var(--white); }
   .print-head { display: block; margin-bottom: 8px; }
   .print-head-title { font-size: 18px; }
   .report { margin: 0; }
@@ -749,8 +708,8 @@ a.tile.hk-row:focus { outline: 2px solid var(--blue-6); outline-offset: 2px; }
   padding: 6vh 16px 16px;
 }
 .hk-panel {
-  background: #fff; color: var(--text);
-  border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  background: var(--white); color: var(--text);
+  border-radius: var(--radius); box-shadow: var(--shadow-3);
   width: 100%; max-width: 640px; max-height: 82vh; overflow: auto;
   padding: 16px 20px 20px;
 }
@@ -800,12 +759,12 @@ kbd {
 .hk-nudge {
   position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
   z-index: 90; cursor: pointer;
-  background: var(--gray-7); color: #fff;
+  background: var(--gray-7); color: var(--white);
   padding: 8px 14px; border-radius: 999px; font-size: 0.85rem;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   transition: opacity 0.4s ease;
 }
-.hk-nudge kbd { background: transparent; border-color: rgba(255, 255, 255, 0.4); color: #fff; }
+.hk-nudge kbd { background: transparent; border-color: rgba(255, 255, 255, 0.4); color: var(--white); }
 .hk-nudge-out { opacity: 0; }
 
 /* Below 768px the rail is a bottom bar, so a bottom-centred nudge would sit on top of it. */
@@ -846,7 +805,7 @@ kbd {
 /* The period reads as "From: 11-Apr-2026 To: 28-Sep-2026" on the right, not as a meta line under the
    filters. `meta.from`/`meta.to` are already the legacy's own d-MMM-yyyy text — see
    `app/lib/spoolreports.js`. */
-.report-period { display: flex; gap: 10px; font-size: 0.875rem; color: #000; white-space: nowrap; }
+.report-period { display: flex; gap: 10px; font-size: 0.875rem; color: var(--black); white-space: nowrap; }
 
 /* The legacy filter block is two rows: the two date inputs on the first, then one row of selects
    ending in APPLY (`09-reports-profit.png`). `report.html` emits the date fields into `.filter-dates`
@@ -872,7 +831,7 @@ kbd {
 .ac-input {
   font: inherit; font-size: 0.875rem; width: 100%; height: 36px;
   padding: 0 30px 0 12px; border: 1px solid var(--gray-4); border-radius: var(--radius);
-  background: #fff; color: var(--text);
+  background: var(--white); color: var(--text);
 }
 .ac-input:focus { outline: 2px solid var(--blue-6); outline-offset: -1px; border-color: var(--blue-6); }
 .ac-caret {
@@ -884,8 +843,8 @@ kbd {
 .ac-list {
   position: absolute; z-index: 60; left: 0; right: 0; top: calc(100% + 2px);
   margin: 0; padding: 4px 0; list-style: none; max-height: 280px; overflow-y: auto;
-  background: #fff; border: 1px solid var(--gray-3); border-radius: var(--radius);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14);
+  background: var(--white); border: 1px solid var(--gray-3); border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
 }
 .ac-option { padding: 7px 12px; cursor: pointer; font-size: 0.875rem; }
 .ac-option.is-active, .ac-option:hover { background: var(--blue-0); }
@@ -933,7 +892,7 @@ aa-date-input { position: relative; display: block; }
 .aa-date-text {
   font: inherit; font-size: 0.875rem; width: 100%; height: 36px;
   padding: 0 12px; border: 1px solid var(--gray-4); border-radius: var(--radius);
-  background: #fff; color: var(--text); cursor: pointer;
+  background: var(--white); color: var(--text); cursor: pointer;
 }
 .aa-date-text:focus { outline: 2px solid var(--blue-6); outline-offset: -1px; border-color: var(--blue-6); }
 /* The native control sits under the text field, invisible but still the submitted value. It is shown
@@ -953,13 +912,13 @@ aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
    `/app/reports/stockreport` "Filter Data" dialog ([[ui-parity-discrepancies-2026-10-08]]). */
 .aa-modal-overlay {
   position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--overlay);
   display: flex; align-items: center; justify-content: center;
   padding: 16px;
 }
 .aa-modal-dialog {
   width: 440px; max-width: 100%;
-  background: #fff; border-radius: var(--radius);
+  background: var(--white); border-radius: var(--radius);
   box-shadow: rgba(0, 0, 0, 0.05) 0 1px 3px 0, rgba(0, 0, 0, 0.05) 0 36px 28px -7px, rgba(0, 0, 0, 0.04) 0 17px 17px -7px;
 }
 .aa-modal-header { display: flex; align-items: center; justify-content: space-between; min-height: 60px; padding: 16px 11px 16px 16px; }
@@ -968,7 +927,7 @@ aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
   display: inline-flex; align-items: center; justify-content: center;
   width: 28px; height: 28px; padding: 0;
   border: 1px solid var(--gray-4); border-radius: var(--radius);
-  background: #fff; color: var(--gray-7); cursor: pointer;
+  background: var(--white); color: var(--gray-7); cursor: pointer;
 }
 .aa-modal-close:hover { background: var(--gray-0); }
 .aa-modal-body { padding: 0 16px 16px; }
@@ -986,7 +945,7 @@ aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
 
 /* ── list pager (the /invoices list, which used to stop hard at 300 rows) ──────────────────────── */
 .pager { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 10px 0; }
-.pager-info { color: var(--grey-6, #495057); font-size: 0.9em; }
+.pager-info { color: var(--grey-6, var(--gray-7)); font-size: 0.9em; }
 .btn.disabled { opacity: 0.5; pointer-events: none; }
 @media print { .pager { display: none !important; } }
 
@@ -1007,23 +966,23 @@ aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
 .invoice-head .ih-field { display: flex; flex-direction: column; gap: 4px; }
 .invoice-head .ih-field > span {
   font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;
-  color: #000; font-weight: 600;
+  color: var(--black); font-weight: 600;
 }
 .invoice-head .ih-field input,
 .invoice-head .ih-field select,
 .invoice-head .ih-field aa-date-input { min-width: 10rem; }
 .invoice-head .ih-field input[readonly],
-.invoice-head .ih-field input:disabled { background: var(--gray-1, #f1f3f5); color: var(--gray-7, #495057); }
+.invoice-head .ih-field input:disabled { background: var(--gray-1, var(--gray-1)); color: var(--gray-7, var(--gray-7)); }
 .invoice-head .ih-go { min-width: 2.5rem; height: 36px; padding: 0 10px; font-size: 1.1rem; line-height: 1; }
 /* The legacy blue "+" beside the party opens the Create New Customer/Supplier dialog. */
 .invoice-head .ih-with-add { display: flex; align-items: center; gap: 6px; }
 .invoice-head .ih-with-add > select { flex: 1 1 auto; }
 .invoice-head .ih-add {
   flex: 0 0 auto; width: 34px; height: 36px; padding: 0;
-  border: 0; border-radius: var(--radius); background: var(--blue-6, #1c7ed6);
-  color: #fff; font-size: 1.25rem; line-height: 1; cursor: pointer;
+  border: 0; border-radius: var(--radius); background: var(--blue-6, var(--blue-7));
+  color: var(--white); font-size: 1.25rem; line-height: 1; cursor: pointer;
 }
-.invoice-head .ih-add:hover { background: var(--blue-7, #1971c2); }
+.invoice-head .ih-add:hover { background: var(--blue-7, var(--blue-8)); }
 .invoice-head .ih-print {
   display: inline-flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; color: var(--blue-6);
@@ -1046,13 +1005,13 @@ aa-date-input:focus-within .aa-date-text { border-color: var(--blue-6); }
 .pq-actions { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
 .pq-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
 .pq-list {
-  border: 1px solid var(--border); border-radius: var(--radius); background: #fff;
+  border: 1px solid var(--border); border-radius: var(--radius); background: var(--white);
   padding: 6px 8px; min-height: 56px; max-height: 74vh; overflow: auto;
 }
 .pq-item { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px; border-bottom: 1px solid var(--gray-3); }
 .pq-item:last-child { border-bottom: 0; }
 .pq-item a { font-variant-numeric: tabular-nums; }
-.pq-remove { border: 0; background: none; color: #c92a2a; cursor: pointer; padding: 0 4px; font-size: 0.9rem; line-height: 1; }
+.pq-remove { border: 0; background: none; color: var(--danger-text); cursor: pointer; padding: 0 4px; font-size: 0.9rem; line-height: 1; }
 .pq-picker { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin: 0 0 12px; }
 .pq-picker .field { margin: 0; }
 .pq-picker .btn { display: inline-flex; align-items: center; gap: 6px; }
@@ -1078,10 +1037,10 @@ aa-money, aa-entity-form, aa-invoice-entry, aa-flash { display: contents; }
 
 /* `<aa-entity-form>` — inline validation messages and the in-flight state. */
 .field-error { display: block; color: var(--danger); font-size: 0.8rem; margin-top: 4px; }
-[aria-invalid="true"] { border-color: #c92a2a; }
+[aria-invalid="true"] { border-color: var(--danger-text); }
 .form-error {
   padding: 8px 12px; margin-bottom: 12px; border-radius: var(--radius);
-  border: 1px solid #ffc9c9; background: #fff5f5; color: #c92a2a; font-size: 0.875rem;
+  border: 1px solid var(--red-2); background: var(--red-0); color: var(--danger-text); font-size: 0.875rem;
 }
 form[aria-busy="true"] button[type="submit"], form[aria-busy="true"] input[type="submit"] { cursor: progress; opacity: 0.7; }
 
@@ -1120,6 +1079,25 @@ form[aria-busy="true"] button[type="submit"], form[aria-busy="true"] input[type=
 @keyframes aa-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .aa-spinner { animation-duration: 2s; } }
 @media print { .aa-loading { display: none !important; } }
+
+/* ── supply summary invoice picker ─────────────────────────────────────────────────────────────────
+   A readable, scrollable, multi-column list of sale invoices. It used to be unstyled labels, which
+   rendered every invoice on one wrapped line. */
+.picker-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; font-size: 0.875rem; color: var(--muted); margin: 0 0 6px; }
+.picker-list {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 1px 16px; max-height: 22rem; overflow: auto;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 8px 10px; background: var(--surface);
+}
+.picker-row { display: flex; align-items: center; gap: 8px; padding: 3px 4px; border-radius: 4px; font-size: 0.8125rem; cursor: pointer; }
+.picker-row:hover { background: var(--accent-soft); }
+.picker-row input { flex: 0 0 auto; margin: 0; }
+.picker-no { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 4.5em; }
+.picker-date { color: var(--muted); min-width: 6.5em; }
+.picker-party { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.picker-tools { display: flex; gap: 8px; }
+
 
 
 

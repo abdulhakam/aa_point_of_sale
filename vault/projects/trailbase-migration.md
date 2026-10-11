@@ -69,6 +69,85 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-11 — print-sheet column order, the console picker's missing invoices, and a distributable.**
+Four things, all operator-reported or operator-asked:
+
+1. **Print sheet: TOTAL before DISCOUNTS.** The owner reported the printed totals looked pre-discount.
+   The real defect was column order: the guest put `TOTAL` **before** the `DISCOUNTS` group, while the
+   compiled legacy bundle puts `DISCOUNTS` before a `rowSpan=2` `TOTAL` (the last column). Reordered in
+   `partials/invoice-sheet.html` and verified live. [[invoice-print-total-column-before-discounts]].
+2. **Console invoice-# picker only listed the newest 200.** `consoleView` capped the picker
+   server-side; typing filtered only those. Fixed with a **debounced server-side number search** —
+   `GET /data/invoices/search?type=N&q=<digits>` + `public/js/invoice-remote.js` — after rejecting the
+   two expensive alternatives (inline the whole type; reuse the 2.08 MB/4.4 s client cache). Decision
+   [[console-invoice-number-search-is-server-side]]; issue
+   [[console-invoice-picker-listed-only-newest-200]]; task [[tb-0041-console-invoice-number-search]].
+3. **Invoice view/preview controls trimmed** to `Back · Print · Add to Queue · Edit` (the A4-copy link
+   removed; paper size is the browser dialog's job). [[invoice-view-actions-are-back-print-queue-edit]].
+4. **A review of the uncommitted changes** (5 fixes applied, builds/vets clean) hardened the Go control
+   panel — a bypassable same-file guard on `--wipe` (**critical**, data loss), an unbacked wipe, a
+   progress-accounting bug, and a false "listening" check — plus an out-of-order fix in the new picker
+   script. See [[pos-0030-control-panel-gui-importer]] "Post-review hardening".
+
+**Distributable (owner's ask).** `trailbase/dist.ps1` / `dist.bat` assemble a minimal runnable `dist\`
+(control panel + `trail.exe` + config/migrations/runtime/wasm + launcher) at **126.3 MB**, excluding
+`target\` (~6 GB) and the depot data. Smoke-tested by booting a server from it. Task
+[[pos-0031-distributable-build]].
+
+A re-run visual parity test (guest vs the known legacy captures) stayed at **28/28 differ, same
+carve-outs, no new regression**: [[ui-parity-run-2026-10-11]].
+
+**UI parity: the four residues fixed (owner's ask).** All four were closed the same day and verified
+against the live guest (`guest-smoke` 116/116): item drill-down links on `difference`/`stockreport`
+(235 links each, `table.html` `link: "item"` → item sales); the cash-memo **payments** columns and
+`Select Section/Area/Booker` filters (which surfaced and fixed a real defect — the relation filters
+compared a BLOB to base64 text and matched nothing, [[payments-relation-filters-matched-nothing]]); the
+shared filter labels (`Select Party/Booker/Area/Section`); and a `RESET`/`CLEAR` control restored per
+manifest (`resetLabel`). `/payments` also stopped stopping at 300 rows — a "Show all" window like the
+reports. Details and what stayed an artefact: [[ui-parity-run-2026-10-11]].
+
+**The theme is now one file of tokens.** `app/public/css/theme.css` holds the palette + semantic tokens
+(Mantine 7 defaults) and `app.css` references them — 91 colour literals tokenised, no colour literal
+left in `app.css`, so editing one file rethemes everything. Decision
+[[theme-is-one-file-of-tokens]].
+
+**Pagination on every report, and a readable Supply Summary.** The reports' growing "Load more"
+window became **LIMIT/OFFSET paging** (`?page=k`, Prev/Next + `Show all`) across all fifteen
+report/ledger screens; the totals/count stayed exact ([[reports-page-by-offset]]). Supply Summary's
+invoice picker, which had **no CSS** and rendered every checkbox on one line, is now a scrollable
+multi-column list, and its result gained a **Total Items** figure (a new `ints` totals group — the
+first non-money total). [[supply-summary-picker-and-total-items]]. Verified: `verify-spool-reports`
+15/15, `check-report-pages` all ok, `guest-smoke` 116/116, `route-snapshot` 50/0.
+
+**Next: the headless-Chrome keyboard gate, retiring `invoicing.js`, `runtime-revision-is-unstable`,
+`<aa-dirty-guard>`, then the deferred money pass; and the parity candidates (`management-parties`
+`party type` filter, cash-memo expenses columns).**
+
+**2026-10-10 — imports were failing because `import.bat` destroyed `main.db`.** The symptom was
+`open destination: file is not a database` from *any* importer (Node TUI or the new Go control
+panel). The cause was not the importer: `import.bat`'s progress `echo` contained an **un-escaped
+`>`** in `-> "%DEST%"`, so `cmd` parsed `> "%DEST%"` as a **stdout redirect** and wrote the echo
+line *over* `traildepot\data\main.db` (122 bytes of text) before the import ran. Fixed by escaping
+it (`-^>`); a repo-wide scan found that one line. The depot was restored: corrupt file backed up,
+schema re-initialised, and a full `--wipe` import returned **all 11 collections verified, 0
+failures (792 s)**. See [[import-bat-clobbers-main-db]].
+
+**2026-10-10 — the importer is now a native Go control panel (with a monitor).** The direct-import
+TUI was recreated in **Go** and folded into a **startup control panel** the owner asked for: a
+go-gui window whose **TrailBase** tab starts/stops/attaches the `trail` server and shows the
+process's CPU/RAM (and the machine's), and whose **Import** tab drives the v1→TrailBase import with
+live progress, per-collection stats and verification. The GUI toolkit ended up **go-gui (pure Go),
+not Fyne** — Fyne is CGO/GL-only and its first build did not finish in a 20-minute budget on this
+compiler-less machine; the choice is recorded in [[control-panel-gui-is-pure-go]] (with
+[[go-module-proxy-blocked]] as the related environment finding). Rebuilt as a Go port of
+`tools/import-v1-tui.mjs`, and it is **schema-aware**: `Open` reads the real source and destination
+column lists and refuses to run on a destination missing any column it writes. Verified against the
+**real** databases: dry-run read counts match the source exactly; a full `--wipe` import returns
+**all 11 collections verified, 0 failures** (575 s), and an independent diff finds equal counts,
+money sums equal at whole paisas, `created`/`updated` **byte-identical**, `invoice_maker` on all
+12,791 invoices and `inv_doc` 12,791. System reference: [[control-panel]]; task:
+[[pos-0030-control-panel-gui-importer]].
+
 **2026-10-10 — full-app UI sweep: three real defects.** Drove the whole guest app in Chrome against a
 seeded throw-away depot (every route 200; create/read/update/delete/navigate exercised). Found and fixed
 three bugs no HTTP gate saw: **`readInvoice` dropped per-line discounts from the invoice total**
@@ -548,6 +627,7 @@ Two vault hygiene issues surfaced alongside: `tb-0020` is `status: done` with th
 | Navigation is htmx `hx-boost` over server-rendered HTML fragments; the shell renders once | [[htmx-navigation-with-html-fragments]] |
 | UI components are light-DOM custom elements that consume server descriptors (never own schemas) | [[components-consume-server-descriptors]] |
 | Per-browser UI preferences live in localStorage (no backend), edited at `/settings` | [[browser-settings-are-client-side]] |
+| The import tool is recreated as a native **Go GUI** control panel, toolkit **go-gui** (pure Go, not Fyne); SQLite driver stays CGO | [[control-panel-gui-is-pure-go]] |
 
 ## Known friction in the migration
 

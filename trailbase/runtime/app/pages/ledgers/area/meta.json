@@ -1,6 +1,7 @@
 {
   "title": "Area Ledger",
   "template": "page.html",
+  "resetLabel": "CLEAR",
   "hub": {
     "title": "Area",
     "target": "ledgers/area",

@@ -10,7 +10,7 @@
 </tr></thead>
 <tbody>
 {% for r in rows -%}
-<tr class="{{ r.tone }}">{% for c in columns %}<td class="{{ c.cls }}" data-label="{{ c.label }}"{% if c.lead %} data-lead{% endif %}>{% if c.link == 'invoice' and r.invoiceId %}<a class="report-link" href="/invoices/{{ r.invoiceId }}/view">{{ r.typeLetter }} {{ r.invoiceNo }}</a>{% else %}{{ r[c.key] }}{% endif %}</td>{% endfor %}</tr>
+<tr class="{{ r.tone }}">{% for c in columns %}<td class="{{ c.cls }}" data-label="{{ c.label }}"{% if c.lead %} data-lead{% endif %}>{% if c.link == 'invoice' and r.invoiceId %}<a class="report-link" href="/invoices/{{ r.invoiceId }}/view">{{ r.typeLetter }} {{ r.invoiceNo }}</a>{% elif c.link == 'item' and r.id %}<a class="report-link" href="/reports/itemsales?item={{ r.id }}">{{ r[c.key] }}</a>{% else %}{{ r[c.key] }}{% endif %}</td>{% endfor %}</tr>
 {% else -%}
 <tr><td class="empty" colspan="{{ columns|length }}">No data for the selected filters.</td></tr>
 {% endfor -%}

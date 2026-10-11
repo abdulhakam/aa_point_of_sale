@@ -482,7 +482,10 @@ export async function consoleView(A, req, { type, invoiceId, message, status, ac
   const refs = await routeKit.refs();
   const pickerType = Number(type) in INVOICE_TYPES ? Number(type) : 1;
 
-  // The picker: this type's invoices, newest first, capped like the payment picker (`newView`).
+  // The picker: this type's newest invoices, as the initial list. `public/js/invoice-remote.js`
+  // replaces them with server-side number matches as the operator types (`data-invoice-remote`), so
+  // any invoice number is reachable without shipping the whole type (12,000+ rows) into the page —
+  // the console re-renders on every line write, so a full inline list is not affordable here.
   const pickerRows = await listInvoices(db, { type: pickerType }, { limit: 200 });
   const picker = pickerRows.map((r) => ({
     id: r.id,

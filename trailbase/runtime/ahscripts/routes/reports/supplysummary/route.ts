@@ -86,21 +86,43 @@
     if (selected.length) {
       // ONE delimited text bind carries the whole list; the statement matches it with instr(). `from`/
       // `to` are passed too, so the statement restricts the scan to the range the pick-list showed.
-      const cap = String(text(q.all)) === "1" ? -1 : (Number(A.reportRender && A.reportRender.RENDER_MAX_ROWS) || 1000);
+      const all = String(text(q.all)) === "1";
+      const pageSize = (A.reportRender && A.reportRender.RENDER_MAX_ROWS) || 1000;
       const filters = { invoices: "|" + selected.join("|") + "|", from, to };
       const totals = await A.spooled.totalsFor("supplysummary", filters);
-      const handle = await A.spooled.spoolRows("supplysummary", filters, cap);
-      const total = Number(totals.rowCount || 0);
+      const total = Math.trunc(Number(totals.rowCount || 0));
+      const pageCount = all ? 1 : Math.max(1, Math.ceil(total / pageSize));
+      const page = Math.min(Math.max(Math.floor(Number(text(q.page)) || 1) || 1, 1), pageCount);
+      const offset = all ? 0 : (page - 1) * pageSize;
+      const cap = all ? -1 : pageSize;
+      const handle = await A.spooled.spoolRows("supplysummary", filters, cap, offset);
       const shown = Number((handle && handle.rows) || 0);
+
+      // Total ITEMS is the `ints.units` total: an integer SUM over the same statement the page renders
+      // (spoolreports `ints` group), so it cannot describe a different row set than the visible rows.
+      const totalItems = Math.trunc(Number(totals.units || 0));
+
+      const qbase = "from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to) + "&invoices=" + selected.join("&invoices=");
+      const link = (extra: string) => "/reports/supplysummary?" + qbase + extra;
+
       frame.totals = totals;
+      frame.totalItems = totalItems;
+      frame.selectedCount = selected.length;
       frame.rowInfo = {
         shown,
         total,
+        page,
+        pageCount,
+        pageSize,
+        first: total ? offset + 1 : 0,
+        last: offset + shown,
         truncated: shown < total,
-        allHref: "/reports/supplysummary?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to) + "&invoices=" + selected.join("&invoices=") + "&all=1",
+        allHref: link("&all=1"),
+        prevHref: page > 1 ? link("&page=" + (page - 1)) : null,
+        nextHref: page < pageCount ? link("&page=" + (page + 1)) : null,
       };
-      const page = await A.http.pageSpooled(req, shell, "reports/supplysummary.html", frame, [{ field: "rows", key: handle.key }]);
-      return { html: page };
+      const pageOut = await A.http.pageSpooled(req, shell, "reports/supplysummary.html", frame, [{ field: "rows", key: handle.key }]);
+      return { html: pageOut };
     }
 
     const page = await A.http.page(req, shell, "reports/supplysummary.html", frame);

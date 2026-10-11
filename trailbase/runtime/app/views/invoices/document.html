@@ -12,14 +12,16 @@
 {{ sheetdoc.sheet(sheet) }}
 
 {% if not print %}
-{# The legacy print page's two actions, then the guest extras (Edit, the A4 copy). `data-print` with an
-   href opens the `?print=1` page and prints it, so "Print Invoice Now" is the same A5 sheet; "Add to
-   Print Queue" is the localStorage queue the picker and `/print/queue` read. #}
+{# The document's controls, and nothing else: go back, print, add to the queue, edit. The former
+   "Print A4 copy" is gone — the paper size is the browser print dialog's business. `data-print` opens
+   the `?print=1` page in a new tab and prints it (the A5 sheet); "+ Add to Print Queue" is the
+   localStorage queue the picker and `/print/queue` read. Back and Edit use `target="_top"` so they
+   act on the whole window when this document is shown in the `/print` preview iframe. #}
 <p class="pagebar no-print">
-  <a class="btn primary" href="/invoices/{{ actions.id }}/view?print=1" data-print="a5">{{ icons.svg('printer', 18) }} Print Invoice Now</a>
+  <a class="btn" href="/invoices" target="_top">&larr; Back</a>
+  <a class="btn primary" href="/invoices/{{ actions.id }}/view?print=1" data-print="a5">{{ icons.svg('printer', 18) }} Print</a>
   <button class="btn" type="button" data-pq-add data-id="{{ actions.id }}" data-no="{{ actions.invoiceNo }}" data-type="{{ actions.type }}">{{ icons.svg('printer', 18) }} + Add to Print Queue</button>
-  <a class="btn" href="/invoices/{{ actions.id }}/grid">Edit</a>
-  <a class="btn" href="/invoices/{{ actions.id }}/view?print=1&amp;paper=a4" data-print="a4">Print A4 copy</a>
+  <a class="btn" href="/invoices/{{ actions.id }}/grid" target="_top">Edit</a>
 </p>
 {% endif %}
 {% endblock %}

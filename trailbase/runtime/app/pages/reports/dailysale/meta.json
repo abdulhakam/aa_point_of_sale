@@ -1,6 +1,7 @@
 {
   "title": "Daily Sale Report",
   "template": "page.html",
+  "resetLabel": "RESET",
   "hub": {
     "title": "Daily Sale Report",
     "target": "dailysale",

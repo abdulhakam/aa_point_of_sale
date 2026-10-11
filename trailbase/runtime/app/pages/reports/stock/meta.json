@@ -48,7 +48,8 @@
     },
     {
       "key": "name",
-      "label": "Name"
+      "label": "Name",
+      "link": "item"
     },
     {
       "key": "costText",

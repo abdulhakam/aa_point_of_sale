@@ -1,6 +1,7 @@
 {
   "title": "Booker Sales Ledger",
   "template": "page.html",
+  "resetLabel": "CLEAR",
   "hub": {
     "title": "Booker",
     "target": "ledgers/booker",

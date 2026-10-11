@@ -27,6 +27,9 @@
     "totals": {
       "cents": {
         "amount": "amount"
+      },
+      "ints": {
+        "units": "units"
       }
     }
   },

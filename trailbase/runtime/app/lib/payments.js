@@ -25,19 +25,30 @@ const named = (columns) => (row) => {
 
 const LIST_COLUMNS = [
   "id", "type", "amount", "paid", "payment_date", "description", "invoice", "invoiceNo",
-  "invoiceType", "partyName", "paidTo", "invoiceTotal", "invoicePaid",
+  "invoiceType", "partyName", "paidTo", "areaName", "sectionName", "bookerName", "originalInvoiceNo",
+  "invoiceTotal", "invoicePaid",
 ];
 
 const PAYMENT_SELECT =
   'SELECT p."id" AS id, p."type" AS type, p."amount" AS amount, p."paid" AS paid, ' +
   'p."payment_date" AS payment_date, p."description" AS description, p."invoice" AS invoice, ' +
   'i."invoiceNo" AS invoiceNo, i."type" AS invoiceType, pa."name" AS partyName, bo."name" AS paidTo, ' +
+  'ar."name" AS areaName, se."name" AS sectionName, bk."name" AS bookerName, oi."invoiceNo" AS originalInvoiceNo, ' +
   'ROUND(COALESCE(t.total, 0) * (1 - COALESCE(i."discount_1", 0) / 100.0) * (1 - COALESCE(i."discount_2", 0) / 100.0) - COALESCE(i."discount_rs", 0), 2) AS invoiceTotal, ' +
   'COALESCE(pay.paid, 0) AS invoicePaid ' +
   'FROM payments p ' +
   'LEFT JOIN invoices i ON i."id" = p."invoice" ' +
   'LEFT JOIN parties pa ON pa."id" = p."party" ' +
   'LEFT JOIN order_bookers bo ON bo."id" = p."paid_to" ' +
+  // The invoice's party carries area -> section; the invoice itself carries the booker. A standalone
+  // DA payment has no invoice, so these are empty — the legacy screen shows them blank too.
+  'LEFT JOIN areas ar ON ar."id" = pa."area" ' +
+  'LEFT JOIN sections se ON se."id" = ar."section" ' +
+  'LEFT JOIN order_bookers bk ON bk."id" = i."booker" ' +
+  // "Original invoices": a return payment's invoice references the sale it returns (one id in
+  // `invoices_return_reference.original_invoices`); show that invoice's number.
+  'LEFT JOIN invoices_return_reference rr ON rr."id" = p."invoice" ' +
+  'LEFT JOIN invoices oi ON oi."id" = rr."original_invoices" ' +
   'LEFT JOIN (SELECT "invoice", ROUND(SUM(ROUND((("qty" * "price") * (1 - COALESCE("discount_1", 0) / 100.0) * (1 - COALESCE("discount_2", 0) / 100.0)) - COALESCE("discount_rs", 0), 2)), 2) AS total ' +
   '          FROM transactions WHERE "deleted" = 0 GROUP BY "invoice") t ON t."invoice" = i."id" ' +
   'LEFT JOIN (SELECT "invoice", ROUND(SUM(CASE WHEN "paid" = 1 THEN "amount" ELSE 0 END), 2) AS paid FROM payments ' +
@@ -60,10 +71,19 @@ function filteredQuery(filters) {
     where.push("date(p.payment_date) <= date(?)");
     params.push(String(filters.to));
   }
-  if (filters.party) {
-    where.push("p.party = ?");
-    params.push(String(filters.party));
-  }
+  // A relation filter must compare the stored BLOB to the id's bytes, not to its base64 text: the
+  // old `p."party" = ?` matched nothing and silently returned an empty list. `unhex(?)` with the
+  // decoded hex is what every other relation comparison in this app already does.
+  const rel = (column, value) => {
+    const hex = base64ToHex(String(value));
+    if (!hex) return;
+    where.push(column + " = unhex(?)");
+    params.push(hex);
+  };
+  if (filters.party) rel('p."party"', filters.party);
+  if (filters.area) rel('pa."area"', filters.area);
+  if (filters.section) rel('ar."section"', filters.section);
+  if (filters.booker) rel('i."booker"', filters.booker);
   if (filters.standalone === "on") where.push("p.invoice IS NULL");
   // PocketBase left one `paid = 0` row per invoice as the ledger's invoice-side placeholder
   // ("Invoice Created", 0.00). The screen shows settled payments; "open entries" switches to the
@@ -112,6 +132,10 @@ function shapeRow(r) {
     invoiceNo: r.invoiceNo === null || r.invoiceNo === undefined ? null : Number(r.invoiceNo),
     partyName: r.partyName ?? "",
     paidTo: r.paidTo ?? "",
+    area: r.areaName ?? "",
+    section: r.sectionName ?? "",
+    booker: r.bookerName ?? "",
+    originalInvoiceNo: r.originalInvoiceNo === null || r.originalInvoiceNo === undefined ? null : Number(r.originalInvoiceNo),
     standalone: r.invoice === null || r.invoice === undefined,
   };
   if (!row.standalone) {
@@ -123,9 +147,13 @@ function shapeRow(r) {
   return row;
 }
 
-export async function listPayments(db, filters = {}) {
+export async function listPayments(db, filters = {}, opts = {}) {
   const { sql, params } = filteredQuery(filters);
-  const rows = await db.all(sql + ' ORDER BY p."payment_date" DESC, p."id" DESC LIMIT 300', params);
+  // The list is windowed at 300 by default; `show=all` lifts the cap so a wide date range can be
+  // read (and printed) in full. The window is a render cap, not a filter — the totals and the row
+  // count in `sumPayments` are always over the WHOLE filtered set.
+  const limit = opts.all ? "" : " LIMIT 300";
+  const rows = await db.all(sql + ' ORDER BY p."payment_date" DESC, p."id" DESC' + limit, params);
 
   return rows.map(named(LIST_COLUMNS)).map(shapeRow);
 }
@@ -227,19 +255,38 @@ export async function listView(A, req, query) {
     from: routeKit.pick(query.from, ""),
     to: routeKit.pick(query.to, ""),
     party: routeKit.pick(query.party, ""),
+    area: routeKit.pick(query.area, ""),
+    section: routeKit.pick(query.section, ""),
+    booker: routeKit.pick(query.booker, ""),
     standalone: routeKit.flag(query.standalone),
     open: routeKit.flag(query.open),
   };
-  const rows = await listPayments(db, filters);
+  const rows = await listPayments(db, filters, { all: routeKit.pick(query.show, "") === "all" });
   const totals = await sumPayments(db, filters);
+  // The URL that lifts the window, keeping the current filters. Built from the filters the form
+  // wrote, so "Show all" is the same query with `show=all` appended.
+  const qs = Object.keys(filters)
+    .filter((k) => filters[k])
+    .map((k) => k + "=" + encodeURIComponent(String(filters[k])))
+    .join("&");
+  const rowInfo = {
+    shown: rows.length,
+    total: totals.count,
+    truncated: rows.length < totals.count,
+    allHref: "/payments?" + (qs ? qs + "&" : "") + "show=all",
+  };
   return {
     options: { active: "payments", title: "Payments", template: "payments/index.html" },
     data: {
       rows,
+      rowInfo,
       filters,
       types: routeKit.typeOptions(PAYMENT_TYPES),
       selectedType: Number(filters.type || -1),
       parties: refs.parties ?? [],
+      areas: refs.areas ?? [],
+      sections: refs.sections ?? [],
+      bookers: refs.bookers ?? [],
       totals,
       status: query.status || "",
       message: query.message || "",

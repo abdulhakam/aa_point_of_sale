@@ -44,7 +44,8 @@
     },
     {
       "key": "name",
-      "label": "Name"
+      "label": "Name",
+      "link": "item"
     },
     {
       "key": "box_size_qty",

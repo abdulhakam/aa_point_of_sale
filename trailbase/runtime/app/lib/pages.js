@@ -172,6 +172,11 @@ export function normalizeMeta(meta, presets) {
     // manifest may declare that its filters render in a modal (`app/views/reports/report.html`). It is
     // exposed as a plain boolean here because normalizeMeta does not pass unknown keys through.
     filtersModal: meta?.filtersModal === true,
+    // The legacy carries a clear control on some inline filter blocks (`RESET` on payments and the
+    // sales/daily/outstanding/payments-by-company reports, `CLEAR` on the party/booker/area ledgers).
+    // A manifest opts in with `resetLabel`; normalizeMeta does not pass unknown keys through, so it is
+    // surfaced here for `reports/report.html`. See [[ui-parity-run-2026-10-11]].
+    resetLabel: meta?.resetLabel ? String(meta.resetLabel) : "",
     filters,
     // `fields` is the server-rendered report template's name for the same list; both are exposed so
     // neither template has to know which host is asking.

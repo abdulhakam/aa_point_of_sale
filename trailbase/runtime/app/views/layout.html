@@ -19,6 +19,7 @@
     fragments to another on a shared browser. The shell is per-identity; this is the same key material. #}
 <meta id="aa-user" name="aa-user" content="{{ user.email if user else '' }}">
 <link rel="icon" href="/static/favicon.svg">
+<link rel="stylesheet" href="/static/css/theme.css">
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
 {# `paper` selects the print sheet: a5 for an invoice or a voucher, a4 for a report. See app.css. #}
@@ -132,5 +133,9 @@
    populates the picker from IndexedDB and fires `refdb:select`, which the combobox listens for. Loaded
    lazily — it only fetches when the page actually has an invoice picker. See `invoicedb.js`. #}
 <script src="/static/js/invoicedb.js" defer></script>
+{# Server-side invoice-number search for a picker that opts in with `data-invoice-remote` (the
+   console's invoice #). Loaded after autocomplete.js so the combobox it drives already exists; it
+   replaces the select's options and fires `refdb:select` to re-read them. See `invoice-remote.js`. #}
+<script src="/static/js/invoice-remote.js" defer></script>
 </body>
 </html>{% endif %}

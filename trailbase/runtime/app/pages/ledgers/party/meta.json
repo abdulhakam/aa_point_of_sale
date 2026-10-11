@@ -1,6 +1,7 @@
 {
   "title": "Party Ledger",
   "template": "page.html",
+  "resetLabel": "CLEAR",
   "hub": {
     "title": "Party",
     "target": "ledgers/party",

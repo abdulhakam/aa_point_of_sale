@@ -170,9 +170,11 @@ export async function renderReportPage(A, db, req, user, path, query, key, pageD
 
   const showAll = String(query.all || "") === "1";
   const requestedMax = Number(query.maxRows || 0);
+  // Page size (rows per page). `maxRows` is a legacy override; the page is the unit of navigation now.
+  const pageSize = requestedMax > 0 ? requestedMax : RENDER_MAX_ROWS;
   // -1 means "no cap", which is what a `LIMIT`-less statement wants; the page renders everything
   // rather than slicing in JS.
-  const maxRows = showAll ? -1 : requestedMax > 0 ? requestedMax : RENDER_MAX_ROWS;
+  const maxRows = showAll ? -1 : pageSize;
 
   // Rendered-page cache lookup. The fingerprint is the live data version, so any write misses; the
   // revision is a content hash of the app tree, so a code change misses too.
@@ -180,7 +182,7 @@ export async function renderReportPage(A, db, req, user, path, query, key, pageD
   try {
     const fp = await A.service.fingerprint();
     const rev = await A.paths.runtimeRevision();
-    cacheKey = JSON.stringify([rev, fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax, fragment]);
+    cacheKey = JSON.stringify([rev, fp, (user && (user.email || user.name)) || "anon", key, filters, showAll, requestedMax, String(query.page || "1"), fragment]);
     const cached = await pageCacheGet(db, cacheKey);
     if (cached !== null) return html(cached);
   } catch {
@@ -231,26 +233,35 @@ export async function renderReportPage(A, db, req, user, path, query, key, pageD
   // The spool path. Two statements: the rows, and a one-row totals aggregate over the SAME statement.
   // Neither brings a row into QuickJS — the totals row is read back through the same KV handoff.
   const totals = missing.length ? { rowCount: 0 } : await A.spooled.totalsFor(key, filters);
-  const total = Number(totals.rowCount || 0);
-  const shown = maxRows < 0 ? total : Math.min(total, maxRows);
-  const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows)).key }];
-  // "Load more" steps the window (`maxRows`) by one cap instead of jumping to every row at once — the
-  // "Show all" cliff. The current `maxRows`/`all` are dropped from the query first, or a second click
-  // would append a second `maxRows` and the server would read the first. A windowed step, not offset
-  // paging: it re-renders the window, so it is bounded per click but not O(1) in total.
+  const total = Math.trunc(Number(totals.rowCount || 0));
+  // Offset paging: `LIMIT pageSize OFFSET (page-1)*pageSize` on the statement, so each page is O(page
+  // size) to render and the row count comes from the uncapped totals statement.
+  const pageCount = showAll ? 1 : Math.max(1, Math.ceil(total / pageSize));
+  const pageNo = Math.min(Math.max(Math.floor(Number(query.page || 1)) || 1, 1), pageCount);
+  const offset = showAll ? 0 : (pageNo - 1) * pageSize;
+  const shown = maxRows < 0 ? total : Math.max(0, Math.min(pageSize, total - offset));
+  const spools = missing.length ? [] : [{ field: "rows", key: (await A.spooled.spoolRows(key, filters, maxRows, offset)).key }];
+  // Prev/Next keep the current filters and drop the paging params, so a click replaces the page rather
+  // than appending a second one.
   const keepQuery = String(rawQuery || "")
     .split("&")
-    .filter((p) => p && !/^(maxRows|all)=/.test(p))
+    .filter((p) => p && !/^(maxRows|all|page)=/.test(p))
     .join("&");
-  const moreHref = `${path}?${keepQuery ? keepQuery + "&" : ""}maxRows=${shown + RENDER_MAX_ROWS}`;
+  const pageHref = (n) => `${path}?${keepQuery ? keepQuery + "&" : ""}page=${n}`;
   const page = await A.http.pageSpooled(req, { ...shell(user, "reports", pageDef.title), paper: "a4", fragment }, view, {
     ...frame,
     rowInfo: {
       shown,
       total,
+      page: pageNo,
+      pageCount,
+      pageSize,
+      first: total ? offset + 1 : 0,
+      last: offset + shown,
       truncated: shown < total,
       allHref,
-      moreHref,
+      prevHref: pageNo > 1 ? pageHref(pageNo - 1) : null,
+      nextHref: pageNo < pageCount ? pageHref(pageNo + 1) : null,
       // Resolved only when the window is empty, and it is what lets the page say WHICH period has data
       // instead of only that this one does not. One fingerprint-cached probe.
       latest: missing.length || total > 0 ? null : await latestPeriod(A, pageDef.filters.find((f) => f.dateSource)?.dateSource),

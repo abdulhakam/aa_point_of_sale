@@ -10,18 +10,36 @@
 {# APPLY is an htmx fragment: it swaps the list into `#app-main` and pushes the filtered URL, so a
    filter result is shareable and the shell is not re-rendered (see [[htmx-navigation-with-html-fragments]]). #}
 <form class="filters" method="get" hx-get="/payments" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="true" action="/payments">
-  <label class="field"><span>Type</span>
-    <select name="type">
+  <label class="field"><span>Date From</span><input type="date" name="from" value="{{ filters.from }}"></label>
+  <label class="field"><span>Date To</span><input type="date" name="to" value="{{ filters.to }}"></label>
+  <label class="field"><span>Select Section</span>
+    <select name="section" data-searchable data-ref="sections">
       <option value="">All</option>
-      {% for t in types %}<option value="{{ t.code }}"{% if selectedType == t.code %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
+      {% for s in sections %}<option value="{{ s.id }}"{% if filters.section == s.id %} selected{% endif %}>{{ s.name }}</option>{% endfor %}
     </select>
   </label>
-  <label class="field"><span>From</span><input type="date" name="from" value="{{ filters.from }}"></label>
-  <label class="field"><span>To</span><input type="date" name="to" value="{{ filters.to }}"></label>
-  <label class="field"><span>Party</span>
+  <label class="field"><span>Select Area</span>
+    <select name="area" data-searchable data-ref="areas">
+      <option value="">All</option>
+      {% for a in areas %}<option value="{{ a.id }}"{% if filters.area == a.id %} selected{% endif %}>{{ a.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field"><span>Select Booker</span>
+    <select name="booker" data-searchable data-ref="order_bookers">
+      <option value="">All</option>
+      {% for b in bookers %}<option value="{{ b.id }}"{% if filters.booker == b.id %} selected{% endif %}>{{ b.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field"><span>Select Party</span>
     <select name="party" data-searchable data-ref="parties">
       <option value="">All</option>
       {% for p in parties %}<option value="{{ p.id }}"{% if filters.party == p.id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field"><span>Select Payment Type</span>
+    <select name="type">
+      <option value="">All</option>
+      {% for t in types %}<option value="{{ t.code }}"{% if selectedType == t.code %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
     </select>
   </label>
   <label class="field check"><input type="checkbox" name="standalone"{% if filters.standalone %} checked{% endif %}> <span>DA only (no invoice)</span></label>
@@ -34,7 +52,7 @@
 
 <section class="card">
   <div class="list-toolbar">
-    <h2>Payments ({{ rows|length }})</h2>
+    <h2>Payments ({{ totals.count }})</h2>
     <div class="stat-grid">
       <div class="stat"><div class="stat-value">{{ totals.recievedText }}</div><div class="stat-label">Recieved</div></div>
       <div class="stat"><div class="stat-value">{{ totals.sentText }}</div><div class="stat-label">Sent</div></div>
@@ -44,8 +62,8 @@
   <div class="tablewrap">
   <table class="data" data-mobile="cards">
     <thead><tr>
-      <th>Date</th><th>Type</th><th>Invoice</th><th>Party / Paid to</th>
-      <th>Description</th><th class="right">Amount</th><th class="right">Actions</th>
+      <th>Date</th><th>Type</th><th>Invoice</th><th>Original invoices</th><th>Area</th>
+      <th>Section</th><th>Party</th><th>Booker</th><th class="right">Amount</th><th class="right">Row actions</th>
     </tr></thead>
     <tbody>
     {% for r in rows %}
@@ -53,8 +71,11 @@
         <td data-label="Date" data-lead>{{ r.date }}</td>
         <td data-label="Type">{{ r.typeLabel }}</td>
         <td data-label="Invoice">{% if r.standalone %}<span class="muted">DA</span>{% else %}<a href="/invoices/{{ r.invoice }}">{{ r.invoiceNo }}</a>{% endif %}</td>
+        <td data-label="Original invoices">{{ r.originalInvoiceNo or "" }}</td>
+        <td data-label="Area">{{ r.area }}</td>
+        <td data-label="Section">{{ r.section }}</td>
         <td data-label="Party">{{ r.partyName }}{% if r.paidTo %} → {{ r.paidTo }}{% endif %}</td>
-        <td data-label="Description">{{ r.description }}</td>
+        <td data-label="Booker">{{ r.booker }}</td>
         <td class="right" data-label="Amount">{{ r.amountText }}</td>
         <td class="row-actions" data-label="">
           <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Delete this payment?" action="/payments/{{ r.id }}/delete">
@@ -63,10 +84,13 @@
         </td>
       </tr>
     {% else %}
-      <tr><td class="empty" colspan="7">No payments match these filters.</td></tr>
+      <tr><td class="empty" colspan="10">No payments match these filters.</td></tr>
     {% endfor %}
     </tbody>
   </table>
   </div>
+  {% if rowInfo.truncated %}
+  <p class="notice">Showing the first {{ rowInfo.shown }} of {{ rowInfo.total }} payments. <a href="{{ rowInfo.allHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">Show all</a></p>
+  {% endif %}
 </section>
 {% endblock %}

@@ -2,8 +2,9 @@
 title: Invoice print sheet legacy metrics (A5 page, explicit column widths)
 type: reference
 created: 2026-10-10
+updated: 2026-10-11
 tags: [pos, guest, invoice, print, legacy, css]
-related_to: ["[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[print-queue-is-browser-local-like-legacy]]"]
+related_to: ["[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[print-queue-is-browser-local-like-legacy]]", "[[invoice-print-total-column-before-discounts]]"]
 ---
 
 # Invoice print sheet legacy metrics (A5 page, explicit column widths)
@@ -21,9 +22,15 @@ session, 2026-10-10.
 
 ## Columns
 
-`# | ITEM | BOX SIZE | QUANTITY (CTN / UNTS / FREE) | PRICES (UNIT / CTN) | TOTAL`, with a
-**conditional `DISCOUNTS`** group (`1(%) · 2(%) · IN RS`) rendered only when some line carries a
-discount — the guest already does this (`hasLineDiscounts`).
+`# | ITEM | BOX SIZE | QUANTITY (CTN / UNTS / FREE) | PRICES (UNIT / CTN) | DISCOUNTS | TOTAL`, with a
+**conditional `DISCOUNTS`** group (`1(%) · 2(%) · IN RS`) before `TOTAL`, rendered only when some
+line carries a discount — the guest already does this (`hasLineDiscounts`).
+
+> **Corrected 2026-10-11.** This line previously read "... PRICES (UNIT / CTN) | TOTAL, with a
+> conditional DISCOUNTS group", i.e. DISCOUNTS *after* TOTAL. That order is wrong: in the legacy
+> chunk the `DISCOUNTS` group precedes a `rowSpan=2` `TOTAL`, which is the **last** column, and each
+> body row emits `total` last. The guest sheet had the reversed order and was fixed to match; see
+> [[invoice-print-total-column-before-discounts]].
 
 - The **only explicit widths** in the legacy bundle are **`BOX SIZE = 2em`** and **`UNTS = 1em`**;
   every other column is auto.
