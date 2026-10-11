@@ -98,9 +98,9 @@
       const handle = await A.spooled.spoolRows("supplysummary", filters, cap, offset);
       const shown = Number((handle && handle.rows) || 0);
 
-      // Total ITEMS is the `ints.units` total: an integer SUM over the same statement the page renders
-      // (spoolreports `ints` group), so it cannot describe a different row set than the visible rows.
-      const totalItems = Math.trunc(Number(totals.units || 0));
+      // Total ITEMS is the COUNT of products the summary lists — the number of rows, not the sum of
+      // their units. It is the same `rowCount` the heading shows, carried into the totals block.
+      const totalItems = total;
 
       const qbase = "from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to) + "&invoices=" + selected.join("&invoices=");
       const link = (extra: string) => "/reports/supplysummary?" + qbase + extra;

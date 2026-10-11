@@ -264,7 +264,6 @@ function totalsCols(spec) {
     ...Object.keys(t.cents || {}).filter((k) => !derived.includes(k)),
     ...derived,
     ...Object.keys(t.consts || {}),
-    ...Object.keys(t.ints || {}),
     ...Object.keys(t.pick || {}),
   ];
 }
@@ -347,15 +346,10 @@ function aggregateSql(t, sql, toPaisas = toCents) {
   const openCols = openNames.map((name) => `${toCents(`CAST(${t.openings[name]} AS REAL)`)} AS ${cent(name)}`);
 
   const tiers = Object.entries(t.cents || {}).map(([key, expr]) => `SUM(${toPaisas(expr)}) AS ${cent(key)}`);
-  // `ints` are plain INTEGER sums of a report column that is a count, not money (e.g. Supply Summary's
-  // total units). They are summed as-is — no paisa conversion, no /100 on the way out — which is why
-  // they are a separate group rather than a `cents` key.
-  const intKeys = Object.keys(t.ints || {});
-  const intTiers = intKeys.map((key) => `CAST(SUM(${t.ints[key]}) AS INTEGER) AS ${key}_i`);
   // The count lives in `tiers` too, and for the same reason: `tiers` is an AGGREGATE, so it produces
   // one row, and `COUNT(*)` in the outer SELECT would therefore have counted the tiers row and
   // answered 1 for every report. Carrying it out of the layer that actually saw the rows is the fix.
-  const tierCols = ["COUNT(*) AS rowCount", ...tiers, ...openCols, ...intTiers];
+  const tierCols = ["COUNT(*) AS rowCount", ...tiers, ...openCols];
 
   // `refs` is what a `derived` key is built from: the paisa ALIAS in `tiers`, never the per-row
   // expression. Handing it the raw expression instead produced a `derived` that re-evaluated the CASE
@@ -379,7 +373,7 @@ function aggregateSql(t, sql, toPaisas = toCents) {
   // The reported keys, in manifest order: the cents that are not shadowed, then derived, then consts.
   const derivedKeys = Object.keys(t.derived || {});
   const carried = Object.keys(t.cents || {}).filter((k) => !derivedKeys.includes(k));
-  const constKeys = Object.keys(t.consts || {});
+  const reported = [...carried, ...derivedKeys, ...Object.keys(t.consts || {})];
 
   // The second layer is what the outer select reads, so it must NAME every reported key. A plain cents
   // key is passed through under its own alias; a derived key is computed from the paisa sums; a const
@@ -388,17 +382,13 @@ function aggregateSql(t, sql, toPaisas = toCents) {
   const secondLayer = [
     ...carried.map((key) => `tiers.${cent(key)} AS ${cent(key)}`),
     ...derivedKeys.map((key) => `${refs[key]} AS ${cent(key)}`),
-    ...constKeys.map((key) => `${t.consts[key]} AS ${cent(key)}`),
-    ...intKeys.map((key) => `tiers.${key}_i AS ${key}_i`),
+    ...Object.entries(t.consts || {}).map(([key, paisas]) => `${paisas} AS ${cent(key)}`),
   ];
 
   // `rowCount` is an integer, so it is read straight through — `printf` is for money, and `tiers` is
-  // the layer that actually counted rows. An `ints` key is likewise an integer: no /100.
+  // the layer that actually counted rows.
   const values = ["s.rowCount AS rowCount",
-    ...carried.map((key) => `${money(`s.${cent(key)} / 100.0`)} AS ${key}`),
-    ...derivedKeys.map((key) => `${money(`s.${cent(key)} / 100.0`)} AS ${key}`),
-    ...constKeys.map((key) => `${money(`s.${cent(key)} / 100.0`)} AS ${key}`),
-    ...intKeys.map((key) => `s.${key}_i AS ${key}`)];
+    ...reported.map((key) => `${money(`s.${cent(key)} / 100.0`)} AS ${key}`)];
 
   const from = secondLayer.length
     // `rowCount` is carried through the second layer, or the outer select's `s.rowCount` is a name the

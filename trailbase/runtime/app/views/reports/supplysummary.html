@@ -18,7 +18,12 @@
     <div class="picker-head">
       <strong>{{ invoices | length }}</strong> sale invoice(s) in range
       {% if selectedCount %}· <strong>{{ selectedCount }}</strong> selected{% endif %}
-      <span>— tick the invoices to summarise, then SUBMIT.</span>
+      <span>— tick the invoices to summarise, or select all, then SUBMIT.</span>
+      {# `supply-summary.js` toggles every checkbox; the buttons are `type="button"` so they do not submit. #}
+      <span class="picker-tools">
+        <button type="button" class="btn" data-picker-all>Select all</button>
+        <button type="button" class="btn" data-picker-none>Clear</button>
+      </span>
     </div>
     <div class="picker-list">
     {% for inv in invoices %}

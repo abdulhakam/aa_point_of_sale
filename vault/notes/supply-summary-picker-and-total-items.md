@@ -26,9 +26,14 @@ quantity/amount, not the total number of units across the selected invoices.
   grid (`repeat(auto-fill, minmax(17rem, 1fr))`, `max-height: 22rem`) of `.picker-row` lines showing
   `#number · date · party`. Tokens only ([[theme-is-one-file-of-tokens]]).
 - **Picker header** states the count in range, how many are selected, and the instruction to submit.
-- **Total Items** — a new total (the sum of the report's per-product `units`) shown beside Total
-  Amount. It is the `ints.units` group: a plain `CAST(SUM(units) AS INTEGER)` over the SAME statement
-  the rows come from, so it cannot describe a different set (see [[reports-page-by-offset]]).
+- **Total Items** — the **number of items in the summary** (the count of product rows the report
+  lists), shown beside Total Amount. It is the report's `rowCount`, the same figure the "Products (N)"
+  heading shows. ⚠️ **Corrected 2026-10-11:** the first version added an `ints` totals group summing
+  the rows' `units` — the owner clarified this is wrong: Total Items is a count of items, not the sum
+  of units/pieces. That group was reverted (see [[reports-page-by-offset]]).
+- **Select all / Clear** — the picker header has a "Select all" and a "Clear" button
+  (`data-picker-all` / `data-picker-none`) that toggle every invoice checkbox; `supply-summary.js`
+  binds them and they are `type="button"` so they cannot submit the form.
 - **Pagination** — the products table pages by `LIMIT/OFFSET` (`page`, `Show all`), the same pager as
   every other report.
 

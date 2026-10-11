@@ -43,6 +43,8 @@ is exact regardless of the page.
 - Ordering is the report's own `ORDER BY`; a report whose ordering has ties can page unstably — the
   same caveat the SQL already carried.
 - Supply Summary keeps its own template but pages the same way (`app/ahscripts/routes/reports/supplysummary`).
-- The integer "Total Items" on Supply Summary needed a new totals group (`ints`): a plain
-  `CAST(SUM(units) AS INTEGER)` over the same statement, because the existing groups are money
-  (paisa) only. `spoolreports.js` now carries `cents`, `derived`, `consts`, `ints`, `pick`.
+- **Correction 2026-10-11:** an earlier form of this change added an `ints` (plain integer sum) totals
+  group so Supply Summary could show a "total units" figure. The owner clarified that **Total Items**
+  means the **number of items in the summary** (the row count), not the sum of their units. The `ints`
+  group was reverted; `spoolreports.js` carries `cents`, `derived`, `consts`, `pick` only, and Supply
+  Summary's Total Items is its `rowCount`.

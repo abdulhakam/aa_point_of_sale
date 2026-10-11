@@ -137,5 +137,7 @@
    console's invoice #). Loaded after autocomplete.js so the combobox it drives already exists; it
    replaces the select's options and fires `refdb:select` to re-read them. See `invoice-remote.js`. #}
 <script src="/static/js/invoice-remote.js" defer></script>
+{# Supply Summary's picker: "Select all" / "Clear" over the invoice checkboxes (`data-picker-*`). #}
+<script src="/static/js/supply-summary.js" defer></script>
 </body>
 </html>{% endif %}

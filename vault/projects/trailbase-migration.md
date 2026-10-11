@@ -115,9 +115,10 @@ left in `app.css`, so editing one file rethemes everything. Decision
 window became **LIMIT/OFFSET paging** (`?page=k`, Prev/Next + `Show all`) across all fifteen
 report/ledger screens; the totals/count stayed exact ([[reports-page-by-offset]]). Supply Summary's
 invoice picker, which had **no CSS** and rendered every checkbox on one line, is now a scrollable
-multi-column list, and its result gained a **Total Items** figure (a new `ints` totals group — the
-first non-money total). [[supply-summary-picker-and-total-items]]. Verified: `verify-spool-reports`
-15/15, `check-report-pages` all ok, `guest-smoke` 116/116, `route-snapshot` 50/0.
+multi-column list with **Select all / Clear**, and its result gained a **Total Items** figure — the
+number of items in the summary (the product-row count; an earlier `ints` "total units" attempt was
+reverted as not what was meant). [[supply-summary-picker-and-total-items]]. Verified:
+`verify-spool-reports` 15/15, `check-report-pages` all ok, `guest-smoke` 116/116, `route-snapshot` 50/0.
 
 **Next: the headless-Chrome keyboard gate, retiring `invoicing.js`, `runtime-revision-is-unstable`,
 `<aa-dirty-guard>`, then the deferred money pass; and the parity candidates (`management-parties`
