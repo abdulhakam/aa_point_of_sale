@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-01
 tags: [trailbase, cleanup, dead-code, rust]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[tb-0030-retire-the-route-ts-dispatcher]]", "[[trailbase-host-jobs-module-never-called]]", "[[trailbase-runtime-js-scheduler-not-running-jobs]]", "[[direct-js-serde-bridge-no-win]]"]
+related_to: ["[[tb-0030-retire-the-route-ts-dispatcher]]", "[[trailbase-host-jobs-module-never-called]]", "[[trailbase-runtime-js-scheduler-not-running-jobs]]", "[[direct-js-serde-bridge-no-win]]", "[[tb-0042-dead-code-sweep-2026-10-11]]"]
 ---
 
 # tb-0031 — Remove the dead code the reference graph proves unreachable

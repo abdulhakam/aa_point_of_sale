@@ -169,12 +169,12 @@ wanted only the snapshot's `version` counter:
 
 | Call site | What it actually used | Now |
 |---|---|---|
-| `/dashboard` | `counts` — eleven row counts | `A.baseviews.counts()` → `app/sql/counts.sql` |
+| `/dashboard` | ~~`counts` — eleven row counts~~ **removed 2026-10-11** | the "Overview" card is gone, so `/dashboard` does not compute counts; `baseviews.counts()` and `app/sql/counts.sql` were deleted ([[tb-0042-dead-code-sweep-2026-10-11]]) |
 | `/invoice/context` | `itemsReport` rows | `A.baseviews.itemsReport()` → `app/reports/sql/items_report.sql` |
 | `/inventory` | `itemsReport` rows | `A.baseviews.itemsReport()` |
 | `/p/<slug>/data` | **only** `snap.version` for the ETag | `A.service.dataVersion()` |
 
-`app/lib/baseviews.js` serves the first two. It is deliberately **not** a report page — no manifest, no
+`app/lib/baseviews.js` serves the remaining one. It is deliberately **not** a report page — no manifest, no
 render, no totals block — but `sqlite.all` returns positional arrays with no column metadata, so it
 names each statement's columns in SELECT order and `columnsToObjects()` **refuses a width mismatch**. A
 statement that gains or loses a column is a loud error, not a row of shifted values.

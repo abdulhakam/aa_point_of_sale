@@ -349,7 +349,7 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
       let _ = fs::create_dir("/ahscripts/routes");
   }
 
-  let mut file_path = match resolve_route_file(clean_path) {
+  let file_path = match resolve_route_file(clean_path) {
       Some(p) => p,
       None => {
           // No route folder owns this path. The app is folder-only since tb-0030 step 6 deleted

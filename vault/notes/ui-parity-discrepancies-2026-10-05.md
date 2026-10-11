@@ -139,7 +139,8 @@ now uses that identical expression, copied rather than reinvented. `verify-spool
 
 **#5 involved a template that was reading a variable nobody set.** The frame passed to a report page has
 **no `meta`** — so the old `partials/report_meta.html` line was rendering `appliedLabels`, and its
-`{% if meta.from %}` never fired. The period had therefore *never* been shown. It is now built from
+`{% if meta.from %}` never fired. (That partial, orphaned when the line was removed, was deleted
+2026-10-11 — [[tb-0042-dead-code-sweep-2026-10-11]].) The period had therefore *never* been shown. It is now built from
 `filters.from`/`filters.to` through a new `app/lib/dates.js::legacyDate`, which spells the month out
 rather than calling `toLocaleDateString`, whose output changes with the host's ICU data and locale — a
 date that reshapes itself per machine is not a date a shop can read a printout of.

@@ -1,42 +1,28 @@
 /**
- * The two derived reads the app still needs, as SQL.
+ * The one derived read the app still needs, as SQL.
  *
- * These replace `getViews(["counts"])` and `getViews(["itemsReport"])` — the last two calls into the
- * JavaScript view layer (`app/compute/views.js`) that had live consumers. Once the call sites in
- * `ahscripts/routes/_app/route.ts` (the dashboard, `/invoice/context`, `/inventory`) come through here,
- * nothing in the running app builds a view in JavaScript.
+ * This replaces `getViews(["itemsReport"])` — the last call into the JavaScript view layer
+ * (`app/compute/views.js`) that had a live consumer. Once the call sites in `ahscripts/routes/_app/route.ts`
+ * (`/invoice/context`, `/inventory`) come through here, nothing in the running app builds a view in
+ * JavaScript.
  *
- * They are NOT report pages, so they are not spooled: there is no manifest, no render, no totals block.
- * `sqlite.all` answers positional arrays with no column metadata, so each statement names its columns
+ * It is NOT a report page, so it is not spooled: there is no manifest, no render, no totals block.
+ * `sqlite.all` answers positional arrays with no column metadata, so the statement names its columns
  * here in the order it selects them, and `columnsToObjects` asserts the widths match. A statement that
  * gains or loses a column is a loud error rather than a row of shifted values — the same contract the
  * report manifests keep for the same reason.
+ *
+ * ⚠️ The `counts` view was removed 2026-10-11 with the rest of the dashboard "Overview" card: the
+ * `/dashboard` route no longer computes it (see that route's comment), which left `counts()` and
+ * `app/sql/counts.sql` with no caller. The eleven row counts are gone from the product, not deferred.
  */
 
 import { composeStatement } from "./spoolreports.js";
 
-/** `app/sql/counts.sql`, in SELECT order. */
-const COUNT_COLUMNS = [
-  "sections",
-  "areas",
-  "categories",
-  "parties",
-  "order_bookers",
-  "items",
-  "purchase_invoices",
-  "sale_invoices",
-  "return_invoices",
-  "recieving_payments",
-  "sending_payments",
-];
-
 /** `app/reports/sql/items_report.sql`, in SELECT order. */
 const ITEM_COLUMNS = ["id", "name", "created", "updated", "cost_price", "sale_price", "box_size_qty", "category", "qty"];
 
-const COUNTS_SQL = "/app/sql/counts.sql";
 const ITEMS_SQL = "/app/reports/sql/items_report.sql";
-
-let countsCache = null;
 
 /**
  * Positional rows to named objects, refusing a width mismatch.
@@ -57,23 +43,6 @@ function columnsToObjects(columns, rows) {
 }
 
 /**
- * The dashboard tiles: eleven row counts.
- *
- * Memoised for a short window because the dashboard is the first page anyone opens and it now costs
- * eleven sub-selects rather than one probe of the tables it was going to count anyway. The window is
- * deliberately tiny — it exists to collapse a burst of requests, not to be a cache that can go stale.
- */
-export async function counts() {
-  const now = Date.now();
-  if (countsCache && now - countsCache.at < 1000) return countsCache.value;
-  const sql = String(await fs.readFile(COUNTS_SQL)).replace(/;\s*$/, "");
-  const rows = await sqlite.all(sql, []);
-  const value = columnsToObjects(COUNT_COLUMNS, rows)[0] || {};
-  countsCache = { at: now, value };
-  return value;
-}
-
-/**
  * The item rows the invoice-entry item list and the inventory screen read.
  *
  * `items_report.sql` opens with its own CTE, so it is composed onto the shared prelude by the SAME
@@ -84,9 +53,4 @@ export async function itemsReport() {
   const compose = await composeStatement(await fs.readFile(ITEMS_SQL));
   const rows = await sqlite.all(compose.replace(/;\s*$/, ""), []);
   return columnsToObjects(ITEM_COLUMNS, rows);
-}
-
-/** Drop the memoised counts. Called on commit, so a new invoice moves the tiles immediately. */
-export function invalidate() {
-  countsCache = null;
 }

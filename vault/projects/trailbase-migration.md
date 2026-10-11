@@ -487,6 +487,7 @@ on.
 [--] 17. Trigger-maintained Tier 2 materialised tables    -> [[tb-0033-trigger-maintained-report-tables]] (SKIPPED 2026-10-06: the premise was wrong — the SQL runs in ~0.05-1.2 s and the slowness was JS reprocessing in the route handlers, fixed 2026-10-03)
 [x] 18. Remove the code the reference graph proves dead  -> [[tb-0031-remove-proven-dead-code]] (done 2026-10-01: 13 guest exports, 5 Rust items, 5 orphaned tools; `jobs.rs` kept, see open decision 6)
 [--] 19. Measure and bound report cost on a whole database -> [[report-cost-on-a-whole-database]] (measured 2026-10-04; its SQL claim was WRONG — see the note's correction — so the step-17 promotion it caused is withdrawn and this step needs revisiting)
+[x] 20. Second dead-code sweep (dashboard counts, orphan manifest seam, orphan template) -> [[tb-0042-dead-code-sweep-2026-10-11]] (done 2026-10-11: `baseviews.counts`+`counts.sql`, `manifests.jobs/all/invalidate`, `partials/report_meta.html`, one Rust `unused_mut`; open candidates listed, not actioned)
 ```
 
 **Step 19 is new, and it reorders 16 and 17.** On 2026-10-04 the depot was rebuilt and re-imported

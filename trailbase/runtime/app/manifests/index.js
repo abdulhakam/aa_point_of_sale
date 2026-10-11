@@ -34,12 +34,7 @@ async function read(name) {
   return value;
 }
 
-export const entities = () => read("entities");
-export const jobs = () => read("jobs");
 export const contentTypes = () => read("content-types");
-
-/** The schema contract: tables, foreign-key columns, boolean columns. Read by `app/lib/data.js`. */
-export const schema = () => read("schema");
 
 /** Which URL prefixes serve which directories under `/app`. Read by `routeKit.resolveMount`. */
 export const staticMounts = () => read("static-mounts");
@@ -52,26 +47,9 @@ export const staticMounts = () => read("static-mounts");
  */
 export const pagePresets = () => read("page-presets");
 
-/** Everything, for a caller that wants it in one read. */
-export async function all() {
-  const [e, s, c, j, m] = await Promise.all([
-    entities(),
-    schema(),
-    contentTypes(),
-    jobs(),
-    staticMounts(),
-  ]);
-  return { entities: e, schema: s, contentTypes: c, jobs: j, staticMounts: m };
-}
-
 /** Read every required manifest once, so a missing file is a start-up failure and not a first-use one. */
 export async function loadAll() {
   const out = {};
   for (const name of REQUIRED) out[name] = await read(name);
   return out;
-}
-
-/** Drop the cache, so a manifest edit is picked up without a restart. Used by the harnesses. */
-export function invalidate() {
-  cache.clear();
 }
