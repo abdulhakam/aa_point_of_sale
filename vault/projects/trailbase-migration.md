@@ -120,6 +120,12 @@ number of items in the summary (the product-row count; an earlier `ints` "total 
 reverted as not what was meant). [[supply-summary-picker-and-total-items]]. Verified:
 `verify-spool-reports` 15/15, `check-report-pages` all ok, `guest-smoke` 116/116, `route-snapshot` 50/0.
 
+**Logout fixed.** `/logout` redirected to `/_/auth/logout`, which 404s, and cleared nothing — the
+session stayed live. It now revokes the refresh token at the host (`POST /api/auth/v1/logout`) and
+clears the app's own `auth_token`/`refresh_token` cookies, redirecting to `/login`.
+[[logout-left-the-session-live]]. (Found while the guest was briefly hosted publicly for remote
+testing; that tunnel and server were closed again.)
+
 **Next: the headless-Chrome keyboard gate, retiring `invoicing.js`, `runtime-revision-is-unstable`,
 `<aa-dirty-guard>`, then the deferred money pass; and the parity candidates (`management-parties`
 `party type` filter, cash-memo expenses columns).**
