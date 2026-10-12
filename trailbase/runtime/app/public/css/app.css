@@ -625,7 +625,7 @@ table.grid select { min-width: 12rem; }
 
 @media print {
   [data-invoice-doc] .doc-print-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  [data-invoice-doc] .doc-foot { display: flex; justify-content: space-between; margin-top: 1em; font-size: 10pt; bottom:1em;}
+  [data-invoice-doc] .doc-foot { display: flex; justify-content: space-between; margin-top: 1em; font-size: 10pt; position: fixed; bottom: 1em; left: 0; right: 0;}
   [data-invoice-doc] .doc-foot-right { text-align: right; }
   /* The legacy line table is a full black grid and its header row repeats on every page. */
   [data-invoice-doc] .doc-lines th, [data-invoice-doc] .doc-lines td { border: 1px solid var(--black); }
