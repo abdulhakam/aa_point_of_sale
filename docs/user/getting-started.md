@@ -81,16 +81,20 @@ auth {
 # Optional: rate limiting, cors, etc.
 ```
 
-### Business Info: `traildepot/runtime/app/config/business.json`
+### Business Info & Logo: `traildepot/runtime/app/config/business.json`
 
 ```json
 {
   "name": "YOUR BUSINESS NAME",
-  "address": "Your Business Address",
-  "phone": "Your Phone Number"
+  "address": "Your Full Address",
+  "phone": "Your Phone Number",
+  "logo": ""
 }
 ```
-This appears on all printed documents (invoices, reports, vouchers).
+
+This appears on **all printed documents**: invoices (A5), reports (A4), and vouchers/receipts.
+See **[Set Up Business Information & Logo (for prints)](#set-up-business-information--logo-for-prints)**
+below for the full walkthrough.
 
 ### Renderer: `traildepot/runtime/app/config/renderer.json`
 
@@ -110,7 +114,90 @@ This appears on all printed documents (invoices, reports, vouchers).
    - **Email:** `admin@example.com`
    - **Password:** `changeme`
 4. **Change password** immediately via Settings → Change Password
-5. **Configure business info** in `business.json` and restart
+5. **Set your business information and logo** (see the next section) so your name and logo appear on
+   every printed invoice, report and voucher.
+
+## Set Up Business Information & Logo (for prints)
+
+Every printed document — the A5 invoice, the A5 voucher/receipt, and the A4 report — carries a business
+header built from one small config file. Set it once and all prints use it.
+
+### 1. Edit `business.json`
+
+Open `traildepot/runtime/app/config/business.json` (in a distribution, this is
+`<dist>\runtime\app\config\business.json`) and set your details:
+
+```json
+{
+  "name": "YOUR BUSINESS NAME",
+  "address": "Shop / street, area, city",
+  "phone": "0300-0000000",
+  "logo": ""
+}
+```
+
+| Field | Where it appears on the print |
+|-------|-------------------------------|
+| `name` | Centered header title (invoices & reports), business name on a voucher |
+| `address` | Under the name (invoices & reports), address line on a voucher |
+| `phone` | `Contact:` line under the address, phone line on a voucher |
+| `logo` | Left of the invoice header / above the report title / top of the voucher (optional) |
+
+### 2. Add a logo (optional)
+
+The logo is **optional**. Leave `"logo": ""` for no logo — this is the default and matches the original
+prints.
+
+To add one:
+
+1. **Place the image** in the app's public folder:
+   - Source/running-from-repo: `traildepot/runtime/app/public/`
+   - Distribution: `<dist>\traildepot\runtime\app\public\`
+   - Name it something simple, e.g. `logo.png`.
+2. **Point `logo` at it** with the `/static/` URL (the `/static/` prefix serves that public folder):
+
+```json
+{
+  "name": "YOUR BUSINESS NAME",
+  "address": "Shop / street, area, city",
+  "phone": "0300-0000000",
+  "logo": "/static/logo.png"
+}
+```
+
+**Logo recommendations**
+
+| Aspect | Guidance |
+|--------|----------|
+| Format | PNG (transparent background prints cleanest) or JPG/SVG |
+| Width | ~200–400 px; it is scaled down and capped at **150 px wide × 56 px tall** |
+| Shape | Horizontal/wide logos fit the header band best; square logos also work |
+| Filename | No spaces (use `logo.png`, not `my logo.png`) |
+
+> The image is capped by the stylesheet (`max-width: 150px; max-height: 56px`), so an oversized upload
+> cannot break the layout. If your logo looks squashed, crop it to a wide aspect ratio before uploading.
+
+### 3. Restart the server
+
+`business.json` is read **once at start-up** (into the app's cached business identity), so a change
+takes effect only after a restart. Restart the server (or the control panel's TrailBase **Stop** →
+**Start**).
+
+### 4. Verify on a print
+
+1. Open any invoice → **Print** (or a report → printer glyph). The header should show your name, address,
+   phone, and — if set — your logo.
+2. The logo appears **on the printed sheet** for invoices and reports. On a voucher it is also visible on
+   screen (the voucher *is* the printable receipt).
+
+### Troubleshooting
+
+| Symptom | Cause / Fix |
+|---------|-------------|
+| Old name still prints | Server not restarted, or you edited the depot copy of `runtime` (edit the source and restart) |
+| Logo does not appear | `logo` empty/typo; file not in `app/public/`; URL missing the `/static/` prefix; wrong filename case |
+| Logo broken-image icon | File not found at the URL — check the path and that the filename has no spaces |
+| Logo too large / squashed | Crop to a wide aspect ratio (~200×60); it is capped at 150×56 |
 
 ## Default Data
 

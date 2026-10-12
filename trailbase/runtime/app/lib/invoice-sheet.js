@@ -120,6 +120,7 @@ export async function buildSheet(A, id) {
     name: "SAMPLE TRADERS",
     address: "123 Sample Street, Sample City",
     phone: "000-0000000",
+    logo: "",
   };
 
   const data = {
@@ -127,6 +128,8 @@ export async function buildSheet(A, id) {
     businessName: biz.name,
     businessAddress: biz.address,
     businessPhone: biz.phone,
+    // Optional logo (from business.json). The sheet draws it in the left header cell only when set.
+    businessLogo: biz.logo ?? "",
     typeLabel,
     partyName,
     partyPhone,
@@ -243,6 +246,7 @@ export async function buildSheetFresh(A, id) {
     name: "SAMPLE TRADERS",
     address: "123 Sample Street, Sample City",
     phone: "000-0000000",
+    logo: "",
   };
 
   const data = {
@@ -250,6 +254,8 @@ export async function buildSheetFresh(A, id) {
     businessName: biz.name,
     businessAddress: biz.address,
     businessPhone: biz.phone,
+    // Optional logo (from business.json). The sheet draws it in the left header cell only when set.
+    businessLogo: biz.logo ?? "",
     typeLabel,
     partyName,
     partyPhone,

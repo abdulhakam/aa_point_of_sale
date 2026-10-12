@@ -566,6 +566,10 @@ table.grid select { min-width: 12rem; }
 .invoice-doc { max-width: none; }
 .doc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; border-bottom: 2px solid var(--black); padding-bottom: 8px; margin-bottom: 12px; }
 .doc-business { font-size: 1.25rem; font-weight: 700; }
+/* The optional print logo (business.json `logo`). Constrained so an oversized image cannot push the
+   document down the sheet or change the legacy column layout. Empty is the default: nothing renders. */
+.doc-logo { display: block; max-height: 56px; max-width: 150px; object-fit: contain; margin-bottom: 4px; }
+.print-head .doc-logo { margin: 0 auto 4px; }
 .doc-address, .doc-phone { font-size: 0.8rem; color: var(--doc-muted); }
 .doc-meta { text-align: right; }
 .doc-type { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }

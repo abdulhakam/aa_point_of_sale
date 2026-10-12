@@ -21,6 +21,10 @@ export const DEFAULT_BUSINESS = {
   name: "SAMPLE TRADERS",
   address: "123 Sample Street, Sample City",
   phone: "000-0000000",
+  // Optional print logo, a URL served by the app (e.g. "/static/logo.png"). Empty means no logo is
+  // drawn on the invoice/report/voucher sheets — the default, and what every print matched before it
+  // existed. See `docs/user/getting-started.md`, "Business information and logo".
+  logo: "",
 };
 
 /** The configured business identity, or the legacy defaults. Set once by `app()`. */
@@ -41,6 +45,7 @@ export async function app() {
         name: String(cfg.name || DEFAULT_BUSINESS.name),
         address: String(cfg.address || DEFAULT_BUSINESS.address),
         phone: String(cfg.phone || DEFAULT_BUSINESS.phone),
+        logo: String(cfg.logo || ""),
       };
     } catch (e) {
       // Optional file: absent or unreadable keeps the defaults.

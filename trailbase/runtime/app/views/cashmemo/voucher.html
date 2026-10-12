@@ -6,6 +6,7 @@
 <article class="invoice-doc" data-voucher>
   <header class="doc-head">
     <div>
+      {% if businessLogo %}<img class="doc-logo" src="{{ businessLogo }}" alt="">{% endif %}
       <div class="doc-business">{{ businessName }}</div>
       <div class="doc-address">{{ businessAddress }}</div>
       <div class="doc-phone">{{ businessPhone }}</div>

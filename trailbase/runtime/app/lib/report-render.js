@@ -24,12 +24,15 @@ function shell(user, active, title) {
     name: "SAMPLE TRADERS",
     address: "123 Sample Street, Sample City",
     phone: "000-0000000",
+    logo: "",
   };
   return {
     appName: b.name,
     businessName: b.name,
     businessAddress: b.address,
     businessPhone: b.phone,
+    // Optional print logo URL (business.json `logo`); the printed report head draws it only when set.
+    businessLogo: b.logo ?? "",
     user,
     active,
     title,

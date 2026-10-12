@@ -181,10 +181,16 @@ The header values come from `business.json` (`globalThis.__AA_BUSINESS__`), reso
 
 ```javascript
 // invoice-sheet.js
-const biz = globalThis.__AA_BUSINESS__ || { name: "…", address: "…", phone: "…" };
+const biz = globalThis.__AA_BUSINESS__ || { name: "…", address: "…", phone: "…", logo: "" };
 ```
 
 Edit `app/config/business.json` (values) — the macro already renders `d.businessName/Address/Phone`.
+The optional **logo** is `biz.logo` (a URL such as `/static/logo.png`); it reaches the templates as
+`businessLogo` via `routeKit.renderRoute` → `http.js` `shellContext`. It is rendered — only when set —
+in the invoice sheet's left header cell, the report `print-head`, and the voucher `doc-head`, and is
+capped by `.doc-logo` (`max-width: 150px; max-height: 56px`). The user-facing walkthrough is
+`docs/user/getting-started.md`, "Set Up Business Information & Logo".
+
 The printed **Checked By / Delivered By** footer is currently hard-coded literals in the macro; edit
 `invoice-sheet.html` to change the names/phones, or move them into `business.json` and the builder if
 they must be configurable.

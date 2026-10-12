@@ -62,6 +62,7 @@
 <div class="report" id="report">
 {# Legacy print header (PrintHead): the business identity on every printed report. #}
 <header class="print-head">
+  {% if businessLogo %}<img class="doc-logo print-logo" src="{{ businessLogo }}" alt="">{% endif %}
   <div class="print-head-title">{{ businessName }}</div>
   <div class="print-head-line">{{ businessAddress }}</div>
   <div class="print-head-line">Contact: {{ businessPhone }}</div>

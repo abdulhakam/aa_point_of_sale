@@ -160,6 +160,7 @@ export async function renderRoute(req, options, data) {
     name: "SAMPLE TRADERS",
     address: "123 Sample Street, Sample City",
     phone: "000-0000000",
+    logo: "",
   };
   return {
     html: await page(
@@ -169,6 +170,9 @@ export async function renderRoute(req, options, data) {
         businessName: biz.name,
         businessAddress: biz.address,
         businessPhone: biz.phone,
+        // Optional print logo URL (from /app/config/business.json); empty draws nothing. It reaches
+        // the invoice sheet, the report print head and the voucher through the shell context.
+        businessLogo: biz.logo ?? "",
         user: opts.user ?? null,
         active: opts.active ?? "",
         title: opts.title ?? "",

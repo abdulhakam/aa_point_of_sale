@@ -142,7 +142,8 @@ Clears **all IndexedDB caches** in this browser:
 {
   "name": "YOUR BUSINESS NAME",
   "address": "Your Full Address",
-  "phone": "Your Phone Number"
+  "phone": "Your Phone Number",
+  "logo": "/static/logo.png"
 }
 ```
 
@@ -150,9 +151,14 @@ Clears **all IndexedDB caches** in this browser:
 - All printed invoices (A5)
 - All printed reports (A4)
 - All vouchers/DA
-- Dashboard header
+- Dashboard header (name only)
 
-**Change requires:** Server restart.
+**Logo:** optional. Leave `"logo": ""` for none. To add one, put the image in
+`runtime/app/public/` and set `logo` to its `/static/` URL (e.g. `/static/logo.png`). It is drawn on
+invoices, reports and vouchers, capped at 150×56 px. Full walkthrough:
+[Getting Started → Set Up Business Information & Logo](getting-started.md#set-up-business-information--logo-for-prints).
+
+**Change requires:** Server restart (the value is read once at start-up).
 
 ### Renderer Selection
 

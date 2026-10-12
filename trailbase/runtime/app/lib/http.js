@@ -41,6 +41,8 @@ function shellContext(shell, data) {
     businessName: shell.businessName ?? shell.appName,
     businessAddress: shell.businessAddress ?? "",
     businessPhone: shell.businessPhone ?? "",
+    // Optional print logo URL; empty means nothing is drawn (see business.json).
+    businessLogo: shell.businessLogo ?? "",
     user: shell.user ?? null,
     active: shell.active ?? "",
     title: shell.title ?? shell.appName,

@@ -15,7 +15,9 @@
 {% macro sheet(d) %}
 <article class="invoice-doc" data-invoice-doc>
   <header class="doc-print-head">
-    <div class="dph-cell"></div>
+    {# Left cell: the optional business logo (business.json `logo`). Empty draws nothing, which is the
+       default and what the legacy sheet had. #}
+    <div class="dph-cell">{% if d.businessLogo %}<img class="doc-logo" src="{{ d.businessLogo }}" alt="">{% endif %}</div>
     <div class="dph-cell dph-center">
       <div class="dph-business">{{ d.businessName }}</div>
       <div class="dph-line">{{ d.businessAddress }}</div>
