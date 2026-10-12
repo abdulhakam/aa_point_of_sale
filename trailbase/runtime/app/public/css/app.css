@@ -625,7 +625,7 @@ table.grid select { min-width: 12rem; }
 
 @media print {
   [data-invoice-doc] .doc-print-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-  [data-invoice-doc] .doc-foot { display: flex; justify-content: space-between; margin-top: 16px; font-size: 10pt; }
+  [data-invoice-doc] .doc-foot { display: flex; justify-content: space-between; margin-top: 1em; font-size: 10pt; bottom:1em;}
   [data-invoice-doc] .doc-foot-right { text-align: right; }
   /* The legacy line table is a full black grid and its header row repeats on every page. */
   [data-invoice-doc] .doc-lines th, [data-invoice-doc] .doc-lines td { border: 1px solid var(--black); }
@@ -1101,8 +1101,3 @@ form[aria-busy="true"] button[type="submit"], form[aria-busy="true"] input[type=
 .picker-date { color: var(--muted); min-width: 6.5em; }
 .picker-party { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .picker-tools { display: flex; gap: 8px; }
-
-
-
-
-
