@@ -18,13 +18,13 @@
 //   2. `itemsales` / `stock` must source the company select from `companies`, not the empty
 //      `categories` table.
 //
-// Re-run:  git show HEAD:trailbase/runtime/app/lib/report-pages.js > tools/_src/runtime/app/lib/report-pages.js
+// Re-run:  git show HEAD:trailbase/runtime/ahscripts/lib/report-pages.js > tools/_src/runtime/ahscripts/lib/report-pages.js
 //           node trailbase/tools/gen-manifests.mjs
 
 import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
-import { REPORT_PAGES, REPORT_INDEX, LEDGER_INDEX } from "./_src/runtime/app/lib/report-pages.js";
+import { REPORT_PAGES, REPORT_INDEX, LEDGER_INDEX } from "./_src/runtime/ahscripts/lib/report-pages.js";
 
-const PAGES = "runtime/app/pages";
+const PAGES = "runtime/ahscripts/pages";
 
 /**
  * Report key -> manifest folder.
@@ -68,7 +68,7 @@ const columnOf = (c) => {
  * its own object literal; the recovered source keeps that text, and the names are read out of it
  * before the module is ever imported. The literal is the authority, not its value today.
  */
-const SOURCE = readFileSync(new URL("./_src/runtime/app/lib/report-pages.js", import.meta.url), "utf8");
+const SOURCE = readFileSync(new URL("./_src/runtime/ahscripts/lib/report-pages.js", import.meta.url), "utf8");
 
 /** For each report key, the `{"from": fnName, "to": fnName}` its defaults object used. */
 const DEFAULT_SOURCE = (() => {

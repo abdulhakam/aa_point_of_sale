@@ -76,5 +76,5 @@ bounded) cost, not a bug that can corrupt state.
 - The former Node frontend's `src/lib/trailbase.js` (removed 2026-09-27) — the header comment
   "Unauthenticated requests are answered `403`."
 - The former Node frontend's `src/lib/http.js` (removed 2026-09-27) — `trailbaseErrorHandler`,
-  which was status-agnostic. The guest's `trailbase/runtime/app/lib/http.js` is a small
+  which was status-agnostic. The guest's `trailbase/runtime/ahscripts/lib/http.js` is a small
   page/query-string helper and has no TrailBase error path.

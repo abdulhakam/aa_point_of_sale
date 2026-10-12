@@ -30,7 +30,7 @@ verified in `trailbase/migrations/main`.
   report warm times barely moved (profit 4577→3932 ms), as expected. Details:
   [[dispatcher-transpiled-per-request]].
 - **Option 2 — IN PROGRESS (2026-09-27).** All 15 legacy report/ledger views extracted **verbatim**
-  from `backend/p_data/data.db` into `trailbase/runtime/app/reports/sql/views/` (the migrations only
+  from `backend/p_data/data.db` into `trailbase/runtime/ahscripts/reports/sql/views/` (the migrations only
   carry some; the directory was deleted 2026-10-02 with the legacy view layer), with two documented adaptations: PocketBase's double-quoted string literals
   normalised to single quotes, and `payments_view`'s `order_bookers.company` re-pointed at the
   `order_booker_companies` link table. A composer inlines dependencies as CTEs; **15/15 now run

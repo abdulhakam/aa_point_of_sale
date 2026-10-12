@@ -21,8 +21,8 @@ Deleted:
 
 | Deleted | Lines | Why it went |
 |---|---|---|
-| `runtime/app/reports/sql/views/*.sql` | 15 files | The legacy v1 view definitions. Loaded by nothing since `USE_SQL_VIEWS = false` |
-| `runtime/app/lib/sqlviews.js` | 101 | The loader for them, behind the same false flag |
+| `runtime/ahscripts/reports/sql/views/*.sql` | 15 files | The legacy v1 view definitions. Loaded by nothing since `USE_SQL_VIEWS = false` |
+| `runtime/ahscripts/lib/sqlviews.js` | 101 | The loader for them, behind the same false flag |
 | `tools/verify-legacy-views.mjs` | | Composed and ran the 15 views |
 | `tools/view-equivalence.mjs` | | The pure SQL-vs-JS row-multiset gate |
 | `tools/verify-guest-only-views.py` | | Compared two guest-only views with the JS builders |

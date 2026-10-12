@@ -209,8 +209,8 @@ GET /page -> 200  content-type: text/html; charset=utf-8
 ```
 
 **Parity harness.** The former Node frontend's `scripts/render-parity.mjs` (removed 2026-09-27)
-rendered all 34 `views/`+`pages/` templates (now `trailbase/runtime/app/views/` and
-`trailbase/runtime/app/pages/`) and the ten filters through both `minijinja-js` (Node) and the Rust
+rendered all 34 `views/`+`pages/` templates (now `trailbase/runtime/ahscripts/views/` and
+`trailbase/runtime/ahscripts/pages/`) and the ten filters through both `minijinja-js` (Node) and the Rust
 renderer, and diffed them. Result: **34/34 templates byte-identical** (CRLF, doctype case,
 `{% extends %}`/`{% include %}`/`{% import %}`, macros, loops, conditionals); filters **9/10
 identical**. The one divergence is `json`: `minijinja-js` serializes ctx objects as `{}` (its

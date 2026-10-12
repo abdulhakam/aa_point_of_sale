@@ -96,7 +96,7 @@ unhandled rather than silently landing in a catch-all.
   `path ===` compares, 16 regex `Match` constructions, 13 inline `db.all()` calls.
 - `trailbase/tb-ah-run-js/src/lib.rs:198-216` — literal-path folder lookup, then the `_app`
   fallback being removed.
-- `trailbase/runtime/app/pages/<slug>/` — the same convention already serving 15 page folders
+- `trailbase/runtime/ahscripts/pages/<slug>/` — the same convention already serving 15 page folders
   ([[trailbase-declarative-page-host]]), which is why the route half is a small extension.
 - `trailbase/tools/route-snapshot.mjs` — the 45-route fingerprint used as the acceptance gate.
 

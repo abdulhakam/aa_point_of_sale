@@ -8,7 +8,7 @@
 #   config.textproto      server/auth settings + record API declarations (source of truth)
 #   metadata.textproto
 #   migrations\           the 14 .sql migrations
-#   runtime\              the application (ahscripts + app), served via --runtime-root-fs
+#   runtime\              the application (ahscripts: routes, views, lib, SQL, assets), served via --runtime-root-fs
 #   wasm\                 the built guest components (tb-ah-run-js / -render-jinja / -query-tbdb)
 #   docs\                 the developer and user documentation (Markdown), copied from <repo>\docs
 #   start.bat             seeds traildepot\ on first run, then launches the control panel

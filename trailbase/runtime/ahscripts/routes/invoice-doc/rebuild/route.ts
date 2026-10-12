@@ -5,7 +5,7 @@
 // (`ahscripts/init/invoice-doc.js`) is the one that runs unattended. GET is the rebuild-in-progress view.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const path = routeKit.normalizePath(String(req.path || "/"));
     const user = routeKit.userOf(req);
@@ -15,7 +15,7 @@
   };
 
   (globalThis as any).POST = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const path = routeKit.normalizePath(String(req.path || "/"));
     const user = routeKit.userOf(req);

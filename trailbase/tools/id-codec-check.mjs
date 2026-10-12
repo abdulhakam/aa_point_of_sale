@@ -16,7 +16,7 @@ import { readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 
 const STD = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
-const url = new URL('../runtime/app/lib/route-kit.js', import.meta.url);
+const url = new URL('../runtime/ahscripts/lib/route-kit.js', import.meta.url);
 const src = readFileSync(url, 'utf8');
 
 const line = src.split('\n').find((l) => l.includes('const B64_ALPHABET ='));
@@ -32,7 +32,7 @@ if (alphabet !== STD) {
 // shipped source rather than a hand-edited copy of it.
 const start = src.indexOf('const B64_ALPHABET');
 const body = src.slice(start).replace(/^export \{ invalidate \};$/m, '');
-const tmp = new URL('../runtime/app/lib/route-kit.vectors.mjs', import.meta.url);
+const tmp = new URL('../runtime/ahscripts/lib/route-kit.vectors.mjs', import.meta.url);
 writeFileSync(tmp, body);
 
 const m = await import(tmp.href);

@@ -150,7 +150,7 @@ async fn render_handler(mut req: Request) -> Result<Response, HttpError> {
     }
   }
 
-  // Template: by name from the views root, or inline source.
+  // Template: by name from the renderer roots, or inline source.
   let template = envelope.get("template").cloned().unwrap_or(serde_json::Value::Null);
   let name = template.get("name").and_then(|v| v.as_str()).map(String::from);
   let source = template.get("source").and_then(|v| v.as_str()).map(String::from);

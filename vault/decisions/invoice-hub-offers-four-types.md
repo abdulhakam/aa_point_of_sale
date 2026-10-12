@@ -34,14 +34,14 @@ a superseding decision note; this note records it.
 `invoice_types`.** Return (2) and Difference (3) are first-class, creatable types again.
 
 - `/invoices` is the five-tile hub; the Return and Difference tiles link to
-  `/invoices/new?type=2` and `?type=3` (`runtime/app/views/invoices/index.html.jinja`).
+  `/invoices/new?type=2` and `?type=3` (`runtime/ahscripts/views/invoices/index.html.jinja`).
 - `/invoices/new` GET and POST map the requested `type` through `INVOICE_TYPES` and fall back to a
   sale for anything else (`runtime/ahscripts/routes/invoices/new/route.ts`).
 - `INVOICE_TYPES` and `typeLabel` are `{0 Purchase, 1 Sale, 2 Return, 3 Difference}`
-  (`runtime/app/lib/invoices.js:16`).
+  (`runtime/ahscripts/lib/invoices.js:16`).
 - Each type numbers in **its own** legacy `count+1` sequence
-  (`runtime/app/lib/invoicing.js` `createInvoice`), so a return does not move the sale numbers.
-- The entry bar shapes itself by type (`runtime/app/views/invoices/entry.html.jinja`): a return shows a
+  (`runtime/ahscripts/lib/invoicing.js` `createInvoice`), so a return does not move the sale numbers.
+- The entry bar shapes itself by type (`runtime/ahscripts/views/invoices/entry.html.jinja`): a return shows a
   PARTY and an **Original Invoice** field; a difference shows **no party field at all**; booker is
   sale-only.
 
@@ -56,7 +56,7 @@ negative line on a purchase/sale; the legacy document type is available directly
   makes the legacy look required; a four-tile hub could not match a five-tile one.
 - **The arithmetic already handled types 2 and 3.** The shared report prelude already carries the
   return/difference stock rules, so creating the documents needed no report change
-  (`runtime/app/reports/sql/prelude.sql`: `stock_deltas` signs return by party type and difference
+  (`runtime/ahscripts/reports/sql/prelude.sql`: `stock_deltas` signs return by party type and difference
   positively; `difference_deltas` keys on `inv_type = 3` as well as the Difference party).
 
 ## Consequences
@@ -79,11 +79,11 @@ negative line on a purchase/sale; the legacy document type is available directly
 
 ## Evidence
 
-- `runtime/app/views/invoices/index.html.jinja` — the five tiles and their `?type=` targets.
+- `runtime/ahscripts/views/invoices/index.html.jinja` — the five tiles and their `?type=` targets.
 - `runtime/ahscripts/routes/invoices/new/route.ts` — GET/POST accept all four types.
-- `runtime/app/lib/invoices.js` — `INVOICE_TYPES`, `typeLabel`.
-- `runtime/app/views/invoices/entry.html.jinja` — the per-type entry bar.
-- `runtime/app/reports/sql/prelude.sql` — `stock_deltas`, `difference_deltas`.
+- `runtime/ahscripts/lib/invoices.js` — `INVOICE_TYPES`, `typeLabel`.
+- `runtime/ahscripts/views/invoices/entry.html.jinja` — the per-type entry bar.
+- `runtime/ahscripts/reports/sql/prelude.sql` — `stock_deltas`, `difference_deltas`.
 - The write path itself was verified 2026-10-09:
   [[invoice-type-write-verification-2026-10-09]].
 

@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const sqlRoot = resolve(here, "../runtime/app/reports/sql");
+const sqlRoot = resolve(here, "../runtime/ahscripts/reports/sql");
 const depot = resolve(here, "../traildepot/data/main.db");
 const CHECK = process.argv.includes("--check");
 

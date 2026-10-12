@@ -1,10 +1,11 @@
 //! Rust `minijinja` rendering, exposed to runtime JS as `render(name, ctxJson)`.
 //!
-//! Templates are loaded from the views root
-//! (falling back to the pages root), every name resolves views-root-relative (so
-//! `{% extends 'layout.html.jinja' %}` works from a page in another directory), and the same ten
-//! custom filters are registered. Templates are read fresh on each render; see `Loader` for
-//! why an mtime cache is not used.
+//! Templates are loaded from the configured roots — `/ahscripts/routes` (colocated route
+//! templates), then `/ahscripts/views` (the shared `layout.html.jinja` and `partials/*`), then
+//! `/ahscripts/pages` (declarative page templates) — and every name resolves root-relative (so
+//! `{% extends 'layout.html.jinja' %}` works from a route template in another directory). The same
+//! ten custom filters are registered. Templates are read fresh on each render; see `Loader` for why
+//! an mtime cache is not used.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -97,7 +98,7 @@ fn qty_display(box_v: &Value, qty_v: &Value) -> String {
 
 // --- template loader -----------------------------------------------------------------
 
-/// Reads template sources from the configured roots (views first, then pages).
+/// Reads template sources from the configured roots, in order (routes, then views, then pages).
 ///
 /// Deliberately uncached: `std::fs::metadata(...).modified()` does not change on the WASI
 /// target, so an mtime cache never invalidates and serves stale templates for the life of
@@ -128,11 +129,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(views_root: PathBuf, pages_root: Option<PathBuf>, app_name: &str) -> Self {
-        let mut roots = vec![views_root];
-        if let Some(p) = pages_root {
-            roots.push(p);
-        }
+    pub fn new(roots: Vec<PathBuf>, app_name: &str) -> Self {
         let loader = Arc::new(Loader { roots });
 
         let mut env = Environment::new();
@@ -171,7 +168,7 @@ impl Renderer {
             if v.is_true() { "Yes" } else { "No" }.to_string()
         });
 
-        // Every include/extends name is views-root-relative, exactly as render.js does it.
+        // Every include/extends name resolves root-relative against the roots, in order.
         env.set_path_join_callback(|name, _parent| name.into());
 
         let l = loader.clone();
@@ -212,16 +209,20 @@ impl Renderer {
 /// each thread gets its own environment and its own template cache — there is no cross-thread
 /// contention on this lock.
 ///
-/// The roots are the same two the app host uses: views at `/app/views`, declarative page templates
-/// at `/app/pages`. `app_name` comes from the caller's `options.app`, and defaults to empty — this
+/// The roots are the same three the app host uses: colocated route templates at
+/// `/ahscripts/routes`, the shared shell at `/ahscripts/views`, and declarative page templates at
+/// `/ahscripts/pages`. `app_name` comes from the caller's `options.app`, and defaults to empty — this
 /// component has no opinion about whose business it renders, which is the point of it being
 /// separate.
 pub fn global() -> &'static Mutex<Renderer> {
   static RENDERER: OnceLock<Mutex<Renderer>> = OnceLock::new();
   RENDERER.get_or_init(|| {
     Mutex::new(Renderer::new(
-      PathBuf::from("/app/views"),
-      Some(PathBuf::from("/app/pages")),
+      vec![
+        PathBuf::from("/ahscripts/routes"),
+        PathBuf::from("/ahscripts/views"),
+        PathBuf::from("/ahscripts/pages"),
+      ],
       "",
     ))
   })

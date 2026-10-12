@@ -20,7 +20,7 @@ its successor `trailbase/tb-ah-run-js/README.md` does not repeat it):
 | File | Line | Text |
 |---|---|---|
 | `trailbase/README.md` | 4, 128 | "schema in `../full_database_schema.sql`", "preserved verbatim in `../full_database_schema.sql` and `../dltbl/views_from_pb/U1776088644__create_views.sql`" |
-| `trailbase/runtime/app/compute/views.js` | 5 | "preserved verbatim in `full_database_schema.sql` / `dltbl/views_from_pb/U1776088644__create_views.sql`" |
+| `trailbase/runtime/ahscripts/compute/views.js` | 5 | "preserved verbatim in `full_database_schema.sql` / `dltbl/views_from_pb/U1776088644__create_views.sql`" |
 
 From `aa_point_of_sale/`, `../` resolves to `.../PRODUCTION_FULL/`, which does **not** contain
 either artefact. A search of that tree finds nothing.

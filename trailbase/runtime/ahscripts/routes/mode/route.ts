@@ -13,7 +13,7 @@
 // the deployment is actually in rather than what the file claims.
 
 (globalThis as any).GET = async (req: any) => {
-  // `/app/config/app.config.json` is read by the Rust host at start-up. The guest cannot re-read it
+  // `/ahscripts/config/app.config.json` is read by the Rust host at start-up. The guest cannot re-read it
   // and expect a different answer, so this reports what the host resolved, via a route the host
   // chose to run.
   return {
@@ -30,7 +30,7 @@ so it is served by the host's per-URL folder resolution, which is tried before a
   <li><strong>dispatcher</strong> &mdash; the catch-all in <code>app.config.json</code> answers it.</li>
   <li><strong>crawler</strong> &mdash; nothing answers it, and it is a 404.</li>
 </ul>
-<p>The active mode is in <code>/app/config/app.config.json</code>. The host logs the mode it resolved
+<p>The active mode is in <code>/ahscripts/config/app.config.json</code>. The host logs the mode it resolved
 at start-up, and an unknown mode falls back to <code>dispatcher</code> because the catch-all is the
 more permissive of the two.</p>
 <p><a href="/">Back to the app</a></p>

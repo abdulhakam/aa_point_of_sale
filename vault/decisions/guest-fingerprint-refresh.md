@@ -56,7 +56,7 @@ deadline ([[trailbase-guest-cpu-js-limits]]) — so it builds lazily per view cl
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/reports.js` — `probeFingerprints`, `refresh`, `status`.
+- `trailbase/runtime/ahscripts/lib/reports.js` — `probeFingerprints`, `refresh`, `status`.
 - The guest smoke (`trailbase/tools/guest-smoke.mjs`) asserts `lastRefresh.changed` includes
   `sections` and `lastRefresh.rebuilt` includes `refs` after a write: every check passes
   (**67/67** when this was written on 2026-09-27; the suite has grown since — see

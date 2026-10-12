@@ -15,7 +15,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const registryPath = resolve(here, "../runtime/app/lib/spoolreports.js");
+const registryPath = resolve(here, "../runtime/ahscripts/lib/spoolreports.js");
 const CHECK = process.argv.includes("--check");
 
 const text = readFileSync(registryPath, "utf8");

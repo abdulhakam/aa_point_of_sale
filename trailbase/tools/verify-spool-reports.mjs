@@ -38,7 +38,7 @@ globalThis.fs = {
   readFile: async (p) => readFileSync(asHostPath(p)),
   readdir: async (p) => readdirSync(asHostPath(p)),
 };
-const spool = await import("../runtime/app/lib/spoolreports.js");
+const spool = await import("../runtime/ahscripts/lib/spoolreports.js");
 
 const argv = process.argv.slice(2);
 const VERBOSE = argv.includes("--verbose");

@@ -53,7 +53,7 @@ field `"money": "rate"`, and the template chooses the tag. The component carries
 
 ## Evidence (2026-10-09)
 
-- `trailbase/runtime/app/public/js/components/money.js` — the two modes; `step="any"` for a rate.
+- `trailbase/runtime/ahscripts/public/js/components/money.js` — the two modes; `step="any"` for a rate.
 - `trailbase/tools/component-check.mjs` — asserts an amount input normalises to 2 dp, a rate input keeps
   `114.583333` (the depot's real value) and is `step="any"`, and an amount is `step="0.01"`. **19/19.**
 - The memoised footgun: `Number(getAttribute("decimals"))` reads an absent attribute as `0`

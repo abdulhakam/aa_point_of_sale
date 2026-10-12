@@ -153,7 +153,7 @@ trailbase\RUN.BAT              # trail --depot=traildepot run --runtime-root-fs=
 ```
 
 - `--runtime-root-fs=traildepot/runtime` is **load-bearing**: it is the WASI sandbox root, so the
-  app's `app/` and `ahscripts/` live under it. It points at the **generated copy**, not at
+  app's single `ahscripts/` tree lives under it. It points at the **generated copy**, not at
   `trailbase/runtime/` — which is why `RUN.BAT` syncs on every start. Keeping it a subdirectory (not
   the depot root) keeps the depot's `data/` and `secrets/` out of the guest sandbox
   ([[trailbase-guest-wasm-runtime-defaults]]).
@@ -177,10 +177,11 @@ robocopy trailbase\migrations trailbase\traildepot\migrations /MIR /NFL /NDL /NJ
 trail --depot=traildepot run --address=127.0.0.1:4000 --runtime-threads=4 --runtime-root-fs=traildepot\runtime
 ```
 
-- **The restart is required for anything under `app/lib/`.** Modules are loaded once per QuickJS
+- **The restart is required for anything under `ahscripts/lib/`.** Modules are loaded once per QuickJS
   context and cached on `globalThis.__AA_MODS__`, so a new export only appears after a restart —
   otherwise the screen fails with `not a function` / `cannot read property … of undefined`. Edits to
-  `app/views/*.html`, `app/public/**` and to `ahscripts/routes/_app/route.ts` hot-reload.
+  route templates (`ahscripts/routes/**/page.html.jinja`), the shared `ahscripts/views/**`, and
+  `ahscripts/public/**` hot-reload.
 - Sync `migrations/` too. On 2026-09-29 the depot was found **missing** `config.textproto` and
   missing one migration file, and the server refused to start at all — the repair and the diagnosis
   are in [[production-depot-could-not-be-started]].

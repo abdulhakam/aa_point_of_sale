@@ -32,8 +32,8 @@
 
 // Imported from the RUNTIME, not copied alongside: a second copy of `format.js` is a second answer to "what
 // does round2 do", and the point of moving this fixture out of the app is to stop duplicating things.
-import { num, round2, compareText } from "../../runtime/app/compute/format.js";
-import { relId } from "../../runtime/app/compute/ids.js";
+import { num, round2, compareText } from "../../runtime/ahscripts/compute/format.js";
+import { relId } from "../../runtime/ahscripts/compute/ids.js";
 
 const byId = (rows) => {
   const m = new Map();

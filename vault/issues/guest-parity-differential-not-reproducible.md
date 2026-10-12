@@ -93,7 +93,7 @@ Option 1 is the one worth taking; it turns a memory into a gate.
 - `trailbase/tools/` — eight harnesses, none of which compares against the legacy app.
 - `notes/vault-code-drift-audit.md:27-29` — the harness removal.
 - `vault/tasks/tb-0022-move-reports-to-sql.md:84-90` — the SQL-on 14/14, then the revert.
-- `trailbase/runtime/app/lib/reports.js:27` — `const USE_SQL_VIEWS = false` (line and flag both
+- `trailbase/runtime/ahscripts/lib/reports.js:27` — `const USE_SQL_VIEWS = false` (line and flag both
   deleted 2026-10-02 with the legacy view layer).
 - `node trailbase/tools/view-equivalence.mjs` on 2026-09-28 — `paymentsView` DIFF, the rest
   identical (tool deleted 2026-10-02 with the legacy view layer).

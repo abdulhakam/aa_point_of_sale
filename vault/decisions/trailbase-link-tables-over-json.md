@@ -55,12 +55,12 @@ CREATE TABLE "party_companies" (
 - The `UNIQUE` constraint doubles as the party → company lookup index, and the explicit
   `idx_party_companies_company` / `idx_order_booker_companies_company` indexes add the reverse.
 - The guest frontend's management screens edit these directly:
-  `trailbase/runtime/app/lib/management.js` declares a `multi` field type with
+  `trailbase/runtime/ahscripts/lib/management.js` declares a `multi` field type with
   `{link, field, other, source}`, e.g.
   `{ name: "company", type: "multi", link: "party_companies", field: "party", other: "company", source: "companies" }`.
 - The `import-from-v1` plugin expanded the PocketBase arrays into these tables, so the translation
   is already written. It is ported to the guest at
-  `trailbase/runtime/app/plugins/import-from-v1/`; verifying it is
+  `trailbase/runtime/ahscripts/plugins/import-from-v1/`; verifying it is
   [[pos-0029-rebuild-v1-import-on-guest]].
 
 **Given up**
@@ -84,9 +84,9 @@ CREATE TABLE "party_companies" (
   `expand: ["party","company"]` / `["order_booker","company"]`.
 - `trailbase/README.md` § *Design decisions* → "**No JSON columns.**" including the
   `company~"<id>"` filter note.
-- `trailbase/runtime/app/lib/management.js` — the `multi` field and column definitions for `parties`
+- `trailbase/runtime/ahscripts/lib/management.js` — the `multi` field and column definitions for `parties`
   and `bookers`.
-- `trailbase/runtime/app/plugins/import-from-v1/meta.md` — "Expands the multi-valued
+- `trailbase/runtime/ahscripts/plugins/import-from-v1/meta.md` — "Expands the multi-valued
   `parties.company` / `order_bookers.company` relations into the `party_companies` /
   `order_booker_companies` link tables." The Node copy had the same text
   (`frontend-ssr/plugins/import-from-v1/meta.md`, removed 2026-09-27, [[guest-app-host-port]]).

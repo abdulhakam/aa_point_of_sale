@@ -69,6 +69,23 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-12 — optional `_not-found` / `_error` / `_global-error` pages (Next.js-style).**
+
+Added three optional reserved handlers the host dispatches: a no-route path runs `_not-found`, a
+thrown handler runs `_error` then `_global-error`, and a failed error handler falls back to a host
+page. `_`-prefixed route folders are private and never routed. Decision
+[[runtime-js-special-pages]], task [[tb-0044-special-pages]]. Awaits the operator's wasm rebuild.
+
+**2026-10-12 — the runtime collapses to one `ahscripts/` root, templates colocated per route.**
+
+The operator asked to fold the two sibling directories (`ahscripts/` + `app/`) into one, "like Next.js
+but Jinja", with each route's template beside its handler. Done:
+[[tb-0043-colocate-app-into-ahscripts]], decision [[runtime-js-single-root-ahscripts]]. 28 route
+templates moved into their route folders as `page.html.jinja`; the 14 genuinely shared files stayed
+under `ahscripts/views/`; the declarative pages stay a separate `ahscripts/pages/` tree (moving them
+into `routes/<slug>/` would shadow the `{key}` route folders). The renderer now searches
+`[routes, views, pages]`. Awaits the operator's wasm rebuild + `route-snapshot.mjs` / `guest-smoke.mjs`.
+
 **2026-10-11 — print-sheet column order, the console picker's missing invoices, and a distributable.**
 Four things, all operator-reported or operator-asked:
 

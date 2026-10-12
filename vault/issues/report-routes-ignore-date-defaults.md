@@ -40,12 +40,12 @@ documentation-naming mistakes recorded in it.
 
 ⚠️ **Naming note:** despite the original title, this is about the `/reports/*` routes **inside the
 guest frontend** ([[runtime-js-guest-platform]]) — the hand-written report routes in
-`trailbase/runtime/app/lib/report-pages.js` — versus the declarative page host at `/p/*`. It is *not*
+`trailbase/runtime/ahscripts/lib/report-pages.js` — versus the declarative page host at `/p/*`. It is *not*
 about the legacy Next.js app in `frontend/`.
 
 ## Summary
 
-`parseFilters` in `trailbase/runtime/app/lib/report-pages.js` starts from `pageDef.defaults` and then
+`parseFilters` in `trailbase/runtime/ahscripts/lib/report-pages.js` starts from `pageDef.defaults` and then
 **overwrites every field** from the query string. A bare `GET /reports/<report>` with no query
 therefore wipes the declared `from` / `to` defaults to empty strings, and the route computes
 **all-time** figures. The declarative page for the same report applies the manifest default, so
@@ -121,13 +121,13 @@ performance case for the report routes and will confuse anyone comparing the two
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/report-pages.js` — `REPORT_PAGES[*].defaults` (e.g. `payments: {
+- `trailbase/runtime/ahscripts/lib/report-pages.js` — `REPORT_PAGES[*].defaults` (e.g. `payments: {
   defaults: { from: monthStart(), to: today() }, … }`) and `parseFilters`, which reads the query
   over the defaults.
-- `trailbase/runtime/app/lib/pages.js` → `resolveDefault`, and
+- `trailbase/runtime/ahscripts/lib/pages.js` → `resolveDefault`, and
   `trailbase/runtime/ahscripts/routes/_app/route.ts` → `filtersFor` (`value || field.value`), which
   is the behaviour the route is missing.
-- `trailbase/runtime/app/pages/reports/dailysale/meta.json` — `{ "fn": "today" }` on both `from` and
+- `trailbase/runtime/ahscripts/pages/reports/dailysale/meta.json` — `{ "fn": "today" }` on both `from` and
   `to`, the declared default the route ignores.
 - The measurements above, originally recorded 2026-09-26 against a 60,254-row depot on the former
   Node frontend (removed 2026-09-27); the prior vault held them as

@@ -4,7 +4,7 @@
 // invoice behind it by definition. `?print=1` selects A5 and drops the navigation.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
     const path = routeKit.normalizePath(String(req.path || "/"));
@@ -25,7 +25,7 @@
         active: "cashmemo",
         title: "Voucher",
         paper: print ? String(query.paper ?? "a5") : "",
-        template: "cashmemo/voucher.html.jinja",
+        template: "cashmemo/vouchers/{id}/page.html.jinja",
       },
       {
         voucher: found,

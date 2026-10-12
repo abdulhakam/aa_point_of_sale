@@ -119,7 +119,7 @@ that was checked separately:
 - **There is no JavaScript report engine.** `app/compute/reports.js` and `app/compute/views.js` are
   gone — `spoolreports.js:8` says the retired engine "no longer exists in the tree", and
   `app/compute/views.js` moved to `trailbase/tools/_src/legacy-views.js` as a verification fixture.
-  What remains under `trailbase/runtime/app/compute/` is **`format.js` and `ids.js` only**:
+  What remains under `trailbase/runtime/ahscripts/compute/` is **`format.js` and `ids.js` only**:
   `round2`, `money`, `num`, `dateOnly`, `qtyDisplay`, `monthStart`, `today`, `yearStart`,
   `compareText`, `relId`. **Formatting and id helpers — no sums, no sorts, no filters.**
 - **No template arithmetic.** `grep` for `|sort`, `|sum`, `|round`, `|abs`, `|int`, `|float`, `|min`,

@@ -12,7 +12,7 @@ related_to: ["[[full-app-ui-sweep-2026-10-10]]", "[[tb-0037-component-library]]"
 
 # Management relation/enum selects showed a duplicate blank option
 
-**Status:** fixed 2026-10-10 in `runtime/app/views/partials/entity_fields.html.jinja`.
+**Status:** fixed 2026-10-10 in `runtime/ahscripts/views/partials/entity_fields.html.jinja`.
 
 ## Symptom
 

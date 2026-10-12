@@ -4,7 +4,7 @@
 // branches, and a folder bypasses the dispatcher. See `app/lib/route-kit.js` `userOf`/`loginRedirect`.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
 
     const path = routeKit.normalizePath(String(req.path || "/"));
@@ -15,7 +15,7 @@
     // the "Overview" counters card is gone, so `counts()` and the array it fed are not computed.
     return routeKit.renderRoute(
       req,
-      { user, active: "dashboard", title: "Dashboard", template: "dashboard/index.html.jinja" },
+      { user, active: "dashboard", title: "Dashboard", template: "dashboard/page.html.jinja" },
       {}
     );
   };

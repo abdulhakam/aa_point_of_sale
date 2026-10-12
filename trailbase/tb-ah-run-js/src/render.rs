@@ -1,10 +1,11 @@
 //! Rust `minijinja` rendering, exposed to runtime JS as `render(name, ctxJson)`.
 //!
-//! Templates are loaded from the views root
-//! (falling back to the pages root), every name resolves views-root-relative (so
-//! `{% extends 'layout.html.jinja' %}` works from a page in another directory), and the same ten
-//! custom filters are registered. Templates are read fresh on each render; see `Loader` for
-//! why an mtime cache is not used.
+//! Templates are loaded from the configured roots — `/ahscripts/routes` (colocated route
+//! templates), then `/ahscripts/views` (the shared `layout.html.jinja` and `partials/*`), then
+//! `/ahscripts/pages` (the declarative page templates) — and every name resolves root-relative (so
+//! `{% extends 'layout.html.jinja' %}` works from a route template in another directory). The same
+//! ten custom filters are registered. Templates are read fresh on each render; see `Loader` for why
+//! an mtime cache is not used.
 
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, OnceLock};
@@ -97,7 +98,7 @@ fn qty_display(box_v: &Value, qty_v: &Value) -> String {
 
 // --- template loader -----------------------------------------------------------------
 
-/// Reads template sources from the configured roots (views first, then pages).
+/// Reads template sources from the configured roots, in order (routes, then views, then pages).
 ///
 /// Deliberately uncached: `std::fs::metadata(...).modified()` does not change on the WASI
 /// target, so an mtime cache never invalidates and serves stale templates for the life of
@@ -128,11 +129,14 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(views_root: PathBuf, pages_root: Option<PathBuf>, app_name: &str) -> Self {
-        let mut roots = vec![views_root];
-        if let Some(p) = pages_root {
-            roots.push(p);
-        }
+    /// `roots` are searched in order and every template name is resolved root-relative.
+    ///
+    /// Order matters: the routes root first, so a colocated route template
+    /// (`dashboard/page.html.jinja`) wins; then the shared views root, where `layout.html.jinja`
+    /// and `partials/*` live; then the declarative pages root. A route template still reaches the
+    /// shared shell because `{% extends 'layout.html.jinja' %}` is resolved through this same
+    /// loader, which falls through to the views root when the routes root has no such name.
+    pub fn new(roots: Vec<PathBuf>, app_name: &str) -> Self {
         let loader = Arc::new(Loader { roots });
 
         let mut env = Environment::new();
@@ -298,14 +302,18 @@ pub fn json_spooled(ctx: serde_json::Value, spools: Vec<SpoolRef>) -> Result<Str
   return result;
 }
 
-/// Process-wide renderer. Views live at `/app/views`, page templates at `/app/pages`,
-/// matching the plan's `app/` directory contract under the runtime FS root.
+/// Process-wide renderer. Everything the app renders lives under `/ahscripts`: colocated route
+/// templates in `/ahscripts/routes`, the shared shell (`layout.html.jinja`, `partials/*`) in
+/// `/ahscripts/views`, and the declarative page templates in `/ahscripts/pages`.
 pub fn global() -> &'static Mutex<Renderer> {
     static RENDERER: OnceLock<Mutex<Renderer>> = OnceLock::new();
     RENDERER.get_or_init(|| {
         Mutex::new(Renderer::new(
-            PathBuf::from("/app/views"),
-            Some(PathBuf::from("/app/pages")),
+            vec![
+                PathBuf::from("/ahscripts/routes"),
+                PathBuf::from("/ahscripts/views"),
+                PathBuf::from("/ahscripts/pages"),
+            ],
             "AA Point of Sale",
         ))
     })

@@ -12,7 +12,7 @@ related_to: ["[[reports-and-ledgers]]", "[[guest-vs-legacy-report-performance]]"
 
 ## STALE FILE REFERENCES, 2026-10-01
 
-This note's evidence cites `trailbase/runtime/app/compute/reports.js` for `reportPayments` and
+This note's evidence cites `trailbase/runtime/ahscripts/compute/reports.js` for `reportPayments` and
 `reportSalesPayments`. **That file is deleted** — the app is SQL-only now, by decision
 ([[one-manifest-is-the-page-definition]]). The finding itself is untested and still open, but it must
 be re-established against the SQL:
@@ -46,7 +46,7 @@ Report** totals were nonsense:
 
 ### Cause
 
-`reportPayments` / `reportSalesPayments` (`trailbase/runtime/app/compute/reports.js`) mapped the
+`reportPayments` / `reportSalesPayments` (`trailbase/runtime/ahscripts/compute/reports.js`) mapped the
 raw `paymentsView` rows to **display** rows with `paymentRow()`, then passed those display rows to
 `paymentsTotals()` / `salesTotals()`. Those calculators are ports of the legacy
 `PaymentsView.tsx` `calculator` and read the **raw** shape:
@@ -59,7 +59,7 @@ raw `paymentsView` rows to **display** rows with `paymentRow()`, then passed tho
 - `p.paid` — dropped, so `totalPaid`/`invoiceTotal` were both wrong.
 
 A second, independent mismatch: the totals template
-(`trailbase/runtime/app/lib/report-pages.js`, `paymentsTotalsGroups`) labelled `t.totalSending`
+(`trailbase/runtime/ahscripts/lib/report-pages.js`, `paymentsTotalsGroups`) labelled `t.totalSending`
 as **Payable Amount**, but the legacy UI prints `total` = `invoiceTotal - totalPaid`.
 
 ### Fix
@@ -93,9 +93,9 @@ moves by exactly that residue. It is not a calculation error.
 
 ## Evidence
 
-- `trailbase/runtime/app/compute/reports.js` — `reportPayments`, `reportSalesPayments`,
+- `trailbase/runtime/ahscripts/compute/reports.js` — `reportPayments`, `reportSalesPayments`,
   `paymentsTotals`, `salesTotals`.
-- `trailbase/runtime/app/lib/report-pages.js` — `paymentsTotalsGroups`.
+- `trailbase/runtime/ahscripts/lib/report-pages.js` — `paymentsTotalsGroups`.
 - `frontend/src/app/app/reports/payments/PaymentsView.tsx` — the legacy `calculator` the totals
   mirror, and `frontend/src/app/app/reports/salesreport/PaymentsView.tsx` (same shape).
 - PocketBase `payments_view` (26,526 rows) + the legacy calculator ported to Node for the reference

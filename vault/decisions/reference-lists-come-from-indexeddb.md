@@ -136,8 +136,8 @@ so the base `payments` table has no picker consumer.
 
 ## Evidence
 
-- `trailbase/runtime/app/sql/refs.sql` — the definition of the nine reference lists.
-- `trailbase/runtime/app/lib/refs.js` — the server-side loader this mirrors.
+- `trailbase/runtime/ahscripts/sql/refs.sql` — the definition of the nine reference lists.
+- `trailbase/runtime/ahscripts/lib/refs.js` — the server-side loader this mirrors.
 - `trailbase/runtime/ahscripts/routes/invoice/context/route.ts` — the ETag/version JSON endpoint
   pattern `GET /data/refs` follows.
 

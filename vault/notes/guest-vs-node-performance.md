@@ -66,7 +66,7 @@ The Node figures below are the historical baseline (see the note at the top).
 - The Node numbers (historical) depended on its warm-snapshot state (`REFRESH_INTERVAL_SECONDS=60`,
   `WORKER_THREADS=4`).
 - Both apps ran the **same** `compute/` code (the guest's copy is
-  `trailbase/runtime/app/compute/`); the difference was the runtime (interpreter vs JIT, single
+  `trailbase/runtime/ahscripts/compute/`); the difference was the runtime (interpreter vs JIT, single
   request thread vs a worker pool), not the logic.
 
 ## Implications

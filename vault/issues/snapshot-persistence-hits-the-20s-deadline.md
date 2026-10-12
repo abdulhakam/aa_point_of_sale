@@ -72,7 +72,7 @@ shared, inspectable store) but not the answer by itself.
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/reports.js` — `mview` persistence + per-view hydration.
+- `trailbase/runtime/ahscripts/lib/reports.js` — `mview` persistence + per-view hydration.
 - `trailbase/runtime/ahscripts/routes/_app/route.ts` — reconcile drives `refresh`.
 - `trailbase/traildepot/data/main.db` — `mview` (14 views, sizes above), `mview_meta`.
 - Server log `[mview] hydrate 3/3`, `[mview] persist N views`, and the 20 s `Error calling WASM

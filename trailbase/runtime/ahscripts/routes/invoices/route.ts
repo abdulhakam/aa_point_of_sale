@@ -5,7 +5,7 @@
 // this. The list it used to show lives at `/invoices/all`.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
 
     const path = routeKit.normalizePath(String(req.path || "/"));
@@ -14,7 +14,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "invoices", title: "Invoices", template: "invoices/index.html.jinja" },
+      { user, active: "invoices", title: "Invoices", template: "invoices/page.html.jinja" },
       {}
     );
   };

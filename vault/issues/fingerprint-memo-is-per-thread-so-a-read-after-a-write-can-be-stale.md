@@ -98,10 +98,10 @@ Degradation is deliberate: if the KV is missing or the write fails, this is exac
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/reports.js` — `probe`, `kvStamp()`, `currentFingerprint()`, `invalidate()`.
-- `trailbase/runtime/app/lib/route-kit.js` — `write()` awaits `invalidate()`.
-- `trailbase/runtime/app/lib/refs.js` — the snapshot keyed on the fingerprint.
-- `trailbase/runtime/app/lib/invoice-doc.js:51,60` — the KV idiom this follows.
+- `trailbase/runtime/ahscripts/lib/reports.js` — `probe`, `kvStamp()`, `currentFingerprint()`, `invalidate()`.
+- `trailbase/runtime/ahscripts/lib/route-kit.js` — `write()` awaits `invalidate()`.
+- `trailbase/runtime/ahscripts/lib/refs.js` — the snapshot keyed on the fingerprint.
+- `trailbase/runtime/ahscripts/lib/invoice-doc.js:51,60` — the KV idiom this follows.
 
 ## Related
 

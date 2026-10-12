@@ -4,19 +4,19 @@
 // then sets the same auth cookies its form flow would. No second session layer.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const query = routeKit.parsePairs(String(req.query || ""));
     const user = routeKit.userOf(req);
     return routeKit.renderRoute(
       req,
-      { user, active: "", title: "Log in", template: "auth/login.html.jinja" },
+      { user, active: "", title: "Log in", template: "login/page.html.jinja" },
       { next: query.next || "", expired: query.expired || "", error: "" }
     );
   };
 
   (globalThis as any).POST = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const query = routeKit.parsePairs(String(req.query || ""));
     const form = routeKit.parsePairs(String(req.body || ""));
@@ -36,7 +36,7 @@
     if (!tokens || !tokens.auth_token) {
       const res = await routeKit.renderRoute(
         req,
-        { user: null, active: "", title: "Log in", template: "auth/login.html.jinja" },
+        { user: null, active: "", title: "Log in", template: "login/page.html.jinja" },
         { next, expired: "", error: "Invalid email or password" }
       );
       return { ...res, status: 401 };

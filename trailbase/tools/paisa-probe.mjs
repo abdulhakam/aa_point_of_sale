@@ -18,10 +18,10 @@ import { DatabaseSync } from "node:sqlite";
 import { readFileSync } from "node:fs";
 
 const db = new DatabaseSync("traildepot/data/main.db", { readOnly: true });
-const prelude = readFileSync("runtime/app/reports/sql/prelude.sql", "utf8").replace(/;\s*$/, "").trimEnd();
+const prelude = readFileSync("runtime/ahscripts/reports/sql/prelude.sql", "utf8").replace(/;\s*$/, "").trimEnd();
 
 // Exactly sqlFor("productsale"): the body opens with a CTE, so join with a comma.
-const body = readFileSync("runtime/app/reports/sql/reports/productsale.sql", "utf8").trim();
+const body = readFileSync("runtime/ahscripts/reports/sql/reports/productsale.sql", "utf8").trim();
 const sql = `${prelude},\n${body.replace(/^((?:\s*--[^\n]*\n)+)\s*,\s*/, "$1")}`;
 
 // `transaction_view` is a CTE inside the prelude, not a database table, so the inner query has to

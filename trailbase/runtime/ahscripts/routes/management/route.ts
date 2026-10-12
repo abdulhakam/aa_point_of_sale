@@ -1,7 +1,7 @@
 // /management — the management hub, from a route FOLDER (tb-0030 step 5).
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const path = routeKit.normalizePath(String(req.path || "/"));
     const user = routeKit.userOf(req);
@@ -12,7 +12,7 @@
     const entities = A.entities.order().map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
     return routeKit.renderRoute(
       req,
-      { user, active: "management", title: "Management", template: "management/index.html.jinja" },
+      { user, active: "management", title: "Management", template: "management/page.html.jinja" },
       { entities }
     );
   };

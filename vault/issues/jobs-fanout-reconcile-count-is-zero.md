@@ -42,13 +42,13 @@ The check reports `null` rather than `0` because `jobs-check.mjs` compares
 ## Pre-existing, not caused by the invoice-document work
 
 Reproduced with `route.ts` and `queue.js` reverted to the committed versions via
-`git stash push -- trailbase/runtime/app/lib/queue.js trailbase/runtime/ahscripts/routes/_app/route.ts`.
+`git stash push -- trailbase/runtime/ahscripts/lib/queue.js trailbase/runtime/ahscripts/routes/_app/route.ts`.
 The `invdoc.rebuild` job added to `queue.js` is not involved: the failing case submits
 `demo.count`, and the fan-out path it uses is untouched by this work.
 
 ## What to check when fixing it
 
-The fan-out branch of `reconcile` in `trailbase/runtime/app/lib/queue.js` (around line 145-165)
+The fan-out branch of `reconcile` in `trailbase/runtime/ahscripts/lib/queue.js` (around line 145-165)
 dispatches claimed steps to `/worker/{n}/step` over `concurrency` workers. The likely cause is
 that the `reconciled` figure is accumulated from the non-fan-out branch's return value rather
 than from the dispatched worker results, so a fan-out returns the count from a path that

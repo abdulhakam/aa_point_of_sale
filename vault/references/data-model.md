@@ -88,7 +88,7 @@ still referenced is refused, so a code cannot be orphaned.
 | `expenses` | `name`, `description`, `amount`, `date` |
 
 `sections` has no `deleted` column, which is why [[runtime-js-guest-platform]] hard-deletes
-sections and soft-deletes everything else — `trailbase/runtime/app/lib/management.js` records
+sections and soft-deletes everything else — `trailbase/runtime/ahscripts/lib/management.js` records
 `softDelete: false` for `sections` and `items`, `true` for the rest.
 
 `items` also has no `deleted`, and is the only table with a partial unique index (below).

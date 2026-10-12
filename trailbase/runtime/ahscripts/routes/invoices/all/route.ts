@@ -4,7 +4,7 @@
 // totals and the pager it had; only its path and its back-link to the hub are new.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
 
@@ -33,7 +33,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "invoices", title: "All invoices", template: "invoices/all.html.jinja" },
+      { user, active: "invoices", title: "All invoices", template: "invoices/all/page.html.jinja" },
       {
         rows,
         filters,

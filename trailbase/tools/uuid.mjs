@@ -6,7 +6,7 @@
  * `app/compute/ids.js` so the tools share the exact same accessor the app runs;
  * `toUuid` needs `Buffer` and therefore stays Node-only.
  */
-import { relId } from "../runtime/app/compute/ids.js";
+import { relId } from "../runtime/ahscripts/compute/ids.js";
 
 const b64ToBytes = (id) => {
   const std = id.replace(/-/g, "+").replace(/_/g, "/");

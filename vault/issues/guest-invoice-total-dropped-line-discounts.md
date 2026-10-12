@@ -12,7 +12,7 @@ related_to: ["[[money-is-2dp-everywhere]]", "[[client-side-live-recalculation]]"
 
 # readInvoice dropped per-line discounts from the invoice total
 
-**Status:** fixed 2026-10-10 in `runtime/app/lib/invoices.js` (`readInvoice`).
+**Status:** fixed 2026-10-10 in `runtime/ahscripts/lib/invoices.js` (`readInvoice`).
 
 ## Symptom
 

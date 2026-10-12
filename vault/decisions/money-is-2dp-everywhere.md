@@ -124,7 +124,7 @@ accuracy gain.
 - The Node-vs-guest differential harness (`trailbase/tools/guest-parity.mjs`, removed with the
   Node app) recorded `3987.6899999999996 vs 3987.69` on `reports/paymentsbycompany`
   ([[guest-app-host-port]]).
-- `trailbase/runtime/app/compute/format.js` — `round2`, `money`.
+- `trailbase/runtime/ahscripts/compute/format.js` — `round2`, `money`.
 - [[tb-0015-integer-cents-for-money]] — the measurement, and why integer cents were not adopted.
 
 ## Related

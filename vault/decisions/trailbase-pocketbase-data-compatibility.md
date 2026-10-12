@@ -67,7 +67,7 @@ all used that spelling. The migration carries a comment saying so.
   ([[trailbase-incremental-report-refresh]]).
 - The migration is a straight value translation — the table in [[data-model]] — implemented by the
   `import-from-v1` plugin, ported to the guest at
-  `trailbase/runtime/app/plugins/import-from-v1/` (the Node copy was deleted with `frontend-ssr` on
+  `trailbase/runtime/ahscripts/plugins/import-from-v1/` (the Node copy was deleted with `frontend-ssr` on
   2026-09-27). Verifying it is [[pos-0029-rebuild-v1-import-on-guest]].
 
 **Debt this creates**

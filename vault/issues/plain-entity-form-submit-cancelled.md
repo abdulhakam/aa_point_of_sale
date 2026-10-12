@@ -12,7 +12,7 @@ related_to: ["[[features-as-native-web-components]]", "[[full-app-ui-sweep-2026-
 
 # Plain `<aa-entity-form>` submit buttons were cancelled on click
 
-**Status:** fixed 2026-10-10 in `runtime/app/public/js/components/entity-form.js`.
+**Status:** fixed 2026-10-10 in `runtime/ahscripts/public/js/components/entity-form.js`.
 
 ## Symptom
 

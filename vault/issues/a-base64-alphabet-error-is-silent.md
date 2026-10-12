@@ -25,7 +25,7 @@ renders empty rather than failing.
 ## How it happened
 
 Hand-typing the 64-character literal into
-`trailbase/runtime/app/lib/route-kit.js` while extracting the id codec. The `edit` tool reported
+`trailbase/runtime/ahscripts/lib/route-kit.js` while extracting the id codec. The `edit` tool reported
 "oldString and newString are identical" on the correction attempt, because the intended and actual
 strings differed by characters that are not visible in a diff — `3` and `4` missing from a digit run
 inside a long string. An earlier scripted rewrite used a line-relative index to slice a whole-file

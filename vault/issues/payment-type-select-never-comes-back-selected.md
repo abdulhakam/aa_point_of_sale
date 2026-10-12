@@ -75,14 +75,14 @@ So the filter works, the rendering of the selected option does not.
 `parseFilters` coerces the one numeric filter to a **Number**:
 
 ```js
-// trailbase/runtime/app/lib/report-pages.js:337
+// trailbase/runtime/ahscripts/lib/report-pages.js:337
 if (filters.type !== undefined && filters.type !== "") filters.type = Number(filters.type);
 ```
 
 The template compares it against the **string** option values that `filterOptions` built:
 
 ```jinja
-{# trailbase/runtime/app/views/partials/filters.html.jinja:9 #}
+{# trailbase/runtime/ahscripts/views/partials/filters.html.jinja:9 #}
 <option value="{{ o.value }}"{% if filters[field.name] == o.value %} selected{% endif %}>
 ```
 
@@ -119,7 +119,7 @@ rendering is wrong.
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/report-pages.js:337` — `filters.type = Number(...)`.
-- `trailbase/runtime/app/views/partials/filters.html.jinja:9` — `filters[field.name] == o.value`.
-- `trailbase/runtime/app/reports/sql/reports/payments.sql:47` — the bind is already CAST in SQL.
+- `trailbase/runtime/ahscripts/lib/report-pages.js:337` — `filters.type = Number(...)`.
+- `trailbase/runtime/ahscripts/views/partials/filters.html.jinja:9` — `filters[field.name] == o.value`.
+- `trailbase/runtime/ahscripts/reports/sql/reports/payments.sql:47` — the bind is already CAST in SQL.
 - The fetch sweep above, run against `http://127.0.0.1:4000` on 2026-10-01.

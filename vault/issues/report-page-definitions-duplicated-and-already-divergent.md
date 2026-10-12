@@ -152,9 +152,9 @@ direction of the drift was wrong.
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/report-pages.js:115-118` — `paymentsTotalsGroups` reads `t.total`.
-- `trailbase/runtime/app/lib/spoolreports.js:180-182` — the three derived keys, and the group rule.
-- `trailbase/runtime/app/pages/reports/payments/meta.json` — the last total is keyed
+- `trailbase/runtime/ahscripts/lib/report-pages.js:115-118` — `paymentsTotalsGroups` reads `t.total`.
+- `trailbase/runtime/ahscripts/lib/spoolreports.js:180-182` — the three derived keys, and the group rule.
+- `trailbase/runtime/ahscripts/pages/reports/payments/meta.json` — the last total is keyed
   `"totalSending"`.
 - The live fetches above, 2026-10-01: `/reports` 10,852,251.43 vs `/p` 6,950,631.20, and
   `categories` returning 0 rows where `companies` returns 16.

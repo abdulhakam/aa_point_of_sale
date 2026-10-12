@@ -70,7 +70,7 @@ Round money with the JS-equivalent expression above (done), **or** return raw va
   view layer).
 - `trailbase/tools/view-equivalence.mjs` — `transactionView` 23,413/23,413 identical (deleted
   2026-10-02 with the legacy view layer).
-- `trailbase/runtime/app/compute/format.js` — `round2`.
+- `trailbase/runtime/ahscripts/compute/format.js` — `round2`.
 
 ## Related
 

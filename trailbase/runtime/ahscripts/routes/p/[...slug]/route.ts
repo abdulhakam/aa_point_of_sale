@@ -5,7 +5,7 @@
 // than a `{slug}` folder. It serves both shapes and tells them apart by the `/data` suffix.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
     const path = routeKit.normalizePath(String(req.path || "/"));
@@ -18,7 +18,7 @@
     const dataMatch = /^\/p\/(.+)\/data$/.exec(path);
     if (dataMatch) {
       const slug = dataMatch[1];
-      const def = await A.pages.readPage("/app/pages", slug);
+      const def = await A.pages.readPage("/ahscripts/pages", slug);
       if (!def) return { text: "No such page", status: 404 };
       const filters = await A.reportRender.filtersFor(A, def, query);
       // The ETag keys on the DATA fingerprint, not on a snapshot version counter. The rows come from
@@ -53,7 +53,7 @@
     const pageMatch = /^\/p\/(.+)$/.exec(path);
     if (!pageMatch) return { text: "Not found", status: 404 };
     const slug = pageMatch[1];
-    const def = await A.pages.readPage("/app/pages", slug);
+    const def = await A.pages.readPage("/ahscripts/pages", slug);
     if (!def) return { text: "No such page", status: 404 };
 
     // A page that names a report is the SAME page as `/reports/<key>` — one manifest, one template,

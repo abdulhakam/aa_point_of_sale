@@ -91,7 +91,7 @@ mview counts = {"areas":59,"sections":10,"categories":15,"parties":943,"order_bo
    comment asserts: *"The import path sets it explicitly (the column did not exist when it ran)."*
 2. `U1790400200__invoice_status_default.sql` added `invoices_status_default_insert`, an
    `AFTER INSERT … WHEN NEW.status IS NULL` trigger that sets `'draft'`.
-3. The v1 import **never sets `status`** — `trailbase/runtime/app/plugins/import-from-v1/index.html`
+3. The v1 import **never sets `status`** — `trailbase/runtime/ahscripts/plugins/import-from-v1/index.html`
    copies PocketBase records field-for-field and v1 has no such column. Every imported invoice
    therefore arrives with `status = NULL` and the trigger stamps it `'draft'`.
 
@@ -166,13 +166,13 @@ that import, not a long-standing condition.
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/data.js:114-154` — `isCommitted()`, `readCommittedInvoiceIds()`,
+- `trailbase/runtime/ahscripts/lib/data.js:114-154` — `isCommitted()`, `readCommittedInvoiceIds()`,
   `readTables()`.
 - `trailbase/traildepot/migrations/main/U1790400200__invoice_status_default.sql:28-33` — the
   `AFTER INSERT` default to `'draft'`.
 - `trailbase/traildepot/migrations/main/U1790400100__repair_invoice_status_backfill.sql:13-21` — the
   repair that did not take.
-- `trailbase/runtime/app/plugins/import-from-v1/index.html` — no `status` field on the invoice path
+- `trailbase/runtime/ahscripts/plugins/import-from-v1/index.html` — no `status` field on the invoice path
   (grep for `status` finds only the UI's own progress field).
 - `node:sqlite` against `trailbase/traildepot/data/main.db` — the counts and `mview` payloads above.
 - `GET /api/records/v1/invoices?filter[status]=draft&count=true` → `total_count: 8927`.

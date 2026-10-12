@@ -98,9 +98,9 @@ information was not preserved by the load. Whether the cause is the importer not
 
 - `backend/p_data/data.db` vs `trailbase/traildepot/data/main.db`, `min`/`max(created)` on
   `invoices`, `transactions`, `payments` (table above), 2026-09-27.
-- `trailbase/runtime/app/compute/views.js` — the report views derive their date from the invoice/
+- `trailbase/runtime/ahscripts/compute/views.js` — the report views derive their date from the invoice/
   transaction `created`.
-- `trailbase/runtime/app/lib/report-pages.js` — report `defaults` are month/day ranges over that date.
+- `trailbase/runtime/ahscripts/lib/report-pages.js` — report `defaults` are month/day ranges over that date.
 
 ## Related
 

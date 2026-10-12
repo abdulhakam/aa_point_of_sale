@@ -75,8 +75,8 @@ categories→companies mapping, the document sync, the invoice lifecycle and dif
 status backfill repairs, the general document store (later dropped), the whole-paisas rounding, and
 the two drops that retired that store and the status column.
 
-The report SQL is at `runtime/app/reports/sql/` — `prelude.sql` plus `reports/*.sql` — **not** at
-`reports/sql/views/`, which is what several older notes in the vault still say. `runtime/app/sql/`
+The report SQL is at `runtime/ahscripts/reports/sql/` — `prelude.sql` plus `reports/*.sql` — **not** at
+`reports/sql/views/`, which is what several older notes in the vault still say. `runtime/ahscripts/sql/`
 is a different directory holding `latest_business_date.sql` and `refs.sql`.
 
 The three `tb-ah-*` directories are the compiled engine (Rust -> WASM, one cargo workspace: a single
@@ -355,7 +355,7 @@ a record of a decision is how a question gets re-opened by accident.
    needs no record-API client at all.
 2. ~~**Rework the report screens** that depended on the dropped views, and delete the corresponding
    entries from `frontend/src/app/api/pocketbase-types.ts`.~~ **IMPOSSIBLE (2026-10-03)** — same
-   reason. The arithmetic was reimplemented in `runtime/app/compute/` and has since moved to SQL
+   reason. The arithmetic was reimplemented in `runtime/ahscripts/compute/` and has since moved to SQL
    (`prelude.sql` + per-report `.sql`); the JS view builders are being retired.
 3. ~~**Point the "Company" fields at `companies`**: `items.category` is labelled "Company" in
    `frontend/src/app/api/items.ts`. Decide whether `items` also needs a `company` foreign key.~~
@@ -371,7 +371,7 @@ a record of a decision is how a question gets re-opened by accident.
    `party_companies` / `order_booker_companies`, `partiesEnumType` instead of `party_types`, and
    TEXT enums), so it needs those renamed before it can talk to this schema.
 6. **`static/`** is reserved in `traildepot/.gitignore` for a future `--public-dir` bundle. ⚠️ Note
-   that the guest app now serves its own assets from `runtime/app/public/`, so this is unlikely to be
+   that the guest app now serves its own assets from `runtime/ahscripts/public/`, so this is unlikely to be
    needed.
 
 ## Validation

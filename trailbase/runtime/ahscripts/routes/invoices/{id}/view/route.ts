@@ -10,7 +10,7 @@
 // `app/public/js/print-queue.js`). See `vault/notes/print-queue-is-the-legacy-picker-and-queue.md`.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
 
     const path = routeKit.normalizePath(String(req.path || "/"));
@@ -31,7 +31,7 @@
     // print tab use it so the preview is always the latest data, not the trigger-maintained copy.
     // Everything else (`/print`, `/print/queue`, a plain bookmark) stays on the materialised tier.
     const live = String(query.source ?? "") === "live";
-    const sheetMod = await (globalThis as any).__AA_LOAD__("/app/lib/invoice-sheet.js");
+    const sheetMod = await (globalThis as any).__AA_LOAD__("/ahscripts/lib/invoice-sheet.js");
     const sheet = live
       ? await sheetMod.buildSheetFresh(A, id)
       : await sheetMod.buildSheet(A, id);
@@ -49,7 +49,7 @@
         active: "invoices",
         title: "Invoice " + sheet.invoiceNo,
         paper: print ? paper : "",
-        template: "invoices/document.html.jinja",
+        template: "invoices/{id}/view/page.html.jinja",
       },
       {
         sheet: sheet.data,

@@ -149,7 +149,7 @@ practice.
   0.78 MB.
 - `trailbase/tb-ah-run-js/src/render.rs` — the renderer to be moved, including the ten filters and the
   read-only-WASI loader note.
-- `trailbase/runtime/app/lib/http.js` — `page()`, the current caller.
+- `trailbase/runtime/ahscripts/lib/http.js` — `page()`, the current caller.
 - [[component-split-and-sql-materialised-tables]] — the +71% measurement and what it did and did
   not cover.
 

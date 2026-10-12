@@ -75,7 +75,7 @@ reports as a mismatch even though no cent moved.
 ## Consequences
 
 - The **SQL base views are off by default** (`USE_SQL_VIEWS = false` in
-  `trailbase/runtime/app/lib/reports.js`; the flag and the `.sql` views were deleted 2026-10-02, see
+  `trailbase/runtime/ahscripts/lib/reports.js`; the flag and the `.sql` views were deleted 2026-10-02, see
   [[legacy-parity-checks-waived]]) until the accumulation is deterministic; the JS path is the
   parity-safe default ([[convert-base-views-not-derivations]]).
 - The differential should compare money with a tiny tolerance (e.g. 1e-6 absolute, far below a
@@ -88,9 +88,9 @@ reports as a mismatch even though no cent moved.
 ## Evidence
 
 - `trailbase/tools/guest-parity.mjs` — 13/14 then 14/14 on the same code and data.
-- `trailbase/runtime/app/lib/reports.js` — `USE_SQL_VIEWS = false` with the reason (deleted
+- `trailbase/runtime/ahscripts/lib/reports.js` — `USE_SQL_VIEWS = false` with the reason (deleted
   2026-10-02 with the legacy view layer).
-- `trailbase/runtime/app/lib/sqlviews.js` — `ORDER BY "id" DESC` added to align order (helped but
+- `trailbase/runtime/ahscripts/lib/sqlviews.js` — `ORDER BY "id" DESC` added to align order (helped but
   cannot bind an aggregate's scan order). Deleted 2026-10-02 with the legacy view layer.
 
 ## Related

@@ -78,7 +78,7 @@ public: an unauthenticated request gets 401" (see [[trailbase-auth-status-doc-mi
 Delete the route. Nothing uses it, and deleting it is strictly better than gating it — an
 unauthenticated row-count endpoint is not a capability any POS app needs. If a count is genuinely
 needed later, it belongs behind the dispatcher's auth check, with the table name checked against
-the `TABLES` list already in `trailbase/runtime/app/lib/data.js` rather than interpolated.
+the `TABLES` list already in `trailbase/runtime/ahscripts/lib/data.js` rather than interpolated.
 
 Tracked in [[tb-0025-host-endpoint-hygiene]].
 

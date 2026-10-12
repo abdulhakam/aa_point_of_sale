@@ -69,7 +69,7 @@ logic all used that spelling". A future cleanup must change all of them at once,
 | **Page host** | The generic `/p/<slug>` runtime: renders a `meta.json`-declared template, serves that page's data, and does not know any specific page. See [[trailbase-declarative-page-host]]. |
 | **Declarative page** | A folder `pages/<slug>/` containing `meta.json` + a template. Adding a page is adding a folder. |
 | **Plugin** | A folder `plugins/<slug>/` containing `meta.md` + `index.html`, served behind the login and listed by the plugin hub. |
-| **Compute module** | A file in `trailbase/runtime/app/compute/` that is environment-neutral and byte-for-byte shared between the guest host and the browser (served, behind auth, at `/compute/*`). |
+| **Compute module** | A file in `trailbase/runtime/ahscripts/compute/` that is environment-neutral and byte-for-byte shared between the guest host and the browser (served, behind auth, at `/compute/*`). |
 | **Warm-up** | Pre-rendering the reports that read a rebuilt view for their default filters, so the first visit after a change is already cached. |
 | **Depot** | A TrailBase data directory (`traildepot/`): `config.textproto`, `migrations/`, and the git-ignored runtime state. |
 | **Record API** | A TrailBase-exposed table at `/api/records/v1/<name>`, declared inside `config.textproto`'s `record_apis`. |

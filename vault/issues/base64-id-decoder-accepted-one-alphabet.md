@@ -67,9 +67,9 @@ should be an error.
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/management.js` — `B64` and `B64_STANDARD`.
+- `trailbase/runtime/ahscripts/lib/management.js` — `B64` and `B64_STANDARD`.
 - The measurement: 60,032 ids, 0 mis-decoded from base64url, 0 from standard.
-- `trailbase/runtime/app/lib/payments.js` — `readPayment`, the first by-id read this exposed.
+- `trailbase/runtime/ahscripts/lib/payments.js` — `readPayment`, the first by-id read this exposed.
 
 ## Related
 

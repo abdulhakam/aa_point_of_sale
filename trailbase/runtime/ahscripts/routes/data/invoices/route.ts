@@ -12,7 +12,7 @@
 // an unchanged depot answers 304 and the client keeps its cache.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
 

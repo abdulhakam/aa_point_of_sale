@@ -142,9 +142,9 @@ save the invoice together — which is a page load. Both are now available:
 
 ## Evidence
 
-- `trailbase/runtime/app/views/partials/quick-create.html.jinja` — the two panels.
-- `trailbase/runtime/app/lib/quick-create.js` — the create calls and the one type translation.
-- `trailbase/runtime/app/public/js/autocomplete.js` — the "Create …" row, the panel's open/close, the
+- `trailbase/runtime/ahscripts/views/partials/quick-create.html.jinja` — the two panels.
+- `trailbase/runtime/ahscripts/lib/quick-create.js` — the create calls and the one type translation.
+- `trailbase/runtime/ahscripts/public/js/autocomplete.js` — the "Create …" row, the panel's open/close, the
   inert-when-closed rule, and the `required` handover.
 - `trailbase/runtime/ahscripts/routes/_app/route.ts` — the three handlers.
 - `trailbase/tools/guest-smoke.mjs` — 91 checks, including the four creates and the price rule.

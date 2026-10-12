@@ -14,7 +14,7 @@ related_to: ["[[tb-0022-move-reports-to-sql]]", "[[report-logic-stays-runtime-fi
 
 `trailbase/tools/view-equivalence.mjs` (deleted 2026-10-02 with the legacy view layer) reads the
 depot's base tables exactly as the guest's data
-layer does, builds every view with `trailbase/runtime/app/compute/views.js` (the code the guest runs
+layer does, builds every view with `trailbase/runtime/ahscripts/compute/views.js` (the code the guest runs
 and that produces the current 14/14 report parity), runs the composed legacy SQL for the same view,
 and diffs the rows.
 
@@ -26,7 +26,7 @@ exposed a further divergence: rows created by invoice entry (a sale invoice with
 the JS views handled them. The equivalence gate's dataset had no such rows, so it passed. With the
 SQL path enabled the differential also showed `dailysale`/`itemsales`/`profit` row-count gaps.
 
-`USE_SQL_VIEWS` is therefore back **off** (`trailbase/runtime/app/lib/reports.js`), and the SQL path
+`USE_SQL_VIEWS` is therefore back **off** (`trailbase/runtime/ahscripts/lib/reports.js`), and the SQL path
 stays a switch to enable only after the equivalence gate covers fresh/partial invoices — or after
 the arithmetic moves to SQL properly ([[convert-base-views-not-derivations]]).
 
@@ -72,7 +72,7 @@ The conversion plan assumed the legacy SQL could be dropped in **verbatim** (own
 would reproduce the JS. It does not: the JS views were *ported and adapted* — they add columns
 (`booker`), drop others, keep numbers unformatted, and in several places compute differently
 (`ledger_*` credit/debit, `items_report` qty units, `outstanding` which ignores the legacy
-threshold view). **The parity reference is the JS (`trailbase/runtime/app/compute/views.js`), not the
+threshold view). **The parity reference is the JS (`trailbase/runtime/ahscripts/compute/views.js`), not the
 legacy SQL.**
 
 ## Consequences for the plan
@@ -91,8 +91,8 @@ legacy SQL.**
 
 - `trailbase/tools/view-equivalence.mjs` — output above (0/13 identical; field-level diffs).
   Tool deleted 2026-10-02 with the legacy view layer.
-- `trailbase/runtime/app/reports/sql/views/*.sql` (deleted 2026-10-02) vs
-  `trailbase/runtime/app/compute/views.js`.
+- `trailbase/runtime/ahscripts/reports/sql/views/*.sql` (deleted 2026-10-02) vs
+  `trailbase/runtime/ahscripts/compute/views.js`.
 
 ## Related
 

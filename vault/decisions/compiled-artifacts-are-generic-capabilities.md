@@ -99,7 +99,7 @@ Concretely:
   [[runtime-js-single-host]].
 - `trailbase/runtime/ahscripts/routes/_app/route.ts` — the generic runtime file router; all app
   routes and report dispatch are runtime JS/TS.
-- `trailbase/runtime/app/compute/*.js`, `app/reports/sql/views/*.sql` (deleted 2026-10-02),
+- `trailbase/runtime/ahscripts/compute/*.js`, `app/reports/sql/views/*.sql` (deleted 2026-10-02),
   `app/views/**` — the runtime authoring surface that composes the capabilities.
 - [[runtime-js-single-host]] — the accepted single-host packaging this reframes as an optimization.
 

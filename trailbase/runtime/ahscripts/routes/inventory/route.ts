@@ -3,7 +3,7 @@
 // Only the exact GET `/inventory` is owned here. `/inventory/save` still falls through to the dispatcher.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
 
     const path = routeKit.normalizePath(String(req.path || "/"));
@@ -17,7 +17,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "inventory", title: "Inventory", template: "inventory/index.html.jinja" },
+      { user, active: "inventory", title: "Inventory", template: "inventory/page.html.jinja" },
       {
         rows,
         query: routeKit.pick(query.q, ""),

@@ -82,7 +82,7 @@ function guestRoutes(
 
   // The declarative pages and their data endpoints are served by slug as well as by the `p/[...slug]`
   // folder, so they are added from the manifests on disk.
-  const pagesDir = fileURLToPath(new URL("../runtime/app/pages", import.meta.url));
+  const pagesDir = fileURLToPath(new URL("../runtime/ahscripts/pages", import.meta.url));
   const walk = (dir) => {
     for (const e of readdirSync(dir)) {
       const p = join(dir, e);

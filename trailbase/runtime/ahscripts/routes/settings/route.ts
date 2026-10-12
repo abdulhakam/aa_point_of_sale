@@ -4,7 +4,7 @@
 // and writes none. It renders the defaults and the script hydrates them and saves on change.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const path = routeKit.normalizePath(String(req.path || "/"));
     const user = routeKit.userOf(req);
@@ -12,7 +12,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "management", title: "Settings", template: "settings/index.html.jinja" },
+      { user, active: "management", title: "Settings", template: "settings/page.html.jinja" },
       {}
     );
   };

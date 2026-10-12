@@ -46,7 +46,7 @@ mode is invisible unless the bridge logs the underlying error.
 
 - `trailbase/tb-ah-run-js/src/api.rs`, `trailbase/tb-ah-run-js/src/api/sqlite.rs` — the `Opt<Vec<String>>` signatures and
   the added error logging.
-- `trailbase/runtime/app/lib/invoicing.js` — `completeInvoice` now passes `String(...)`.
+- `trailbase/runtime/ahscripts/lib/invoicing.js` — `completeInvoice` now passes `String(...)`.
 
 ## Related
 

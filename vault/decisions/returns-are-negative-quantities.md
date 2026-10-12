@@ -90,8 +90,8 @@ already in the imported 8,935 rows, and nothing is rewritten — but the app nev
 
 ## Evidence
 
-- `trailbase/runtime/app/compute/views.js` — the stock sign rule and money chain this relies on.
-- `trailbase/runtime/app/lib/invoices.js` — the entry-type list, now `{1, 0}`.
+- `trailbase/runtime/ahscripts/compute/views.js` — the stock sign rule and money chain this relies on.
+- `trailbase/runtime/ahscripts/lib/invoices.js` — the entry-type list, now `{1, 0}`.
 - `vault/issues/returns-are-negative-quantities` — the verification against the live depot.
 - `trailbase/migrations/main/` — the Difference party seed.
 

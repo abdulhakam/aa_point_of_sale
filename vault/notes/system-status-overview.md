@@ -96,7 +96,7 @@ run but not repaired, and shape A became impossible. The intermediate Node
 | Two SQL artefacts referenced by a wrong path | The READMEs' `../full_database_schema.sql` does not resolve, so the preserved view SQL looks missing | [[stale-schema-sql-paths]] |
 | Money is `REAL` | Float drift masked everywhere by `printf("%.2f")`; cheap to fix while the DB is empty | [[tb-0015-integer-cents-for-money]] |
 | "Company" means two different tables | `items.category` is labelled "Company" but there is now a real `companies` table | [[tb-0014-point-company-fields-at-companies]] |
-| Business identity differs between stacks | Mostly resolved: the guest reads `runtime/app/config/business.json` (legacy name/address/phone); the `config.textproto` application name is still `AA Point of Sale` and is what the header shows | [[environment]] |
+| Business identity differs between stacks | Mostly resolved: the guest reads `runtime/ahscripts/config/business.json` (legacy name/address/phone); the `config.textproto` application name is still `AA Point of Sale` and is what the header shows | [[environment]] |
 | Prior knowledge base removed from the tree | Its content is only in git; claims in it are partly superseded | [[previous-vault-recovery]] |
 | Guest latency is multiples of the legacy stack's | ~20–30 ms baseline; a cold profit report came close to the 20 s guest deadline; large payloads serialise across the JS↔Rust boundary | [[guest-vs-node-performance]], [[guest-report-performance-options]] |
 | The dispatcher is re-transpiled every request | swc runs per request on `_app/route.ts`; every route pays it and it grows with the file | [[dispatcher-transpiled-per-request]] |

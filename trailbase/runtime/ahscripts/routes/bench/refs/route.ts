@@ -5,9 +5,9 @@
 // silently renders empty, so a missing key or an emptied list must fail here rather than on a shop screen.
 (function () {
   (globalThis as any).GET = async () => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const EXPECTED_REFS = { sections: 10, companies: 15, areas: 59, parties: 943, bookers: 4, items: 207, partyTypes: 2, invoiceTypes: 4, paymentTypes: 3 };
-    const refsMod = await (globalThis as any).__AA_LOAD__("/app/lib/refs.js");
+    const refsMod = await (globalThis as any).__AA_LOAD__("/ahscripts/lib/refs.js");
     const fp = await A.service.fingerprint();
     const t0 = Date.now();
     const live = await refsMod.refs(fp);

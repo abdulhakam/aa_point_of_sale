@@ -24,10 +24,10 @@ they are the legacy picker/queue batch and do not need to bypass the materialisa
 
 ## Evidence
 
-- `runtime/app/lib/invoice-sheet.js` — `buildSheetFresh` added beside `buildSheet`; the `data` shape is
+- `runtime/ahscripts/lib/invoice-sheet.js` — `buildSheetFresh` added beside `buildSheet`; the `data` shape is
   identical (business header, `typeLabel`, party/address/booker, lines with CTN/UNTS/FREE and UNIT/CTN,
   the `hasLineDiscounts` group, the legacy totals labels).
-- `runtime/app/lib/invoices.js` `readInvoice` gained `created` so the live sheet's Invoice Date/Time has
+- `runtime/ahscripts/lib/invoices.js` `readInvoice` gained `created` so the live sheet's Invoice Date/Time has
   the same source the materialised one uses.
 - `runtime/ahscripts/routes/invoices/{id}/view/route.ts` — `source=live` selects `buildSheetFresh`;
   an unknown id 404s with "No such invoice" (the materialised path keeps its "No materialised document…"

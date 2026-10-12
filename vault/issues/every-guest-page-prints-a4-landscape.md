@@ -14,7 +14,7 @@ related_to: ["[[tb-0021-invoices-cashmemos-printing]]", "[[print-queue-parity-fi
 ## FIXED 2026-10-09 — portrait by default, operator chooses landscape in the print dialog
 
 The bare `@page { size }` rules are replaced by **named pages** in
-`trailbase/runtime/app/public/css/app.css`, which the `page` property on `<body>` can actually
+`trailbase/runtime/ahscripts/public/css/app.css`, which the `page` property on `<body>` can actually
 select:
 
 ```css
@@ -44,7 +44,7 @@ report payments           data-paper=a4      A4      portrait  (595x842)
 dashboard (no paper)      data-paper=(none)  Letter  portrait  (612x792)
 ```
 
-The generated depot copy `trailbase/traildepot/runtime/app/public/css/app.css` was synced to match
+The generated depot copy `trailbase/traildepot/runtime/ahscripts/public/css/app.css` was synced to match
 (`RUN.BAT` would do this on the next start anyway). Stale "A4 landscape" comments in `http.js` and
 `reports/report.html.jinja` were corrected.
 
@@ -72,7 +72,7 @@ are landscape" report — not a printer-driver setting, not a per-route mistake.
 The two sizes are written as bare `@page` rules inside two `@media print` blocks:
 
 ```css
-/* trailbase/runtime/app/public/css/app.css */
+/* trailbase/runtime/ahscripts/public/css/app.css */
 @media print {
   body[data-paper="a5"] { font-size: 9.5pt; }      /* the selector only styles the body */
   @page { size: A5 portrait; margin: 6mm; }         /* ...but @page is document-scoped */
@@ -115,10 +115,10 @@ is a decision to record, not a silent default.
 
 ## Evidence
 
-- `trailbase/runtime/app/public/css/app.css:640-654` — the two `@media print` blocks and their bare
+- `trailbase/runtime/ahscripts/public/css/app.css:640-654` — the two `@media print` blocks and their bare
   `@page { size: … }` rules.
-- `trailbase/runtime/app/views/layout.html.jinja:12-13` — `<body data-paper="{{ paper }}">`.
-- `trailbase/runtime/app/lib/report-render.js:232` — reports pass `paper: "a4"`.
+- `trailbase/runtime/ahscripts/views/layout.html.jinja:12-13` — `<body data-paper="{{ paper }}">`.
+- `trailbase/runtime/ahscripts/lib/report-render.js:232` — reports pass `paper: "a4"`.
 - `trailbase/runtime/ahscripts/routes/invoices/{id}/view/route.ts:26,38` and
   `.../cashmemo/vouchers/{id}/route.ts:27` — invoices/vouchers pass `paper` defaulting to `a5`.
 - Legacy (compiled, `legacyforparity/standalone/.next/server/...`): invoice print uses

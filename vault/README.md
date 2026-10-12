@@ -84,8 +84,8 @@ on the LAN can use it, behind a Private-profile Windows firewall rule —
 ## Status at a glance
 
 - 17 of 17 TrailBase tables exposed as record APIs; migration applies clean on an empty depot.
-- 10 reports + 4 ledgers (14 entries in `trailbase/runtime/app/compute/reports.js`, and 14
-  declarative page folders under `trailbase/runtime/app/pages/`).
+- 10 reports + 4 ledgers (14 entries in `trailbase/runtime/ahscripts/compute/reports.js`, and 14
+  declarative page folders under `trailbase/runtime/ahscripts/pages/`).
 - The guest serves the same app without Node: the smoke suite passes in full, differential **14/14**
   (`trailbase/tools/`), plus a first verified invoice-entry slice.
 - **The legacy stack is production and has no source** — deleted from git 2026-09-29; it runs from

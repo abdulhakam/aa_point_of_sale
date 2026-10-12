@@ -18,7 +18,7 @@ implied. On the legacy side the arithmetic is SQL, inside PocketBase views ([[ba
 > is not: the reports now run on **SQL**, not on a JavaScript engine.
 >
 > - `app/compute/reports.js` — **deleted**. It was the report engine; `git show
->   04cd42b:trailbase/runtime/app/compute/reports.js` still recovers it.
+>   04cd42b:trailbase/runtime/ahscripts/compute/reports.js` still recovers it.
 > - `app/lib/spoolreports.js` — the current entry point. Its comments cite `reports.js:NN` lines and
 >   say so explicitly, so the mapping is traceable.
 > - `app/reports/sql/` — `prelude.sql` plus **11** report statements under `reports/`.

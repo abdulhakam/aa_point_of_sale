@@ -73,7 +73,7 @@ ports and throw-away depots:
 | Path | Role |
 |---|---|
 | `trailbase/target/wasm32-wasip2/release/tb_ah_run_js.wasm` | the built host (git-ignored). ⚠️ **Not** `tb-ah-run-js/target/` — the three `tb-ah-*` crates are one cargo workspace and share a single `target/` at `trailbase/target/` |
-| `trailbase/runtime/` | the editable app: `ahscripts/` dispatcher and `app/` (views, pages, compute, lib, SQL) the host reads. **Edit here**, then re-sync |
+| `trailbase/runtime/` | the editable app, a single `ahscripts/` root (routes, views, pages, lib, compute, manifests, reports/sql, public, plugins, config) the host reads. **Edit here**, then re-sync |
 | `trailbase/traildepot/runtime/` | **what `--runtime-root-fs` is actually given** — a generated copy of the above, produced by `clear_db.bat`. Editing `trailbase/runtime/` alone does nothing until that re-sync (the failure in [[plugin-directory-url-404]]) |
 | `trailbase/.tbdemo-guest/depot` | the throw-away depot `guest-smoke.mjs` creates and deletes |
 | `trailbase/traildepot/` | the **production** depot — 60,245 imported records, `main.db` ≈ 175 MB. ⚠️ **not** covered by any automated harness; see the credentials section below |
@@ -104,7 +104,7 @@ All four are `NEXT_PUBLIC_*`, so they are compiled into the browser bundle — n
 ### Guest app (`trailbase/`) — no `.env`
 
 The guest app is served by TrailBase and reads no `.env`: its settings are the depot's
-`config.textproto` (below) plus the runtime files under `trailbase/runtime/app/`. The former Node
+`config.textproto` (below) plus the runtime files under `trailbase/runtime/ahscripts/`. The former Node
 `frontend-ssr` `.env` — including its inert `CACHE_TTL_SECONDS` and its `SESSION_SECRET` — was
 removed with that app on 2026-09-27 ([[guest-ui-is-a-direct-shift-of-legacy]]). The guest uses
 TrailBase's own auth cookies, so there is no second session secret to rotate
@@ -183,11 +183,11 @@ Three different business identities appear in configuration:
 |---|---|
 | `frontend/.env.local` (deleted) | `SAMPLE TRADERS` + a Sample City address + phone |
 | `frontend/.env.local.example` (deleted) | `AA_W_POS` + `abc 123 xyz` + `123 abc 789` |
-| guest app (`trailbase/runtime/app/config/business.json`) | `SAMPLE TRADERS` + the same Sample City address + phone |
+| guest app (`trailbase/runtime/ahscripts/config/business.json`) | `SAMPLE TRADERS` + the same Sample City address + phone |
 | guest app (`trailbase/config.textproto` application name) | `AA Point of Sale` |
 
 **Resolved 2026-09-28.** The earlier statement that "the new side has no equivalent variables yet"
-was stale: `trailbase/runtime/app/config/business.json` carries the legacy values verbatim
+was stale: `trailbase/runtime/ahscripts/config/business.json` carries the legacy values verbatim
 (`SAMPLE TRADERS`, the Sample City address, the phone) and the `tb-0023` box for reproducing the
 printout header is ticked. Two identities remain, both benign:
 

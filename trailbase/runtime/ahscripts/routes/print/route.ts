@@ -11,7 +11,7 @@
 // browser, so this route owns GET only.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
 
@@ -42,7 +42,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "print", title: "Print Invoices", template: "print/index.html.jinja" },
+      { user, active: "print", title: "Print Invoices", template: "print/page.html.jinja" },
       {
         types,
         // A STRING, so the template's `selectedType == t.code` compares like with like — minijinja does

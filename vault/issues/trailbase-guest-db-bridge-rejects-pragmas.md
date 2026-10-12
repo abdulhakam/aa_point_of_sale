@@ -70,7 +70,7 @@ assumed, and the cold implementation was removed rather than left in place looki
 - `GET /bench/pragma` on the running depot — the four errors above.
 - `trailbase/tb-ah-query-tbdb/src/lib.rs` — the `cold_flush` tombstone and the reason the `PRAGMA` version
   was removed.
-- `trailbase/runtime/app/lib/data.js` — `columnsOf` using the working `pragma_table_info(?)` form.
+- `trailbase/runtime/ahscripts/lib/data.js` — `columnsOf` using the working `pragma_table_info(?)` form.
 
 ## Related
 

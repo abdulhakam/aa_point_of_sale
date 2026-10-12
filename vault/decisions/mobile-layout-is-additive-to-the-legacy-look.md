@@ -85,10 +85,10 @@ sheet — the mobile rules are not a retrofit tax, they are the base.
 
 ## Evidence
 
-- `trailbase/runtime/app/public/css/app.css` — the `@media (max-width: 768px)` block, and the
+- `trailbase/runtime/ahscripts/public/css/app.css` — the `@media (max-width: 768px)` block, and the
   `data-label` rules it drives.
-- `trailbase/runtime/app/views/partials/table.html.jinja` — every `<td>` now carries its column label.
-- `trailbase/runtime/app/views/partials/nav.html.jinja` — the same rail markup that becomes the bottom bar.
+- `trailbase/runtime/ahscripts/views/partials/table.html.jinja` — every `<td>` now carries its column label.
+- `trailbase/runtime/ahscripts/views/partials/nav.html.jinja` — the same rail markup that becomes the bottom bar.
 - [[tb-0028-guest-transactional-screens-and-mobile]] — the screens built under this rule.
 
 ## Related

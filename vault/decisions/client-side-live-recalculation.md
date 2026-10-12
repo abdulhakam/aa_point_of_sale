@@ -111,8 +111,8 @@ What actually removes the risk is **one shared function, copied once, asserted t
 
 ## Evidence
 
-- `trailbase/runtime/app/public/js/app.js` — the grid's `recalc()`, integer paisa.
-- `trailbase/runtime/app/compute/views.js` — the server chain it mirrors.
+- `trailbase/runtime/ahscripts/public/js/app.js` — the grid's `recalc()`, integer paisa.
+- `trailbase/runtime/ahscripts/compute/views.js` — the server chain it mirrors.
 - `trailbase/tools/guest-smoke.mjs` — the equivalence check on the pinned fixtures.
 - `vault/tasks/guest-invoice-lifecycle` — the measurements reproduced.
 

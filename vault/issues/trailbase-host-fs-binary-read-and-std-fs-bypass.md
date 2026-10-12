@@ -31,7 +31,7 @@ they are not consistent with each other:
 
 - **No binary asset path.** `tb-0018` already lists "binary static assets" as an open item and notes
   "current assets are all text" — that is still true. Today the app's own assets
-  (`runtime/app/public/`: `app.js`, `page.js`, `app.css`, `favicon.svg`) are all text, so nothing is
+  (`runtime/ahscripts/public/`: `app.js`, `page.js`, `app.css`, `favicon.svg`) are all text, so nothing is
   broken, but the *silent* fallback means the day someone adds a PNG it fails as corrupt data
   rather than as a clear error.
 - **Mixed sandbox semantics.** Two ways to reach the same filesystem, one of which is the SDK's

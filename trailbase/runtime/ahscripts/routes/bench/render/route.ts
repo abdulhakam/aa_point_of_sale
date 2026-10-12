@@ -4,7 +4,7 @@
 // a context that does not have to.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const path = routeKit.normalizePath(String(req.path || "/"));
     const query = routeKit.parsePairs(String(req.query || ""));
@@ -19,7 +19,7 @@
       company: (refs.companies ?? [])[i % Math.max(1, (refs.companies ?? []).length)]?.name ?? "",
       amount: i * 13.37,
     }));
-    const result = await A.renderClient.benchRender(req, "bench/payload.html.jinja", { rows }, Number(query.rounds ?? 5));
+    const result = await A.renderClient.benchRender(req, "bench/payload/page.html.jinja", { rows }, Number(query.rounds ?? 5));
     return { ...(result || {}), renderer: await A.renderClient.rendererStatus(req) };
   };
 })();

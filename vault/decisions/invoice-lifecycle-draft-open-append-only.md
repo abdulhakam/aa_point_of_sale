@@ -143,9 +143,9 @@ row another reader could be looking at.
 ## Evidence
 
 - `trailbase/migrations/main/` — the status column, its `CHECK`, and the backfill.
-- `trailbase/runtime/app/lib/invoice-lifecycle.js` — the transitions, the lease, and the append-only
+- `trailbase/runtime/ahscripts/lib/invoice-lifecycle.js` — the transitions, the lease, and the append-only
   line operations.
-- `trailbase/runtime/app/views/invoices/grid.html.jinja` — the single-writer spreadsheet.
+- `trailbase/runtime/ahscripts/views/invoices/grid.html.jinja` — the single-writer spreadsheet.
 - The stock-sign and money verification in [[returns-are-negative-quantities]].
 
 ## Related

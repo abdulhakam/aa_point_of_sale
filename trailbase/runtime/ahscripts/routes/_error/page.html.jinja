@@ -1,0 +1,8 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+<section class="card" style="margin:2rem;max-width:40rem">
+  <h1 class="page-title">Something went wrong</h1>
+  <p>The page at <code>{{ path }}</code> failed to render.</p>
+  <p><a href="/">Go to the dashboard</a></p>
+</section>
+{% endblock %}

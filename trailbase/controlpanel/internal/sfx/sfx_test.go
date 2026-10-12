@@ -11,7 +11,7 @@ func sampleFS() fstest.MapFS {
 	return fstest.MapFS{
 		"payload/trail.exe":         {Data: []byte("TRAIL")},
 		"payload/config.textproto":  {Data: []byte("cfg")},
-		"payload/runtime/app/x.js":  {Data: []byte("js")},
+		"payload/runtime/ahscripts/x.js":  {Data: []byte("js")},
 		"payload/migrations/U1.sql": {Data: []byte("sql")},
 		"payload/.gitkeep":          {Data: []byte{}},
 	}
@@ -25,7 +25,7 @@ func TestExtractWritesTreeAndMarker(t *testing.T) {
 	for _, p := range []string{
 		"trail.exe",
 		"config.textproto",
-		filepath.Join("runtime", "app", "x.js"),
+		filepath.Join("runtime", "ahscripts", "x.js"),
 		filepath.Join("migrations", "U1.sql"),
 	} {
 		if _, err := os.Stat(filepath.Join(dir, p)); err != nil {

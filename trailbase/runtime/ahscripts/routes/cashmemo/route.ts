@@ -5,7 +5,7 @@
 // rendered them — three aggregate queries per request for values nothing showed.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const path = routeKit.normalizePath(String(req.path || "/"));
     const user = routeKit.userOf(req);
@@ -13,7 +13,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "cashmemo", title: "Cash memo", template: "cashmemo/index.html.jinja" },
+      { user, active: "cashmemo", title: "Cash memo", template: "cashmemo/page.html.jinja" },
       {}
     );
   };

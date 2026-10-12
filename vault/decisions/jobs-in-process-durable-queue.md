@@ -75,7 +75,7 @@ API: `POST /jobs`, `GET /jobs/{id}`, `GET /jobs/{id}/result`, `POST /jobs/{id}/c
 ## Evidence
 
 - `trailbase/migrations/main/U1790300000__create_job_tables.sql`.
-- `trailbase/runtime/app/lib/queue.js` — specs, claim, run, execute, finalize, recover, fan-out.
+- `trailbase/runtime/ahscripts/lib/queue.js` — specs, claim, run, execute, finalize, recover, fan-out.
 - `trailbase/runtime/ahscripts/routes/_app/route.ts` — the `/jobs` routes and `/worker/{pool}/step`.
 - `trailbase/tb-ah-run-js/src/api/fetch.rs` — `http.postJson` (login) and `http.request` (fan-out).
 - `trailbase/tools/jobs-check.mjs` — all checks pass, including the fan-out path

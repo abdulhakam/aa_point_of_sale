@@ -4,7 +4,7 @@
 // item" and "add the line" are one submit.
 (function () {
   (globalThis as any).POST = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
     const path = routeKit.normalizePath(String(req.path || "/"));

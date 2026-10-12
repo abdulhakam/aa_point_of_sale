@@ -74,7 +74,7 @@ and are never blocked by it.**
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/invoicing.js` — `takeLock` / `releaseLock` / `lockHolder`.
+- `trailbase/runtime/ahscripts/lib/invoicing.js` — `takeLock` / `releaseLock` / `lockHolder`.
 - `trailbase/tools/invoice-check.mjs` — the `409`-for-another-device assertion.
 - `vault/tasks/guest-invoice-lifecycle` — the grid's read-only-for-others path.
 

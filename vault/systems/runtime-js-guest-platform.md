@@ -57,7 +57,7 @@ improvements the operator asked for.
 | `trailbase/tb-ah-run-js/` | The **compiled engine**: the Rust guest crate `tb_ah_run_js` — `trailbase-wasm` SDK + `rquickjs` (QuickJS) + `minijinja`, built for `wasm32-wasip2` into a single `*.wasm`. Changing it needs `build.bat`. Its README is `tb-ah-run-js/README.md` |
 | `trailbase/tb-ah-render-jinja/` | minijinja as its own component, behind the `aa_render` envelope |
 | `trailbase/tb-ah-query-tbdb/` | data acquisition (experimental, exists to be measured) |
-| `trailbase/runtime/` | The **editable application**: `ahscripts/routes/` (`_app/route.ts`, the dispatcher, and `mode/route.ts`) and `app/` (views, pages, compute, lib, plugins, public, and the report SQL under `app/reports/sql/`). Read at request time — no rebuild |
+| `trailbase/runtime/` | The **editable application**, a **single root `ahscripts/`** (tb-0043): `routes/` (one folder per URL, method-named exports, each route's template colocated as `page.html.jinja`), `views/` (the shared `layout.html.jinja` + `partials/`), `pages/` (declarative page manifests + templates), `lib/`, `compute/`, `manifests/`, `reports/sql/`, `public/`, `plugins/`, `config/`. Read at request time — no rebuild |
 | `trailbase/tools/` | The verification harnesses (`guest-smoke.mjs`, `route-snapshot.mjs`, …; `view-equivalence.mjs` was deleted 2026-10-02 with the legacy view layer) |
 | `trailbase/traildepot/` | **Generated** by `clear_db.bat` + `build.bat`: source copies + `wasm/*.wasm` + `data/` |
 | `guests/` | **Deleted 2026-09-28.** The throw-away **Phase 0 spike** guest (TS + Vite + `jco componentize`) that proved the platform's assumptions — S1–S8 ([[trailbase-guest-wasm-spike-results]]). Nothing loaded it once the host crate shipped, so the tree was removed; the spike findings survive in that note and in the [[trailbase-guest-aot-startup-cost]] / [[trailbase-guest-cpu-js-limits]] issues |
@@ -68,17 +68,23 @@ settled are in [[trailbase-guest-wasm-runtime-defaults]] and [[runtime-js-single
 ## How it works
 
 - **Routing**: one generic file route. `trailbase/tb-ah-run-js/src/lib.rs` resolves
-  `ahscripts/routes/<path>/route.*` and, when no route folder matches, falls back to
-  `ahscripts/routes/_app/route.ts` — a single dispatcher that implements the whole URL space
-  (dynamic paths included). ⚠️ **There is no `{param}` matching and no `[...path]` fallback in the
-  host today** — both are added by [[tb-0030-retire-the-route-ts-dispatcher]], and until then the
-  dispatcher is what makes dynamic routes work.
-- **Business logic** is runtime JS/TS: `app/compute/*.js` is the **same** `compute/` code the Node
-  app ran, and `app/lib/*.js` are the guest ports of the Node `src/lib`. The dispatcher loads modules
-  itself through an ESM→CJS shim ([[guest-app-host-port]]).
+  `ahscripts/routes/<path>/route.*` by a filesystem walk — **literal, then `{param}`, then
+  `[...rest]`** at each segment — and a path with no matching folder is a 404. The `_app/route.ts`
+  dispatcher was deleted by [[tb-0030-retire-the-route-ts-dispatcher]] step 6; `mode: crawler` in
+  `ahscripts/config/app.config.json` means folder-only.
+- **Special pages**: three optional reserved handlers — `routes/_not-found`, `_error`,
+  `_global-error` — are dispatched by the host for a no-route path, a thrown handler, and a failed
+  error handler respectively ([[runtime-js-special-pages]]). A `_`-prefixed segment is private and
+  never matched as a route; a handler exception is now a 500 the app lays out, not a 404.
+- **Business logic** is runtime JS/TS under `ahscripts/lib/*.js` (the guest ports of the Node
+  `src/lib`) and `ahscripts/compute/*.js`. Every route file reaches them through the host's
+  `__AA_LOAD__` loader ([[guest-app-host-port]]).
 - **Rendering** is Rust `minijinja` folded into the host: scripts call `render.html(name, ctxJson)` /
-  `render.string`, with templates under `app/views` (named `*.html.jinja` —
-  [[jinja-templates-use-html-jinja-extension]]) and the ten `compute/format.js` filters ported
+  `render.string`. The loader searches three roots in order — `ahscripts/routes`, `ahscripts/views`,
+  `ahscripts/pages` — and resolves every name root-relative, so a colocated route template
+  (`dashboard/page.html.jinja`) still reaches the shared `layout.html.jinja` and `partials/*` in
+  `ahscripts/views` through its own `{% extends %}`. Templates are named `*.html.jinja`
+  ([[jinja-templates-use-html-jinja-extension]]) and the ten `compute/format.js` filters are ported
   ([[report-logic-stays-runtime-file-based]]).
 - **Data**: base tables are read **directly from the depot's SQLite** (order-sensitive:
   `ORDER BY id DESC`, engine-independent `compareText` sorting —
@@ -106,7 +112,7 @@ RUN.BAT          # trail run --runtime-root-fs=traildepot\runtime
 ```
 
 `--runtime-root-fs=traildepot/runtime` is load-bearing: it is the WASI sandbox root, so the
-frontend's `app/` and `ahscripts/` must live under it. Keeping it a subdirectory (not the depot root)
+application's single `ahscripts/` tree must live under it. Keeping it a subdirectory (not the depot root)
 keeps the depot's `data/` and `secrets/` out of the sandbox. `RUN.BAT` runs `clear_db.bat` and
 `build.bat` automatically when the depot is not prepared, **and** re-syncs `runtime/` and
 `migrations/` on every start.

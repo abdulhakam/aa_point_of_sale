@@ -124,7 +124,7 @@ build.
 - `frontend/src/app/app/invoices/InvoiceForm.tsx:48,206,287,434` — create-with-`completed:false`,
   then PATCH on OK.
 - `frontend/src/app/providers.tsx` — the legacy react-query staleness settings.
-- `trailbase/runtime/app/compute/views.js:115` and `trailbase/runtime/app/compute/reports.js` —
+- `trailbase/runtime/ahscripts/compute/views.js:115` and `trailbase/runtime/ahscripts/compute/reports.js` —
   `completed` is carried in the invoice view but never filtered.
 - The subscription probe: `…/subscribe/*` returns **403** for both auth methods
   ([[trailbase-subscribe-endpoint-forbidden]]).

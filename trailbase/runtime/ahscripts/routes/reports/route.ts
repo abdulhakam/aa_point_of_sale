@@ -5,14 +5,14 @@
 // precedence, so creating this folder does not shadow them.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
 
     const path = routeKit.normalizePath(String(req.path || "/"));
     const user = routeKit.userOf(req);
     if (!user) return routeKit.loginRedirect(req, path);
 
-    const hub = await A.pages.hubIndex("/app/pages");
+    const hub = await A.pages.hubIndex("/ahscripts/pages");
     // The `ledgers` tile is a link to the ledger hub rather than a report, so it is inserted at the
     // position its legacy index held, between "Payments By Company" and "Stock Report".
     const tiles = hub.reports.slice();
@@ -23,7 +23,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "reports", title: "Reports", template: "reports/index.html.jinja" },
+      { user, active: "reports", title: "Reports", template: "reports/page.html.jinja" },
       { tiles, ledgerTiles: hub.ledgers }
     );
   };

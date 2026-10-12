@@ -235,6 +235,152 @@ fn apply_extra_headers(response: &mut Response, json: &serde_json::Value) {
 }
 
 
+/// The request headers the host copies into the guest (the fixed allowlist). Shared by the normal
+/// dispatch and the special (`_error`/`_not-found`) dispatch so both see the same request shape.
+fn collect_headers(req: &Request) -> serde_json::Map<String, serde_json::Value> {
+  let mut headers_map = serde_json::Map::new();
+  for name in [
+    "content-type",
+    "accept",
+    "accept-encoding",
+    "if-none-match",
+    "cookie",
+    "host",
+    "referer",
+    "x-csrf-token",
+    "x-requested-with",
+  ] {
+    if let Some(val) = req.header(name) {
+      if let Ok(s) = val.to_str() {
+        headers_map.insert(name.to_string(), serde_json::Value::String(s.to_string()));
+      }
+    }
+  }
+  headers_map
+}
+
+/// The resolved TrailBase user (from the auth_token cookie or bearer header), or JSON null.
+fn user_json_of(req: &Request) -> serde_json::Value {
+  match req.user() {
+    Some(user) => serde_json::to_value(user).unwrap_or(serde_json::Value::Null),
+    None => serde_json::Value::Null,
+  }
+}
+
+/// The request object a SPECIAL handler receives (`_not-found`, `_error`, `_global-error`).
+///
+/// Always method `GET`: these are framework boundaries the host invokes, not routes a client calls,
+/// so there is no verb to preserve. `error` carries the failing handler's message when there is one.
+fn special_req(req: &Request, path: &str, error: Option<String>) -> serde_json::Value {
+  serde_json::json!({
+    "method": "GET",
+    "path": path,
+    "url": req.url().to_string(),
+    "query": req.url().query().unwrap_or(""),
+    "body": "",
+    "headers": collect_headers(req),
+    "user": user_json_of(req),
+    "error": error,
+  })
+}
+
+/// The reserved special handler for `name`, at `routes/_<name>/route.{ts,js}`.
+///
+/// `None` when the app has not opted in, in which case the host behaves exactly as it did before
+/// this convention existed. The `_` prefix marks the folder private: `resolve_route_file` never
+/// matches it, so it is not reachable as an ordinary URL.
+fn resolve_special_file(name: &str) -> Option<std::path::PathBuf> {
+  let dir = std::path::Path::new("/ahscripts/routes").join(format!("_{}", name));
+  for ext in ["ts", "js"] {
+    let candidate = dir.join(format!("route.{}", ext));
+    if candidate.is_file() {
+      return Some(candidate);
+    }
+  }
+  None
+}
+
+/// Run a reserved special handler and convert its return value to a response.
+///
+/// `None` when the app supplies none, or when the handler itself failed — the caller decides the
+/// fallback, which is what lets `error` fall through to `global-error`.
+async fn run_special(name: &str, req_obj: serde_json::Value) -> Option<Response> {
+  let file = resolve_special_file(name)?;
+  println!("special: {} -> {}", name, file.display());
+  match runtime::run_route(file.to_string_lossy().as_ref(), "GET", req_obj).await {
+    Ok(json) => Some(response_from_json(json)),
+    Err(e) => {
+      eprintln!("special {} failed: {}", name, e);
+      None
+    }
+  }
+}
+
+/// The response shapes a route (or a special handler) may return:
+///   { redirect, status? } -> Location + status (303 default)
+///   { text, status? }     -> text/plain
+///   { body, contentType, status?, headers? } -> fully controlled
+///   { html, status? }     -> text/html
+///   anything else         -> application/json
+///
+/// Extracted so the normal dispatch and the `_error`/`_not-found` dispatch answer identically.
+fn response_from_json(json: serde_json::Value) -> Response {
+  if let Some(location) = json.get("redirect").and_then(|v| v.as_str()) {
+    let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(303) as u16;
+    let mut response = "".into_response();
+    *response.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::SEE_OTHER);
+    if let Ok(value) = HeaderValue::from_str(location) {
+      response.headers_mut().insert(header::LOCATION, value);
+    }
+    apply_extra_headers(&mut response, &json);
+    return response;
+  }
+  if let Some(text) = json.get("text").and_then(|v| v.as_str()) {
+    let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(200) as u16;
+    let mut response = text.to_string().into_response();
+    *response.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
+    response
+      .headers_mut()
+      .insert(header::CONTENT_TYPE, HeaderValue::from_static("text/plain; charset=utf-8"));
+    apply_extra_headers(&mut response, &json);
+    return response;
+  }
+  if let (Some(body), Some(content_type)) = (
+    json.get("body").and_then(|v| v.as_str()),
+    json.get("contentType").and_then(|v| v.as_str()),
+  ) {
+    let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(200) as u16;
+    let mut response = body.to_string().into_response();
+    *response.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
+    if let Ok(value) = HeaderValue::from_str(content_type) {
+      response.headers_mut().insert(header::CONTENT_TYPE, value);
+    }
+    apply_extra_headers(&mut response, &json);
+    return response;
+  }
+  if let Some(html) = json.get("html").and_then(|v| v.as_str()) {
+    let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(200) as u16;
+    let mut response = Html(html.to_string()).into_response();
+    *response.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
+    apply_extra_headers(&mut response, &json);
+    return response;
+  }
+  Json(json).into_response()
+}
+
+/// The host's last-resort error page, used only when the app supplies no `_global-error` handler or
+/// that handler also failed. A minimal self-contained document, and it echoes no error text.
+fn host_error_response() -> Response {
+  let body = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">\
+<title>Something went wrong</title></head><body>\
+<h1>Something went wrong</h1><p>Please try again, or contact your administrator.</p>\
+</body></html>";
+  let mut response = Html(body.to_string()).into_response();
+  *response.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+  response
+}
+
+
 /// The file-router conventions, in the order a request is matched against them.
 ///
 /// - `/reports/profit`                 → `routes/reports/profit/route.{js,ts}`   (literal)
@@ -269,10 +415,14 @@ fn resolve_route_file(clean_path: &str) -> Option<std::path::PathBuf> {
         let mut next: Option<std::path::PathBuf> = None;
         let mut caught_all = false;
 
-        // 1. literal
-        let literal = dir.join(segment);
-        if literal.is_dir() {
-            next = Some(literal);
+        // 1. literal — but never a reserved `_`-prefixed folder (`_not-found`, `_error`,
+        // `_global-error`), which the host dispatches by name and which must not be reachable as a
+        // normal route. This mirrors Next.js's `_folder` private convention.
+        if !segment.starts_with('_') {
+            let literal = dir.join(segment);
+            if literal.is_dir() {
+                next = Some(literal);
+            }
         }
 
         // 2. `{param}` — any single segment
@@ -365,6 +515,20 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
           match fallback {
               Some(p) => p,
               None => {
+                  // A custom 404, if the app supplies one (`routes/_not-found/route.*`). The host
+                  // stamps `x-aa-not-found: no_route_folder` so a dev tool can still tell "the app
+                  // rendered a 404" from "nothing is mounted here" — the distinction the JSON body
+                  // below used to be the only carrier of.
+                  if let Some(mut response) =
+                      run_special("not-found", special_req(&req, clean_path, None)).await
+                  {
+                      if let Ok(value) = HeaderValue::from_static("no_route_folder") {
+                          response
+                              .headers_mut()
+                              .insert(header::HeaderName::from_static("x-aa-not-found"), value);
+                      }
+                      return Ok(response);
+                  }
                   // A DISTINCTIVE body, deliberately. The guest's own 404 is `text("Not found", 404)`
                   // in six places, which is byte-identical to what TrailBase renders for an
                   // `HttpError::message(NOT_FOUND, …)`. So a 404 could not be told apart from "this
@@ -399,98 +563,34 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
       let body_bytes = req.body().bytes().await.map_err(internal)?;
       let body_str = String::from_utf8(body_bytes).unwrap_or_default();
       
-      let mut headers_map = serde_json::Map::new();
-      for name in [
-        "content-type",
-        "accept",
-        "accept-encoding",
-        "if-none-match",
-        "cookie",
-        "host",
-        "referer",
-        "x-csrf-token",
-        "x-requested-with",
-      ] {
-        if let Some(val) = req.header(name) {
-          if let Ok(s) = val.to_str() {
-            headers_map.insert(name.to_string(), serde_json::Value::String(s.to_string()));
-          }
-        }
-      }
-
-      // The resolved TrailBase user (from the auth_token cookie or bearer header).
-      let user_json = match req.user() {
-        Some(user) => serde_json::to_value(user).unwrap_or(serde_json::Value::Null),
-        None => serde_json::Value::Null,
-      };
-
       let req_obj = serde_json::json!({
           "method": method,
           "path": path,
           "url": req.url().to_string(),
           "query": req.url().query().unwrap_or(""),
           "body": body_str,
-          "headers": headers_map,
-          "user": user_json
+          "headers": collect_headers(&req),
+          "user": user_json_of(&req),
       });
 
-      match runtime::run_route(file_path.to_string_lossy().as_ref(), &method, req_obj).await {
+      // Cloned: the error path below hands the same request object to the `_error` boundary.
+      match runtime::run_route(file_path.to_string_lossy().as_ref(), &method, req_obj.clone()).await {
           Ok(json) => {
-              // Response shapes a route may return:
-              //   { redirect: "/path", status? } -> 303 (or status) with Location, empty body
-              //   { text, status? }              -> text/plain
-              //   { html }                       -> text/html 200
-              //   anything else                  -> application/json 200
-              if let Some(location) = json.get("redirect").and_then(|v| v.as_str()) {
-                  let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(303) as u16;
-                  let mut response = "".into_response();
-                  *response.status_mut() =
-                      StatusCode::from_u16(status).unwrap_or(StatusCode::SEE_OTHER);
-                  if let Ok(value) = HeaderValue::from_str(location) {
-                      response.headers_mut().insert(header::LOCATION, value);
-                  }
-                  apply_extra_headers(&mut response, &json);
-                  return Ok(response);
-              }
-              if let Some(text) = json.get("text").and_then(|v| v.as_str()) {
-                  let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(200) as u16;
-                  let mut response = text.to_string().into_response();
-                  *response.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
-                  response.headers_mut().insert(
-                      header::CONTENT_TYPE,
-                      HeaderValue::from_static("text/plain; charset=utf-8"),
-                  );
-                  apply_extra_headers(&mut response, &json);
-                  return Ok(response);
-              }
-              // { body, contentType, status?, headers? } — a fully controlled response
-              // (static files, JSON with ETag/cache-control, 304s).
-              if let (Some(body), Some(content_type)) = (
-                  json.get("body").and_then(|v| v.as_str()),
-                  json.get("contentType").and_then(|v| v.as_str()),
-              ) {
-                  let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(200) as u16;
-                  let mut response = body.to_string().into_response();
-                  *response.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
-                  if let Ok(value) = HeaderValue::from_str(content_type) {
-                      response.headers_mut().insert(header::CONTENT_TYPE, value);
-                  }
-                  apply_extra_headers(&mut response, &json);
-                  return Ok(response);
-              }
-              if let Some(html) = json.get("html").and_then(|v| v.as_str()) {
-                  let status = json.get("status").and_then(|v| v.as_u64()).unwrap_or(200) as u16;
-                  let mut response = Html(html.to_string()).into_response();
-                  *response.status_mut() = StatusCode::from_u16(status).unwrap_or(StatusCode::OK);
-                  apply_extra_headers(&mut response, &json);
-                  return Ok(response);
-              }
-              return Ok(Json(json).into_response());
+              return Ok(response_from_json(json));
           }
           Err(e) => {
-              // Return 404 if method not found or other error (simulating "otherwise return 404")
-              // Ideally distinguish between "file not found" (handled above) and "method not found".
-              return Err(HttpError::message(StatusCode::NOT_FOUND, format!("Route execution failed: {}", e)));
+              // A handler failed. Give the app first refusal: its `_error` boundary, then its
+              // `_global-error` boundary, then the host's minimal page. A broken route is a 500 that
+              // the app decides how to present — not a bare 404 with no HTML.
+              let mut err_obj = req_obj;
+              err_obj["error"] = serde_json::Value::String(format!("{}", e));
+              if let Some(response) = run_special("error", err_obj.clone()).await {
+                  return Ok(response);
+              }
+              if let Some(response) = run_special("global-error", err_obj).await {
+                  return Ok(response);
+              }
+              return Ok(host_error_response());
           }
       }
   }

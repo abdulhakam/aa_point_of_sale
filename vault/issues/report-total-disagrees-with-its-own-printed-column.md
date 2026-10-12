@@ -144,8 +144,8 @@ Open, unfixed. Found by `trailbase/tools/paisa-probe.mjs` (written during the sa
 
 ## Evidence
 
-- `trailbase/runtime/app/reports/sql/reports/productsale.sql` — `printf('%.2f', sg.amount) AS amountText`.
-- `trailbase/runtime/app/compute/format.js:9` — `round2` is `Math.round((v + EPSILON) * 100) / 100`.
-- `trailbase/runtime/app/lib/spoolreports.js` — `toCents` is `((x) * 100 + 0.5)` with a negative-half
+- `trailbase/runtime/ahscripts/reports/sql/reports/productsale.sql` — `printf('%.2f', sg.amount) AS amountText`.
+- `trailbase/runtime/ahscripts/compute/format.js:9` — `round2` is `Math.round((v + EPSILON) * 100) / 100`.
+- `trailbase/runtime/ahscripts/lib/spoolreports.js` — `toCents` is `((x) * 100 + 0.5)` with a negative-half
   correction, i.e. round-half-up.
 - `trailbase/tools/paisa-probe.mjs` — reproduces all three totals and names the offending row.

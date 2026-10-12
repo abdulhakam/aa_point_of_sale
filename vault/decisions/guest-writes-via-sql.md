@@ -61,7 +61,7 @@ correct. A write calls `invalidate()` on the guest report service so the next re
 ## Evidence
 
 - `trailbase/tb-ah-run-js/src/api.rs`, `trailbase/tb-ah-run-js/src/api/sqlite.rs` — the `execute` bridge.
-- `trailbase/runtime/app/lib/management.js` — `base64ToHex`, `createRow`/`updateRow`/`deleteRow`,
+- `trailbase/runtime/ahscripts/lib/management.js` — `base64ToHex`, `createRow`/`updateRow`/`deleteRow`,
   `syncLinks`.
 - `trailbase/tools/management-check.mjs` — create → list → update → verify → delete → verify for
   sections (hard delete) and items (relation + numeric fields): all checks pass.

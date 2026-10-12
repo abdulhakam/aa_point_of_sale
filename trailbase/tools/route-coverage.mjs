@@ -98,7 +98,10 @@ async function call(route) {
     // `contentType` is checked too: the guest's 404 is `text/plain`, so a JSON 404 can only be the host.
     unrouted:
       /"error"\s*:\s*"no_route_folder"/.test(text) ||
-      (res.status === 404 && /application\/json/.test(contentType)),
+      (res.status === 404 && /application\/json/.test(contentType)) ||
+      // tb-0044: when the app ships a custom `routes/_not-found` page the host answers HTML 404, so
+      // the JSON body above no longer appears; the host stamps this header instead.
+      (res.headers.get("x-aa-not-found") ?? "") === "no_route_folder",
     location: res.headers.get("location") ?? "",
   };
 }

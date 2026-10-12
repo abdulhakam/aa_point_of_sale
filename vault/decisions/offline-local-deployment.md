@@ -86,7 +86,7 @@ Two design choices follow directly and are recorded elsewhere:
   are source; `data/`, `backups/`, `uploads/`, `secrets/`, `wasm/` are runtime state.
 - `trailbase/config.textproto` — no SMTP, no OAuth, no anonymous or OTP sign-in; everything
   local.
-- `trailbase/tb-ah-run-js/src/render.rs` and `trailbase/runtime/app/views/` — templates read from disk at render
+- `trailbase/tb-ah-run-js/src/render.rs` and `trailbase/runtime/ahscripts/views/` — templates read from disk at render
   time, no bundler.
 - The prior vault recorded this as `decisions/offline-local-desktop-deployment.md`, and a related
   investigation into desktop packaging; see [[previous-vault-recovery]].

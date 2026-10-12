@@ -5,7 +5,7 @@
 // SQL, so a timing difference is transport, not output.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
     const path = routeKit.normalizePath(String(req.path || "/"));
@@ -14,7 +14,7 @@
     const t0 = Date.now();
     const arm = String(query.arm || "spooled");
     const reportName = String(query.report || "ledgers/booker");
-    const spooled = await (globalThis as any).__AA_LOAD__("/app/lib/spoolreports.js");
+    const spooled = await (globalThis as any).__AA_LOAD__("/ahscripts/lib/spoolreports.js");
     const filters = { booker: query.booker || "", party: query.party || "", from: query.from || "", to: query.to || "" };
     const timing: any = {};
     // `?format=html` returns the rendered document itself, so a bench run can assert the two arms are
@@ -39,14 +39,14 @@
         return obj;
       });
       const acquireMs = Date.now() - tRows;
-      const htmlOut: string = (globalThis as any).render.html("bench/spooled.html.jinja", { rows: mapped });
+      const htmlOut: string = (globalThis as any).render.html("bench/spool/page.html.jinja", { rows: mapped });
       if (asHtml) return { html: htmlOut, status: 200 };
       return { report: reportName, arm, rows: mapped.length, acquireMs, totalMs: Date.now() - t0, htmlBytes: htmlOut.length };
     }
 
     const htmlOut: string = await spooled.renderPage(
       reportName,
-      "bench/spooled.html.jinja",
+      "bench/spool/page.html.jinja",
       {},
       filters,
       -1,

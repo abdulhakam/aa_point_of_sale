@@ -26,8 +26,8 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const sqlRoot = resolve(here, "../runtime/app/reports/sql");
-const registryPath = resolve(here, "../runtime/app/lib/spoolreports.js");
+const sqlRoot = resolve(here, "../runtime/ahscripts/reports/sql");
+const registryPath = resolve(here, "../runtime/ahscripts/lib/spoolreports.js");
 const CHECK = process.argv.includes("--check");
 
 /**

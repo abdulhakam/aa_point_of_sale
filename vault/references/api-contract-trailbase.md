@@ -188,7 +188,7 @@ The checks below were exercised over HTTP against a seeded depot (the full table
 ## Client implementation notes (the former `frontend-ssr/src/lib/trailbase.js`, removed 2026-09-27)
 
 - `TrailBaseError` carried `status`, `body` and `path`; `trailbaseErrorHandler` in the ported
-  `trailbase/runtime/app/lib/http.js` turns it into a rendered page rather than a stack trace.
+  `trailbase/runtime/ahscripts/lib/http.js` turns it into a rendered page rather than a stack trace.
 - `MAX_LIMIT = 1024` matches the server cap.
 - `listPage`, `listAll`, `count`, `getOne`, `create`, `update`, `remove`, `schema`, `login`,
   `refresh` — deliberately no caching, no retries, no model layer. TrailBase is used for CRUD and

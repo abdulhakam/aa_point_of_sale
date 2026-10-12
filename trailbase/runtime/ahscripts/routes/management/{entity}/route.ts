@@ -16,9 +16,9 @@
 // `A.routeKit`, so the four management folders do not each carry a copy.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    // The bundle was extracted to `app/lib/context.js` for exactly this: a route folder can build it
+    // The bundle was extracted to `ahscripts/lib/context.js` for exactly this: a route folder can build it
     // through the host's loader without ever calling the dispatcher.
-    const ctx = await (globalThis as any).__AA_LOAD__("/app/lib/context.js");
+    const ctx = await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js");
     const A = await ctx.app();
     const routeKit = A.routeKit;
 

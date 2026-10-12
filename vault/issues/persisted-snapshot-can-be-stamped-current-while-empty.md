@@ -148,9 +148,9 @@ then restart the server and rebuild. There is no endpoint that does this, and th
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/reports.js:278-285` — `persistViews(await currentFingerprint())`.
-- `trailbase/runtime/app/lib/reports.js:293-299` — `invalidate()` clears memory only.
-- `trailbase/runtime/app/lib/reports.js:313-332` — the early-adopt path in `refresh()`.
+- `trailbase/runtime/ahscripts/lib/reports.js:278-285` — `persistViews(await currentFingerprint())`.
+- `trailbase/runtime/ahscripts/lib/reports.js:293-299` — `invalidate()` clears memory only.
+- `trailbase/runtime/ahscripts/lib/reports.js:313-332` — the early-adopt path in `refresh()`.
 - `GET /count/payments` → `Got 26526 rows`, against reports rendering "No data".
 - `POST /reports/refresh?full=1` with `Accept: application/json` → `{"changed":[],"hydrated":true,"rebuilt":[]}`.
 

@@ -70,7 +70,7 @@ Implemented entirely in runtime files: `app/lib/reports.js` exposes `fingerprint
 
 ## Evidence
 
-- `trailbase/runtime/app/lib/reports.js` — `fingerprint()`.
+- `trailbase/runtime/ahscripts/lib/reports.js` — `fingerprint()`.
 - `trailbase/runtime/ahscripts/routes/_app/route.ts` — `pageCacheGet` / `pageCachePut` and the
   report page handler.
 - Measured repeat times in [[report-performance-baseline]]; `guest-smoke` stays in full green (including

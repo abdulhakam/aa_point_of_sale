@@ -19,7 +19,7 @@ original defect is what made them findable.
 
 ## Finding
 
-The 15 preserved view files under `trailbase/runtime/app/reports/sql/views/` (**deleted 2026-10-02**
+The 15 preserved view files under `trailbase/runtime/ahscripts/reports/sql/views/` (**deleted 2026-10-02**
 with the legacy view layer) are the legacy
 PocketBase SQL, carried over **untranslated**. They compare enum columns against **TEXT literals**,
 but [[trailbase-encode-enums-as-integer-codes]] made those columns `INTEGER` foreign keys into
@@ -102,7 +102,7 @@ Both were in the same files and both were silent. See [[report-enum-translation-
 
 ## Evidence
 
-- `trailbase/runtime/app/reports/sql/views/outstanding_summary.sql:28` — the TEXT filter, since
+- `trailbase/runtime/ahscripts/reports/sql/views/outstanding_summary.sql:28` — the TEXT filter, since
   fixed. File deleted 2026-10-02 with the legacy view layer.
 - `python` against `traildepot/data/main.db` — 0 rows on the TEXT filter, 25,967 on codes `1,2`.
 - `trailbase/tools/translate-enums.mjs` — 53 sites, 10 files, no leftovers (deleted 2026-10-02 with

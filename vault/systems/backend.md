@@ -110,7 +110,7 @@ Every one of them appeared as a *record type* in `frontend/src/app/api/pocketbas
 git on 2026-09-29** and is not recoverable from the working tree, only from history. That is why
 removing the views on the TrailBase side was a frontend-visible change, and it is also why
 [[tb-0013-rework-report-screens-without-views]] is now blocked rather than merely unfinished. Their
-arithmetic is reimplemented in `trailbase/runtime/app/compute/views.js` and
+arithmetic is reimplemented in `trailbase/runtime/ahscripts/compute/views.js` and
 `compute/reports.js`, documented in [[reports-and-ledgers]], and preserved verbatim as SQL
 in the parent-directory artefacts described in [[stale-schema-sql-paths]].
 
@@ -157,7 +157,7 @@ The value translations that must be applied:
 | `parties.company`, `order_bookers.company` (JSON arrays of ids) | one `party_companies` / `order_booker_companies` row per id |
 
 A working implementation of exactly this translation exists as the `import-from-v1` plugin,
-ported to the guest at `trailbase/runtime/app/plugins/import-from-v1/` (the Node copy at
+ported to the guest at `trailbase/runtime/ahscripts/plugins/import-from-v1/` (the Node copy at
 `frontend-ssr/plugins/import-from-v1/` was deleted with that app on 2026-09-27).
 
 > **Corrected 2026-10-06.** This paragraph used to end "…but it still drops

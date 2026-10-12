@@ -6,7 +6,7 @@
 // aggregation is the spooled report `supplysummary` (SQL), selected by the `invoices` list bind.
 (function () {
   (globalThis as any).GET = async (req: any) => {
-    const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();
+    const A = await (await (globalThis as any).__AA_LOAD__("/ahscripts/lib/context.js")).app();
     const routeKit = A.routeKit;
     const db = (globalThis as any).sqlite;
 
@@ -70,7 +70,7 @@
     };
 
     // The columns come from the page manifest — the single definition — not a second copy here.
-    const pageDef = await A.pages.readPage("/app/pages", "reports/supplysummary");
+    const pageDef = await A.pages.readPage("/ahscripts/pages", "reports/supplysummary");
     const columns = (pageDef && pageDef.columns) || [];
 
     const frame: any = {
@@ -121,11 +121,11 @@
         prevHref: page > 1 ? link("&page=" + (page - 1)) : null,
         nextHref: page < pageCount ? link("&page=" + (page + 1)) : null,
       };
-      const pageOut = await A.http.pageSpooled(req, shell, "reports/supplysummary.html.jinja", frame, [{ field: "rows", key: handle.key }]);
+      const pageOut = await A.http.pageSpooled(req, shell, "reports/supplysummary/page.html.jinja", frame, [{ field: "rows", key: handle.key }]);
       return { html: pageOut };
     }
 
-    const page = await A.http.page(req, shell, "reports/supplysummary.html.jinja", frame);
+    const page = await A.http.page(req, shell, "reports/supplysummary/page.html.jinja", frame);
     return { html: page };
   };
 })();

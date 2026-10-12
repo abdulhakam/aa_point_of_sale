@@ -2,7 +2,7 @@ use serde::Deserialize;
 use std::path::Path;
 use std::sync::OnceLock;
 
-/// The app's routing mode, read once at server start from `/app/config/app.config.json`.
+/// The app's routing mode, read once at server start from `/ahscripts/config/app.config.json`.
 ///
 /// Two modes, and the choice is the app's, not the host's:
 ///
@@ -43,7 +43,7 @@ impl Default for AppConfig {
     }
 }
 
-const CONFIG_PATH: &str = "/app/config/app.config.json";
+const CONFIG_PATH: &str = "/ahscripts/config/app.config.json";
 
 /// The raw shape on disk. Only `mode` is a closed set; `dispatcher` is a path, so it is a `String` and
 /// is validated by whether the file exists rather than by an enum.
