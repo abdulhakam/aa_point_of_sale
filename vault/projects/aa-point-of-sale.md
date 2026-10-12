@@ -3,7 +3,7 @@ title: AA Point of Sale
 type: project
 status: active
 created: 2026-09-26
-updated: 2026-10-06
+updated: 2026-10-12
 tags: [pos, erp, trade-and-distribution, programme]
 related_to: ["[[trailbase-migration]]"]
 ---
@@ -70,6 +70,10 @@ documents the value translation between them, and that translation is what
   [[smoke-count-is-not-a-hard-coded-number]]).
 - Guest report arithmetic cross-checked against the preserved PocketBase view SQL
   with hand-computed amounts — see [[reports-and-ledgers]].
+- The control panel ships as a **self-extracting single-file executable** — one `.exe` embeds
+  `trail.exe`, config, migrations, runtime, wasm and docs, extracts them next to itself on first
+  launch and seeds the depot; a payload-less dev build is unchanged. Built and end-to-end verified
+  2026-10-12 — see [[pos-0032-control-panel-sfx]], [[control-panel-is-a-self-extracting-executable]].
 
 **Not done**
 

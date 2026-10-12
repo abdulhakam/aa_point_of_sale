@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 
 	"aa-pos/controlpanel/internal/importer"
+	"aa-pos/controlpanel/internal/sfx"
 	"aa-pos/controlpanel/internal/ui"
 )
 
@@ -29,8 +30,44 @@ func main() {
 		sourceRoot = flag.String("source-root", "", "the trailbase dir holding runtime\\ and migrations\\ (GUI)")
 		screenshot = flag.String("screenshot", "", "render the GUI to a PNG and exit (headless check)")
 		tab        = flag.String("tab", "monitor", "initial tab: monitor or import")
+		sfxDir     = flag.String("sfx-dir", "", "where to extract the embedded payload (default: next to the exe)")
+		sfxForce   = flag.Bool("sfx", false, "force re-extraction of the embedded payload")
+		sfxOff     = flag.Bool("no-sfx", false, "ignore the embedded payload (run against loose files)")
 	)
 	flag.Parse()
+
+	// Self-extracting launcher: when this binary embeds the application payload,
+	// write it out (first run or after an upgrade), seed the depot, and point the
+	// server + importer at the extracted files. Without a payload this is a no-op
+	// and the panel behaves exactly as before.
+	if !*sfxOff && sfx.HasPayload() {
+		dir := *sfxDir
+		if dir == "" {
+			dir = sfx.DefaultDir()
+		}
+		if err := sfx.Ensure(dir, *sfxForce); err != nil {
+			fatal("extracting the application payload", err)
+		}
+		depotPath := *depot
+		if depotPath == "" {
+			depotPath = filepath.Join(dir, "traildepot")
+		}
+		if err := sfx.SeedDepot(dir, depotPath); err != nil {
+			fatal("preparing the depot", err)
+		}
+		if *depot == "" {
+			*depot = depotPath
+		}
+		if *trail == "./trail" {
+			*trail = filepath.Join(dir, "trail.exe")
+		}
+		if *sourceRoot == "" {
+			*sourceRoot = dir
+		}
+		if *dest == "" {
+			*dest = filepath.Join(*depot, "data", "main.db")
+		}
+	}
 
 	root := findRepoRoot()
 	if root == "" {
@@ -123,6 +160,16 @@ func runCLI(source, dest, user string, wipe, dryRun bool, limit int) int {
 		return 1
 	}
 	return 0
+}
+
+// fatal reports a startup failure the user can see: the process is built with
+// -H=windowsgui, so a console message would be invisible. It logs next to the
+// temp dir and shows a message box.
+func fatal(what string, err error) {
+	msg := fmt.Sprintf("AA Point of Sale could not start: %s failed.\n\n%v", what, err)
+	_ = os.WriteFile(filepath.Join(os.TempDir(), "aa-pos-error.log"), []byte(msg+"\n"), 0o644)
+	errorBox("AA Point of Sale", msg)
+	os.Exit(1)
 }
 
 // findRepoRoot walks up from the executable and the working directory looking

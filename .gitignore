@@ -68,3 +68,10 @@ p_data/
 
 # Local route-fingerprint baseline written by the snapshot tool.
 /.kilo/route-snapshot-baseline.txt
+
+# Staged self-extracting payload (trailbase/controlpanel/internal/sfx/payload).
+# It is assembled at build time by trailbase/sfx.ps1, embedded into the
+# single-file executable, and must never be tracked; the .gitkeep keeps the
+# embed pattern valid for a payload-less `go build`.
+/trailbase/controlpanel/internal/sfx/payload/*
+!/trailbase/controlpanel/internal/sfx/payload/.gitkeep

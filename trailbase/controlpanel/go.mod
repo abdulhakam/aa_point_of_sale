@@ -6,6 +6,7 @@ require (
 	github.com/go-gui-org/go-gui v0.86.0
 	github.com/mattn/go-sqlite3 v1.14.52
 	github.com/shirou/gopsutil/v4 v4.26.9
+	golang.org/x/sys v0.48.0
 )
 
 require (
@@ -28,6 +29,5 @@ require (
 	github.com/yuin/goldmark-emoji v1.0.6 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	golang.org/x/image v0.46.0 // indirect
-	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 )

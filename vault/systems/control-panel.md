@@ -3,10 +3,10 @@ title: Control panel (go-gui) — TrailBase monitor and importer GUI
 type: system
 status: experimental
 created: 2026-10-10
-updated: 2026-10-10
+updated: 2026-10-12
 locator: trailbase/controlpanel/
 tags: [pos, trailbase, gui, go, go-gui, importer, monitor, control-panel]
-related_to: ["[[trailbase]]", "[[v1-direct-import-tool]]", "[[control-panel-gui-is-pure-go]]", "[[pos-0030-control-panel-gui-importer]]", "[[go-module-proxy-blocked]]"]
+related_to: ["[[trailbase]]", "[[v1-direct-import-tool]]", "[[control-panel-gui-is-pure-go]]", "[[pos-0030-control-panel-gui-importer]]", "[[go-module-proxy-blocked]]", "[[pos-0032-control-panel-sfx]]", "[[control-panel-is-a-self-extracting-executable]]", "[[controlpanel-build-needs-cgo]]"]
 ---
 
 # Control panel (go-gui) — TrailBase monitor and importer GUI
@@ -54,16 +54,27 @@ destination's CHECK/DEFAULT clauses require. `--wipe` re-seeds the schema's
 
 ## Build and run
 
-Requires a C compiler for the SQLite driver. Working recipe (w64devkit fetched to
-`%USERPROFILE%\w64devkit`, `GOPROXY` to work around [[go-module-proxy-blocked]]):
+`build.bat` is the recipe. The SQLite driver (mattn/go-sqlite3) **requires cgo**,
+so it points `CC` at w64devkit, sets `CGO_ENABLED=1`, sets `GOPROXY` to work
+around [[go-module-proxy-blocked]], then builds the **GUI-subsystem, stripped**
+binary:
 
-```sh
-set CGO_ENABLED=1
-set CC=C:\Users\<user>\w64devkit\w64devkit\bin\gcc.exe
-set GOPROXY=https://goproxy.io,direct
-set GOSUMDB=off
-go build -o controlpanel.exe .          # run from trailbase/controlpanel
+```bat
+set "CC=%USERPROFILE%\w64devkit\w64devkit\bin\gcc.exe"
+set "CGO_ENABLED=1"
+go build -ldflags="-H=windowsgui -s -w" -o controlpanel.exe .
 ```
+
+`-H=windowsgui` suppresses the console window when the GUI is launched from
+Explorer; `-s -w` strips the symbol table and DWARF. `build.bat` refuses to run
+when no C compiler is found, because a plain `go build` with `CGO_ENABLED=0`
+still *compiles* (go-sqlite3 ships a `!cgo` stub in `static_mock.go`) and
+produces a `controlpanel.exe` whose **Import tab fails at runtime** — see
+[[controlpanel-build-needs-cgo]] for the evidence.
+
+Caveat of `-H=windowsgui`: the binary's `--cli`/`--screenshot` modes no longer
+attach to a console, so `--cli` prints nothing to a terminal. Use the exit code,
+or redirect output, or build a console-subsystem binary for CLI use.
 
 Flags: `--cli` (headless import, exit code 1 on errors), `--screenshot <png>`
 (render the window headlessly — used to verify the UI without a display),
@@ -72,6 +83,20 @@ Repo root is auto-detected (a directory holding both `trailbase` and
 `legacyforparity`), so the default source is
 `legacyforparity/backend/pb_data/data.db` and the default destination is
 `trailbase/traildepot/data/main.db`.
+
+## Self-extracting single file (SFX)
+
+`trailbase/sfx.ps1` builds a **single-file, self-extracting** variant: the panel embeds the whole
+runtime payload with `//go:embed all:payload` (staged from `trailbase\` into
+`controlpanel/internal/sfx/payload/`, then cleared). On launch the panel writes that payload next
+to the executable — or `%LOCALAPPDATA%\AA Point of Sale` when the exe directory is read-only —
+seeds `traildepot\` from it, and starts the server against the extracted files. It records the
+build version in `.aa-pos-payload`, so an upgraded build re-extracts and an unchanged one is
+skipped. New flags: `--sfx-dir` (target directory), `--sfx` (force re-extract), `--no-sfx` (ignore
+the payload). A payload-less `go build` reports `HasPayload() == false` and behaves exactly as
+before, so the dev workflow is unchanged. Because the payload is baked in, changing `trail.exe`,
+the wasm or `runtime/` means rebuilding the panel. See [[control-panel-is-a-self-extracting-executable]]
+and [[pos-0032-control-panel-sfx]].
 
 ## Verified behaviour (2026-10-10)
 
