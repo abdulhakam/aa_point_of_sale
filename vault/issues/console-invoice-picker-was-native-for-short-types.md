@@ -73,5 +73,7 @@ Headless Chrome against the production depot (12,791 invoices):
 ## Not done
 
 The search still matches a **substring** (`CAST(invoiceNo AS TEXT) LIKE '%digits%'`), which is
-non-sargable — a scan of the type per keystroke, debounced. Recorded already in
+non-sargable — a scan of the type per keystroke, debounced. **Resolved 2026-10-12** with
+`idx_invoices_type_invoiceno` on `("type", "invoiceNo")`: it makes the plain `LIKE` order-provided and
+early-terminating (`%3%` 10 ms → 0.35 ms) without dropping substring matching. See
 [[tb-0041-console-invoice-number-search]].

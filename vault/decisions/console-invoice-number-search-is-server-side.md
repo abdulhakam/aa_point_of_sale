@@ -3,7 +3,7 @@ title: "The console invoice-number picker searches on the server as you type"
 type: decision
 status: accepted
 created: 2026-10-11
-updated: 2026-10-11
+updated: 2026-10-12
 tags: [invoices, console, picker, search, decision, guest]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[console-invoice-picker-listed-only-newest-200]]", "[[why-some-selects-are-not-comboboxes]]", "[[reference-lists-come-from-indexeddb]]"]
@@ -45,3 +45,14 @@ search** the picker calls as the operator types digits:
 - The search is a **substring** match on the invoice number, so a middle fragment finds the invoice.
 - `refdb:select` remains the one mechanism by which any picker's options are refreshed, so this adds
   no new coordination with `autocomplete.js` — it reuses the event already used by `invoicedb.js`.
+
+## Update 2026-10-12 — the substring scan is now indexed
+
+The substring `LIKE` was non-sargable, so the plan was the type index plus a `TEMP B-TREE` for the
+`ORDER BY invoiceNo DESC` (a scan+sort of the type per keystroke). Migration
+`U1790800000__invoice_number_index.sql` adds `idx_invoices_type_invoiceno` on `("type", "invoiceNo")`;
+with `type` fixed, the index rows are in `invoiceNo` order, so the plain `LIKE` gets the order for
+free and stops at the 50-row `LIMIT`. Measured `%3%` **10 ms → 0.35 ms**; a rare `%12345%` ~2.7 ms.
+This **keeps the substring behaviour** above; a numeric `BETWEEN` prefix range was prototyped and
+rejected because it would drop middle-fragment matching for no meaningful gain. Details in
+[[tb-0041-console-invoice-number-search]].

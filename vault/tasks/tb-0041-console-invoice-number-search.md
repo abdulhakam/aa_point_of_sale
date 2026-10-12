@@ -36,8 +36,18 @@ one matching invoice; a headless load of `/invoices/new?type=1`, typing `3000`, 
 options with the match and the probe invoice was present and selectable. Reason and rejected
 alternatives: [[console-invoice-number-search-is-server-side]].
 
-## Not done
+## Not done → resolved 2026-10-12
 
-The endpoint matches by substring (`CAST(invoiceNo AS TEXT) LIKE '%digits%'`), which is non-sargable —
-a full scan of the type per keystroke (~12k rows, debounced). An indexed numeric prefix range would
-serve prefix search cheaply if middle-fragment matching is dropped (review suggestion, not applied).
+The endpoint matched by substring (`CAST(invoiceNo AS TEXT) LIKE '%digits%'`), which was non-sargable:
+the plan was `idx_invoices_type` (type only) plus a `TEMP B-TREE` for the `ORDER BY invoiceNo DESC`,
+i.e. a scan+sort of the type per keystroke.
+
+**Resolved with an index, not a prefix range.** Migration
+`U1790800000__invoice_number_index.sql` adds `idx_invoices_type_invoiceno` on `("type", "invoiceNo")`.
+With `type` fixed on the leading column the index rows are already in `invoiceNo` order, so the
+existing `LIKE` is served from the index with **no temp sort** and **early termination** at the 50-row
+`LIMIT`. Measured on a copy of the production `main.db`: `%3%` **10 ms → 0.35 ms**; a rare `%12345%`
+stays ~2.7 ms (index rows, not the wide table). A numeric `BETWEEN` prefix range was prototyped and
+rejected: it is a little faster on rare queries but **drops middle-fragment matching** (typing `0000`
+would no longer find `10000`), which this decision deliberately keeps. Endpoint wall time (`type=1`,
+warm) is unchanged at ~10 ms — HTTP plus the bounded totals query now dominate, not the scan.
