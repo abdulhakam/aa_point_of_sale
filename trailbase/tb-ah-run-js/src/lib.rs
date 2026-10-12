@@ -522,11 +522,10 @@ async fn wildcard_handler(mut req: Request) -> Result<Response, HttpError> {
                   if let Some(mut response) =
                       run_special("not-found", special_req(&req, clean_path, None)).await
                   {
-                      if let Ok(value) = HeaderValue::from_static("no_route_folder") {
-                          response
-                              .headers_mut()
-                              .insert(header::HeaderName::from_static("x-aa-not-found"), value);
-                      }
+                      response.headers_mut().insert(
+                          header::HeaderName::from_static("x-aa-not-found"),
+                          HeaderValue::from_static("no_route_folder"),
+                      );
                       return Ok(response);
                   }
                   // A DISTINCTIVE body, deliberately. The guest's own 404 is `text("Not found", 404)`

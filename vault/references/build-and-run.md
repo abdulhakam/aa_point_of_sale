@@ -186,6 +186,13 @@ robocopy trailbase\migrations trailbase\traildepot\migrations /MIR /NFL /NDL /NJ
 trail --depot=traildepot run --address=127.0.0.1:4000 --runtime-threads=4 --runtime-root-fs=traildepot\runtime
 ```
 
+- **Sync `wasm\` whenever the guest components were rebuilt.** A runtime/template change usually
+  needs `tb-ah-run-js.wasm` / `tb-ah-render-jinja.wasm` to move with it; a depot whose `runtime\` is
+  current but whose `wasm\` is not fails every render (the 2026-10-12 `template not found` outage,
+  [[runtime-refactor-shipped-unrebuilt-wasm]]). The control panel's Start now mirrors `wasm\` too
+  (as well as `runtime\` and `migrations\`), so its "Sync … before start" path cannot leave them
+  mismatched; a source root without a `wasm\` beside it (the source-tree layout, whose components
+  live in `traildepot\wasm`) is skipped rather than treated as an error.
 - **The restart is required for anything under `ahscripts/lib/`.** Modules are loaded once per QuickJS
   context and cached on `globalThis.__AA_MODS__`, so a new export only appears after a restart —
   otherwise the screen fails with `not a function` / `cannot read property … of undefined`. Edits to

@@ -254,18 +254,39 @@ func (c *Controller) initDepot(cfg Config) error {
 	return nil
 }
 
-// syncSources mirrors runtime\ and migrations\ into the depot, matching
+// syncSources mirrors runtime\, migrations\ and wasm\ into the depot, matching
 // RUN.BAT: runtime is mirrored but keeps the generated `vaulter-lite` store,
 // migrations are mirrored whole.
+//
+// wasm is mirrored on every start as well (when the source root provides it),
+// not only on first seed. A rebuilt guest component (tb-ah-run-js /
+// tb-ah-render-jinja) is the half of the app that a runtime/template change
+// most often needs to move in lockstep with; if only runtime\ were refreshed, a
+// depot seeded once would keep the previous engine and every route would fail
+// on the new layout (the 2026-10-12 `template not found` outage).
 func (c *Controller) syncSources(sourceRoot, depot string) error {
-	c.logf("syncing runtime\\ and migrations\\ into %s …", depot)
+	c.logf("syncing runtime\\, migrations\\ and wasm\\ into %s …", depot)
 	if err := mirrorDir(filepath.Join(sourceRoot, "runtime"), filepath.Join(depot, "runtime"), map[string]bool{"vaulter-lite": true}); err != nil {
 		return fmt.Errorf("sync runtime: %w", err)
 	}
 	if err := mirrorDir(filepath.Join(sourceRoot, "migrations"), filepath.Join(depot, "migrations"), nil); err != nil {
 		return fmt.Errorf("sync migrations: %w", err)
 	}
+	// The source layout (the panel run from trailbase\) keeps the compiled
+	// components in traildepot\wasm, not beside sourceRoot, so a missing wasm\
+	// under sourceRoot is not an error — the depot already holds them.
+	if src := filepath.Join(sourceRoot, "wasm"); dirExists(src) {
+		if err := mirrorDir(src, filepath.Join(depot, "wasm"), nil); err != nil {
+			return fmt.Errorf("sync wasm: %w", err)
+		}
+	}
 	return nil
+}
+
+// dirExists reports whether p is an existing directory.
+func dirExists(p string) bool {
+	st, err := os.Stat(p)
+	return err == nil && st.IsDir()
 }
 
 // mirrorDir copies src into dst, deleting files in dst not present in src

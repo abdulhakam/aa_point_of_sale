@@ -1,13 +1,13 @@
 ---
 title: "tb-0043 — Merge runtime/app into runtime/ahscripts and colocate route templates"
 type: task
-status: doing
+status: done
 priority: high
 created: 2026-10-12
 updated: 2026-10-12
 tags: [trailbase, runtime-js, layout, refactoring, templates, minijinja]
 belongs_to: "[[trailbase-migration]]"
-related_to: ["[[runtime-js-guest-platform]]", "[[trailbase]]", "[[build-and-run]]", "[[environment]]"]
+related_to: ["[[runtime-js-guest-platform]]", "[[trailbase]]", "[[build-and-run]]", "[[environment]]", "[[runtime-refactor-shipped-unrebuilt-wasm]]"]
 ---
 
 # tb-0043 — Merge `runtime/app` into `runtime/ahscripts` and colocate route templates
@@ -59,7 +59,10 @@ its own directives.
       the sibling `tb-ah-render-jinja` component's `render.rs` too
 - [x] Add `tools/template-check.mjs` and run it — **71 references / 56 templates, 0 misses**
 - [x] Update `.bat` drivers (wholesale `runtime\` copy needs none), `tools/*`, `README.md`, and the vault
-- [ ] **Operator**: rebuild the wasm (`build.bat`) and run `route-snapshot.mjs` + `guest-smoke.mjs`
+- [x] **Operator**: rebuild the wasm (`build.bat`) and verify the app boots — done 2026-10-12; the
+      first build exposed a compile error in the new `lib.rs`, and the deployed wasm had been stale.
+      See [[runtime-refactor-shipped-unrebuilt-wasm]]. `route-snapshot.mjs` re-baseline and
+      `guest-smoke.mjs` remain the shared operator gate tracked by [[tb-0044-special-pages]]
 
 ## What changed
 

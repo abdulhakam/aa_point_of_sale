@@ -74,7 +74,8 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 Added three optional reserved handlers the host dispatches: a no-route path runs `_not-found`, a
 thrown handler runs `_error` then `_global-error`, and a failed error handler falls back to a host
 page. `_`-prefixed route folders are private and never routed. Decision
-[[runtime-js-special-pages]], task [[tb-0044-special-pages]]. Awaits the operator's wasm rebuild.
+[[runtime-js-special-pages]], task [[tb-0044-special-pages]]. The wasm rebuild is done (2026-10-12);
+`route-snapshot.mjs` re-baseline and `guest-smoke.mjs` remain.
 
 **2026-10-12 — the runtime collapses to one `ahscripts/` root, templates colocated per route.**
 
@@ -84,7 +85,9 @@ but Jinja", with each route's template beside its handler. Done:
 templates moved into their route folders as `page.html.jinja`; the 14 genuinely shared files stayed
 under `ahscripts/views/`; the declarative pages stay a separate `ahscripts/pages/` tree (moving them
 into `routes/<slug>/` would shadow the `{key}` route folders). The renderer now searches
-`[routes, views, pages]`. Awaits the operator's wasm rebuild + `route-snapshot.mjs` / `guest-smoke.mjs`.
+`[routes, views, pages]`. The wasm was rebuilt and the app boots (2026-10-12) — the first build
+exposed a compile error in the new host `lib.rs` and the deployed components had been stale, so the
+app was 404ing every page until the rebuild; see [[runtime-refactor-shipped-unrebuilt-wasm]].
 
 **2026-10-11 — print-sheet column order, the console picker's missing invoices, and a distributable.**
 Four things, all operator-reported or operator-asked:

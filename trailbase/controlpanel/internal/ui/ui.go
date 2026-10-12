@@ -291,7 +291,7 @@ func monitorTab(w *gui.Window, a *App) []gui.View {
 				}),
 			}}),
 			gui.Checkbox(gui.ToggleCfg{
-				ID: "sync", Label: "Sync runtime + migrations before start", Selected: a.SyncSources,
+				ID: "sync", Label: "Sync runtime + migrations + wasm before start", Selected: a.SyncSources,
 				OnClick: func(ctx gui.EventCtx) {
 					state(ctx.Window).SyncSources = !state(ctx.Window).SyncSources
 					ctx.Consume()
