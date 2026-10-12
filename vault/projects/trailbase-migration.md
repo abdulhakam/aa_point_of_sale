@@ -90,6 +90,9 @@ Two of tb-0040's remainders, both verified in a real browser against the product
   now use `lifecycle.appendLine`/`removeLine`, the same money chain the console and the grid use; the
   two writers are removed from `invoicing.js` (its header/lease/complete writers remain until those are
   reconciled). `appendLine` adds item-id validation and `removeLine` checks ownership.
+- **Legacy report-table carve-outs re-verified.** All 11 report pages render real `<th>` and none
+  contains `BOX_SIZE_QTY` ([[parity-carve-outs-reconfirmed-2026-10-08]]) — the two defects the parity
+  mandate deliberately fixes rather than copies are confirmed absent; there is no gap to close.
 
 **2026-10-12 — tb-0044 verified; the guest-smoke logout check was stale.**
 

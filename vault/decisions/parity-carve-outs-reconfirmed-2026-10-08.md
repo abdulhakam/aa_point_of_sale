@@ -5,7 +5,7 @@ type: decision
 status: accepted
 decided_on: 2026-10-08
 created: 2026-10-08
-updated: 2026-10-08
+updated: 2026-10-12
 tags: [guest, ui, parity, legacy, decisions, reconfirmation]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[tb-0023-guest-feature-parity]]", "[[parity-reinstates-the-legacy-look-with-defect-fixes]]", "[[ui-parity-discrepancies-2026-10-08]]", "[[ui-parity-restyle-progress-2026-10-08]]", "[[guest-frontend-feature-parity-gaps]]"]
@@ -40,6 +40,14 @@ batch of dialogs on 2026-10-08. This note is the record of the answers; it narro
 "1-1 with legacy" now means: everything **except** the rows above is matched to the legacy
 captured/live rendering. The rows above are the complete, explicitly-ruled carve-out set; a new
 divergence is a defect until the owner rules on it.
+
+## Verified again 2026-10-12
+
+The two report-table carve-outs were re-checked against the live guest (production depot): all
+**11 report pages** render real `<th>` cells and **none** contains `BOX_SIZE_QTY` — the stock and
+difference reports show `Carton Size` (236 cells). `supplysummary` renders no table at all. So the
+`BOX_SIZE_QTY` / `<th>`-less legacy defects are confirmed **not copied**; there is no gap to close
+here, and reintroducing them would reverse this ruling.
 
 ## Related
 
