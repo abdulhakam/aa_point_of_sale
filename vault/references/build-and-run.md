@@ -86,11 +86,20 @@ aa            rem interactive menu
 aa run        rem trailbase\RUN.BAT
 aa build      rem trailbase\build.bat
 aa panel      rem trailbase\controlpanel\run.bat
+aa panelbuild rem trailbase\controlpanel\build.bat
 aa import     rem trailbase\import.bat (WIPES business tables)
 aa cleardb    rem trailbase\clear_db.bat
 aa devreset   rem trailbase\devreset.bat
-aa dist       rem trailbase\dist.bat
+aa dist       rem trailbase\dist.bat   (loose folder: panel + server + runtime)
+aa sfx        rem trailbase\sfx.bat    (one self-extracting aa-pos.exe)
+aa open       rem open http://127.0.0.1:4000
 ```
+
+`aa dist` and `aa sfx` are the two distributables and are separate on purpose: `dist` copies a
+prebuilt `controlpanel.exe` + `trail.exe` into a folder and needs no compiler; `sfx` rebuilds the
+panel with the whole payload embedded, so it needs cgo (a C compiler) and bakes in `runtime\` —
+changing `trail.exe`, the wasm or `runtime\` means rebuilding the sfx. Each has a `.bat` wrapper
+(`dist.bat`, `sfx.bat`) around its `.ps1`.
 
 `aa.bat` only dispatches to the scripts documented below; they still call each other
 (`devreset.bat` → `clear_db.bat`, `RUN.BAT` → `clear_db.bat`/`build.bat`) and remain the source

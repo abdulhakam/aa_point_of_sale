@@ -36,7 +36,7 @@ still behaves exactly as before, so the dev workflow is unchanged.
   tree. Startup failures route through `fatal()`, which logs to `%TEMP%\aa-pos-error.log` and
   shows a Windows message box (`fatal_windows.go`; `fatal_other.go` off Windows) because the
   binary is GUI-subsystem and has no console.
-- `trailbase/sfx.ps1` — stages the payload from `trailbase\`, builds with cgo and
+- `trailbase/sfx.ps1` (wrapped by `trailbase/sfx.bat` and exposed as `aa sfx`) — stages the payload from `trailbase\`, builds with cgo and
   `-ldflags "-H=windowsgui -s -w -X aa-pos/controlpanel/internal/sfx.Version=<stamp>"`, then
   clears the staged payload. `.gitignore` keeps `internal/sfx/payload/*` out of history while
   tracking the `.gitkeep` that keeps a payload-less build valid.
@@ -62,4 +62,5 @@ still behaves exactly as before, so the dev workflow is unchanged.
 - Any `trail.exe` / wasm / runtime change requires rebuilding the panel, since the payload is
   baked in.
 - `dist.ps1` still produces the loose multi-file distribution with `start.bat`; the SFX is a
-  parallel artifact. See [[control-panel]] and [[pos-0031-distributable-build]].
+  parallel artifact. Both are reachable from the launcher: `aa dist` (loose) and `aa sfx` (single
+  file). See [[control-panel]] and [[pos-0031-distributable-build]].

@@ -86,7 +86,8 @@ Repo root is auto-detected (a directory holding both `trailbase` and
 
 ## Self-extracting single file (SFX)
 
-`trailbase/sfx.ps1` builds a **single-file, self-extracting** variant: the panel embeds the whole
+`trailbase/sfx.ps1` (wrapped by `trailbase/sfx.bat`, reachable as `aa sfx`) builds a **single-file,
+self-extracting** variant: the panel embeds the whole
 runtime payload with `//go:embed all:payload` (staged from `trailbase\` into
 `controlpanel/internal/sfx/payload/`, then cleared). On launch the panel writes that payload next
 to the executable — or `%LOCALAPPDATA%\AA Point of Sale` when the exe directory is read-only —

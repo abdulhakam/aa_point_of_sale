@@ -10,8 +10,14 @@ rem   aa panelbuild   build the control panel binary       (trailbase\controlpan
 rem   aa import       import the v1 database (WIPES tables)(trailbase\import.bat)
 rem   aa cleardb      wipe the depot / reset the database  (trailbase\clear_db.bat)
 rem   aa devreset     reset the depot and re-place wasm    (trailbase\devreset.bat)
-rem   aa dist         build the distributable              (trailbase\dist.bat)
+rem   aa dist         build the loose distributable folder (trailbase\dist.bat)
+rem   aa sfx          build the single-file SFX (aa-pos.exe)(trailbase\sfx.bat)
 rem   aa open         open the running app in a browser
+rem
+rem `aa dist` and `aa sfx` are the two distributables and are kept separate on purpose:
+rem dist copies a prebuilt panel + server into a folder (no compiler needed); sfx rebuilds
+rem the panel with the whole payload embedded, so it needs cgo (a C compiler) and bakes in
+rem runtime\; changing trail.exe, the wasm or runtime\ means rebuilding the sfx.
 rem
 rem The individual scripts are kept: they call each other (devreset -> clear_db,
 rem RUN.BAT -> clear_db/build.bat) and are referenced by the docs. This file only
@@ -29,6 +35,7 @@ if /i "%~1"=="import"     ( call "%TB%\import.bat"     & exit /b !errorlevel! )
 if /i "%~1"=="cleardb"    ( call "%TB%\clear_db.bat"   & exit /b !errorlevel! )
 if /i "%~1"=="devreset"   ( call "%TB%\devreset.bat"   & exit /b !errorlevel! )
 if /i "%~1"=="dist"       ( call "%TB%\dist.bat"       & exit /b !errorlevel! )
+if /i "%~1"=="sfx"        ( call "%TB%\sfx.bat"        & exit /b !errorlevel! )
 if /i "%~1"=="open"       ( start "" http://127.0.0.1:4000/ & exit /b 0 )
 if /i "%~1"=="help"       ( call :usage & exit /b 0 )
 if not "%~1"==""          ( echo Unknown task: %~1 & echo. & call :usage & exit /b 1 )
@@ -49,7 +56,8 @@ if "%choice%"=="5" call "%TB%\clear_db.bat"
 if "%choice%"=="6" call "%TB%\devreset.bat"
 if "%choice%"=="7" call "%TB%\dist.bat"
 if "%choice%"=="8" call "%TB%\controlpanel\build.bat"
-if "%choice%"=="9" start "" http://127.0.0.1:4000/
+if "%choice%"=="9" call "%TB%\sfx.bat"
+if "%choice%"=="10" start "" http://127.0.0.1:4000/
 if "%choice%"=="0" exit /b 0
 echo.
 pause
@@ -63,7 +71,8 @@ echo.
 echo   [1] Build guest wasm components     [2] Start the server
 echo   [3] Run the control panel GUI       [4] Import v1 database (WIPES)
 echo   [5] Clear depot / reset database    [6] Dev reset + import
-echo   [7] Build the distributable         [8] Build the control panel
-echo   [9] Open the app in a browser       [0] Exit
+echo   [7] Build distributable (loose)     [8] Build the control panel
+echo   [9] Build single-file SFX (aa-pos)  [10] Open the app in a browser
+echo   [0] Exit
 echo.
 goto :eof

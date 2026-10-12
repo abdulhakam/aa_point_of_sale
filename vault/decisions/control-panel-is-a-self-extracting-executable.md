@@ -26,7 +26,8 @@ siblings. This is a distribution decision, not a change to how the server runs.
 3. starts the server and drives the importer against those paths as usual.
 
 The embedded payload is optional to the code: a payload-less `go build` leaves `HasPayload()`
-false and the panel behaves as before. The build step that stages the payload is `trailbase/sfx.ps1`.
+false and the panel behaves as before. The build step that stages the payload is `trailbase/sfx.ps1`
+(wrapped by `trailbase/sfx.bat`, exposed as `aa sfx`).
 
 ## Why this, over the loose distribution
 
