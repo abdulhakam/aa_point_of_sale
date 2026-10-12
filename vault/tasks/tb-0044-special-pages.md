@@ -1,7 +1,7 @@
 ---
 title: "tb-0044 — optional error, global-error and not-found pages"
 type: task
-status: doing
+status: done
 priority: medium
 created: 2026-10-12
 updated: 2026-10-12
@@ -48,9 +48,9 @@ layout change. Decision and rationale: [[runtime-js-special-pages]].
 - [x] App: the three handlers + templates
 - [x] `route-coverage.mjs` header handling
 - [x] Vault: decision + this task + system note
-- [ ] **Operator**: `build.bat` done 2026-10-12 (see [[runtime-refactor-shipped-unrebuilt-wasm]]);
-      still to run `route-snapshot.mjs` (re-baseline the 5 negative probes — they
-      now answer an HTML 404) and `guest-smoke.mjs`
+- [x] **Operator**: `build.bat` done 2026-10-12 (see [[runtime-refactor-shipped-unrebuilt-wasm]]);
+      `route-snapshot.mjs` re-run (**50 routes, 0 erroring** — the unknown-route probes now answer an
+      HTML 404) and `guest-smoke.mjs` (**117/117**) against a throw-away depot, 2026-10-12
 
 ## Verification
 

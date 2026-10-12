@@ -69,6 +69,16 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-12 — tb-0044 verified; the guest-smoke logout check was stale.**
+
+The optional `_not-found` / `_error` / `_global-error` handlers ([[tb-0044-special-pages]]) are now
+verified end-to-end against a throw-away depot: `route-snapshot.mjs` **50 routes / 0 erroring** (the
+unknown-route probes answer an HTML 404 instead of the host's JSON) and `guest-smoke.mjs` **117/117**.
+The smoke run surfaced that its logout assertion still expected the pre-fix `/_/auth/logout` redirect,
+and because the cookie jar drops the cleared cookies five later authenticated checks were failing too;
+the harness now asserts `303 → /login`, checks the session is gone, and signs back in
+([[logout-left-the-session-live]]).
+
 **2026-10-12 — invoice-view field styles, and the invoice-# picker for short types.**
 
 Owner-reported: "fix the styles of some of the input fields … invoice views" and "make it so the

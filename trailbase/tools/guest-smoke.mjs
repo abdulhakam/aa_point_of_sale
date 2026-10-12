@@ -651,7 +651,21 @@ async function main() {
     check("unknown route is 404", unknownRoute.status === 404, `${unknownRoute.status}`);
 
     const logout = await get(cookies, "/logout");
-    check("logout redirects to TrailBase's auth endpoint", (logout.status === 302 || logout.status === 303) && String(logout.location).includes("auth"), `${logout.status} ${logout.location}`);
+    // /logout answers 303 -> the app's own /login and clears both auth cookies. The old version
+    // redirected to the host's `/_/auth/logout` (which does not exist) and cleared nothing; that was
+    // fixed and is recorded in [[logout-left-the-session-live]]. This check asserted the OLD
+    // behaviour ("...includes auth") and so had been failing since that fix.
+    check("logout returns to /login", (logout.status === 302 || logout.status === 303) && String(logout.location).startsWith("/login"), `${logout.status} ${logout.location}`);
+    const afterLogout = await get(cookies, "/dashboard");
+    check(
+      "...and the session is gone (dashboard redirects to /login)",
+      (afterLogout.status === 302 || afterLogout.status === 303) && String(afterLogout.location).startsWith("/login"),
+      `${afterLogout.status} ${afterLogout.location}`
+    );
+
+    // The logout check ended the session; sign back in for the rest of the suite (the jar dropped the
+    // cleared cookies, so without this every later authenticated request would 303 to /login).
+    await postForm(cookies, "/login", { email: trail.email, password: trail.password, next: "/dashboard" });
 
     // Preset expansion (app/manifests/page-presets.json): a page's `filters`/`columns` array may name a
     // preset, which `normalizeMeta` expands. A wrong preset name or a broken expansion would NOT fail a

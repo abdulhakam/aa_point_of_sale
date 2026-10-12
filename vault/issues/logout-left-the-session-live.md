@@ -4,7 +4,7 @@ type: issue
 status: fixed
 severity: major
 created: 2026-10-11
-updated: 2026-10-11
+updated: 2026-10-12
 tags: [auth, logout, session, cookies, guest, security]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[api-contract-trailbase]]", "[[tb-0036-htmx-navigation]]"]
@@ -56,3 +56,11 @@ Verified 2026-10-11 against the local server: `POST /logout` → **303, Location
 
 The access token is left to expire (1 h); only the refresh token is revoked server-side. Acceptable for
 a browser logout, but a server-side session list would let the access token be cut immediately.
+
+## Harness (fixed 2026-10-12)
+
+`tools/guest-smoke.mjs` still asserted the OLD behaviour — that `/logout` redirected to a location
+containing `auth` — so it had been failing since the 2026-10-11 fix, and because the jar drops the
+cleared cookies every later authenticated check then got a `303`. The check now asserts `303 → /login`,
+adds "…and the session is gone" (`/dashboard` → `303 /login`), and signs back in so the rest of the
+suite runs authenticated. Guest smoke: **117/117**.
