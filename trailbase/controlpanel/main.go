@@ -25,7 +25,7 @@ func main() {
 		limit      = flag.Int("limit", 0, "import at most N rows per collection (testing)")
 		depot      = flag.String("depot", "", "TrailBase depot directory (GUI)")
 		address    = flag.String("address", "127.0.0.1:4000", "bind address (GUI)")
-		trail      = flag.String("trail", "trail", "path to the trail binary (GUI)")
+		trail      = flag.String("trail", "./trail", "path to the trail binary (GUI)")
 		sourceRoot = flag.String("source-root", "", "the trailbase dir holding runtime\\ and migrations\\ (GUI)")
 		screenshot = flag.String("screenshot", "", "render the GUI to a PNG and exit (headless check)")
 		tab        = flag.String("tab", "monitor", "initial tab: monitor or import")
