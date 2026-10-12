@@ -79,18 +79,35 @@ const LINE_COLUMNS = [
 
 const PAYMENT_COLUMNS = ["id", "amount", "paid", "payment_date", "description", "type", "partyName", "paidTo"];
 
+/**
+ * The per-invoice **line total**: Σ round2(line total), the same line arithmetic
+ * `compute/views.js` uses, so a screen and the reports cannot disagree. Exported so the
+ * invoice-number search (`routes/data/invoices/search`) computes the same figure the list and the
+ * console picker do, from ONE definition rather than a second copy that can drift.
+ */
+export const LINE_TOTAL_SUM_SQL =
+  'ROUND(SUM(ROUND((("qty" * "price") * (1 - COALESCE("discount_1", 0) / 100.0) * (1 - COALESCE("discount_2", 0) / 100.0)) - COALESCE("discount_rs", 0), 2)), 2)';
+
+/**
+ * The **header total** of an invoice `i`, from a joined line total `t.total`: the line sum, then the
+ * header's percent discounts and its rupee discount. Exported with `LINE_TOTAL_SUM_SQL` so the list,
+ * the console picker and the number search share one definition.
+ */
+export const HEADER_TOTAL_SQL =
+  'ROUND(COALESCE(t.total, 0) * (1 - COALESCE(i."discount_1", 0) / 100.0) * (1 - COALESCE(i."discount_2", 0) / 100.0) - COALESCE(i."discount_rs", 0), 2)';
+
 const LIST_SQL =
   'SELECT i."id" AS id, i."type" AS type, i."invoiceNo" AS invoiceNo, i."dated" AS dated, ' +
   'i."completed" AS completed, i."deleted" AS deleted, i."discount_1" AS discount_1, ' +
   'i."discount_rs" AS discount_rs, pa."name" AS partyName, bo."name" AS bookerName, ' +
   // Σ round2(line total) — the same line arithmetic `compute/views.js` uses, so this screen and
   // the reports cannot disagree — then the header's percent discounts and its rupee discount.
-  'ROUND(COALESCE(t.total, 0) * (1 - COALESCE(i."discount_1", 0) / 100.0) * (1 - COALESCE(i."discount_2", 0) / 100.0) - COALESCE(i."discount_rs", 0), 2) AS total, ' +
+  HEADER_TOTAL_SQL + ' AS total, ' +
   'COALESCE(p.paid, 0) AS paid ' +
   'FROM invoices i ' +
   'LEFT JOIN parties pa ON pa."id" = i."party" ' +
   'LEFT JOIN order_bookers bo ON bo."id" = i."booker" ' +
-  'LEFT JOIN (SELECT "invoice", ROUND(SUM(ROUND((("qty" * "price") * (1 - COALESCE("discount_1", 0) / 100.0) * (1 - COALESCE("discount_2", 0) / 100.0)) - COALESCE("discount_rs", 0), 2)), 2) AS total ' +
+  'LEFT JOIN (SELECT "invoice", ' + LINE_TOTAL_SUM_SQL + ' AS total ' +
   '          FROM transactions WHERE "deleted" = 0 GROUP BY "invoice") t ON t."invoice" = i."id" ' +
   // Only settled rows count as paid: a `paid = 0` row against an invoice is the ledger's *invoice*
   // side (`buildLedgerJournal` in `compute/views.js`), not money received. In the imported depot

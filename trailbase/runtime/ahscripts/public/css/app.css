@@ -211,7 +211,13 @@ aa-live-time { display: block; }
 
 .field { display: flex; flex-direction: column; gap: 4px; }
 .field > span { font-size: 0.875rem; color: var(--black); }
-.field input, .field select {
+/* The invoice entry bar and the console use `.ih-field` rather than `.field`, so the same control
+   styling has to be applied to both. Without this the plain text/number/select controls in an
+   invoice view fell back to the browser default (a 21px `2px inset` box, radius 0), while the
+   `<aa-date-input>` and the searchable comboboxes beside them were styled (36px, 8px radius, flat
+   1px border) — visibly mismatched fields on the same row. */
+.field input, .field select,
+.ih-field input, .ih-field select {
   font: inherit;
   font-size: 0.875rem;
   height: 36px;
@@ -223,7 +229,10 @@ aa-live-time { display: block; }
   min-width: 10rem;
 }
 .field select[multiple] { height: auto; padding: 4px; min-width: 12rem; }
-.field input:focus, .field select:focus { outline: none; border-color: var(--blue-6); }
+.field input:focus, .field select:focus,
+.ih-field input:focus, .ih-field select:focus { outline: none; border-color: var(--blue-6); }
+.ih-field { display: flex; flex-direction: column; gap: 4px; }
+.ih-field > span { font-size: 0.875rem; color: var(--black); }
 .field.check { flex-direction: row; align-items: center; gap: 8px; }
 .field.check input { min-width: 0; height: auto; }
 .field.check > span { font-size: 0.875rem; }
@@ -457,8 +466,10 @@ table.grid select { min-width: 12rem; }
   .filters .field.check, .entity-form .field.check { flex-direction: row; align-items: center; gap: 8px; }
   /* The full-width rule above would stretch a checkbox across the row and push its label away. */
   .field.check input[type="checkbox"] { width: 24px; height: 24px; flex: 0 0 24px; min-height: 24px; }
-  .field input, .field select { width: 100%; min-width: 0; height: 44px; font-size: 1rem; }
-  .field > span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
+  .field input, .field select,
+  .ih-field input, .ih-field select { width: 100%; min-width: 0; height: 44px; font-size: 1rem; }
+  .field > span,
+  .ih-field > span { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--muted); }
   .filter-actions { margin-left: 0; width: 100%; }
   .filter-actions .btn { flex: 1; }
   /* The report's row filter is a thumb-sized single control on its own row under 768px. */

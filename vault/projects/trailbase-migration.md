@@ -69,6 +69,27 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-12 — invoice-view field styles, and the invoice-# picker for short types.**
+
+Owner-reported: "fix the styles of some of the input fields … invoice views" and "make it so the
+dropdowns for invoice numbers show the full list … still not loading the invoice list properly when I
+enter the invoice numbers." Three fixes, verified in headless Chrome against the production depot:
+
+1. **The plain invoice-bar controls were unstyled.** `.ih-field` (used only by the invoice entry view
+   and the console) had no base rule, so its text/number/select controls fell back to the browser
+   default (21px, `2px inset`, radius 0) beside the styled `<aa-date-input>` and comboboxes. The
+   `.field` control styling now covers `.ih-field` too. [[invoice-view-ih-field-controls-unstyled]].
+2. **The console invoice-# picker was a native select for any type with fewer than `MIN_OPTIONS`
+   (12) invoices** (type 3 "difference" has 2), so `invoice-remote.js` never found a combobox input
+   and typing did nothing. The picker now opts into `data-force-combo`. Also hardened
+   `invoice-remote.js` to normalise a non-digit query (`#3000`) so the combobox no longer reported
+   "No match" for a row the server had just returned.
+3. **The opened picker showed only the first 50** of its server-rendered rows; it now renders the
+   full 200 (`data-ac-limit`), and a searched option reads identically to a resting one
+   (`#no · party · date · total`). [[console-invoice-picker-was-native-for-short-types]].
+
+Task [[tb-0045-invoice-view-fields-and-picker]]. `tools/invoice-view-check.mjs` passes in full.
+
 **2026-10-12 — optional `_not-found` / `_error` / `_global-error` pages (Next.js-style).**
 
 Added three optional reserved handlers the host dispatches: a no-route path runs `_not-found`, a

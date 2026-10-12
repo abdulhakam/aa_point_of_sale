@@ -136,8 +136,10 @@
       return at === 0 ? 0 : 1 + at;
     }
 
-    /** The most options rendered at once. 943 parties is fine as an array and absurd as DOM. */
-    var MAX_RENDERED = 50;
+    /** The most options rendered at once. 943 parties is fine as an array and absurd as DOM. A control
+     *  can raise its own cap with `data-ac-limit` (the console invoice-# picker asks for its whole
+     *  200-row server list, so opening it browses the full set rather than the first 50). */
+    var MAX_RENDERED = Math.max(1, Number(select.getAttribute("data-ac-limit")) || 50);
 
     function filter() {
       var needle = typedQuery().toLowerCase().trim();

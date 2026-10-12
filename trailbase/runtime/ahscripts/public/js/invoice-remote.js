@@ -24,7 +24,12 @@
       var inv = list[i];
       var o = document.createElement("option");
       o.value = inv.id;
-      o.textContent = "#" + inv.invoiceNo + (inv.partyName ? " \u00b7 " + inv.partyName : "");
+      // Same shape as the server-rendered options (`lib/invoices.js` consoleView): number · party ·
+      // date · total, so a searched option reads identically to a resting one.
+      o.textContent = "#" + inv.invoiceNo +
+        " \u00b7 " + (inv.partyName || "No party") +
+        (inv.dated ? " \u00b7 " + inv.dated : "") +
+        (inv.totalText ? " \u00b7 " + inv.totalText : "");
       frag.appendChild(o);
     }
     return frag;
@@ -74,6 +79,11 @@
             if (mine !== seq) return; // a newer keystroke superseded this response
             if (restingHTML === null) restingHTML = select.innerHTML;
             rebuild(select, (p && p.invoices) || []);
+            // The endpoint matched on the DIGITS in the box; `autocomplete.js` filters the replacement
+            // options on the box's raw text. If the operator typed a non-digit (e.g. `#3000`), the two
+            // needles disagree and the control showed "No match" for a row the server had just returned.
+            // Normalise the box to the digits that were matched, before telling the combobox to re-read.
+            if (input.value !== digits) input.value = digits;
             sync();
           })
           .catch(function () { /* keep the previous list; the operator can retype */ });

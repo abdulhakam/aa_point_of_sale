@@ -3,7 +3,7 @@ title: "Why some selects are not searchable comboboxes (and the reported cases)"
 type: note
 status: current
 created: 2026-10-09
-updated: 2026-10-09
+updated: 2026-10-12
 tags: [guest, ui, autocomplete, filters, reports, frontend]
 belongs_to: "[[trailbase-migration]]"
 related_to: ["[[features-as-native-web-components]]", "[[runtime-js-guest-platform]]", "[[print-queue-no-cross-context-sync]]"]
@@ -20,11 +20,20 @@ A report that "the invoice/dropdown isn't a searchable select". Investigated 202
 limits:
 
 - **`MIN_OPTIONS = 12`** — a select with fewer than 12 real options is left a **native select** ("a
-  combobox that filters four bookers is theatre"). Blank options are dropped before counting.
+  combobox that filters four bookers is theatre"). Blank options are dropped before counting. A
+  control can override this with **`data-force-combo`** where its keyboard codes need the text box.
 - **`MAX_RENDERED = 50`** — the open list renders at most 50 rows until you type; typing filters the
-  **whole** option list, not just the rendered 50.
+  **whole** option list, not just the rendered 50. A control can raise its own cap with
+  **`data-ac-limit="N"`**.
 
 A select must also actually be a `select[data-searchable]`. A field declared as text is a text box.
+
+**Update 2026-10-12.** The console invoice-# picker *was* a real defect at the `MIN_OPTIONS` boundary:
+it renders one type's newest rows, so type 3 ("difference", 2 invoices) fell below 12 and stayed a
+native select — and the server-side number search (`invoice-remote.js`) drives the combobox's
+`.ac-input`, so typing did nothing. It now opts into `data-force-combo` (always a combobox) and
+`data-ac-limit="200"`; see [[console-invoice-picker-was-native-for-short-types]]. The rule above still
+holds for the smaller reference selects (four bookers stays native).
 
 ## The reported cases (verified live 2026-10-09)
 

@@ -32,7 +32,7 @@
 <form class="console-pick" method="get" action="/invoices/new" data-console-pick>
   <input type="hidden" name="type" value="{{ type }}">
   <label class="ih-field"><span>INVOICE #</span>
-    <select name="invoice" data-searchable data-console-picker data-invoice-remote="/data/invoices/search?type={{ type }}" aria-label="Invoice number">
+    <select name="invoice" data-searchable data-force-combo data-ac-limit="200" data-console-picker data-invoice-remote="/data/invoices/search?type={{ type }}" aria-label="Invoice number">
       <option value=""{% if isNew %} selected{% endif %}>NEW</option>
       {% for p in picker %}
       <option value="{{ p.id }}"{% if invoice and invoice.id == p.id %} selected{% endif %}>{{ p.label }}</option>
