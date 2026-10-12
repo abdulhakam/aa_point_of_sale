@@ -36,7 +36,13 @@ Rebuild the guest invoice screen as one keyboard-first surface (the plan
       not exit, and Enter would not advance past an enhanced combobox — all fixed;
       [[console-keyboard-defects-found-by-the-gate]]. Gate 13/13, and `autocomplete-check` 39/39,
       `hotkey-check` 62/62, `guest-smoke` 117/117, `route-snapshot` 50/0 after.
-- [ ] Retire `invoicing.js`'s line writers in favour of `invoice-lifecycle.js` (the two still coexist).
+- [x] Retire `invoicing.js`'s line writers in favour of `invoice-lifecycle.js` (the two still coexist).
+      Done 2026-10-12: the four callers of `invoicing.addLine` / `invoicing.deleteLine`
+      (`/invoice/<id>/line`, `/invoices/<id>/line`, and the two line-delete routes) now use
+      `lifecycle.appendLine` / `lifecycle.removeLine`, the same money chain the console and the grid
+      use. The two writers were removed from `invoicing.js`; its header/lease/complete writers stay
+      for the older entry/JSON routes until those are reconciled too. `appendLine` adds item-id
+      validation and `removeLine` checks the line belongs to the invoice.
 - [x] Composite party `label` through `refdb.js`'s option spec so it survives a version-change
       rebuild. Done 2026-10-12: `/data/refs` projects parties with the server's
       `A.invoices.partyLabel` (`name - area - section`) and `spec.parties = { label: "label" }`;

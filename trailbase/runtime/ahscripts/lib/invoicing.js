@@ -140,41 +140,17 @@ export async function patchHeader(db, invoiceHex, patch) {
   return db.execute(`UPDATE "invoices" SET ${sets.join(", ")} WHERE "id" = unhex(?)`, params);
 }
 
-/** Add a line, idempotent on the client's op key. Returns the line's hex id. */
-export async function addLine(db, invoiceHex, line, opKey) {
-  if (opKey) {
-    const seen = await db.all('SELECT hex("line") AS hx FROM "invoice_line_op" WHERE "key" = ?', [opKey]);
-    if (seen && seen.length) return await base64Id(db, "transactions", seen[0][0]);
-  }
-  const lineHex = await uuidHex(db);
-  await db.execute(
-    'INSERT INTO "transactions" ("id", "invoice", "item", "qty", "price", "cost_price", "discount_1", "discount_2", "discount_rs", "scheme") ' +
-      "VALUES (unhex(?), unhex(?), unhex(?), CAST(? AS REAL), CAST(? AS REAL), CAST(? AS REAL), CAST(? AS REAL), CAST(? AS REAL), CAST(? AS REAL), CAST(? AS REAL))",
-    [
-      lineHex,
-      invoiceHex,
-      base64ToHex(line.item),
-      money(line.qty),
-      money(line.price),
-      money(line.cost_price),
-      money(line.discount_1),
-      money(line.discount_2),
-      money(line.discount_rs),
-      money(line.scheme),
-    ]
-  );
-  if (opKey) {
-    await db.execute('INSERT OR IGNORE INTO "invoice_line_op" ("key", "line") VALUES (?, unhex(?))', [
-      opKey,
-      lineHex,
-    ]);
-  }
-  return await base64Id(db, "transactions", lineHex);
-}
-
-export async function deleteLine(db, lineHex) {
-  return db.execute('DELETE FROM "transactions" WHERE "id" = unhex(?)', [lineHex]);
-}
+// ---------------------------------------------------------------------------
+// Line writers retired 2026-10-12 (tb-0040).
+//
+// The line add/remove lived here as `addLine`/`deleteLine`. Every caller now goes through the
+// CANONICAL `invoice-lifecycle.js` `appendLine`/`removeLine`, the same money chain the keyboard
+// console and the grid use, so the two cannot write different numbers. `appendLine` additionally
+// validates the item id (a 400 with a message instead of a raw constraint error) and `removeLine`
+// checks the line belongs to the invoice and honours an op key — neither of which this copy had.
+// Nothing here writes lines any more; the header/lease/complete writers below stay for the older
+// entry and JSON routes until those are reconciled too.
+// ---------------------------------------------------------------------------
 
 /**
  * Release the lease once the operator is done with the invoice.

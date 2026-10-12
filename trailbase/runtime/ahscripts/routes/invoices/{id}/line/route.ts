@@ -42,7 +42,7 @@
       const linePrice = createdItem
         ? (priceIsUnset ? String(price) : submittedPrice)
         : (submittedPrice === "" ? String(price) : submittedPrice);
-      await A.invoicing.addLine(
+      await A.lifecycle.appendLine(
         db,
         hex,
         {

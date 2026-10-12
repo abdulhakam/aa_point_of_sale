@@ -34,7 +34,7 @@
     } else {
       if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return routeKit.locked();
       await routeKit.write(async () => {
-        await A.invoicing.deleteLine(db, lineHex);
+        await A.lifecycle.removeLine(db, hex, lineHex, "");
       });
     }
     // htmx write: re-render the screen that made it.

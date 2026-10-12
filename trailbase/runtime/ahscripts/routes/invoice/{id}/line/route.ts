@@ -14,7 +14,7 @@
     const hex = routeKit.b64ToHex(match[1]);
     const userHex = routeKit.userHex(req);
     if (!(await A.invoicing.takeLock(db, hex, userHex, String(body.device || "")))) return routeKit.locked();
-    const line = await routeKit.write(() => A.invoicing.addLine(db, hex, body, body.opKey));
+    const line = await routeKit.write(() => A.lifecycle.appendLine(db, hex, body, body.opKey));
     return { line };
   };
 })();

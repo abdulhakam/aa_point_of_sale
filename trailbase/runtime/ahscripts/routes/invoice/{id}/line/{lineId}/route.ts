@@ -43,7 +43,7 @@
     const hex = routeKit.b64ToHex(match[1]);
     const userHex = routeKit.userHex(req);
     if (!(await A.invoicing.takeLock(db, hex, userHex, ""))) return routeKit.locked();
-    const deleted = await routeKit.write(() => A.invoicing.deleteLine(db, routeKit.b64ToHex(match[2])));
+    const deleted = await routeKit.write(() => A.lifecycle.removeLine(db, hex, routeKit.b64ToHex(match[2]), ""));
     return { deleted };
   };
 })();

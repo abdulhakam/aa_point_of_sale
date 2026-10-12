@@ -86,6 +86,10 @@ Two of tb-0040's remainders, both verified in a real browser against the product
   returns the same label, and `refdb.js` falls back to `name` for a partial row. `refdb-check` 12/12.
 - `refdb-check`, `autocomplete-check` and `hotkey-check` gained an optional `--cookie`, so a browser
   gate can run against a depot whose admin password is not the scaffold default.
+- **`invoicing.js`'s line writers are retired.** The four callers of `invoicing.addLine`/`deleteLine`
+  now use `lifecycle.appendLine`/`removeLine`, the same money chain the console and the grid use; the
+  two writers are removed from `invoicing.js` (its header/lease/complete writers remain until those are
+  reconciled). `appendLine` adds item-id validation and `removeLine` checks ownership.
 
 **2026-10-12 — tb-0044 verified; the guest-smoke logout check was stale.**
 
