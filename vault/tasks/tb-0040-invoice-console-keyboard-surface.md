@@ -17,7 +17,7 @@ Rebuild the guest invoice screen as one keyboard-first surface (the plan
 
 ## Done (2026-10-10)
 
-- [x] `views/invoices/console.html` + `components/invoice-view.js` (`<aa-invoice-view>`) +
+- [x] `views/invoices/console.html.jinja` + `components/invoice-view.js` (`<aa-invoice-view>`) +
       `components/item-search.js` (`<aa-item-search>`) at `GET /invoices/new?type=N` / `?invoice=<id>`.
 - [x] Backend: fragment create on `POST /invoices/new`; `PATCH /invoice/<id>/line/<lineId>` via
       `lifecycle.editLine`; `buildSheetFresh` + `?source=live`; composite party `label`;

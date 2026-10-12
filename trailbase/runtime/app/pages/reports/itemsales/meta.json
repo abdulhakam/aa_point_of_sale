@@ -1,6 +1,6 @@
 {
   "title": "Item Sales Report",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "hub": {
     "title": "Item Sales Report",
     "target": "itemsales",

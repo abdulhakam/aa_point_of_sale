@@ -15,7 +15,7 @@ related_to: ["[[runtime-js-guest-platform]]", "[[features-as-native-web-componen
 ## Context
 
 The guest renders every page server-side through minijinja, one template per route, each extending
-`views/layout.html` (`runtime-js-guest-platform`, `trailbase-declarative-page-host`). A normal
+`views/layout.html.jinja` (`runtime-js-guest-platform`, `trailbase-declarative-page-host`). A normal
 navigation is a full document: doctype, head, topbar, nav, the `#app-main` body, and eight deferred
 `<script>` tags — re-rendered and re-parsed on every click even though only the body changed.
 
@@ -29,7 +29,7 @@ htmx is an evolution — the app is already HTML-over-the-wire, and a fragment i
 **Navigation is htmx `hx-boost`, and the server answers a boosted request with the body block only.**
 
 - **Vendored, not CDN.** `app/public/js/htmx.min.js` (2.0.4) — the deployment is offline.
-- **The shell renders once.** `views/layout.html` wraps everything except `{% block body %}` in
+- **The shell renders once.** `views/layout.html.jinja` wraps everything except `{% block body %}` in
   `{% if not fragment %}`. `fragment` comes from `app/lib/http.js` `isFragment(req)`.
 - **The swap target is `#app-main`**, so a boosted nav click replaces the body and leaves the topbar,
   nav, head and script tags untouched.
@@ -149,8 +149,8 @@ which carried `data-ac-ready="1"`, proving the `afterSwap` re-init ran; the shel
 console had no errors or warnings. `tools/route-snapshot.mjs`: **50 routes, 0 erroring**.
 
 Source: `app/lib/http.js` (`isFragment`, `fragment` in `shellContext`), `app/lib/route-kit.js`
-(`renderRoute`), `app/lib/report-render.js` (shell + cache key), `views/layout.html`,
-`views/partials/nav.html`, `views/partials/topbar.html`, `public/js/app.js`,
+(`renderRoute`), `app/lib/report-render.js` (shell + cache key), `views/layout.html.jinja`,
+`views/partials/nav.html.jinja`, `views/partials/topbar.html.jinja`, `public/js/app.js`,
 `public/js/autocomplete.js`, `public/js/htmx.min.js`.
 
 ## Related

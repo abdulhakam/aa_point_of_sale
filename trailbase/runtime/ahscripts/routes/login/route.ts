@@ -10,7 +10,7 @@
     const user = routeKit.userOf(req);
     return routeKit.renderRoute(
       req,
-      { user, active: "", title: "Log in", template: "auth/login.html" },
+      { user, active: "", title: "Log in", template: "auth/login.html.jinja" },
       { next: query.next || "", expired: query.expired || "", error: "" }
     );
   };
@@ -36,7 +36,7 @@
     if (!tokens || !tokens.auth_token) {
       const res = await routeKit.renderRoute(
         req,
-        { user: null, active: "", title: "Log in", template: "auth/login.html" },
+        { user: null, active: "", title: "Log in", template: "auth/login.html.jinja" },
         { next, expired: "", error: "Invalid email or password" }
       );
       return { ...res, status: 401 };

@@ -6,7 +6,7 @@ maturity: new
 locator: trailbase/tb-ah-run-js
 platform: TrailBase 0.33.22 + wasmtime guest, Rust + QuickJS (rquickjs) + minijinja
 created: 2026-09-27
-updated: 2026-10-03
+updated: 2026-10-12
 tags: [pos, wasm, guests, runtime-js, rquickjs, quickjs, minijinja, experimental]
 related_to: ["[[trailbase]]", "[[frontend]]", "[[guest-app-host-port]]", "[[trail-runtime-js-reference]]", "[[cutover-is-guest-only]]", "[[smoke-count-is-not-a-hard-coded-number]]", "[[tb-0032-manifest-first-refactor]]"]
 ---
@@ -77,7 +77,8 @@ settled are in [[trailbase-guest-wasm-runtime-defaults]] and [[runtime-js-single
   app ran, and `app/lib/*.js` are the guest ports of the Node `src/lib`. The dispatcher loads modules
   itself through an ESM→CJS shim ([[guest-app-host-port]]).
 - **Rendering** is Rust `minijinja` folded into the host: scripts call `render.html(name, ctxJson)` /
-  `render.string`, with templates under `app/views` and the ten `compute/format.js` filters ported
+  `render.string`, with templates under `app/views` (named `*.html.jinja` —
+  [[jinja-templates-use-html-jinja-extension]]) and the ten `compute/format.js` filters ported
   ([[report-logic-stays-runtime-file-based]]).
 - **Data**: base tables are read **directly from the depot's SQLite** (order-sensitive:
   `ORDER BY id DESC`, engine-independent `compareText` sorting —

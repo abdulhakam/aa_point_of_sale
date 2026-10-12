@@ -18,10 +18,10 @@ Decision: [[browser-settings-are-client-side]].
 
 - [x] `app/public/js/settings.js` — the `localStorage` store (`aa-settings`), `DEFAULTS`,
       `__AA_SETTINGS__.get/set/all/reset/apply`, `aa-settings:change`, and Settings-form hydration.
-- [x] `/settings` route folder + `views/settings/index.html` — the Settings screen; the management hub
+- [x] `/settings` route folder + `views/settings/index.html.jinja` — the Settings screen; the management hub
       links to it. Nothing is stored server-side.
 - [x] `invoices.pickerInvoices(db)` — every non-deleted invoice, paging past `listInvoices`'s 1,000 cap.
-- [x] `payments.newView` + `payments/new.html` — the invoice select lists **all** invoices
+- [x] `payments.newView` + `payments/new.html.jinja` — the invoice select lists **all** invoices
       (`data-invoice-picker`), each paid option `data-paid="1"`.
 - [x] `settings.apply` trims paid options when `invoicePickerScope === "open"`; `app.js` applies it on
       `htmx:afterSwap` before re-enhancing.

@@ -31,7 +31,7 @@
       });
     });
     // htmx write: re-render the screen that made it. A console write (`surface=console`) answers with
-    // the console; the older entry screen answers with entry.html. One form field, so a write's screen
+    // the console; the older entry screen answers with entry.html.jinja. One form field, so a write's screen
     // cannot drift from the GET that rendered it.
     if (A.http.isFragment(req)) {
       if (String(form.surface || "") === "console") {

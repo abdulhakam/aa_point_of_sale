@@ -79,7 +79,7 @@ Both were found by reading the code *next to* the measurement, and both are now 
 ### 1. The invoice total was never updated at all
 
 `app.js` looked for the total with `grid.querySelector("[data-sum]")` — but `[data-sum]` is at
-`grid.html:64`, **above** the `<form data-grid>` at line 73. The query returned `null`, so the total was
+`grid.html.jinja:64`, **above** the `<form data-grid>` at line 73. The query returned `null`, so the total was
 never written. Measured on invoice `AaEHwKG8…`, 37 lines:
 
 ```text

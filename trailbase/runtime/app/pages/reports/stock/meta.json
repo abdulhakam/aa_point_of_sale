@@ -1,6 +1,6 @@
 {
   "title": "Stock Report",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "hub": {
     "title": "Stock Report",
     "target": "stockreport",

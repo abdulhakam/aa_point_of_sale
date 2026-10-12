@@ -12,7 +12,7 @@ related_to: ["[[invoice-print-sheet-legacy-metrics]]", "[[guest-invoice-print-dr
 
 # Invoice print sheet put the TOTAL column before the DISCOUNTS columns
 
-**Status:** fixed 2026-10-11 (`app/views/partials/invoice-sheet.html`). Reported by the operator while
+**Status:** fixed 2026-10-11 (`app/views/partials/invoice-sheet.html.jinja`). Reported by the operator while
 reading a printed invoice: "the totals in column is printed before the discounts columns, which is
 causing problems in understanding the invoice."
 
@@ -54,7 +54,7 @@ The vault reference [[invoice-print-sheet-legacy-metrics]] listed the columns as
 
 ## Fix
 
-`app/views/partials/invoice-sheet.html`: the header `TOTAL` `<th>` and the body `TOTAL` `<td>` were
+`app/views/partials/invoice-sheet.html.jinja`: the header `TOTAL` `<th>` and the body `TOTAL` `<td>` were
 moved to **after** the conditional `DISCOUNTS` group, in both header rows and every body row, so the
 order is `... PRICES | [DISCOUNTS] | TOTAL`. The explicit column widths (`BOX SIZE = 2em`,
    `UNTS = 1em`) are applied to body columns 3 and 5, which the reorder does not move, so `app.css` is

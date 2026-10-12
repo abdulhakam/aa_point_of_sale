@@ -61,7 +61,7 @@ document, the README, or the `.bat` launchers.
 - **`spoolreports.totalsParts` / `totalsParameters` / `totalsSpec` are live.** The export scanner
   calls them dead because no app module imports them, but `tools/verify-spool-reports.mjs:181,282,666`
   calls all three. They stay.
-- **`partials/page_body.html` is live.** It is reached by every `pages/**/page.html` through
+- **`partials/page_body.html.jinja` is live.** It is reached by every `pages/**/page.html.jinja` through
   `{% include %}`, not by any path-string reference — a filename-only scan reports it orphaned.
 - **`compute/reports.js` and `compute/views.js` stay.** No `meta.json` sets `compute.useJs`, so
   the JS report engine is dormant, but it is the documented escape hatch

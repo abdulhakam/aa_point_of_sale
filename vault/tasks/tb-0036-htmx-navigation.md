@@ -20,12 +20,12 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 - [x] Vendor htmx 2.0.4 locally (`app/public/js/htmx.min.js`) — offline, no CDN.
 - [x] `app/lib/http.js`: `isFragment(req)` (accepted headers `hx-request` or `x-requested-with`) and
       `fragment` in `shellContext`.
-- [x] `views/layout.html`: guard the full-document shell with `{% if not fragment %}` around a single
+- [x] `views/layout.html.jinja`: guard the full-document shell with `{% if not fragment %}` around a single
       unconditional `{% block body %}`; add `id="app-main"`; send `X-Requested-With` via `hx-headers`
       on `<body>` (the host's header allowlist drops `HX-Request`).
 - [x] `app/lib/route-kit.js` + `app/lib/report-render.js`: set `fragment` from the request, and add it
       to the rendered-page cache key.
-- [x] `views/partials/nav.html` + `views/partials/topbar.html`: `hx-boost="true" hx-target="#app-main"
+- [x] `views/partials/nav.html.jinja` + `views/partials/topbar.html.jinja`: `hx-boost="true" hx-target="#app-main"
       hx-swap="innerHTML"` on the rail and the brand; `hx-boost="false"` on the two rail forms.
 - [x] `public/js/app.js`: scope the content enhancers to a `root`; re-run on `htmx:afterSwap`; expose
       `window.__AA_ENHANCE__`. `public/js/autocomplete.js`: expose `window.__AA_AUTOCOMPLETE__.enhanceAll`.
@@ -70,7 +70,7 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       GET's list cannot drift.
 - [x] The create/update/delete routes answer an htmx request with the list **fragment** (flash
       included) instead of a 303; a plain POST still 303-redirects, so the forms work without JS.
-- [x] `management/list.html`: the entity form and the row delete form are `hx-boost` into `#app-main`
+- [x] `management/list.html.jinja`: the entity form and the row delete form are `hx-boost` into `#app-main`
       with `hx-push-url="false"`; the delete uses htmx's own `hx-confirm` (replacing `data-confirm`, so
       the cancel happens before the request rather than as a listener racing htmx's submit).
 - [x] Browser-verified: create → list row appears, panel closes, flash "Created", shell node stays live,
@@ -89,7 +89,7 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
       htmx request by re-rendering the entry screen (flash included) instead of a 303; a plain POST
       still 303-redirects. These are exactly the writes that redirected to the entry page, which is
       where `/invoices/new` lands.
-- [x] `views/invoices/entry.html`: the header form, the ADD LINE form, the per-line delete form and the
+- [x] `views/invoices/entry.html.jinja`: the header form, the ADD LINE form, the per-line delete form and the
       complete/reopen form are `hx-boost` into `#app-main` with `hx-push-url="false"`; the line delete
       uses htmx's `hx-confirm`.
 - [x] Browser-verified on a real invoice: header save → flash "Saved", shell node live, navigation
@@ -107,7 +107,7 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 - [x] `/invoices/<id>/lines` answers an htmx request by re-rendering the grid (flash included) instead
       of a 303; the **error** path re-renders the grid with the message as a red flash
       (`status: "error"`) because htmx does not swap a bare 4xx body. A plain POST still 303-redirects.
-- [x] `views/invoices/grid.html`: the grid form is `hx-boost` into `#app-main` with `hx-push-url="false"`;
+- [x] `views/invoices/grid.html.jinja`: the grid form is `hx-boost` into `#app-main` with `hx-push-url="false"`;
       the grid's client recalc re-inits on the swap via `htmx:afterSwap` (already wired). No submit
       listener existed in `enhanceGrid`, so htmx and the recalc do not conflict.
 - [x] Browser-verified on a real difference invoice: SAVE LINES → flash "Saved", shell node live,
@@ -125,8 +125,8 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 - [x] `POST /payments` (create) answers an htmx request with the list fragment (flash included); a bad
       value re-renders the **new form** with the error rather than a bare 400 htmx would not swap.
       `/payments/<id>/delete` re-renders the list. Plain POSTs still 303.
-- [x] `views/payments/index.html`: the filter form APPLYs via `hx-get` into `#app-main` with
-      `hx-push-url`; the row delete is `hx-boost` + `hx-confirm`. `views/payments/new.html`: the form is
+- [x] `views/payments/index.html.jinja`: the filter form APPLYs via `hx-get` into `#app-main` with
+      `hx-push-url`; the row delete is `hx-boost` + `hx-confirm`. `views/payments/new.html.jinja`: the form is
       `hx-boost` with `hx-push-url="/payments"`.
 - [x] **Fixed the URL residue from earlier slices:** management and payments write forms now push the
       **list** URL (`hx-push-url="/management/<entity>"`, `"/payments"`) instead of leaving the POST
@@ -145,7 +145,7 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 - [x] `/cashmemo/expenses/save` (create/update) answers an htmx request with the list fragment (flash
       included); a bad value re-renders the list with a red flash rather than a bare 400.
       `/cashmemo/expenses/<id>/delete` re-renders the list. Plain POSTs still 303.
-- [x] `views/cashmemo/expenses.html`: the filter APPLYs as a fragment, the row delete is
+- [x] `views/cashmemo/expenses.html.jinja`: the filter APPLYs as a fragment, the row delete is
       `hx-boost` + `hx-confirm`, the row edit link is boosted, and the save form is `hx-boost` with
       `hx-push-url="/cashmemo/expenses"`.
 - [x] Browser-verified: add expense → flash "Saved", row present, shell node live, navigation count 1,
@@ -163,7 +163,7 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 - [x] `report-render.js` adds `rowInfo.moreHref`: the current window plus one `RENDER_MAX_ROWS`, with
       the existing `maxRows`/`all` dropped from the query first so a second click does not append a
       second `maxRows`.
-- [x] `views/reports/report.html`: the truncated notice is now **"Load N more" · "Show all"**; "Load
+- [x] `views/reports/report.html.jinja`: the truncated notice is now **"Load N more" · "Show all"**; "Load
       more" is `hx-boost` into `#app-main`, so it swaps the body (filters + notice + table) with the
       larger window and pushes the URL.
 - [x] Browser-verified on the general ledger (wide period, 26,613 rows): Load more → rows 1000 → 2000,
@@ -179,7 +179,7 @@ every navigation. Decision and measurements: [[htmx-navigation-with-html-fragmen
 ## Follow-ups (not done)
 
 - [x] **Stale document title** — fixed 2026-10-09: the fragment emits a hidden `data-aa-title` marker
-      (`views/layout.html`) and `app.js` copies it onto `document.title` on `htmx:afterSwap`.
+      (`views/layout.html.jinja`) and `app.js` copies it onto `document.title` on `htmx:afterSwap`.
 - [x] **`aa-refdb-version` meta** — fixed 2026-10-09: the head meta carries an id, the fragment emits
       an out-of-band copy, and `app.js` calls the new `__AA_REFDB__.reload()` when the version moves.
 - [x] **Boost the link-only hubs and indexes** (dashboard, reports, ledgers, invoices, cash memo,

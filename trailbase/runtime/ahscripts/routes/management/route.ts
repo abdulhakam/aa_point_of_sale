@@ -12,7 +12,7 @@
     const entities = A.entities.order().map((key: string) => ({ key, ...A.entities.ENTITIES[key] }));
     return routeKit.renderRoute(
       req,
-      { user, active: "management", title: "Management", template: "management/index.html" },
+      { user, active: "management", title: "Management", template: "management/index.html.jinja" },
       { entities }
     );
   };

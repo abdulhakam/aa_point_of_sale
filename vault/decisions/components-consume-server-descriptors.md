@@ -57,7 +57,7 @@ server-provided descriptors — they never own a schema or a type/table mapping.
 
 - `entities.json` + `app/lib/management.js:formFields` — the field model, extended with
   `hidden`/`disabled`; `view` disables every field.
-- `management/{entity}/route.ts` — `?view=<id>` sets `mode = "view"`; `management/list.html` renders a
+- `management/{entity}/route.ts` — `?view=<id>` sets `mode = "view"`; `management/list.html.jinja` renders a
   read-only panel with a "Back to list" action and the eye icon links to `?view=`.
 - Verified over HTTP: `?view=` → "View Section", field `disabled`, no Save, Back link; `?edit=` →
   editable with Save; `?new=1` → create. `guest-smoke` 116/116, `route-snapshot` 50/0.
@@ -74,7 +74,7 @@ server-provided descriptors — they never own a schema or a type/table mapping.
 - The entity schema is the one place a field's visibility/availability is declared.
 - The invoice entry UI was unified in `<aa-invoice-entry>` on 2026-10-09, taking the server `type`
   descriptor — never a client type→table switch ([[component-library-2026-10-09]]). It is the container
-  of `views/invoices/entry.html` and owns only the client behaviour (the item→price fill); the server
+  of `views/invoices/entry.html.jinja` and owns only the client behaviour (the item→price fill); the server
   still renders the type's fields.
 
 ## Related

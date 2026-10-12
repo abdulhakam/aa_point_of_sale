@@ -1,0 +1,10 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+<h1 class="page-title">Manage</h1>
+{# The legacy hub is one row of lowercase blue links — sections, areas, parties, companies, bookers,
+   items — in that order, with no button chrome ([[ui-parity-discrepancies-2026-10-08]] §2). The label
+   is the entity KEY, which is already the legacy's lowercase word, so "bookers" is not "order bookers". #}
+<div class="mgmt-links" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">
+{% for e in entities %}<a href="/management/{{ e.key }}">{{ e.key }}</a>
+{% endfor %}<a href="/settings">settings</a></div>
+{% endblock %}

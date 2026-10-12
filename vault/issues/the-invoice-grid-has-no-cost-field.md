@@ -30,11 +30,11 @@ select.addEventListener("change", function () {
 and the item options **do** carry the data it wants:
 
 ```html
-<!-- app/views/invoices/grid.html:96 and :135 -->
+<!-- app/views/invoices/grid.html.jinja:96 and :135 -->
 <option value="…" data-price="8.33333" data-cost="7.33333" data-box="288">CHILLI GARLIC 22GM</option>
 ```
 
-**`invoices/grid.html` contains no `cost_price` input.** The only occurrences of the string are those
+**`invoices/grid.html.jinja` contains no `cost_price` input.** The only occurrences of the string are those
 two `data-cost` attributes. So `row.querySelector('input[name="cost_price"]')` matches nothing, `cost` is
 always `null`, and the guard `if (cost && …)` silently skips. **The cost half of that handler has never
 done anything.**

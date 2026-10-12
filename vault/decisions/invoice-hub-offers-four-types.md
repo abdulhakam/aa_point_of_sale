@@ -34,14 +34,14 @@ a superseding decision note; this note records it.
 `invoice_types`.** Return (2) and Difference (3) are first-class, creatable types again.
 
 - `/invoices` is the five-tile hub; the Return and Difference tiles link to
-  `/invoices/new?type=2` and `?type=3` (`runtime/app/views/invoices/index.html`).
+  `/invoices/new?type=2` and `?type=3` (`runtime/app/views/invoices/index.html.jinja`).
 - `/invoices/new` GET and POST map the requested `type` through `INVOICE_TYPES` and fall back to a
   sale for anything else (`runtime/ahscripts/routes/invoices/new/route.ts`).
 - `INVOICE_TYPES` and `typeLabel` are `{0 Purchase, 1 Sale, 2 Return, 3 Difference}`
   (`runtime/app/lib/invoices.js:16`).
 - Each type numbers in **its own** legacy `count+1` sequence
   (`runtime/app/lib/invoicing.js` `createInvoice`), so a return does not move the sale numbers.
-- The entry bar shapes itself by type (`runtime/app/views/invoices/entry.html`): a return shows a
+- The entry bar shapes itself by type (`runtime/app/views/invoices/entry.html.jinja`): a return shows a
   PARTY and an **Original Invoice** field; a difference shows **no party field at all**; booker is
   sale-only.
 
@@ -79,10 +79,10 @@ negative line on a purchase/sale; the legacy document type is available directly
 
 ## Evidence
 
-- `runtime/app/views/invoices/index.html` — the five tiles and their `?type=` targets.
+- `runtime/app/views/invoices/index.html.jinja` — the five tiles and their `?type=` targets.
 - `runtime/ahscripts/routes/invoices/new/route.ts` — GET/POST accept all four types.
 - `runtime/app/lib/invoices.js` — `INVOICE_TYPES`, `typeLabel`.
-- `runtime/app/views/invoices/entry.html` — the per-type entry bar.
+- `runtime/app/views/invoices/entry.html.jinja` — the per-type entry bar.
 - `runtime/app/reports/sql/prelude.sql` — `stock_deltas`, `difference_deltas`.
 - The write path itself was verified 2026-10-09:
   [[invoice-type-write-verification-2026-10-09]].

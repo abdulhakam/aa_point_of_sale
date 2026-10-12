@@ -58,7 +58,7 @@ on a phone. Nothing could be demonstrated end to end.
       the power-user nav group moved into the header. All inside `@media screen and (max-width:
       768px)`, so nothing above the breakpoint changed. See
       [[mobile-layout-is-additive-to-the-legacy-look]].
-- [x] **`data-label` on every data cell** — `partials/table.html`, `management/list.html` and the
+- [x] **`data-label` on every data cell** — `partials/table.html.jinja`, `management/list.html.jinja` and the
       new screens. A cardified table without it shows numbers with no headings.
 - [x] **Nav / dashboard** — Invoices, Payments and Inventory added to the rail and the dashboard
       tiles.

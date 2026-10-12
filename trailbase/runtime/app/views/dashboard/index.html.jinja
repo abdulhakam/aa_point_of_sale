@@ -1,0 +1,23 @@
+{% extends 'layout.html.jinja' %}
+{% import 'partials/icons.html.jinja' as icons %}
+{% block body %}
+<section class="card hub" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">
+  <div class="hub-title">Dashboard</div>
+  {# ⚠️ The legacy dashboard is exactly four tiles in this order — Reports, Invoices, Cash Memo,
+     Management (measured off the live legacy dashboard and `vault/attachments/legacy-ui/02-dashboard.png`).
+     The guest's extra Payments and Inventory tiles were removed 2026-10-08 to match it 1-1; both
+     surfaces stay reachable from the rail's foot menu. The icon colours follow the legacy capture —
+     pink report, orange invoice, blue cash-memo, grey management.
+
+     The Cash Memo glyph is the legacy's **filled blue € circle** (`coin-euro-filled`), not the Tabler
+     card outline it used to carry ([[tb-0023-guest-feature-parity]] item G). #}
+  <div class="tiles dashboard">
+    <a class="tile" href="/reports"><span class="c-pink-4">{{ icons.svg('report', 64) }}</span><span class="tile-label">Reports</span></a>
+    <a class="tile" href="/invoices"><span class="c-orange-4">{{ icons.svg('file-invoice', 64) }}</span><span class="tile-label">Invoices</span></a>
+    <a class="tile" href="/cashmemo"><span class="c-blue">{{ icons.svg('coin-euro-filled', 64) }}</span><span class="tile-label">Cash Memo</span></a>
+    <a class="tile" href="/management"><span class="c-gray-4">{{ icons.svg('settings', 64) }}</span><span class="tile-label">Management</span></a>
+  </div>
+</section>
+{# The legacy dashboard has no counters, so the guest's `Overview` card is gone (item H). The counts
+   are still reachable from every management list; a test must not assert a divergence. #}
+{% endblock %}

@@ -46,7 +46,7 @@ Actionable residue was the **same four** as 2026-10-10 — **all four fixed late
 (2026-10-11), verified against the live guest and `guest-smoke` 116/116:
 
 1. **Item drill-down links** (`reports-difference`, `reports-stockreport`) — **fixed.** The `name`
-   column is now `"link": "item"`; `partials/table.html` renders it as
+   column is now `"link": "item"`; `partials/table.html.jinja` renders it as
    `/reports/itemsales?item=<id>`. Verified: 235 item links on each screen (was 0).
 2. **Cash-memo payments filters/columns** (`cashmemo-payments`) — **fixed.** `/payments` now carries the
    legacy columns `Date · Type · Invoice · Original invoices · Area · Section · Party · Booker · Amount ·
@@ -58,7 +58,7 @@ Actionable residue was the **same four** as 2026-10-10 — **all four fixed late
    the harness reads the option text too). The one real part — the shared select labels — is fixed: the
    presets now read `Select Party/Booker/Area/Section/Item` (the report screens' legacy wording); the
    ledgers keep that prefix, a minor divergence from their bare legacy label.
-4. **`reset`/`clear`** — **fixed.** `reports/report.html` renders a clear link when a manifest sets
+4. **`reset`/`clear`** — **fixed.** `reports/report.html.jinja` renders a clear link when a manifest sets
    `resetLabel`: `RESET` on payments/salesreport/dailysale/outstanding/paymentsbycompany, `CLEAR` on the
    party/booker/area ledgers, and no button on itemsales/profit/the modal-filter reports, matching the
    legacy. Verified live.

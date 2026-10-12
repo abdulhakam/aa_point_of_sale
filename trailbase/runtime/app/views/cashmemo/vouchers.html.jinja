@@ -1,0 +1,65 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+{# Cash-memo vouchers: a payment voucher is a payment with nothing behind it — money out (sending)
+   or money in (recieving) that is not settling an invoice. A payment that IS against an invoice
+   lives on that invoice, so this list is `invoice IS NULL`. #}
+<h1 class="page-title">{{ typeLabel }} vouchers</h1>
+<p class="crumbs"><a href="/cashmemo">← Cash memo</a></p>
+
+<div class="pagebar">
+  <a class="btn primary" href="/payments/new?type={{ selectedType }}">+ NEW {{ typeLabel|upper }}</a>
+  <a class="btn" href="/cashmemo/da">DA entry</a>
+</div>
+
+<form class="filters" method="get" action="/cashmemo/vouchers">
+  <label class="field"><span>Type</span>
+    <select name="type">
+      <option value="0"{% if selectedType == 0 %} selected{% endif %}>Payment (sending)</option>
+      <option value="1"{% if selectedType == 1 %} selected{% endif %}>Receive (recieving)</option>
+      <option value="2"{% if selectedType == 2 %} selected{% endif %}>Return</option>
+    </select>
+  </label>
+  <label class="field"><span>From</span><input type="date" name="from" value="{{ filters.from }}"></label>
+  <label class="field"><span>To</span><input type="date" name="to" value="{{ filters.to }}"></label>
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">APPLY</button>
+    <a class="btn" href="/cashmemo/vouchers?type={{ selectedType }}">RESET</a>
+  </div>
+</form>
+
+<section class="card">
+  <div class="list-toolbar">
+    <h2>{{ rows|length }} vouchers</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-value">{{ totals.totalText }}</div><div class="stat-label">Total</div></div>
+    </div>
+  </div>
+  <div class="tablewrap">
+  <table class="data" data-mobile="cards">
+    <thead><tr>
+      <th>Date</th><th>Party</th><th>Paid to</th><th>Description</th>
+      <th class="right">Amount</th><th class="right">Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td data-label="Date" data-lead>{{ r.date }}</td>
+        <td data-label="Party">{{ r.partyName }}</td>
+        <td data-label="Paid to">{{ r.paidTo }}</td>
+        <td data-label="Description">{{ r.description }}</td>
+        <td class="right" data-label="Amount">{{ r.amountText }}</td>
+        <td class="row-actions" data-label="">
+          <a class="icon-edit" href="/cashmemo/vouchers/{{ r.id }}?print=1" data-print title="Print voucher">⎙</a>
+          <form method="post" action="/payments/{{ r.id }}/delete" data-confirm="Delete this voucher?">
+            <button class="icon-del" type="submit" title="Delete">×</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="6">No {{ typeLabel|lower }} vouchers in this range.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}

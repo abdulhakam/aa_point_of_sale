@@ -15,7 +15,7 @@
     // the "Overview" counters card is gone, so `counts()` and the array it fed are not computed.
     return routeKit.renderRoute(
       req,
-      { user, active: "dashboard", title: "Dashboard", template: "dashboard/index.html" },
+      { user, active: "dashboard", title: "Dashboard", template: "dashboard/index.html.jinja" },
       {}
     );
   };

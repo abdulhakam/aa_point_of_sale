@@ -14,7 +14,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "invoices", title: "Invoices", template: "invoices/index.html" },
+      { user, active: "invoices", title: "Invoices", template: "invoices/index.html.jinja" },
       {}
     );
   };

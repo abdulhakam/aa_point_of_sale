@@ -19,7 +19,7 @@
       company: (refs.companies ?? [])[i % Math.max(1, (refs.companies ?? []).length)]?.name ?? "",
       amount: i * 13.37,
     }));
-    const result = await A.renderClient.benchRender(req, "bench/payload.html", { rows }, Number(query.rounds ?? 5));
+    const result = await A.renderClient.benchRender(req, "bench/payload.html.jinja", { rows }, Number(query.rounds ?? 5));
     return { ...(result || {}), renderer: await A.renderClient.rendererStatus(req) };
   };
 })();

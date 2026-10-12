@@ -11,7 +11,7 @@
     const plugins = await A.plugins.loadPlugins("/app/plugins");
     return routeKit.renderRoute(
       req,
-      { user, active: "plugins", title: "Plugins", template: "plugins/index.html" },
+      { user, active: "plugins", title: "Plugins", template: "plugins/index.html.jinja" },
       { plugins }
     );
   };

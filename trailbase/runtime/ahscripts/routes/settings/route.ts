@@ -12,7 +12,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "management", title: "Settings", template: "settings/index.html" },
+      { user, active: "management", title: "Settings", template: "settings/index.html.jinja" },
       {}
     );
   };

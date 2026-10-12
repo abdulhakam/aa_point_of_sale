@@ -15,7 +15,7 @@ Requested as *"there's no searchable autocompletes in the new frontend, so pleas
 a select beside a text input, it looks bad)"* — item 1 of [[tb-0023-guest-feature-parity]] under the
 current mandate ([[parity-is-functional-not-visual]]).
 
-`app/public/js/autocomplete.js`, loaded from `views/layout.html`. It replaces the select-plus-filter-box
+`app/public/js/autocomplete.js`, loaded from `views/layout.html.jinja`. It replaces the select-plus-filter-box
 pair that `enhanceSelects` used to inject.
 
 ## What it is

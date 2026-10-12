@@ -1,6 +1,6 @@
 {
   "title": "Supply Summary",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "hub": {
     "title": "Supply Summary",
     "target": "supplysummary",

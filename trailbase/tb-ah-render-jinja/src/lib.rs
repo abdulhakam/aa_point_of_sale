@@ -20,7 +20,7 @@
 //!
 //! ```json
 //! { "aa_render": 1, "request_id": "…",
-//!   "template": { "name": "invoices/document.html" },
+//!   "template": { "name": "invoices/document.html.jinja" },
 //!   "context":  { "address": { "store": "kv", "key": "…", "bytes": 1234, "format": "json" } },
 //!   "options":  { "paper": "a5" },
 //!   "requires": ["extends", "import", "filters:money"] }

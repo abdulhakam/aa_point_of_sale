@@ -17,7 +17,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "inventory", title: "Inventory", template: "inventory/index.html" },
+      { user, active: "inventory", title: "Inventory", template: "inventory/index.html.jinja" },
       {
         rows,
         query: routeKit.pick(query.q, ""),

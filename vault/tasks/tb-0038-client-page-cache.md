@@ -30,11 +30,11 @@ invalidate on the live data version. Decision and rationale: [[guest-page-cache]
       cannot cross users.
 - [x] **`GET /data/version`** (`ahscripts/routes/data/version/route.ts`) — the `{version}` probe,
       ETag-keyed, auth-gated.
-- [x] **`<meta name="aa-user">`** in `layout.html` — the per-identity key material.
+- [x] **`<meta name="aa-user">`** in `layout.html.jinja` — the per-identity key material.
 - [x] **Gate `tools/pagecache-check.mjs`** — **14 passed, 0 failed** (repeat nav served with no XHR,
       a write clears the cache, the probe answers, no page errors). The section it creates is deleted —
       net zero.
-- [x] **Loading spinner** (`#aa-loading` in `layout.html`, styled in `app.css`) — htmx adds its request
+- [x] **Loading spinner** (`#aa-loading` in `layout.html.jinja`, styled in `app.css`) — htmx adds its request
       class to the element named by `hx-indicator` (inherited from `<body>`), so one element shows a
       spinner for a nav, a filter, a sort or a write. Shown after a ~150 ms delay so a fast request does
       not flash it; a cache hit shows nothing (it never reaches htmx, and it is instant).

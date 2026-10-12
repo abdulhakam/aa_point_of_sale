@@ -1,6 +1,6 @@
 {
   "title": "Payments By Company",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "resetLabel": "RESET",
   "hub": {
     "title": "Payments By Company",

@@ -112,7 +112,7 @@ export async function listView(A, req, query, status, message) {
   const [rows, totals] = await Promise.all([listExpenses(db, filters), sumExpenses(db, filters)]);
   const editId = String(query.edit || "");
   return {
-    options: { active: "cashmemo", title: "Expenses", template: "cashmemo/expenses.html" },
+    options: { active: "cashmemo", title: "Expenses", template: "cashmemo/expenses.html.jinja" },
     data: {
       rows,
       filters,

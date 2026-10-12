@@ -1,6 +1,6 @@
 {
   "title": "Sales Report",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "resetLabel": "RESET",
   "hub": {
     "title": "Sales Report",

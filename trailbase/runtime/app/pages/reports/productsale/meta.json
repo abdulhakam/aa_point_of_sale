@@ -1,6 +1,6 @@
 {
   "title": "Product Sale Report",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "hub": {
     "title": "Product Sale Report",
     "target": "productsale",

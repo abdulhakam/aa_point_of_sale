@@ -1,0 +1,21 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+<h1 class="page-title">Pages</h1>
+<p class="crumbs">Every folder under <code>pages/</code> with a <code>meta.json</code>. Adding one needs no server change.</p>
+
+{% if pages %}
+{% for p in pages %}
+<section class="card">
+  <h2><a href="/p/{{ p.slug }}">{{ p.title }}</a></h2>
+  <p class="report-meta">
+    <span><code>pages/{{ p.slug }}</code></span>
+    <span>{{ p.needs.tables | length }} table(s)</span>
+    {% if p.needs.views %}<span>{{ p.needs.views | length }} view(s)</span>{% endif %}
+    {% if p.compute %}<span class="tag">compute</span>{% endif %}
+  </p>
+</section>
+{% endfor %}
+{% else %}
+<p class="notice">No pages found. Add <code>pages/&lt;slug&gt;/meta.json</code>.</p>
+{% endif %}
+{% endblock %}

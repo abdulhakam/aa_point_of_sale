@@ -75,7 +75,7 @@ Four things, all operator-reported or operator-asked:
 1. **Print sheet: TOTAL before DISCOUNTS.** The owner reported the printed totals looked pre-discount.
    The real defect was column order: the guest put `TOTAL` **before** the `DISCOUNTS` group, while the
    compiled legacy bundle puts `DISCOUNTS` before a `rowSpan=2` `TOTAL` (the last column). Reordered in
-   `partials/invoice-sheet.html` and verified live. [[invoice-print-total-column-before-discounts]].
+   `partials/invoice-sheet.html.jinja` and verified live. [[invoice-print-total-column-before-discounts]].
 2. **Console invoice-# picker only listed the newest 200.** `consoleView` capped the picker
    server-side; typing filtered only those. Fixed with a **debounced server-side number search** —
    `GET /data/invoices/search?type=N&q=<digits>` + `public/js/invoice-remote.js` — after rejecting the
@@ -99,7 +99,7 @@ carve-outs, no new regression**: [[ui-parity-run-2026-10-11]].
 
 **UI parity: the four residues fixed (owner's ask).** All four were closed the same day and verified
 against the live guest (`guest-smoke` 116/116): item drill-down links on `difference`/`stockreport`
-(235 links each, `table.html` `link: "item"` → item sales); the cash-memo **payments** columns and
+(235 links each, `table.html.jinja` `link: "item"` → item sales); the cash-memo **payments** columns and
 `Select Section/Area/Booker` filters (which surfaced and fixed a real defect — the relation filters
 compared a BLOB to base64 text and matched nothing, [[payments-relation-filters-matched-nothing]]); the
 shared filter labels (`Select Party/Booker/Area/Section`); and a `RESET`/`CLEAR` control restored per
@@ -167,8 +167,8 @@ assertion (315.00). Evidence: [[full-app-ui-sweep-2026-10-10]]. Gates after the 
 **116/116**, `invoice-view-check` **all green**.
 
 **2026-10-10 — the invoice console: one keyboard-first surface.** `GET /invoices/new?type=N` is now
-the keyboard console (`views/invoices/console.html` + `components/invoice-view.js` `<aa-invoice-view>`
-+ `components/item-search.js`), with `grid.html` kept as the no-JS fallback. The state machine
+the keyboard console (`views/invoices/console.html.jinja` + `components/invoice-view.js` `<aa-invoice-view>`
++ `components/item-search.js`), with `grid.html.jinja` kept as the no-JS fallback. The state machine
 (picker → booker → party → date → create → line entry → `999` finish) and the `0`/`999`/`000`/`up`
 code contract are the decision [[invoice-console-keyboard-state-machine]]. Backend enablers: a
 **fragment create** on `POST /invoices/new` (the write re-renders the same console), a new
@@ -378,7 +378,7 @@ write surface.**
 **2026-10-09 — navigation is htmx over server-rendered fragments (first slice).** Asked whether SSR
 could become a React SPA or htmx, the owner chose **htmx** — it keeps minijinja and the declarative
 page model, adds no build step, and stops the app shell re-rendering on every navigation
-([[htmx-navigation-with-html-fragments]]). Built and browser-verified: `views/layout.html` renders the
+([[htmx-navigation-with-html-fragments]]). Built and browser-verified: `views/layout.html.jinja` renders the
 body block only when the request carries `X-Requested-With` (htmx's own `HX-Request` is not in the
 host's header allowlist, so the layout sends `X-Requested-With` via `hx-headers`); the rail and topbar
 brand are boosted into `#app-main`; `app.js` scopes its content enhancers to a root and re-runs them on
@@ -394,7 +394,7 @@ the legacy queue page; the queue is **browser-local** (`localStorage` `print-que
 legacy's was, and the sheet carries the legacy "Print Invoice Now" + "Add to Print Queue" actions.
 The old server-side batch (the `print.run` durable job and the "Recent runs" form) was removed. The
 single view and the queued batch now render from one sheet builder (`app/lib/invoice-sheet.js` +
-`partials/invoice-sheet.html`), so a printed sheet cannot diverge from the on-screen one. `guest-smoke`
+`partials/invoice-sheet.html.jinja`), so a printed sheet cannot diverge from the on-screen one. `guest-smoke`
 **116/116**, `route-snapshot` **50/0**, and a new real-browser harness
 `tools/print-queue-check.mjs` **14/14** drives the whole flow (preview, add, dedupe, rail, print, remove,
 clear). Evidence: [[print-queue-parity-fix-2026-10-08]]; the decision:

@@ -33,7 +33,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "invoices", title: "All invoices", template: "invoices/all.html" },
+      { user, active: "invoices", title: "All invoices", template: "invoices/all.html.jinja" },
       {
         rows,
         filters,

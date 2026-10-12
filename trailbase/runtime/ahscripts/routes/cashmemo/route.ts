@@ -13,7 +13,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "cashmemo", title: "Cash memo", template: "cashmemo/index.html" },
+      { user, active: "cashmemo", title: "Cash memo", template: "cashmemo/index.html.jinja" },
       {}
     );
   };

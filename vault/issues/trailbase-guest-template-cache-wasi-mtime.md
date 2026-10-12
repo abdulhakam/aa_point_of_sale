@@ -13,7 +13,7 @@ related_to: ["[[trail-runtime-js-reference]]", "[[runtime-js-single-host]]"]
 ## The symptom
 
 Editing a template on disk and re-rendering kept serving the **old** HTML for the life of the
-instance. Verified directly: append a marker to `app/views/layout.html`, POST `/__render` →
+instance. Verified directly: append a marker to `app/views/layout.html.jinja`, POST `/__render` →
 the marker is absent; restart the server → the marker appears.
 
 ## Root cause

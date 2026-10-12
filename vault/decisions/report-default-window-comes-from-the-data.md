@@ -63,7 +63,7 @@ same `created`-vs-business-date family, and needs its own evidence before it is 
 
 ## An empty window now says which window has data
 
-`reports/report.html` renders, when `rowInfo.total == 0`, the period that was asked for **and a link
+`reports/report.html.jinja` renders, when `rowInfo.total == 0`, the period that was asked for **and a link
 to the most recent period that has data**. The table alone cannot say this — it shows "no data", not
 "no data in April, but March has some".
 

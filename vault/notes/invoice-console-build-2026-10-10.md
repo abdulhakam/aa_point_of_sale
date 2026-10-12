@@ -13,7 +13,7 @@ Implements `.kilo/plans/1791600000000-invoice-view-keyboard-redesign.md`.
 
 ## What shipped
 
-- **New surface** `views/invoices/console.html` + `components/invoice-view.js` (`<aa-invoice-view>`)
+- **New surface** `views/invoices/console.html.jinja` + `components/invoice-view.js` (`<aa-invoice-view>`)
   + `components/item-search.js` (`<aa-item-search>`), served by `GET /invoices/new?type=N` and by
   `?invoice=<id>`. The keyboard state machine, the `0`/`999`/`000`/`up` codes, and the write-path
   routing are recorded in [[invoice-console-keyboard-state-machine]].

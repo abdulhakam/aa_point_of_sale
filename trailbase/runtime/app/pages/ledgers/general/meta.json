@@ -1,7 +1,7 @@
 {
   "title": "General Ledger",
-  "template": "page.html",
-  "view": "reports/ledgers/general.html",
+  "template": "page.html.jinja",
+  "view": "reports/ledgers/general.html.jinja",
   "handlers": [
     "handlers/openings.js"
   ],

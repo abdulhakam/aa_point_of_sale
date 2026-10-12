@@ -365,7 +365,7 @@ ORDER BY tr.dated DESC, tr.id DESC;
 }
 ```
 
-4. **Template:** Use shared `reports/report.html` or create custom
+4. **Template:** Use shared `reports/report.html.jinja` or create custom
 
 ## Invoice Document SQL (`invoice-doc.js`)
 

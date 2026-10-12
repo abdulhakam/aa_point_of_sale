@@ -1,0 +1,127 @@
+{% extends 'layout.html.jinja' %}
+{% import 'partials/filters.html.jinja' as fl %}
+{% import 'partials/table.html.jinja' as tb %}
+{% block body %}
+{# ⚠️ Order matters and the legacy order is filters FIRST, then the report title with the period on
+   the right of the same line — measured off `vault/attachments/legacy-ui/09-reports-profit.png`. This
+   template had the title above the filters and a meta line under them ("Date From: … Date To: … Rows:
+   …"), so every report opened with its name and then asked for the period, where the legacy screen
+   asks for the period and then names what it produced. The legacy also carries ONE control beyond
+   APPLY: a small printer glyph above the filters, top left. PRINT's labelled twin is a new-side
+   addition, so it is gone; printing is still reachable from that glyph and from the keyboard layer's
+   `p`. ⚠️ **Corrected 2026-10-11:** RESET was removed here as a "new-side addition"
+   ([[ui-parity-discrepancies-2026-10-05]]), but the 2026-10-09/10 live captures show the legacy filter
+   block DOES carry a clear control on several screens (`reset` / `clear`); it is restored below per
+   report via `def.resetLabel`. See [[ui-parity-run-2026-10-11]]. #}
+{% import 'partials/icons.html.jinja' as icons %}
+{% if not print %}
+<div class="report-tools no-print">
+  <button class="btn icon" type="button" data-print title="Print this report" aria-label="Print this report">{{ icons.svg('printer', 18) }}</button>
+  {% if def.filtersModal %}<button class="btn icon" type="button" data-modal-open="#report-filter-modal" title="Filter data" aria-label="Filter data">{{ icons.svg('search', 18) }}</button>{% endif %}
+</div>
+{% endif %}
+{% if def.filtersModal %}
+{# The legacy opens these reports' filters in a centered "Filter Data" dialog rather than an inline row
+   ([[ui-parity-discrepancies-2026-10-08]] §3). It starts open when no filter has been chosen yet, so a
+   first visit asks for one; OK submits the same GET the inline form would. `[data-modal-open]` on the
+   printer glyph reopens it, and the dialog closes on OK, the X, Escape or an overlay click. #}
+<aa-modal id="report-filter-modal" title="Filter Data"{% if not filters.company %} open{% endif %}>
+  <form class="filters modal-filters" method="get" action="{{ basePath }}" hx-get="{{ basePath }}" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="true">
+{% for field in def.fields %}{{ fl.render_field(field, filters, options) }}
+{% endfor %}
+    <div class="modal-actions">
+      <button class="btn primary" type="submit">OK</button>
+    </div>
+  </form>
+</aa-modal>
+{% else %}
+<form class="filters" method="get" action="{{ basePath }}" hx-get="{{ basePath }}" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="true">
+{# The two date fields share one row above the selects, as the legacy filter block does
+   (`09-reports-profit.png`). They are emitted into their own wrapper rather than left to wrap by width,
+   because "whatever fits" put one date per line here and the row the legacy draws as a single line of
+   labelled controls became three. #}
+<div class="filter-dates">
+{% for field in def.fields %}{% if field.type == 'date' %}{{ fl.render_field(field, filters, options) }}{% endif %}{% endfor %}
+</div>
+{% for field in def.fields %}{% if field.type != 'date' %}{{ fl.render_field(field, filters, options) }}{% endif %}{% endfor %}
+{% block extra_inputs %}{% endblock %}
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">APPLY</button>
+    {# The legacy inline filter block carries a clear control on the screens that have one — `RESET`
+       on payments/salesreport/dailysale/outstanding/paymentsbycompany, `CLEAR` on the party/booker/area
+       ledgers (`def.resetLabel`). Screens without it (itemsales, profit, the modal-filter reports)
+       omit the button, matching the legacy. See [[ui-parity-run-2026-10-11]]. #}
+    {% if def.resetLabel %}<a class="btn" href="{{ basePath }}">{{ def.resetLabel }}</a>{% endif %}
+  </div>
+</form>
+{% endif %}
+
+{% if missing|length %}
+<p class="notice">Please select a {{ missing[0] }} to view this report.</p>
+{% else %}
+<div class="report" id="report">
+{# Legacy print header (PrintHead): the business identity on every printed report. #}
+<header class="print-head">
+  {% if businessLogo %}<img class="doc-logo print-logo" src="{{ businessLogo }}" alt="">{% endif %}
+  <div class="print-head-title">{{ businessName }}</div>
+  <div class="print-head-line">{{ businessAddress }}</div>
+  <div class="print-head-line">Contact: {{ businessPhone }}</div>
+</header>
+<div class="report-head">
+  <h1 class="page-title">{% block report_title %}{{ def.title }}{% endblock %}</h1>
+  {% if period.from or period.to %}
+  <div class="report-period">
+    {% if period.from %}<span><strong>From:</strong> {{ period.from }}</span>{% endif %}
+    {% if period.to %}<span><strong>To:</strong> {{ period.to }}</span>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% block before_table %}{% endblock %}
+{# A row filter over the rendered table, which the client-side filter in `app.js` already implements for
+   every management list. Two reasons it belongs here rather than only on the management screens:
+
+   - `j`/`k` walk the rows, and a report can hold 1,000 of them. Without a way to narrow the set, a
+     keyboard user walks 1,000 rows to find one invoice, which is slower than the mouse was.
+   - `/` and Escape's filter leg needed a target. Both were advertised on all sixteen report and ledger
+     screens and did nothing on every one — the overlay was promising a shortcut that did not exist.
+
+   It filters the rows ALREADY rendered, so it cannot change a total; a filter that changed a money figure
+   would be a second arithmetic path, and this app has exactly one by decision. Rows beyond the render cap
+   still need "Show all" below. #}
+<div class="report-filter">
+  <label class="field"><span>Find in this report</span><input type="search" data-table-filter="#report-table" autocomplete="off" spellcheck="false"></label>
+</div>
+{{ tb.simple(columns, rows, mobile, "report-table") }}
+{% if rowInfo and rowInfo.pageCount > 1 %}
+{# Offset pager. PREV/NEXT carry the filters and set `page`; SHOW ALL drops the page and renders every
+   row. Each swaps the body ([[htmx-navigation-with-html-fragments]]), so the filters, the table and
+   this pager re-render together and the URL stays shareable. #}
+<div class="pager no-print">
+  {% if rowInfo.prevHref %}<a class="btn" href="{{ rowInfo.prevHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">&larr; Prev</a>{% else %}<span class="btn disabled">&larr; Prev</span>{% endif %}
+  <span class="pager-info">Page {{ rowInfo.page }} of {{ rowInfo.pageCount }} · showing {{ rowInfo.first }}&ndash;{{ rowInfo.last }} of {{ rowInfo.total }}</span>
+  {% if rowInfo.nextHref %}<a class="btn" href="{{ rowInfo.nextHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">Next &rarr;</a>{% else %}<span class="btn disabled">Next &rarr;</span>{% endif %}
+  {% if rowInfo.truncated %}<a class="btn" href="{{ rowInfo.allHref }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">Show all</a>{% endif %}
+</div>
+{% endif %}
+{# An empty window is the one result that cannot be read off the table alone: the rows say "no
+   data", not which period would have data. Name the period, and offer it, so an operator who typed
+   the wrong month is one click from the right one. `latest` is null when no period could be found,
+   and this then degrades to the plain statement. #}
+{% if rowInfo and rowInfo.total == 0 and filters.from %}
+  {% if rowInfo.latest %}
+<p class="notice">No rows between {{ filters.from }} and {{ filters.to }}. The most recent period with data is
+  <a href="{{ basePath }}?from={{ rowInfo.latest.from }}&amp;to={{ rowInfo.latest.to }}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">{{ rowInfo.latest.from }} to {{ rowInfo.latest.to }}</a>.</p>
+  {% else %}
+<p class="notice">No rows between {{ filters.from }} and {{ filters.to }}.</p>
+  {% endif %}
+{% endif %}
+{# Printing a report: A4 portrait by default (the page sets `paper`; the operator may choose
+   Landscape in the browser's print dialog), carrying the filters that are on
+   screen, so the sheet is the report the operator was looking at. The button is hidden by the
+   print stylesheet, so it cannot appear on the paper. The printer glyph at the top of the page
+   (above) is the legacy's own control and opens the same printable document. #}
+{% block after_table %}{% endblock %}
+{% include 'partials/totals.html.jinja' %}
+</div>
+{% endif %}
+{% endblock %}

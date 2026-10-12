@@ -1,0 +1,71 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+{# Expenses. The table was created by the v1 import and never written to; the general ledger
+   already reads it, so an expense recorded here appears in `ledgers/general` as a cash movement
+   and nowhere else. There is no `deleted` column, so remove means remove. #}
+<h1 class="page-title">Expenses</h1>
+<p class="crumbs"><a href="/cashmemo">← Cash memo</a> · <a href="/reports/ledgers/general">General ledger</a></p>
+
+{# APPLY is an htmx fragment into `#app-main` with the filtered URL pushed (see
+   [[htmx-navigation-with-html-fragments]]). #}
+<form class="filters" method="get" hx-get="/cashmemo/expenses" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="true" action="/cashmemo/expenses">
+  <label class="field"><span>Search</span><input type="search" name="q" value="{{ filters.q }}" placeholder="name or note"></label>
+  <label class="field"><span>From</span><input type="date" name="from" value="{{ filters.from }}"></label>
+  <label class="field"><span>To</span><input type="date" name="to" value="{{ filters.to }}"></label>
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">APPLY</button>
+    <a class="btn" href="/cashmemo/expenses">RESET</a>
+  </div>
+</form>
+
+<section class="card">
+  <div class="list-toolbar">
+    <h2>{{ rows|length }} expenses</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-value">{{ totals.totalText }}</div><div class="stat-label">Total</div></div>
+    </div>
+  </div>
+  <div class="tablewrap">
+  <table class="data" data-mobile="cards">
+    <thead><tr>
+      <th>Date</th><th>Name</th><th>Note</th><th class="right">Amount</th><th class="right">Actions</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td data-label="Date" data-lead>{{ r.date if r.hasDate else "—" }}</td>
+        <td data-label="Name">{{ r.name }}</td>
+        <td data-label="Note">{{ r.description }}</td>
+        <td class="right" data-label="Amount">{{ r.amountText }}</td>
+        <td class="row-actions" data-label="">
+          <a class="icon-edit" href="/cashmemo/expenses?edit={{ r.id }}{% if filters.q %}&amp;q={{ filters.q }}{% endif %}" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" title="Edit">✎</a>
+          <form method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="false" hx-confirm="Delete this expense?" action="/cashmemo/expenses/{{ r.id }}/delete">
+            <button class="icon-del" type="submit" title="Delete">×</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="5">No expenses recorded.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="card">
+  <h2>{% if editRow %}Edit expense{% else %}New expense{% endif %}</h2>
+  <aa-entity-form>
+  <form class="entity-form" method="post" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML" hx-push-url="/cashmemo/expenses" action="/cashmemo/expenses/save">
+    {% if editRow %}<input type="hidden" name="id" value="{{ editRow.id }}">{% endif %}
+    <label class="field"><span>Date</span><input type="date" name="date" value="{{ editRow.date if editRow else today }}" required></label>
+    <label class="field"><span>Name</span><input type="text" name="name" value="{{ editRow.name if editRow else '' }}" placeholder="Rent, fuel, chai…" required></label>
+    <label class="field"><span>Amount</span><aa-money><input type="number" step="0.01" name="amount" value="{{ editRow.amount if editRow else '0' }}" required></aa-money></label>
+    <label class="field"><span>Note</span><input type="text" name="description" value="{{ editRow.description if editRow else '' }}"></label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit">{% if editRow %}SAVE EXPENSE{% else %}ADD EXPENSE{% endif %}</button>
+      {% if editRow %}<a class="btn" href="/cashmemo/expenses">Cancel</a>{% endif %}
+    </div>
+  </form>
+  </aa-entity-form>
+</section>
+{% endblock %}

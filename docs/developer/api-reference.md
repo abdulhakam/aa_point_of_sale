@@ -128,10 +128,10 @@ await kv.delete('my-key');
 
 ```javascript
 // Render template with context (returns HTML string)
-const html = await render.html('invoices/entry.html', { invoice: {...}, parties: [...] });
+const html = await render.html('invoices/entry.html.jinja', { invoice: {...}, parties: [...] });
 
 // Render with spooled rows (rows spliced by host)
-const html = await render.spooled('reports/profit.html', { filters: {...}, totals: {...} }, [
+const html = await render.spooled('reports/profit.html.jinja', { filters: {...}, totals: {...} }, [
   { field: 'rows', key: handle.key }
 ]);
 
@@ -150,7 +150,7 @@ Available in route modules via the `A` parameter:
 return routeKit.renderRoute(req, {
   active: "invoices",
   title: "Invoice #123",
-  template: "invoices/entry.html"
+  template: "invoices/entry.html.jinja"
 }, { invoice: {...}, parties: [...] });
 
 // Reference data (parties, items, areas, etc.)
@@ -263,7 +263,7 @@ import { spoolRows, renderPage, jsonPayload, totalsFor, names, parts } from "./s
 const handle = await spoolRows('profit', filters, 100, 0);
 
 // Render report page (rows by address)
-const html = await renderPage('profit', 'reports/report.html', ctx, filters, 100);
+const html = await renderPage('profit', 'reports/report.html.jinja', ctx, filters, 100);
 
 // JSON payload for /p/<slug>/data
 const json = await jsonPayload('profit', filters, payload, totals, meta);
@@ -470,7 +470,7 @@ export async function GET(req) {
   }
 }
 ```
-4. Create `page.html` (or use shared `reports/report.html`)
+4. Create `page.html.jinja` (or use shared `reports/report.html.jinja`)
 
 ### Running Locally
 

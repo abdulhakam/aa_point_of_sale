@@ -73,7 +73,7 @@ Envelope v1 request:
 {
   "aa_render": 1,
   "request_id": "...",
-  "template": { "name": "invoices/document.html" },
+  "template": { "name": "invoices/document.html.jinja" },
   "context": { "address": { "store": "kv", "key": "...", "bytes": 1234, "format": "json" } },
   "options": { "paper": "a5" },
   "requires": ["extends", "filters:money"]
@@ -110,7 +110,7 @@ app/
 │   └── reports/*.sql  # Per-report statements
 ├── sql/               # Ad-hoc SQL (refs, counts, latest business date)
 ├── views/             # Jinja2 templates
-│   ├── layout.html    # App shell with htmx integration
+│   ├── layout.html.jinja    # App shell with htmx integration
 │   ├── invoices/      # Invoice templates
 │   ├── reports/       # Report templates
 │   └── partials/      # Reusable template fragments
@@ -162,7 +162,7 @@ GET /invoices/new?type=1
     → route folder resolves
     → consoleView() builds { options, data }
     → renderRoute() → page() → render.html()
-    → Jinja2 template (invoices/console.html)
+    → Jinja2 template (invoices/console.html.jinja)
     → HTML response with htmx attributes
     
 POST /invoices/new (create)

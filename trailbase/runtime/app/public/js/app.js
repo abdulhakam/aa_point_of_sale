@@ -332,7 +332,7 @@
      * The "Invoice total" stat.
      *
      * ⚠️ It used to be found with `grid.querySelector("[data-sum]")`, but `[data-sum]` is at
-     * `grid.html:64` — inside the Lines card's toolbar, ABOVE the `<form data-grid>` at line 73. So the
+     * `grid.html.jinja:64` — inside the Lines card's toolbar, ABOVE the `<form data-grid>` at line 73. So the
      * query returned null and the total was never written. Verified 2026-10-05: setting a 37-line
      * invoice's first quantity 72 -> 999 moved that line's amount 8,249.76 -> 114,465.42 and left the
      * stat frozen at its server-rendered 180,900.00 — a recalculated line beside a stale invoice total,
@@ -542,7 +542,7 @@
   document.addEventListener("htmx:afterSwap", function (event) {
     var target = (event.detail && event.detail.target) || event.target;
     if (!target) return;
-    // The tab title travels in the fragment as a hidden marker (layout.html emits it only when there
+    // The tab title travels in the fragment as a hidden marker (layout.html.jinja emits it only when there
     // is no <head> to carry one), so a boosted nav updates the title instead of leaving the previous
     // page's. Read from the target, falling back to the document for an out-of-band swap.
     var marker = (target.querySelector && target.querySelector("[data-aa-title]")) ||
@@ -553,7 +553,7 @@
     var st = window.__AA_SETTINGS__;
     if (st && typeof st.apply === "function") st.apply(target);
     if (st && typeof st.hydrateForm === "function") st.hydrateForm(target);
-    // The fragment carries the current reference-cache version out-of-band (layout.html). When it
+    // The fragment carries the current reference-cache version out-of-band (layout.html.jinja). When it
     // moves, tell refdb to re-sync so the IndexedDB store is not left at the version the last full
     // page loaded with. A matching version is a no-op.
     var vmeta = document.getElementById("aa-refdb-version");

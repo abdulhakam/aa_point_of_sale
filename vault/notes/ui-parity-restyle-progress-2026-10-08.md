@@ -30,12 +30,12 @@ cheap items of A2), with the fresh discrepancy list regenerated rather than carr
 |---|---|---|
 | **Body link colour** | `a { color: gray-7 }`, not blue | `ui-parity-report` metric `linkColor` no longer differs on any screen |
 | **Shared shell font** | appended `"Apple Color Emoji", "Segoe UI Emoji"` to `--font` | metric `bodyFont` now identical |
-| **Rail** | five legacy destinations in legacy order (Dashboard, Reports, Invoices, Cash Memo, Management) + Logout at the foot; Payments, Inventory, Print, Pages, Plugins and refresh behind one foot menu | `views/partials/nav.html`; legacy `02-dashboard.snapshot.yml` shows exactly those five links + one button |
-| **A — management list** | bare Search row + table, no heading, no count badge, no card wrappers; create form moved behind a `New {singular}` affordance (`?new=1`) | `views/management/list.html`, `routes/management/{entity}/route.ts` |
+| **Rail** | five legacy destinations in legacy order (Dashboard, Reports, Invoices, Cash Memo, Management) + Logout at the foot; Payments, Inventory, Print, Pages, Plugins and refresh behind one foot menu | `views/partials/nav.html.jinja`; legacy `02-dashboard.snapshot.yml` shows exactly those five links + one button |
+| **A — management list** | bare Search row + table, no heading, no count badge, no card wrappers; create form moved behind a `New {singular}` affordance (`?new=1`) | `views/management/list.html.jinja`, `routes/management/{entity}/route.ts` |
 | **C — management cards** | nested bordered cards removed | same |
 | **D — report date inputs** | native `input[type=date]` given the Mantine look by `<aa-date-input>` | [[features-as-native-web-components]]; verified in-browser: text `January 1, 2024`, native `2024-01-01`, name `from` preserved |
-| **G — Cash Memo tile glyph** | filled blue € circle (`coin-euro-filled`) | `views/dashboard/index.html` |
-| **H — dashboard `Overview` card** | removed; `guest-smoke` assertion changed from "Overview" to "Cash Memo" | `views/dashboard/index.html`, `tools/guest-smoke.mjs:287` |
+| **G — Cash Memo tile glyph** | filled blue € circle (`coin-euro-filled`) | `views/dashboard/index.html.jinja` |
+| **H — dashboard `Overview` card** | removed; `guest-smoke` assertion changed from "Overview" to "Cash Memo" | `views/dashboard/index.html.jinja`, `tools/guest-smoke.mjs:287` |
 | **Management table borders** | black, matching legacy (the earlier comment claimed only report tables were black) | metric `thBorder` on `management-parties` was gray-3 vs legacy black |
 
 ## Gates run (all green)
@@ -66,7 +66,7 @@ The user's ask was that the guest look exactly the same **including when and whe
   `[data-modal-close]` declarative wiring. It MOVES the authored children into the dialog, so with no
   JavaScript the form still renders inline and works ([[features-as-native-web-components]]).
 - The two reports declare `"filtersModal": true` in their `meta.json`; `normalizeMeta` now passes that
-  flag through (it did not pass unknown keys). `reports/report.html` renders those filters inside the
+  flag through (it did not pass unknown keys). `reports/report.html.jinja` renders those filters inside the
   dialog with an **OK** submit and hides the inline row and the "find in this report" box, and the
   dialog starts open when no `company` is chosen.
 - `autocomplete.js`'s blank-option label now reads as its own label ("All") rather than an empty box,
@@ -84,7 +84,7 @@ Worked the self-contained groups of the actionable list in
 
 - **Management hub** — order is now sections, areas, parties, companies, bookers, items (the legacy
   order; the guest was reversed), and each link shows its lowercase KEY, so "bookers" not
-  "order bookers". `app/views/management/index.html`, `app/manifests/entities.json`.
+  "order bookers". `app/views/management/index.html.jinja`, `app/manifests/entities.json`.
 - **Management list columns** — added the legacy **Created** column to sections, areas, companies and
   bookers (the imported `created` TEXT is in exactly the legacy format, e.g.
   `2024-01-31 09:50:40.038Z`); bookers' multi-column relabelled "Company"; items reordered to Company,
@@ -110,8 +110,8 @@ The four items the owner asked for next.
 - **Invoices hub** — `/invoices` is now the legacy five-tile hub (Purchase, Sale, Print Invoices,
   Return, Difference); the list moved to `/invoices/all`. The entry route used to coerce every create
   to a sale (it read only the query, ignoring the form's hidden `type`) — it now accepts all four
-  `invoice_types`, so **Return** and **Difference** entries exist. `views/invoices/index.html`,
-  `all.html`, `routes/invoices/{route.ts,all/route.ts,new/route.ts}`.
+  `invoice_types`, so **Return** and **Difference** entries exist. `views/invoices/index.html.jinja`,
+  `all.html.jinja`, `routes/invoices/{route.ts,all/route.ts,new/route.ts}`.
 - **Items Qty column** — the items list shows the legacy `165 (1 ctn 21 units)`, the signed stock read
   from the SAME `itemsReport` view the stock report and `/inventory` use, so the three cannot disagree.
   `routes/management/{entity}/route.ts`, `app/manifests/entities.json`.
@@ -140,7 +140,7 @@ After the owner restated "1-1 with legacy, except the discussed cases" and recon
 one by one ([[parity-carve-outs-reconfirmed-2026-10-08]]), this increment applied the four answers that
 changed something.
 
-- **The four invoice entry views** — `views/invoices/entry.html` is now the legacy entry bar: a
+- **The four invoice entry views** — `views/invoices/entry.html.jinja` is now the legacy entry bar: a
   `{TYPE} INVOICE` heading over a rule, then one inline row — `INVOICE NO:`, `INVOICE DATE`, the
   transaction's party (`BOOKER` + `CUSTOMER` on a sale, `SUPPLIER` on a purchase, `PARTY` +
   `Original Invoice` on a return, **none** on a difference), the disabled `USER:`, the create/save
@@ -153,7 +153,7 @@ changed something.
   (measured live: legacy's `+` raises a modal titled `Create New Customer` with Name / Area / Phone /
   Address and an OK). The `+` is wired by `refdb-create.js`'s `[data-qc-open]` handler; the combobox's
   own "Create …" row remains the other opener.
-- **Create-from-invoice is a dialog with its own submit** — `partials/quick-create.html` wraps each
+- **Create-from-invoice is a dialog with its own submit** — `partials/quick-create.html.jinja` wraps each
   panel in `<aa-modal>` with its own `<form action="/quick-create">`; `autocomplete.js` opens/closes the
   owning dialog instead of an inline panel, and `components/modal.js` tags its overlay with `__aaHost`
   because `<aa-modal>` MOVES its children out of the element (so `closest("aa-modal")` is null).

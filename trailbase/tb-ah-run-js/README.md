@@ -27,7 +27,7 @@ Globals exposed to scripts: `trailbase.query`, `db.query`/`execute`, `sqlite.exe
 ## Rendering (Rust `minijinja`)
 
 Templates live under `/app/views` (falling back to `/app/pages`); names resolve
-views-root-relative, so `{% extends "layout.html" %}` works from any page. Ten
+views-root-relative, so `{% extends "layout.html.jinja" %}` works from any page. Ten
 formatting filters are registered (`money`, `num`, `round`, `qty`, `date`, `datefmt`, `upper`,
 `lower`, `json`, `yesno`). Templates are read fresh every render — no mtime cache (WASI mtime is
 unusable and minijinja caches compiled templates, so the environment clears templates per render),
@@ -37,7 +37,7 @@ A route returns `{ html: "..." }` to send an HTML document; anything else is JSO
 
 ```ts
 export async function GET(req) {
-  return { html: render.html("page.html", JSON.stringify({ title: "Profit Report", total: 1234.5 })) };
+  return { html: render.html("page.html.jinja", JSON.stringify({ title: "Profit Report", total: 1234.5 })) };
 }
 ```
 

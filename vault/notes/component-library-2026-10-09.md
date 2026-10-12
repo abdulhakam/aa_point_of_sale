@@ -26,17 +26,17 @@ consuming server descriptors ([[components-consume-server-descriptors]],
 | `<aa-invoice-entry>` | `public/js/components/invoice-entry.js` | The entry screen's container: consumes the server `type`/`can-write` descriptor and fills the line price from the item's own |
 
 All four are `display: contents` wrappers, so adding a tag does not move a pixel (rules in `app.css`).
-Loaded from `views/layout.html` in the existing `defer` block.
+Loaded from `views/layout.html.jinja` in the existing `defer` block.
 
 ## Wiring
 
 - **`<aa-money>`**: the invoice grid (line `price`/`discount_1`/`discount_2` as rates, `discount_rs` as
   an amount; header discounts likewise), the entry header and line form, `payments/new`, cash-memo
   expenses, inventory cost/sale price, the quick-create item panel, the general-ledger opening fields,
-  and the management `items` price fields via `entities.json` `"money": "rate"` + `entity_fields.html`.
+  and the management `items` price fields via `entities.json` `"money": "rate"` + `entity_fields.html.jinja`.
 - **`<aa-entity-form>`**: the management entity form, `payments/new`, expenses, inventory, the invoice
   entry header + line-add + new-create forms, and the grid header + grid form.
-- **`<aa-invoice-entry>`**: wraps `views/invoices/entry.html`; its `data-type`/`data-can-write` are the
+- **`<aa-invoice-entry>`**: wraps `views/invoices/entry.html.jinja`; its `data-type`/`data-can-write` are the
   server descriptor. It owns the item→price fill that `app.js` `enhanceLineEditor()` used to apply to
   every `form select[name="item"]`; that function is removed. The grid keeps its richer fill inside
   `enhanceGrid`.
@@ -60,7 +60,7 @@ finds the defect, and a test that only proves the element "is defined" would hav
 ## Also fixed while wiring
 
 - **A rate is `step="any"` in the server-rendered markup too** (grid, entry, inventory, quick-create,
-  and the management `items` price fields through `partials/entity_fields.html`). The grid's price cell
+  and the management `items` price fields through `partials/entity_fields.html.jinja`). The grid's price cell
   was `step="0.01"` while stored rates are not 2 dp, so the **no-JS** plain submit was a `stepMismatch`
   the browser would refuse. htmx submits over XHR and never validated, which hid it. See
   [[money-inputs-distinguish-amounts-from-rates]].
@@ -69,7 +69,7 @@ finds the defect, and a test that only proves the element "is defined" would hav
 
 A local review of the uncommitted diff found four items, all fixed before commit:
 
-- **`partials/entity_fields.html` dropped `step` in the new rate branch**, defaulting a management item
+- **`partials/entity_fields.html.jinja` dropped `step` in the new rate branch**, defaulting a management item
   rate to `step="1"` and blocking the no-JS save — the same defect, on the one path the first pass
   missed. The branch now emits the descriptor's `step`.
 - **`<aa-money>` normalised amounts with `toFixed`, not the defined `round2`.** The two disagree at

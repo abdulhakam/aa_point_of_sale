@@ -46,7 +46,7 @@ dashboard (no paper)      data-paper=(none)  Letter  portrait  (612x792)
 
 The generated depot copy `trailbase/traildepot/runtime/app/public/css/app.css` was synced to match
 (`RUN.BAT` would do this on the next start anyway). Stale "A4 landscape" comments in `http.js` and
-`reports/report.html` were corrected.
+`reports/report.html.jinja` were corrected.
 
 ## The defect (as found)
 
@@ -117,7 +117,7 @@ is a decision to record, not a silent default.
 
 - `trailbase/runtime/app/public/css/app.css:640-654` — the two `@media print` blocks and their bare
   `@page { size: … }` rules.
-- `trailbase/runtime/app/views/layout.html:12-13` — `<body data-paper="{{ paper }}">`.
+- `trailbase/runtime/app/views/layout.html.jinja:12-13` — `<body data-paper="{{ paper }}">`.
 - `trailbase/runtime/app/lib/report-render.js:232` — reports pass `paper: "a4"`.
 - `trailbase/runtime/ahscripts/routes/invoices/{id}/view/route.ts:26,38` and
   `.../cashmemo/vouchers/{id}/route.ts:27` — invoices/vouchers pass `paper` defaulting to `a5`.

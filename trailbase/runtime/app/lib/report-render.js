@@ -16,7 +16,7 @@ export const RENDER_MAX_ROWS = 1000;
 
 // The shared server-rendered report template. A manifest may override it with `view` (the general
 // ledger does), which is how a report gets a bespoke layout without its own route.
-const DEFAULT_REPORT_VIEW = "reports/report.html";
+const DEFAULT_REPORT_VIEW = "reports/report.html.jinja";
 
 /** The page shell a report renders inside. Same shape the dispatcher's `shell()` produced. */
 function shell(user, active, title) {

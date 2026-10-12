@@ -127,7 +127,7 @@ invoice list and every report is silently empty. That is the worst shape this fa
 
 ## The workaround that proves the diagnosis
 
-`/invoices` has a **"Show drafts instead"** checkbox (`?drafts=1`, `app/views/invoices/index.html:26`).
+`/invoices` has a **"Show drafts instead"** checkbox (`?drafts=1`, `app/views/invoices/index.html.jinja:26`).
 Ticking it immediately produces the real ledger:
 
 | Request | Count | Billed | Paid | Balance |

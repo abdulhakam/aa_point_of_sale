@@ -69,7 +69,7 @@ later option if isolation or the per-call deadline demands it.
 
 - `trailbase/tb-ah-run-js/src/render.rs` — the ported renderer and filters.
 - `trailbase/tb-ah-run-js/src/api.rs` — the `render` bridge; `trailbase/tb-ah-run-js/src/lib.rs` — the `{ html }` response.
-- Verified: `GET /page` → `200`, `content-type: text/html`, `{% extends "layout.html" %}` resolved,
+- Verified: `GET /page` → `200`, `content-type: text/html`, `{% extends "layout.html.jinja" %}` resolved,
   filters produced `1234.50`, `1 ctn 1 unit`, `24-Sep-2026`, `PROFIT REPORT`, `Yes`.
 - [[trail-runtime-js-reference]] — the adopted host and its measurements.
 

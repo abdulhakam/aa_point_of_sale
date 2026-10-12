@@ -45,7 +45,7 @@ A server-side number search the picker calls as the operator types — see
   matches of that type whose number contains the digits, newest first.
 - `public/js/invoice-remote.js` — for a select with `data-invoice-remote`, debounced (180 ms) fetch,
   rebuild the options, fire `refdb:select` so the combobox re-reads and refreshes its open list.
-- `views/invoices/console.html` — the picker carries
+- `views/invoices/console.html.jinja` — the picker carries
   `data-invoice-remote="/data/invoices/search?type={{ type }}"`.
 
 **Hardened 2026-10-11 (code review).** `invoice-remote.js` now bumps its request sequence when the

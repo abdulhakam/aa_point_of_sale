@@ -12,7 +12,7 @@ related_to: ["[[full-app-ui-sweep-2026-10-10]]", "[[tb-0037-component-library]]"
 
 # Management relation/enum selects showed a duplicate blank option
 
-**Status:** fixed 2026-10-10 in `runtime/app/views/partials/entity_fields.html`.
+**Status:** fixed 2026-10-10 in `runtime/app/views/partials/entity_fields.html.jinja`.
 
 ## Symptom
 
@@ -22,7 +22,7 @@ blank `—` option **twice** (e.g. two `—` at the top of the Company list).
 ## Cause
 
 `management.formFields` already prepends `{ value: "", label: "—" }` to a select's options (and marks it
-`selected` when the value is empty), and `entity_fields.html` added a second `<option value="">—</option>`
+`selected` when the value is empty), and `entity_fields.html.jinja` added a second `<option value="">—</option>`
 of its own. Two blanks for every non-multiple select.
 
 ## Fix

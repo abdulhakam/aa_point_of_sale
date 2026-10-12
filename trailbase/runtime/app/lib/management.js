@@ -208,7 +208,7 @@ export async function listView(A, entity, entityKey, query) {
   const isNew = /^(1|true|on|yes)$/i.test(String(query.new || ""));
 
   return {
-    options: { active: "management", title: entity.label, template: "management/list.html" },
+    options: { active: "management", title: entity.label, template: "management/list.html.jinja" },
     data: {
       entity,
       entityKey,

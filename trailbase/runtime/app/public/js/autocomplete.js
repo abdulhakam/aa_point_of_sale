@@ -303,7 +303,7 @@
 
        When the typed text names something that is not on the list, the last row of the list becomes
        "Create …". Choosing it opens the panel the select points at with `data-create` — a block of
-       fields rendered by `views/partials/quick-create.html` INSIDE the same form. The create therefore
+       fields rendered by `views/partials/quick-create.html.jinja` INSIDE the same form. The create therefore
        travels in the form's own submit: the invoice header, or the line being added, is saved with it.
        That is the whole reason it is not a fetch: nothing has to be re-rendered and nothing typed is
        lost ([[runtime-js-minimal-file-authoring-contract]]).

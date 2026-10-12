@@ -163,7 +163,7 @@ export async function buildSheet(A, id) {
  * WHY. The materialised document is kept current by triggers, but it is still a second copy, and the
  * request behind the console's view dialog is "show the LATEST data (not from cache / invoice_doc)".
  * `readInvoice` already reads `invoices`/`transactions`/`items` directly, so this maps its output into
- * the exact `data` shape `buildSheet` produces, and the ONE `partials/invoice-sheet.html` macro renders
+ * the exact `data` shape `buildSheet` produces, and the ONE `partials/invoice-sheet.html.jinja` macro renders
  * both — so the live preview and the queued printout cannot diverge in layout.
  *
  * Used by `?source=live` on `/invoices/<id>/view` (the console's view dialog and the finish-flow print

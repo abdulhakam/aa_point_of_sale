@@ -25,7 +25,7 @@
         active: "cashmemo",
         title: "Voucher",
         paper: print ? String(query.paper ?? "a5") : "",
-        template: "cashmemo/voucher.html",
+        template: "cashmemo/voucher.html.jinja",
       },
       {
         voucher: found,

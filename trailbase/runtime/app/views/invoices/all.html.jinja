@@ -1,0 +1,82 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+<h1 class="page-title">All invoices</h1>
+<p class="crumbs"><a href="/invoices">← Invoices</a></p>
+
+<div class="pagebar">
+  <a class="btn primary" href="/invoices/new?type=1">+ New Sale</a>
+  <a class="btn primary" href="/invoices/new?type=0">+ New Purchase</a>
+  <a class="btn" href="/invoices/new?type=2">+ New Return</a>
+  <a class="btn" href="/invoices/new?type=3">+ New Difference</a>
+</div>
+
+<form class="filters" method="get" action="/invoices/all">
+  <label class="field"><span>Type</span>
+    <select name="type">
+      <option value="">All</option>
+      {% for t in types %}<option value="{{ t.code }}"{% if selectedType == t.code %} selected{% endif %}>{{ t.label }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field"><span>From</span><aa-date-input><input type="date" name="from" value="{{ filters.from }}"></aa-date-input></label>
+  <label class="field"><span>To</span><aa-date-input><input type="date" name="to" value="{{ filters.to }}"></aa-date-input></label>
+  <label class="field"><span>Party</span>
+    <select name="party" data-searchable data-ref="parties">
+      <option value="">All</option>
+      {% for p in parties %}<option value="{{ p.id }}"{% if filters.party == p.id %} selected{% endif %}>{{ p.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="field check"><input type="checkbox" name="unpaid"{% if filters.unpaid %} checked{% endif %}> <span>Unpaid only</span></label>
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">APPLY</button>
+    <a class="btn" href="/invoices/all">RESET</a>
+  </div>
+</form>
+
+<section class="card">
+  <div class="list-toolbar">
+    <h2>Invoices ({{ totals.count }})</h2>
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-value">{{ totals.totalText }}</div><div class="stat-label">Billed</div></div>
+      <div class="stat"><div class="stat-value">{{ totals.paidText }}</div><div class="stat-label">Paid</div></div>
+      <div class="stat"><div class="stat-value">{{ totals.balanceText }}</div><div class="stat-label">Balance</div></div>
+    </div>
+  </div>
+  {% if pageCount > 1 %}
+  <div class="pager">
+    {% if page > 1 %}<a class="btn" href="?{{ baseQuery }}&page={{ page - 1 }}">← Prev</a>{% else %}<span class="btn disabled">← Prev</span>{% endif %}
+    <span class="pager-info">Page {{ page }} of {{ pageCount }} · showing {{ (page - 1) * pageSize + 1 }}–{{ (page - 1) * pageSize + rows|length }} of {{ totals.count }}</span>
+    {% if page < pageCount %}<a class="btn" href="?{{ baseQuery }}&page={{ page + 1 }}">Next →</a>{% else %}<span class="btn disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
+  <div class="tablewrap">
+  <table class="data" data-mobile="cards">
+    <thead><tr>
+      <th>Inv #</th><th>Type</th><th>Date</th><th class="right">Total</th>
+      <th class="right">Paid</th><th class="right">Balance</th><th>Status</th>
+    </tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td data-label="Inv #" data-lead><a href="/invoices/{{ r.id }}">{{ r.invoiceNo }}</a></td>
+        <td data-label="Type">{{ r.typeLabel }}</td>
+        <td data-label="Date">{{ r.dated }}</td>
+        <td class="right" data-label="Total">{{ r.totalText }}</td>
+        <td class="right" data-label="Paid">{{ r.paidText }}</td>
+        <td class="right" data-label="Balance">{{ r.balanceText }}</td>
+        <td data-label="Status">{% if r.balance > 0.005 %}<span class="tag">Unpaid</span>{% elif r.balance < -0.005 %}<span class="tag">Credit</span>{% else %}<span class="tag">Paid</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td class="empty" colspan="7">No invoices match these filters.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% if pageCount > 1 %}
+  <div class="pager">
+    {% if page > 1 %}<a class="btn" href="?{{ baseQuery }}&page={{ page - 1 }}">← Prev</a>{% else %}<span class="btn disabled">← Prev</span>{% endif %}
+    <span class="pager-info">Page {{ page }} of {{ pageCount }} · showing {{ (page - 1) * pageSize + 1 }}–{{ (page - 1) * pageSize + rows|length }} of {{ totals.count }}</span>
+    {% if page < pageCount %}<a class="btn" href="?{{ baseQuery }}&page={{ page + 1 }}">Next →</a>{% else %}<span class="btn disabled">Next →</span>{% endif %}
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

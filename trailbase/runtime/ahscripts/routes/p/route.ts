@@ -9,7 +9,7 @@
     const pages = await A.pages.listPages("/app/pages");
     return routeKit.renderRoute(
       req,
-      { user, active: "pages", title: "Pages", template: "pages/index.html" },
+      { user, active: "pages", title: "Pages", template: "pages/index.html.jinja" },
       { pages }
     );
   };

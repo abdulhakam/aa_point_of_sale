@@ -53,7 +53,7 @@ Request, `aa_render` is the envelope version and is required:
 {
   "aa_render": 1,
   "request_id": "r-8f2c…",
-  "template": { "name": "invoices/document.html" },
+  "template": { "name": "invoices/document.html.jinja" },
   "context":  { "address": { "store": "kv", "key": "render-ctx:8f2c", "bytes": 120433, "format": "json" } },
   "options":  { "paper": "a5" },
   "requires": ["extends", "import", "filters:money", "filters:date"]

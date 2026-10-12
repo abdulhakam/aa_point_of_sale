@@ -155,12 +155,12 @@ Bound from user input via `totalsParams()`.
 
 ### 5. Create Template (Optional)
 
-**Default:** Uses shared `reports/report.html` — no template needed.
+**Default:** Uses shared `reports/report.html.jinja` — no template needed.
 
-**Custom:** Create `traildepot/runtime/app/pages/reports/your-report/page.html`
+**Custom:** Create `traildepot/runtime/app/pages/reports/your-report/page.html.jinja`
 
 ```html
-{% extends "reports/report.html" %}
+{% extends "reports/report.html.jinja" %}
 
 {% block report_title %}Your Report{% endblock %}
 
@@ -206,7 +206,7 @@ node tools/verify-spool-reports.mjs your-report
 
 ### 8. Register in Report Hub (Optional)
 
-Edit `traildepot/runtime/app/views/reports/index.html` to add card.
+Edit `traildepot/runtime/app/views/reports/index.html.jinja` to add card.
 
 ---
 
@@ -395,7 +395,7 @@ export async function GET(req) {
   return routeKit.renderRoute(req, { 
     active: "reports", 
     title: "Your Report", 
-    template: "reports/report.html" 
+    template: "reports/report.html.jinja" 
   }, ctx);
 }
 ```

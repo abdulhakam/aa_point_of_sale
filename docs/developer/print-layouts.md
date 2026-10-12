@@ -9,13 +9,13 @@ There is **no separate print renderer**. The on-screen document and the printed 
 whose only difference is the print stylesheet and the paper size. `?print=1` does not render a different
 document; it drops the navigation/action bar and selects a paper size:
 
-- `views/invoices/document.html` — the standalone invoice document
-- `views/print/queue.html` — the queued batch, importing the same macro
-- Both `{% import 'partials/invoice-sheet.html' as sheetdoc %}` and call `{{ sheetdoc.sheet(sheet) }}`
+- `views/invoices/document.html.jinja` — the standalone invoice document
+- `views/print/queue.html.jinja` — the queued batch, importing the same macro
+- Both `{% import 'partials/invoice-sheet.html.jinja' as sheetdoc %}` and call `{{ sheetdoc.sheet(sheet) }}`
 
 ```
 Screen document ─┐
-                 ├─→ partials/invoice-sheet.html (macro: sheet(d))  ← THE single layout source
+                 ├─→ partials/invoice-sheet.html.jinja (macro: sheet(d))  ← THE single layout source
 Print queue ─────┘
 ```
 
@@ -41,7 +41,7 @@ const paper = String(query.paper ?? "") || "a5";
 return routeKit.renderRoute(req, {
   user, active: "invoices", title: "Invoice " + sheet.invoiceNo,
   paper: print ? paper : "",          // blank on screen → no print @page applies
-  template: "invoices/document.html",
+  template: "invoices/document.html.jinja",
 }, { sheet: sheet.data, print, actions /* … */ });
 ```
 
@@ -72,9 +72,9 @@ return routeKit.renderRoute(req, {
 
 | File | Role |
 |------|------|
-| `views/partials/invoice-sheet.html` | **The layout** — macro `sheet(d)` |
-| `views/invoices/document.html` | The page; imports the macro, adds action bar |
-| `views/print/queue.html` | Queued batch; imports the same macro |
+| `views/partials/invoice-sheet.html.jinja` | **The layout** — macro `sheet(d)` |
+| `views/invoices/document.html.jinja` | The page; imports the macro, adds action bar |
+| `views/print/queue.html.jinja` | Queued batch; imports the same macro |
 | `app/lib/invoice-sheet.js` | **The data builder** — `buildSheet` / `buildSheetFresh` → `d` |
 | `app/public/css/app.css` | Layout CSS (`[data-invoice-doc] …` + `@media print`) |
 
@@ -82,11 +82,11 @@ return routeKit.renderRoute(req, {
 
 A layout edit usually touches **one or both**:
 
-- **Structure** — the macro (`invoice-sheet.html`): which blocks, columns, labels.
+- **Structure** — the macro (`invoice-sheet.html.jinja`): which blocks, columns, labels.
 - **Values** — the builder (`invoice-sheet.js`): the `d` object the macro renders.
 
 ```html
-{# invoice-sheet.html — structure #}
+{# invoice-sheet.html.jinja — structure #}
 <article class="invoice-doc" data-invoice-doc>
   <header class="doc-print-head"> … business header … </header>
   <h3 class="doc-type">{{ d.typeLabel }}</h3>
@@ -192,7 +192,7 @@ capped by `.doc-logo` (`max-width: 150px; max-height: 56px`). The user-facing wa
 `docs/user/getting-started.md`, "Set Up Business Information & Logo".
 
 The printed **Checked By / Delivered By** footer is currently hard-coded literals in the macro; edit
-`invoice-sheet.html` to change the names/phones, or move them into `business.json` and the builder if
+`invoice-sheet.html.jinja` to change the names/phones, or move them into `business.json` and the builder if
 they must be configurable.
 
 ### Header and Footer Repeat on Every Page
@@ -228,17 +228,17 @@ and the printed sheet's columns in step.
 
 | File | Role |
 |------|------|
-| `views/reports/report.html` | The shared report layout (all spooled reports) |
+| `views/reports/report.html.jinja` | The shared report layout (all spooled reports) |
 | `app/lib/report-render.js` | Builds the report context (columns, rows, totals, pager) |
 | `app/public/css/app.css` | `.report table.data` + `@media print` A4 rules |
 | `pages/<slug>/meta.json` | Per-report `columns`, `totals`, `filters` (data, not layout) |
 
 ### How a Report Renders
 
-`views/reports/report.html` iterates the manifest:
-- filters from `def.fields` (`partials/filters.html`)
-- the table from `tb.simple(columns, rows, mobile, "report-table")` (`partials/table.html`)
-- totals from `partials/totals.html`
+`views/reports/report.html.jinja` iterates the manifest:
+- filters from `def.fields` (`partials/filters.html.jinja`)
+- the table from `tb.simple(columns, rows, mobile, "report-table")` (`partials/table.html.jinja`)
+- totals from `partials/totals.html.jinja`
 - a client-side "Find in this report" filter, and an offset pager
 
 ### Overridable Blocks
@@ -255,12 +255,12 @@ and the printed sheet's columns in step.
 Give the page a `view` in its manifest pointing at a template that extends the shared one:
 
 ```json
-{ "view": "reports/my-report.html" }
+{ "view": "reports/my-report.html.jinja" }
 ```
 
 ```html
-{# app/views/reports/my-report.html #}
-{% extends "reports/report.html" %}
+{# app/views/reports/my-report.html.jinja #}
+{% extends "reports/report.html.jinja" %}
 {% block report_title %}My Report (custom){% endblock %}
 {% block before_table %}<p class="notice">Figures are provisional.</p>{% endblock %}
 ```
@@ -307,9 +307,9 @@ dialog (a CSS `size` sets the default, it is not a lock).
 
 | File | Role |
 |------|------|
-| `views/cashmemo/voucher.html` | The voucher (receipt) layout |
-| `views/cashmemo/vouchers.html` | The voucher list (with a print link) |
-| `views/payments/new.html` | The payment entry that produces a voucher |
+| `views/cashmemo/voucher.html.jinja` | The voucher (receipt) layout |
+| `views/cashmemo/vouchers.html.jinja` | The voucher list (with a print link) |
+| `views/payments/new.html.jinja` | The payment entry that produces a voucher |
 
 A voucher is **money that moved with no invoice behind it** (a payment with `invoice IS NULL`). It
 renders the payment directly, not an invoice document — so it reuses the shared `.doc-*` CSS but does
@@ -336,7 +336,7 @@ renders the payment directly, not an invoice document — so it reuses the share
 
 ### Adding a New Printable Kinds (e.g., a new receipt type)
 
-1. Create the template `views/<area>/<things>.html`, `{% extends 'layout.html' %}`, with an
+1. Create the template `views/<area>/<things>.html`, `{% extends 'layout.html.jinja' %}`, with an
    `article` carrying a **unique root attribute** (like `data-voucher`) so shared `.doc-*` rules can be
    scoped if needed.
 2. Set `paper: "a5"` in the route's `renderRoute` options when `?print=1`.
@@ -351,8 +351,8 @@ renders the payment directly, not an invoice document — so it reuses the share
 
 | File | Role |
 |------|------|
-| `views/print/index.html` | Picker (type + invoice no) with a live preview `<iframe>` |
-| `views/print/queue.html` | The batch: every queued sheet |
+| `views/print/index.html.jinja` | Picker (type + invoice no) with a live preview `<iframe>` |
+| `views/print/queue.html.jinja` | The batch: every queued sheet |
 | `app/public/js/print-queue.js` | localStorage queue (`print-queue` key) |
 
 The queue is **browser-local** (localStorage), like the legacy. `print-queue.js` syncs queued ids into
@@ -406,8 +406,8 @@ due-date comparison. Keep that source when editing the header.
 
 ## Editing Checklist
 
-- [ ] Structural changes go in **one** place (`partials/invoice-sheet.html` for the sheet; the shared
-      `reports/report.html` for reports).
+- [ ] Structural changes go in **one** place (`partials/invoice-sheet.html.jinja` for the sheet; the shared
+      `reports/report.html.jinja` for reports).
 - [ ] Value changes go in `app/lib/invoice-sheet.js` — **both** `buildSheet` and `buildSheetFresh`.
 - [ ] Money via `A.format.money(...)` / existing formatters; never hand-format.
 - [ ] Column widths/indices rechecked against the **body** row (headers have colspans).

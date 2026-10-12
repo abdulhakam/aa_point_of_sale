@@ -1,0 +1,50 @@
+{# The legacy 80px icon navbar (Mantine NavbarMinimal): icon-only links with tooltips, active link on
+   a blue-0 chip. The five destinations mirror the legacy rail exactly and in the legacy order —
+   Dashboard, Reports, Invoices, Cash Memo, Management (measured off `vault/attachments/legacy-ui/`
+   `02-dashboard.snapshot.yml`) — and Logout ends the rail at the foot
+   ([[ui-parity-discrepancies-2026-10-05]] correction to item I).
+
+   The guest-only destinations (Payments, Inventory, Print) and the utility items (Pages, Plugins,
+   the background-refresh dot) are not on the legacy rail, so they live behind one foot menu rather
+   than lengthening it ([[tb-0023-guest-feature-parity]] 2026-10-07 reopened rail item).
+
+   Below 768px the same markup becomes a fixed bottom bar — see
+   `mobile-layout-is-additive-to-the-legacy-look`; the markup is identical either way. #}
+{% import 'partials/icons.html.jinja' as icons %}
+{# hx-boost turns each rail link into an htmx request that the server answers with the body block
+   only (see `app/lib/http.js` `isFragment`), swapped into `#app-main`. The rail itself is part of the
+   shell and is never re-rendered on a nav click. The two forms below opt OUT with `hx-boost="false"`
+   — a boosted POST would swap a redirect's body into `#app-main` instead of navigating. #}
+<nav class="navbar" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">
+  <div class="navbar-main">
+    <a class="nav-link{% if active == 'dashboard' %} active{% endif %}" href="/dashboard" title="Main">{{ icons.svg('dashboard', 20) }}</a>
+    <a class="nav-link{% if active == 'reports' %} active{% endif %}" href="/reports" title="Reports">{{ icons.svg('report', 20) }}</a>
+    <a class="nav-link{% if active == 'invoices' %} active{% endif %}" href="/invoices" title="Invoices">{{ icons.svg('file-invoice', 20) }}</a>
+    <a class="nav-link{% if active == 'cashmemo' %} active{% endif %}" href="/cashmemo" title="Cash memo">{{ icons.svg('wallet', 20) }}</a>
+    <a class="nav-link{% if active == 'management' %} active{% endif %}" href="/management" title="Management">{{ icons.svg('settings', 20) }}</a>
+  </div>
+  <div class="navbar-bottom">
+    {# One "more" menu for everything the legacy rail did not carry: the guest-only destinations
+       (Payments, Inventory, Print) and the utilities (Pages, Plugins, refresh). Paying for a shorter
+       rail with one menu is deliberate; a <details> keeps it working with no JS. #}
+    <details class="nav-more">
+      <summary class="nav-link" title="More">{{ icons.svg('dots', 20) }}</summary>
+      <div class="nav-more-menu">
+        <a class="nav-link{% if active == 'payments' %} active{% endif %}" href="/payments" title="Payments">{{ icons.svg('cash', 20) }}</a>
+        <a class="nav-link{% if active == 'inventory' %} active{% endif %}" href="/inventory" title="Inventory">{{ icons.svg('trolley', 20) }}</a>
+        <a class="nav-link{% if active == 'print' %} active{% endif %}" href="/print" title="Print queue">{{ icons.svg('printer', 20) }}</a>
+        <a class="nav-link{% if active == 'pages' %} active{% endif %}" href="/p" title="Pages">{{ icons.svg('layout-grid', 20) }}</a>
+        <a class="nav-link{% if active == 'plugins' %} active{% endif %}" href="/plugins" title="Plugins">{{ icons.svg('plug', 20) }}</a>
+        <form class="job-form" method="post" action="/reports/refresh" data-job-form hx-boost="false">
+          <button class="nav-link job" type="submit" data-job title="Reload report data">
+            <span class="job-dot" data-job-dot></span>
+            <span class="job-text" data-job-text>idle</span>
+          </button>
+        </form>
+      </div>
+    </details>
+    <form method="post" action="/logout" hx-boost="false">
+      <button class="nav-link" type="submit" title="Logout">{{ icons.svg('logout', 20) }}</button>
+    </form>
+  </div>
+</nav>

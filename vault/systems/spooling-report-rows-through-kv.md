@@ -104,7 +104,7 @@ process first read it.
 - **One bind cannot serve two types.** `invoice` matches a BLOB id *or* a human number, so it needs
   `:invoiceId` and `:invoiceNo`. And the number half needs `CAST(... AS REAL) = CAST(... AS REAL)`:
   `CAST(invoiceNo AS TEXT)` is `"3840.0"` where the JS renders `"3840"`.
-- **Alias to the JS field names, not to your own column names.** `partials/table.html` reads
+- **Alias to the JS field names, not to your own column names.** `partials/table.html.jinja` reads
   `row[column.key]`; projecting `transaction_type` where the page asks for `transactionType` renders a
   blank column with correct row count and correct money.
 - **A CTE must not share a name with one of its own output columns**, or it shadows the column inside

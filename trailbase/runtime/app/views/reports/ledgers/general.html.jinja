@@ -1,0 +1,11 @@
+{% extends 'reports/report.html.jinja' %}
+{% block extra_inputs %}
+<label class="field"><span>Opening Recievables</span><aa-money><input type="number" step="0.01" name="openingRecievables" value="{{ filters.openingRecievables }}"></aa-money></label>
+<label class="field"><span>Opening Payables</span><aa-money><input type="number" step="0.01" name="openingPayables" value="{{ filters.openingPayables }}"></aa-money></label>
+<label class="field"><span>Opening Cash</span><aa-money><input type="number" step="0.01" name="openingCash" value="{{ filters.openingCash }}"></aa-money></label>
+{% endblock %}
+{% block before_table %}
+{% if opening %}
+<p class="report-opening">Opening Balance — Recievables: {{ opening.recievableText }} · Payables: {{ opening.payableText }} · Cash: {{ opening.cashText }}</p>
+{% endif %}
+{% endblock %}

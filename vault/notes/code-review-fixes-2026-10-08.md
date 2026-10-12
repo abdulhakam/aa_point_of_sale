@@ -16,7 +16,7 @@ gates were re-run green.
 
 ## Requirement conflict (report screens)
 
-`report.html` had wrapped the **"Find in this report"** row in `{% if not def.filtersModal %}` and the
+`report.html.jinja` had wrapped the **"Find in this report"** row in `{% if not def.filtersModal %}` and the
 modal reports' inline **APPLY** became the dialog's OK. The requirement is to KEEP both guest features,
 so the guard is gone: the row is on every report again, alongside the stock/difference filter dialog.
 The apply action on a modal report is the dialog's submit.

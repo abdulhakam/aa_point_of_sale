@@ -19,7 +19,7 @@ Report pages rendered the first `RENDER_MAX_ROWS` (1000) rows with a "Load more"
 window** (`maxRows = shown + 1000`) and a "Show all" that dropped the cap. It was bounded per click
 but re-rendered an ever-larger window and had no page you could sit on, link to, or return to. Every
 one of the fifteen report/ledger screens shares the one path (`app/lib/report-render.js` →
-`reports/report.html`), so one change covers them all.
+`reports/report.html.jinja`), so one change covers them all.
 
 ## Decision
 
@@ -28,7 +28,7 @@ one of the fifteen report/ledger screens shares the one path (`app/lib/report-re
 - `report-render.js` reads `page` (1-based), keeps `pageSize` (`maxRows` override or
   `RENDER_MAX_ROWS`), computes `offset = (page-1)*pageSize`, and exposes `rowInfo` with
   `page`, `pageCount`, `first`, `last`, `total`, and `prevHref`/`nextHref`/`allHref`.
-- `reports/report.html` renders a pager (`← Prev · Page k of n · showing a–b of N · Next →` +
+- `reports/report.html.jinja` renders a pager (`← Prev · Page k of n · showing a–b of N · Next →` +
   `Show all`), reusing the `.pager` styles the invoice list already had. Prev/Next carry the current
   filters and drop the paging params.
 - `all=1` remains the "everything on one page" escape hatch.

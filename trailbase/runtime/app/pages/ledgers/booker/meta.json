@@ -1,6 +1,6 @@
 {
   "title": "Booker Sales Ledger",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "resetLabel": "CLEAR",
   "hub": {
     "title": "Booker",

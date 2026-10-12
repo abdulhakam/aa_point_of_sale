@@ -38,7 +38,7 @@ single generic runtime serves it.
 ```jsonc
 {
   "title": "Profit Report",
-  "template": "page.html",                                  // optional, defaults to page.html
+  "template": "page.html.jinja",                                  // optional, defaults to page.html.jinja
   "needs": { "views": ["transactionsReport", "refs"] },     // tables derived from these
   "compute": { "report": "profit" },                        // a trusted named operation
   "filters": [ { "name": "from", "type": "date", "default": { "fn": "monthStart" } } ],
@@ -105,7 +105,7 @@ single generic runtime serves it.
   `MAX_DEPTH = 6`, and the slug-escape rejection in `readPage`.
 - `trailbase/runtime/ahscripts/routes/_app/route.ts` — the generic host, `filtersFor`, the
   `W/"v3-…"` ETag and gzip handling, and the `/p/<slug>` and `/p/<slug>/data` endpoints.
-- `trailbase/runtime/app/pages/` — 14 folders, each `meta.json` + `page.html` (`reports/{payments,
+- `trailbase/runtime/app/pages/` — 14 folders, each `meta.json` + `page.html.jinja` (`reports/{payments,
   salesreport,paymentsbycompany,itemsales,profit,stock,difference,outstanding,productsale,
   dailysale}`, `ledgers/{area,booker,general,party}`).
 - `trailbase/runtime/app/pages/reports/profit/meta.json` — the worked example quoted above.

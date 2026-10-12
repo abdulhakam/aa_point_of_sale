@@ -20,17 +20,17 @@ sheets. This is the record of what changed, the evidence it matches legacy, and 
 | File | Change |
 |---|---|
 | `trailbase/runtime/app/lib/invoice-sheet.js` | **New.** The sheet render context, lifted out of the view route so the single view and the queued batch render from ONE builder. |
-| `trailbase/runtime/app/views/partials/invoice-sheet.html` | **New.** The sheet body as a minijinja macro, used by `invoices/document.html` and `print/queue.html`. |
+| `trailbase/runtime/app/views/partials/invoice-sheet.html.jinja` | **New.** The sheet body as a minijinja macro, used by `invoices/document.html.jinja` and `print/queue.html.jinja`. |
 | `trailbase/runtime/ahscripts/routes/invoices/{id}/view/route.ts` | Calls `buildSheet`; passes `sheet` + `actions`. |
-| `trailbase/runtime/app/views/invoices/document.html` | The legacy actions: **Print Invoice Now** and **Add to Print Queue**, then the guest extras (Edit, A4 copy). |
+| `trailbase/runtime/app/views/invoices/document.html.jinja` | The legacy actions: **Print Invoice Now** and **Add to Print Queue**, then the guest extras (Edit, A4 copy). |
 | `trailbase/runtime/ahscripts/routes/print/route.ts` | Rewritten: GET is the legacy picker (Type + Invoice No + preview); the batch POST form is gone. |
-| `trailbase/runtime/app/views/print/index.html` | Rewritten as the picker + Queue rail + preview. |
+| `trailbase/runtime/app/views/print/index.html.jinja` | Rewritten as the picker + Queue rail + preview. |
 | `trailbase/runtime/ahscripts/routes/print/queue/route.ts` | **New.** Renders each queued invoice's sheet from `?ids=…`. |
-| `trailbase/runtime/app/views/print/queue.html` | **New.** Print Invoices / Clear Queue + the sheets + per-sheet remove. |
+| `trailbase/runtime/app/views/print/queue.html.jinja` | **New.** Print Invoices / Clear Queue + the sheets + per-sheet remove. |
 | `trailbase/runtime/app/public/js/print-queue.js` | **New.** The `localStorage` queue: add/remove/clear, the rail, the `?ids=` sync, the live picker preview. |
 | `trailbase/runtime/app/public/css/app.css` | Picker/queue layout; one A5 page per queued sheet on print. |
 | `trailbase/runtime/app/lib/queue.js` | Removed the `print.run` job spec (nothing enqueues it now). |
-| `trailbase/runtime/app/views/partials/icons.html` | Added the `printer-off` glyph (Clear Queue). |
+| `trailbase/runtime/app/views/partials/icons.html.jinja` | Added the `printer-off` glyph (Clear Queue). |
 
 ## How it matches legacy
 

@@ -23,7 +23,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "reports", title: "Reports", template: "reports/index.html" },
+      { user, active: "reports", title: "Reports", template: "reports/index.html.jinja" },
       { tiles, ledgerTiles: hub.ledgers }
     );
   };

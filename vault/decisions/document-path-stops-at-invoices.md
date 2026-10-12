@@ -38,7 +38,7 @@ has no consumer and is **dropped**, in migration `U1790600000__drop_general_docu
 ## What survives, and the confusion to avoid
 
 **`inv_doc` is untouched** — 8,927 rows, its own 14 `inv_doc__*` triggers on the base tables, and it
-is the store the app actually reads (`app/views/invoices/document.html` and `app/lib/queue.js`;
+is the store the app actually reads (`app/views/invoices/document.html.jinja` and `app/lib/queue.js`;
 routes `/invoice-doc/<id>` and `/invoice-doc/document?id=`).
 
 The `document` table also held a *mirror* of the invoice documents; that mirror is what went.

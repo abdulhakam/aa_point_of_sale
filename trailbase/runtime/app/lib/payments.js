@@ -276,7 +276,7 @@ export async function listView(A, req, query) {
     allHref: "/payments?" + (qs ? qs + "&" : "") + "show=all",
   };
   return {
-    options: { active: "payments", title: "Payments", template: "payments/index.html" },
+    options: { active: "payments", title: "Payments", template: "payments/index.html.jinja" },
     data: {
       rows,
       rowInfo,
@@ -309,7 +309,7 @@ export async function newView(A, req, query, error) {
   // not ship ~8,900 options. A payment with no invoice at all is the legacy standalone "DA" voucher.
   const invoices = await A.invoices.listInvoices(db, { unpaid: "on" }, { limit: 200 });
   return {
-    options: { active: "payments", title: "New payment", template: "payments/new.html" },
+    options: { active: "payments", title: "New payment", template: "payments/new.html.jinja" },
     data: {
       invoice,
       invoices,

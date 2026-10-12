@@ -19,7 +19,7 @@ amount. No invoice ever appears in the result.
 
 ## Why it is not a plain manifest report
 
-Every other report is a `meta.json` whose `filters` are rendered by the shared `report.html`. Supply
+Every other report is a `meta.json` whose `filters` are rendered by the shared `report.html.jinja`. Supply
 Summary needs an **arbitrary list of invoices** as input, which the filter vocabulary cannot express:
 `filtersFor` keeps only the first value of a multi-valued field (`report-render.js`), and the spool
 bind layer binds a fixed scalar set (`spoolreports.js` `params`). So it is served by a **literal route

@@ -49,7 +49,7 @@
         active: "invoices",
         title: "Invoice " + sheet.invoiceNo,
         paper: print ? paper : "",
-        template: "invoices/document.html",
+        template: "invoices/document.html.jinja",
       },
       {
         sheet: sheet.data,

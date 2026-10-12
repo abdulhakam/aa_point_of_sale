@@ -2,7 +2,7 @@
 //!
 //! Templates are loaded from the views root
 //! (falling back to the pages root), every name resolves views-root-relative (so
-//! `{% extends 'layout.html' %}` works from a page in another directory), and the same ten
+//! `{% extends 'layout.html.jinja' %}` works from a page in another directory), and the same ten
 //! custom filters are registered. Templates are read fresh on each render; see `Loader` for
 //! why an mtime cache is not used.
 

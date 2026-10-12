@@ -1,0 +1,23 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+{# Per-browser preferences. Nothing here is stored on the server: the form is a normal one, but
+   `public/js/settings.js` reads and writes `localStorage` and saves on change. Without JavaScript the
+   controls show the defaults and do nothing, which is the honest no-JS behaviour. #}
+<h1 class="page-title">Settings</h1>
+<p class="crumbs"><a href="/management">← Management</a></p>
+<p class="muted">These are per-browser preferences, kept in this browser only (not on the server, and they
+  do not follow you to another machine).</p>
+
+<section class="card">
+  <h2>Payments</h2>
+  <form class="entity-form" data-settings-form>
+    <label class="field"><span>Invoice picker</span>
+      <select data-setting="invoicePickerScope">
+        <option value="all">All invoices (open and paid)</option>
+        <option value="open">Open invoices only</option>
+      </select>
+    </label>
+    <p class="muted" data-settings-saved></p>
+  </form>
+</section>
+{% endblock %}

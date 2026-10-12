@@ -1,6 +1,6 @@
 {
   "title": "Profit Report",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "hub": {
     "title": "Profit Report",
     "target": "profit",

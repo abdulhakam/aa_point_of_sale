@@ -12,7 +12,7 @@ related_to: ["[[runtime-js-minimal-file-authoring-contract]]", "[[runtime-js-gue
 # The keyboard layer, and the two bugs only a real keystroke could find
 
 The app is now keyboard-first. One file, `app/public/js/hotkeys.js`, framework-free, loaded by
-`views/layout.html` next to `app.js` and entirely separate from it — it is an accelerator for markup
+`views/layout.html.jinja` next to `app.js` and entirely separate from it — it is an accelerator for markup
 that already works, so it can be reasoned about, tested and dropped without touching the app's own
 enhancements.
 
@@ -256,7 +256,7 @@ Two bindings remain that are browser commands elsewhere, both recorded rather th
 
 ## The report filter, and why it cannot be wrong
 
-`views/reports/report.html` now carries a **"Find in this report"** box bound to the table through
+`views/reports/report.html.jinja` now carries a **"Find in this report"** box bound to the table through
 `data-table-filter` — markup only, reusing the client-side filter `app.js` has had for the management lists
 since the start. Two reasons it belongs on a report: `j/k` walk rows and a report can hold **1,000** of
 them, so without a way to narrow the set a keyboard user walks 1,000 rows to find one invoice; and `/`

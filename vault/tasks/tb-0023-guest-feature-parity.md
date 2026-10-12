@@ -99,7 +99,7 @@ Under [[parity-reinstates-the-legacy-look-with-defect-fixes]], the pixel-only it
 
 - [x] **A — management screens.** Move the inline create form off the list page; match legacy's bare
       filter row and table (no headings, no count badge, no card wrappers). **Done 2026-10-08** —
-      `views/management/list.html`, the create panel behind `?new=1`.
+      `views/management/list.html.jinja`, the create panel behind `?new=1`.
 - [x] **C — management cards.** Remove the nested bordered cards; legacy is borderless except the
       table grid. **Done 2026-10-08** with A. The management table border was also corrected to black
       (the earlier comment wrongly claimed only report tables were black; `ui-parity-report` metric
@@ -178,11 +178,11 @@ The owner restated "1-1 with legacy except the discussed cases" and reconfirmed 
 ([[ui-parity-restyle-progress-2026-10-08]] fifth increment):
 
 - [x] **The four invoice entry views** (purchase, sale, return, difference) restyled to the legacy
-      entry bar. `views/invoices/entry.html`, `routes/invoices/new/route.ts`. The legacy blue **`+`**
+      entry bar. `views/invoices/entry.html.jinja`, `routes/invoices/new/route.ts`. The legacy blue **`+`**
       beside the party opens the **Create New Customer/Supplier** dialog; the invoice-create button
       reads **`Create`**.
 - [x] **Create-from-invoice is a dialog with its own submit** — `<aa-modal>` + its own
-      `POST /quick-create` form. `views/partials/quick-create.html`, `autocomplete.js`, `modal.js`.
+      `POST /quick-create` form. `views/partials/quick-create.html.jinja`, `autocomplete.js`, `modal.js`.
 - [x] **Dashboard is exactly the legacy four tiles** — the Payments and Inventory tiles removed.
 - [x] **Management create control reads `add new`.**
 - [x] **The invoice entry hides the payments list until the invoice has a payment.**

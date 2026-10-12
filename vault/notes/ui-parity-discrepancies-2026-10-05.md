@@ -200,7 +200,7 @@ useful half — it is the fastest route from a report to the document.
 ### G. The Cash Memo tile icon is the wrong glyph
 
 Legacy's dashboard Cash Memo tile is a **filled blue € circle**. The guest uses a Tabler card outline in
-the same blue. `icons.html` has no € glyph.
+the same blue. `icons.html.jinja` has no € glyph.
 
 ### H. The dashboard keeps an `Overview` counters card
 

@@ -23,7 +23,7 @@ field that is already there.
 | | exists? | where |
 |---|---|---|
 | `items.sale_price` column | **yes** | `migrations/main/…` — part of the imported schema |
-| a **Sale price** input on the item form | **yes** | `app/views/management/index.html:61`, labelled "Sale price" |
+| a **Sale price** input on the item form | **yes** | `app/views/management/index.html.jinja:61`, labelled "Sale price" |
 | the item's sale price reaching an invoice line | **yes** | the grid's item options carry `data-price`, and `data-price` **is** `sale_price` — verified: `CHILLI GARLIC 22GM` has `cost_price 7.33333`, `sale_price 8.33333`, and its option renders `data-price="8.33333" data-cost="7.33333"` |
 | a per-line price override | **yes** | `app.js` fills the price only when the cell is empty or zero, so typing over it wins — the operator's number always wins |
 

@@ -1,0 +1,32 @@
+{# A declarative page with no report behind it.
+
+   Server-rendered. A page is a manifest plus this template, so it needs no JavaScript to be a page:
+   the filters are a plain GET form, the table is a table, and the totals are totals.
+
+   A page that DOES name a report does not come through here — it renders through
+   `reports/report.html.jinja` via `renderReportPage`, the same path `/reports/<key>` uses, because the
+   manifest is the one page definition and the two routes are the same page.
+
+   What this replaces: the shell used to embed the manifest as JSON and load
+   `public/js/runtime/page.js`, which fetched `/p/<slug>/data` and built the table in the DOM. That
+   was 171 lines of client JavaScript and an 8 MB response for a report `/reports` returns in 465 KB. #}
+{% extends 'layout.html.jinja' %}
+{% import 'partials/filters.html.jinja' as fl %}
+{% import 'partials/table.html.jinja' as tb %}
+{% block body %}
+<h1 class="page-title">{{ meta.title }}</h1>
+
+<form class="filters" method="get" action="">
+{% for field in meta.fields %}{{ fl.render_field(field, filters, options) }}{% endfor %}
+  <div class="filter-actions">
+    <button class="btn primary" type="submit">APPLY</button>
+    <a class="btn" href="">RESET</a>
+    <button class="btn" type="button" data-print>PRINT</button>
+  </div>
+</form>
+
+<div class="report" id="report">
+{{ tb.simple(columns, rows, "cards") }}
+{% include 'partials/totals.html.jinja' %}
+</div>
+{% endblock %}

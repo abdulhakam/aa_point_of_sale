@@ -17,7 +17,7 @@ related_to: ["[[runtime-js-guest-platform]]", "[[one-manifest-is-the-page-defini
 ```
 app/pages/<group>/<name>/
   meta.json     the page definition — inert data
-  page.html     optional template override
+  page.html.jinja     optional template override
 ```
 
 **Route authoring** requires a directory with its workflow file and one or more route-code scripts.

@@ -19,11 +19,11 @@ stylesheet, consuming server descriptors. Rule and rationale: [[components-consu
 
 - [x] **`<aa-live-time>`** (`public/js/components/live-time.js`) — the header clock, ticking every
       second and pausing while the tab is hidden. Replaced the `app.js` clock, which painted seconds
-      on a 30 s interval. Wired in `partials/topbar.html`; `aa-live-time { display:block }` in
+      on a 30 s interval. Wired in `partials/topbar.html.jinja`; `aa-live-time { display:block }` in
       `app.css`; the `tick`/`setInterval` removed from `app.js`.
 - [x] **Entity field `hidden`/`disabled`** — `entities.json` fields may carry either (`true`/`false`, a
       mode, or a mode array); `management.formFields(entity, row, options, links, mode)` resolves them;
-      `partials/entity_fields.html` renders `type=hidden` and `disabled`.
+      `partials/entity_fields.html.jinja` renders `type=hidden` and `disabled`.
 - [x] **Read-only `view` mode** — `?view=<id>` on a management entity renders the panel with every
       field disabled and no submit; the eye icon links to `?view=` (the pencil stays `?edit=`). This is
       the concrete user of the `disabled` mechanism and fixes the eye/pencil conflation.
@@ -44,7 +44,7 @@ stylesheet, consuming server descriptors. Rule and rationale: [[components-consu
 - [x] **`<aa-flash>`** (`public/js/components/flash.js`) — a lifetime and a dismiss control for the
       server-rendered `.flash` banner; the markup is unchanged.
 - [x] **Invoice entry component `<aa-invoice-entry>`** (`public/js/components/invoice-entry.js`) —
-      wraps `views/invoices/entry.html`, consumes the server `type`/`can-write` descriptor, and owns
+      wraps `views/invoices/entry.html.jinja`, consumes the server `type`/`can-write` descriptor, and owns
       the item→price fill (replacing `app.js` `enhanceLineEditor`, now removed). It never switches on
       the type for data — the server already rendered the type's fields.
 - [x] **Fixed a latent no-JS `stepMismatch`**: a rate input rendered `step="0.01"` while stored rates

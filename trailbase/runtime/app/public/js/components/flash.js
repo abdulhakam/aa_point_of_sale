@@ -1,7 +1,7 @@
 /*
  * <aa-flash> — the write-feedback banner, as a native custom element.
  *
- * WHY. Every write answers with a fragment that carries a `.flash` region (see `partials/flash.html`
+ * WHY. Every write answers with a fragment that carries a `.flash` region (see `partials/flash.html.jinja`
  * and [[htmx-navigation-with-html-fragments]]), so the message already appears in place with no
  * reload. What it lacks is a lifetime: on a boosted navigation the banner from the previous action
  * stays until the next action replaces it. This element gives it one — a successful message clears

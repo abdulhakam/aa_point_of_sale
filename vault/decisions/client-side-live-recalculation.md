@@ -18,7 +18,7 @@ existed until 2026-10-04. So for the whole life of this decision **nothing asser
 preview agreed with the server** — which is the exact risk this decision names. `tools/grid-preview-check.mjs`
 does now, and on its first run it found:
 
-1. **The invoice total was never written.** `[data-sum]` sits above the grid element (`grid.html:64`
+1. **The invoice total was never written.** `[data-sum]` sits above the grid element (`grid.html.jinja:64`
    against `:73`), so `grid.querySelector("[data-sum]")` was null. Typing a quantity moved the line amount
    and left the invoice total frozen — a recalculated line beside a stale total.
 2. **The invoice-level discounts did nothing.** They came from `data-d1`/`data-d2` attributes rendered at

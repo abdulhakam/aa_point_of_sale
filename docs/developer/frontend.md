@@ -3,10 +3,10 @@
 ## Template System
 
 **Engine:** Jinja2 via minijinja (Rust) — exposed via `tb-ah-render-jinja` WASM component
-**Layout:** Single `layout.html` with `{% block body %}` for page content
+**Layout:** Single `layout.html.jinja` with `{% block body %}` for page content
 **Rendering:** Server-side with htmx fragment support
 
-### Layout Structure (`views/layout.html`)
+### Layout Structure (`views/layout.html.jinja`)
 
 ```html
 {# Full document shell #}
@@ -15,15 +15,15 @@
 <body data-paper="{{ paper }}" hx-headers='{"X-Requested-With":"XMLHttpRequest"}'>
   <div id="aa-loading" class="aa-loading">...</div>
   <div class="appshell">
-    {% if user %}{% include 'partials/topbar.html' %}{% endif %}
+    {% if user %}{% include 'partials/topbar.html.jinja' %}{% endif %}
     <div class="appbody">
-      {% if user %}{% include 'partials/nav.html' %}{% endif %}
+      {% if user %}{% include 'partials/nav.html.jinja' %}{% endif %}
       <main id="app-main" class="main{% if not user %} main-anon{% endif %}">
 {% endif %}{# fragment starts here #}
 
 {% if fragment %}<div hidden data-aa-title="{{ title }} · {{ appName }}"></div>{% endif %}
 {% if fragment %}<meta name="aa-refdb-version" content="{{ refdbVersion }}" hx-swap-oob="outerHTML:#aa-refdb-version">{% endif %}
-{% include 'partials/flash.html' %}
+{% include 'partials/flash.html.jinja' %}
 {% block body %}{% endblock %}
 
 {% if not fragment %}</main>{% if user %}</div>{% endif %}</div>
@@ -69,25 +69,25 @@
 | Template | Route | Purpose |
 |----------|-------|---------|
 | `index.html` | `/invoices` | Invoice list with filters, pagination, totals |
-| `entry.html` | `/invoices/{id}/entry` | Keyboard-centric invoice entry (header + lines) |
-| `grid.html` | `/invoices/{id}/grid` | Spreadsheet-style line editor |
-| `console.html` | `/invoices/new?type=N` | Unified invoice console (picker + editor) |
-| `document.html` | `/invoices/{id}/document` | Printable invoice document (A5) |
-| `all.html` | `/invoices/all` | All invoices (admin) |
+| `entry.html.jinja` | `/invoices/{id}/entry` | Keyboard-centric invoice entry (header + lines) |
+| `grid.html.jinja` | `/invoices/{id}/grid` | Spreadsheet-style line editor |
+| `console.html.jinja` | `/invoices/new?type=N` | Unified invoice console (picker + editor) |
+| `document.html.jinja` | `/invoices/{id}/document` | Printable invoice document (A5) |
+| `all.html.jinja` | `/invoices/all` | All invoices (admin) |
 
 ### Report Templates (`views/reports/`)
 
 | Template | Route | Purpose |
 |----------|-------|---------|
 | `index.html` | `/reports` | Report hub with 4 card types |
-| `report.html` | `/reports/{slug}` | Generic spooled report (table + totals) |
-| `supplysummary.html` | `/reports/supplysummary` | Supply summary with invoice picker |
+| `report.html.jinja` | `/reports/{slug}` | Generic spooled report (table + totals) |
+| `supplysummary.html.jinja` | `/reports/supplysummary` | Supply summary with invoice picker |
 
 ### Ledger Templates (`views/reports/ledgers/`)
 
 | Template | Route | Purpose |
 |----------|-------|---------|
-| `general.html` | `/reports/ledgers/general` | General ledger with openings |
+| `general.html.jinja` | `/reports/ledgers/general` | General ledger with openings |
 | `index.html` | `/reports/ledgers` | Ledger hub |
 
 ### Management Templates (`views/management/`)
@@ -95,41 +95,41 @@
 | Template | Route | Purpose |
 |----------|-------|---------|
 | `index.html` | `/management` | Management hub (entity cards) |
-| `list.html` | `/management/{entity}` | Entity list with search, sort, create/edit |
+| `list.html.jinja` | `/management/{entity}` | Entity list with search, sort, create/edit |
 
 ### Other Templates
 
 | Template | Route | Purpose |
 |----------|-------|---------|
-| `views/auth/login.html` | `/login` | Login form |
-| `views/dashboard/index.html` | `/dashboard` | Dashboard with quick stats |
-| `views/inventory/index.html` | `/inventory` | Stock overview |
+| `views/auth/login.html.jinja` | `/login` | Login form |
+| `views/dashboard/index.html.jinja` | `/dashboard` | Dashboard with quick stats |
+| `views/inventory/index.html.jinja` | `/inventory` | Stock overview |
 | `views/cashmoe/*.html` | `/cashmemo/*` | Cash memo (DA, vouchers, expenses) |
 | `views/payments/*.html` | `/payments/*` | Payment entry/list |
-| `views/settings/index.html` | `/settings` | User preferences |
+| `views/settings/index.html.jinja` | `/settings` | User preferences |
 | `views/print/*.html` | `/print/*` | Print queue, print preview |
 
 ## Partial Templates (`views/partials/`)
 
 | Partial | Purpose |
 |---------|---------|
-| `topbar.html` | Header with business name, user, clock, print queue link |
-| `nav.html` | Left navigation rail (Invoices, Reports, Ledgers, Management, etc.) |
-| `flash.html` | Toast notifications (success/error) |
-| `nav.html` | Navigation rail |
-| `table.html` | Reusable table with sortable columns |
-| `entity_fields.html` | Dynamic form fields from entity manifest |
-| `filters.html` | Filter form for reports/invoice list |
-| `invoice-sheet.html` | Printable invoice sheet (used in document & print) |
-| `quick-create.html` | "Create..." panel for parties, items, etc. |
+| `topbar.html.jinja` | Header with business name, user, clock, print queue link |
+| `nav.html.jinja` | Left navigation rail (Invoices, Reports, Ledgers, Management, etc.) |
+| `flash.html.jinja` | Toast notifications (success/error) |
+| `nav.html.jinja` | Navigation rail |
+| `table.html.jinja` | Reusable table with sortable columns |
+| `entity_fields.html.jinja` | Dynamic form fields from entity manifest |
+| `filters.html.jinja` | Filter form for reports/invoice list |
+| `invoice-sheet.html.jinja` | Printable invoice sheet (used in document & print) |
+| `quick-create.html.jinja` | "Create..." panel for parties, items, etc. |
 | `report_meta.html` | Report filter bar with date range, party, etc. |
-| `totals.html` | Totals display component |
+| `totals.html.jinja` | Totals display component |
 
 ## Web Components (Progressive Enhancement)
 
 All components in `public/js/components/` are **progressive enhancement** — they upgrade existing working markup.
 
-### Component Loading Order (from `layout.html`)
+### Component Loading Order (from `layout.html.jinja`)
 
 ```html
 <!-- 1. Core utilities -->
@@ -461,8 +461,8 @@ export function isFragment(req) {
 ## Adding a New Page
 
 1. **Create route folder:** `traildepot/runtime/ahscripts/routes/my-page/route.js`
-2. **Create template:** `traildepot/runtime/app/views/my-page.html`
-3. **Add to nav:** Edit `views/partials/nav.html`
+2. **Create template:** `traildepot/runtime/app/views/my-page.html.jinja`
+3. **Add to nav:** Edit `views/partials/nav.html.jinja`
 4. **Register entity (if management):** Add to `app/manifests/entities.json`
 
 ### Route Module Template
@@ -476,7 +476,7 @@ export async function GET(req) {
   return A.routeKit.renderRoute(req, {
     active: "reports",        // Nav section
     title: "My Report",
-    template: "my-page.html"  // Template name
+    template: "my-page.html.jinja"  // Template name
   }, { refs, customData: "..." });
 }
 

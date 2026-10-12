@@ -69,6 +69,6 @@ Open, unfixed, cosmetic-to-operational rather than user-visible. No shipped path
 ## Evidence
 
 - `trailbase/tb-ah-run-js/src/spool.rs` — `bind_param` decodes the `blob:` prefix.
-- `trailbase/runtime/app/views/partials/filters.html` — option values are `o.value` = `String(r.id)`.
+- `trailbase/runtime/app/views/partials/filters.html.jinja` — option values are `o.value` = `String(r.id)`.
 - `trailbase/runtime/app/public/js/runtime/page.js:66-71` — `fillSelects` sets `option.value = row.id`.
 - The fetch sweep above, run against `http://127.0.0.1:4000` on 2026-10-01.

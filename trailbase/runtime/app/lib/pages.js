@@ -128,7 +128,7 @@ export function normalizeMeta(meta, presets) {
   const sources = filters.map((f) => f.source).filter(Boolean);
   return {
     title: typeof meta?.title === "string" && meta.title ? meta.title : "Page",
-    template: typeof meta?.template === "string" && meta.template ? meta.template : "page.html",
+    template: typeof meta?.template === "string" && meta.template ? meta.template : "page.html.jinja",
     // A server-rendered report may override the shared report template (the general ledger does).
     view: typeof meta?.view === "string" && meta.view ? meta.view : null,
     // The general ledger's three opening-balance inputs are filter echoes, not query results.
@@ -169,13 +169,13 @@ export function normalizeMeta(meta, presets) {
     // render as 0.00 for every input.
     spool: meta?.spool && typeof meta.spool === "object" ? meta.spool : null,
     // The legacy opens a few reports' filters in a "Filter Data" dialog rather than an inline row, so a
-    // manifest may declare that its filters render in a modal (`app/views/reports/report.html`). It is
+    // manifest may declare that its filters render in a modal (`app/views/reports/report.html.jinja`). It is
     // exposed as a plain boolean here because normalizeMeta does not pass unknown keys through.
     filtersModal: meta?.filtersModal === true,
     // The legacy carries a clear control on some inline filter blocks (`RESET` on payments and the
     // sales/daily/outstanding/payments-by-company reports, `CLEAR` on the party/booker/area ledgers).
     // A manifest opts in with `resetLabel`; normalizeMeta does not pass unknown keys through, so it is
-    // surfaced here for `reports/report.html`. See [[ui-parity-run-2026-10-11]].
+    // surfaced here for `reports/report.html.jinja`. See [[ui-parity-run-2026-10-11]].
     resetLabel: meta?.resetLabel ? String(meta.resetLabel) : "",
     filters,
     // `fields` is the server-rendered report template's name for the same list; both are exposed so

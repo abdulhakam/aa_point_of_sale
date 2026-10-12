@@ -17,7 +17,7 @@ LATEST data (not from cache / invoice_doc)".
 
 **Decision.** `/invoices/<id>/view` gains `?source=live`. When set, the sheet is built by
 `invoice-sheet.js buildSheetFresh(A, id)`, which maps `invoices.readInvoice`'s base-table output into
-the exact `data` shape `buildSheet` produces, so the ONE `partials/invoice-sheet.html` macro renders
+the exact `data` shape `buildSheet` produces, so the ONE `partials/invoice-sheet.html.jinja` macro renders
 both and their layout cannot diverge. The **console's View dialog and its finish-flow print tab** use
 `?source=live`. `/print` and `/print/queue` **stay on `inv_doc`** — the trigger-maintained tier — because
 they are the legacy picker/queue batch and do not need to bypass the materialisation.

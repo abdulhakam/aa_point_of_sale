@@ -39,14 +39,14 @@
         return obj;
       });
       const acquireMs = Date.now() - tRows;
-      const htmlOut: string = (globalThis as any).render.html("bench/spooled.html", { rows: mapped });
+      const htmlOut: string = (globalThis as any).render.html("bench/spooled.html.jinja", { rows: mapped });
       if (asHtml) return { html: htmlOut, status: 200 };
       return { report: reportName, arm, rows: mapped.length, acquireMs, totalMs: Date.now() - t0, htmlBytes: htmlOut.length };
     }
 
     const htmlOut: string = await spooled.renderPage(
       reportName,
-      "bench/spooled.html",
+      "bench/spooled.html.jinja",
       {},
       filters,
       -1,

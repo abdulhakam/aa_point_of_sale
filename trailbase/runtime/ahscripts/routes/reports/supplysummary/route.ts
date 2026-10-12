@@ -121,11 +121,11 @@
         prevHref: page > 1 ? link("&page=" + (page - 1)) : null,
         nextHref: page < pageCount ? link("&page=" + (page + 1)) : null,
       };
-      const pageOut = await A.http.pageSpooled(req, shell, "reports/supplysummary.html", frame, [{ field: "rows", key: handle.key }]);
+      const pageOut = await A.http.pageSpooled(req, shell, "reports/supplysummary.html.jinja", frame, [{ field: "rows", key: handle.key }]);
       return { html: pageOut };
     }
 
-    const page = await A.http.page(req, shell, "reports/supplysummary.html", frame);
+    const page = await A.http.page(req, shell, "reports/supplysummary.html.jinja", frame);
     return { html: page };
   };
 })();

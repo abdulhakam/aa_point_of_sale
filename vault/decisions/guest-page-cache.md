@@ -71,6 +71,6 @@ A client **page cache** in IndexedDB (`public/js/pagecache.js`), keyed on
 
 - `trailbase/runtime/app/public/js/pagecache.js` — the store, the swap, the invalidation.
 - `trailbase/runtime/ahscripts/routes/data/version/route.ts` — the probe endpoint.
-- `trailbase/runtime/app/views/layout.html` — the `aa-user` meta and the loader.
+- `trailbase/runtime/app/views/layout.html.jinja` — the `aa-user` meta and the loader.
 - `trailbase/tools/pagecache-check.mjs` — **14 passed, 0 failed**.
 - [[tb-0038-client-page-cache]] — the build log and the full gate results.

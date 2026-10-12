@@ -1,6 +1,6 @@
 {
   "title": "Unified Payments Report",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "resetLabel": "RESET",
   "hub": {
     "title": "Unified Payments Report",

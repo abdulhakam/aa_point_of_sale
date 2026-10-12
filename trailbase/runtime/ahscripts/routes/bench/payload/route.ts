@@ -57,7 +57,7 @@
     }
 
     const tRender = Date.now();
-    const out: string = (globalThis as any).render.html("bench/payload.html", { rows });
+    const out: string = (globalThis as any).render.html("bench/payload.html.jinja", { rows });
     const renderMs = Date.now() - tRender;
 
     if (String(query.format || "") === "json") {

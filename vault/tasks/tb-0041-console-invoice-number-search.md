@@ -24,10 +24,10 @@ invoice of the type, not just the newest 200.
       (180 ms) fetch, rebuild the options, fire `refdb:select` so `autocomplete.js` re-reads and
       refreshes; restores the server-rendered list when the box is cleared (bumping its request token
       so an in-flight response cannot overwrite it).
-- [x] `runtime/app/views/invoices/console.html` — the picker carries
+- [x] `runtime/app/views/invoices/console.html.jinja` — the picker carries
       `data-invoice-remote="/data/invoices/search?type={{ type }}"`; the server still renders the
       newest 200 as the initial/no-JS list (`invoices.js` `consoleView`).
-- [x] Loaded in `views/layout.html` after `autocomplete.js` / `invoicedb.js`.
+- [x] Loaded in `views/layout.html.jinja` after `autocomplete.js` / `invoicedb.js`.
 
 ## Evidence
 

@@ -16,7 +16,7 @@ related_to: ["[[tb-0023-guest-feature-parity]]", "[[reference-lists-come-from-in
 
 A feature the guest has to add that is **interactive and repeats across several screens** is built as
 a **native custom element** — `<aa-…>` — authored under `app/public/js/components/`, registered with
-`customElements.define`, and loaded from `layout.html` with `defer`. The element **enhances markup
+`customElements.define`, and loaded from `layout.html.jinja` with `defer`. The element **enhances markup
 that already works**: with no JavaScript the browser shows the ordinary form control inside it, and
 the form posts exactly what it always posted.
 
@@ -63,7 +63,7 @@ report/ledger filter dates ([[tb-0023-guest-feature-parity]] item D) while keepi
 
 - New interactive features should be evaluated for reuse before being written page-local; if two
   screens need the same control, it becomes an `<aa-…>` component.
-- Components live under `app/public/js/components/` and are loaded from `layout.html` in the same
+- Components live under `app/public/js/components/` and are loaded from `layout.html.jinja` in the same
   `defer` block as the existing enhancements.
 - A component's own state (e.g. mirroring a native input's value) must round-trip through the native
   control, so anything that reads the form — the smoke suite, a report query parse — is unaffected.

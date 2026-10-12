@@ -3,10 +3,10 @@
 // GET renders the console (picker, or a loaded invoice via `?invoice=<id>`); POST creates the invoice.
 // Both need the auth gate. The `type` comes from the query (`?type=0` is a purchase).
 //
-// This route used to render `invoices/entry.html` and 303 on every create. It is now the keyboard
-// console (`invoices/console.html`, [[no-draft-invoices-published-on-save]] aside): the POST answers an
+// This route used to render `invoices/entry.html.jinja` and 303 on every create. It is now the keyboard
+// console (`invoices/console.html.jinja`, [[no-draft-invoices-published-on-save]] aside): the POST answers an
 // htmx request with the OPENED console fragment — the same screen the GET renders — so the create no
-// longer costs a full document load. `grid.html` at `/invoices/<id>/grid` stays the no-JS fallback.
+// longer costs a full document load. `grid.html.jinja` at `/invoices/<id>/grid` stays the no-JS fallback.
 (function () {
   (globalThis as any).GET = async (req: any) => {
     const A = await (await (globalThis as any).__AA_LOAD__("/app/lib/context.js")).app();

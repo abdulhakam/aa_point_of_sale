@@ -14,9 +14,9 @@ related_to: ["[[no-draft-invoices-published-on-save]]", "[[single-writer-per-inv
 The guest's invoice screen is one keyboard-first surface — the **console** — that *is* the invoice:
 an invoice-number picker, the header, and the line body, drivable from the keyboard with the same
 capability present as a visible button ([[features-as-native-web-components]]). It lives at
-`GET /invoices/new?type=N` (template `views/invoices/console.html`, controller
-`public/js/components/invoice-view.js`, host `<aa-invoice-view>`); `grid.html` stays the no-JS power
-fallback and the older `entry.html` remains the loaded-invoice landing for callers that need it.
+`GET /invoices/new?type=N` (template `views/invoices/console.html.jinja`, controller
+`public/js/components/invoice-view.js`, host `<aa-invoice-view>`); `grid.html.jinja` stays the no-JS power
+fallback and the older `entry.html.jinja` remains the loaded-invoice landing for callers that need it.
 
 ## The state machine
 

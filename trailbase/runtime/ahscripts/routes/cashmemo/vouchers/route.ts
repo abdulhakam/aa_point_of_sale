@@ -18,7 +18,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "cashmemo", title: "Vouchers", template: "cashmemo/vouchers.html" },
+      { user, active: "cashmemo", title: "Vouchers", template: "cashmemo/vouchers.html.jinja" },
       {
         rows,
         filters,

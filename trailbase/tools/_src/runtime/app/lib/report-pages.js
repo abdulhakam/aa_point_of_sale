@@ -53,7 +53,7 @@ export function openingRow(filters) {
 
 // `icon` mirrors the legacy tile glyph (@tabler/icons-react in
 // frontend/src/app/app/reports/page.tsx and ledgers/page.tsx); the values are names in
-// views/partials/icons.html. The guest renders the same icons so the hubs match the legacy UI.
+// views/partials/icons.html.jinja. The guest renders the same icons so the hubs match the legacy UI.
 export const REPORT_INDEX = [
   { title: "Unified Payments Report", target: "payments", tone: "blue", icon: "report-money" },
   { title: "Item Sales Report", target: "itemsales", tone: "pink", icon: "chart-bar" },
@@ -322,11 +322,11 @@ export const REPORT_PAGES = {
       },
     ],
     openings: true,
-    view: "reports/ledgers/general.html",
+    view: "reports/ledgers/general.html.jinja",
   },
 };
 
-export const DEFAULT_VIEW = "reports/report.html";
+export const DEFAULT_VIEW = "reports/report.html.jinja";
 
 export function parseFilters(pageDef, query) {
   const filters = { ...pageDef.defaults };

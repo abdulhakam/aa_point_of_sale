@@ -25,7 +25,7 @@ element and custom element draws from it.
   chrome dimensions (`--header-h`, `--nav-w`).
 - `app/public/css/app.css` holds component LAYOUT only and references the tokens — it carries **no**
   colour literal (`grep '#[0-9a-f]{3,8}' app.css` → 0).
-- `views/layout.html` loads `theme.css` before `app.css`.
+- `views/layout.html.jinja` loads `theme.css` before `app.css`.
 - Components and custom elements are light-DOM ([[components-consume-server-descriptors]]), so the one
   stylesheet styles all of them; there is no shadow-DOM CSS to duplicate.
 

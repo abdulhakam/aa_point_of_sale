@@ -1,0 +1,26 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+<h1 class="page-title">Plugins</h1>
+<p class="crumbs">Optional, self-contained features. Each plugin is a folder under <code>plugins/</code> with a <code>meta.md</code> and one static page.</p>
+
+{% if plugins %}
+{% for p in plugins %}
+<section class="card">
+  <h2>{% if p.hasPage %}<a href="{{ p.route }}">{{ p.title }}</a>{% else %}{{ p.title }}{% endif %}</h2>
+  {% if p.description %}<p class="report-opening">{{ p.description }}</p>{% endif %}
+  <p class="report-meta">
+    {% if p.author %}<span>by {{ p.author }}</span>{% endif %}
+    {% if p.license %}<span>License: {{ p.license }}</span>{% endif %}
+    {% for t in p.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+  </p>
+  {% if p.hasPage %}
+  <p><a class="btn" href="{{ p.route }}">Open</a></p>
+  {% else %}
+  <p class="report-meta"><span>No <code>index.html</code> in this folder yet.</span></p>
+  {% endif %}
+</section>
+{% endfor %}
+{% else %}
+<p class="notice">No plugins found. Add a folder under <code>plugins/</code> containing a <code>meta.md</code> and an <code>index.html</code>.</p>
+{% endif %}
+{% endblock %}

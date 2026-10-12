@@ -34,7 +34,7 @@ The legacy fields were recovered from the compiled bundles rather than guessed:
 
 ### 1. The create travels in the form's own submit
 
-The panel the combobox opens is rendered by `views/partials/quick-create.html` **inside the form it
+The panel the combobox opens is rendered by `views/partials/quick-create.html.jinja` **inside the form it
 serves** — the invoice's start form, its header form, or the add-a-line form. Its fields are part of
 that form, so "create the party" and "save the header" are one POST, and "create the item" and "add
 the line" are one POST. The redirect afterwards lands back on the same invoice with everything saved.
@@ -142,7 +142,7 @@ save the invoice together — which is a page load. Both are now available:
 
 ## Evidence
 
-- `trailbase/runtime/app/views/partials/quick-create.html` — the two panels.
+- `trailbase/runtime/app/views/partials/quick-create.html.jinja` — the two panels.
 - `trailbase/runtime/app/lib/quick-create.js` — the create calls and the one type translation.
 - `trailbase/runtime/app/public/js/autocomplete.js` — the "Create …" row, the panel's open/close, the
   inert-when-closed rule, and the `required` handover.

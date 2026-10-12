@@ -17,7 +17,7 @@ and `edit`.
 
 ## Decision
 
-`views/invoices/document.html`'s non-print action bar is exactly:
+`views/invoices/document.html.jinja`'s non-print action bar is exactly:
 
 - `← Back` → `/invoices`
 - `Print` → `/invoices/<id>/view?print=1` (`data-print="a5"`, opens the print page and prints it)

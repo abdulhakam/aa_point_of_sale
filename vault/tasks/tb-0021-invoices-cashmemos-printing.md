@@ -56,7 +56,7 @@ The write API and its lease/idempotency are implemented on the guest and verifie
 Printing is the browser's dialog over a **server-rendered** page; there is no printer driver, and
 nothing here prints without the operator confirming the dialog.
 
-- [x] **Paper is chosen by the page, not guessed.** `layout.html` emits `<body data-paper="a5">`
+- [x] **Paper is chosen by the page, not guessed.** `layout.html.jinja` emits `<body data-paper="a5">`
       or `a4`, and `app.css` selects a NAMED page (`@page a5` / `@page a4`) through the `page`
       property. A5 for an invoice or a voucher, A4 for a report — a till slip and a filed copy are
       different artefacts. Both default **portrait**; the operator picks Landscape in the print
@@ -166,7 +166,7 @@ idempotent line writes, totals recompute, invalidation storms) are listed as F1�
 ## Addendum 2026-10-10 — the keyboard console
 
 The invoice screen was rebuilt as one keyboard-first surface at `GET /invoices/new?type=N`
-([[invoice-console-keyboard-state-machine]]), with `grid.html` kept as the no-JS fallback. The
+([[invoice-console-keyboard-state-machine]]), with `grid.html.jinja` kept as the no-JS fallback. The
 console's writes go through the canonical `invoice-lifecycle.js`; the entry-screen routes still use
 `invoicing.js` for their non-console path, so the two line writers **coexist** — reconciling them
 (retiring `invoicing.js`'s writers) is outstanding. New durable pieces this task did not previously

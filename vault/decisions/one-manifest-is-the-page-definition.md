@@ -76,7 +76,7 @@ The manifest is the one definition, and now it is also the only **rendering** pa
 `/reports/<key>` are the same page: rows arrive as a KV handle, are spliced into the template in Rust,
 and the browser gets finished HTML.
 
-`public/js/runtime/page.js` is **deleted** — 171 lines. `page_body.html` no longer embeds the manifest
+`public/js/runtime/page.js` is **deleted** — 171 lines. `page_body.html.jinja` no longer embeds the manifest
 as JSON for a driver. A page with no report behind it still renders (filters, empty table, totals)
 and works with no JavaScript at all, which is the point of a declarative page.
 

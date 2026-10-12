@@ -1,6 +1,6 @@
 {
   "title": "Area Ledger",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "resetLabel": "CLEAR",
   "hub": {
     "title": "Area",

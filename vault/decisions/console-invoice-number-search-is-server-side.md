@@ -27,7 +27,7 @@ search** the picker calls as the operator types digits:
   newest first) — `routes/data/invoices/search/route.ts`;
 - client `public/js/invoice-remote.js`, opt-in via `data-invoice-remote` on the select, replaces the
   options and fires `refdb:select` so `autocomplete.js` refreshes its open list;
-- the console picker opts in (`views/invoices/console.html`).
+- the console picker opts in (`views/invoices/console.html.jinja`).
 
 ## Why not the alternatives
 

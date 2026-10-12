@@ -31,7 +31,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "print", title: "Print queue", paper: "a5", template: "print/queue.html" },
+      { user, active: "print", title: "Print queue", paper: "a5", template: "print/queue.html.jinja" },
       { ids: ids.join(","), sheets, count: sheets.length }
     );
   };

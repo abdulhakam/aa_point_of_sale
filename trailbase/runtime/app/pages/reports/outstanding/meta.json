@@ -1,6 +1,6 @@
 {
   "title": "Outstanding Payments Report",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "resetLabel": "RESET",
   "hub": {
     "title": "Outstanding Payments",

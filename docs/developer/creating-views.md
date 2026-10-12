@@ -22,11 +22,11 @@ trailbase/traildepot/runtime/
 │   └── my-screen/route.ts
 └── app/
     ├── views/                 # Jinja2 templates
-    │   ├── layout.html        # The shell (blocks: body)
-    │   ├── my-screen.html
+    │   ├── layout.html.jinja        # The shell (blocks: body)
+    │   ├── my-screen.html.jinja
     │   └── partials/          # Reusable macros/fragments
-    ├── pages/                 # Declarative pages (meta.json + optional page.html)
-    ├── manifests/             # Shared manifests (icons live in views/partials/icons.html)
+    ├── pages/                 # Declarative pages (meta.json + optional page.html.jinja)
+    ├── manifests/             # Shared manifests (icons live in views/partials/icons.html.jinja)
     └── public/                # Static assets (css/, js/)
 ```
 
@@ -60,7 +60,7 @@ published.
     const refs = await routeKit.refs();
     return routeKit.renderRoute(
       req,
-      { user, active: "my-section", title: "My Screen", template: "my-screen.html" },
+      { user, active: "my-section", title: "My Screen", template: "my-screen.html.jinja" },
       { refs }
     );
   };
@@ -98,7 +98,7 @@ published.
 
     return routeKit.renderRoute(
       req,
-      { user, active: "things", title: "Thing", template: "things/detail.html" },
+      { user, active: "things", title: "Thing", template: "things/detail.html.jinja" },
       data
     );
   };
@@ -163,13 +163,13 @@ published.
 
 ## Part 2: Jinja2 Templates
 
-### Base Template: `layout.html`
+### Base Template: `layout.html.jinja`
 
 Every page extends the shell:
 
 ```html
-{% extends 'layout.html' %}
-{% import 'partials/icons.html' as icons %}
+{% extends 'layout.html.jinja' %}
+{% import 'partials/icons.html.jinja' as icons %}
 {% block body %}
 <section class="card">
   <h1 class="page-title">My Screen</h1>
@@ -195,18 +195,18 @@ The shell provides (`{% block body %}` sits inside it):
 
 | Block | Where | Purpose |
 |-------|-------|---------|
-| `body` | `layout.html` | The page content (the one block both full and fragment modes emit) |
-| `extra_inputs` | `reports/report.html` | Extra filter inputs |
-| `report_title` | `reports/report.html` | Override the report heading |
-| `before_table` / `after_table` | `reports/report.html` | Insert around the table |
+| `body` | `layout.html.jinja` | The page content (the one block both full and fragment modes emit) |
+| `extra_inputs` | `reports/report.html.jinja` | Extra filter inputs |
+| `report_title` | `reports/report.html.jinja` | Override the report heading |
+| `before_table` / `after_table` | `reports/report.html.jinja` | Insert around the table |
 
 ### Partials & Macros
 
 ```html
 {# Import a macro namespace #}
-{% import 'partials/table.html' as tb %}
-{% import 'partials/filters.html' as fl %}
-{% import 'partials/icons.html' as icons %}
+{% import 'partials/table.html.jinja' as tb %}
+{% import 'partials/filters.html.jinja' as fl %}
+{% import 'partials/icons.html.jinja' as icons %}
 
 {# Use them #}
 {{ tb.simple(columns, rows, mobile, "report-table") }}
@@ -216,13 +216,13 @@ The shell provides (`{% block body %}` sits inside it):
 
 | Partial | Provides |
 |---------|----------|
-| `partials/icons.html` | `svg(name, size)` — inline SVG icon set |
-| `partials/table.html` | `simple(columns, rows, mobile, id)` — sortable table |
-| `partials/filters.html` | `render_field(field, filters, options)` — one filter control |
-| `partials/totals.html` | Totals groups |
-| `partials/entity_fields.html` | Manifest-driven entity form fields |
-| `partials/invoice-sheet.html` | The printable invoice sheet |
-| `partials/topbar.html`, `partials/nav.html`, `partials/flash.html` | Shell fragments |
+| `partials/icons.html.jinja` | `svg(name, size)` — inline SVG icon set |
+| `partials/table.html.jinja` | `simple(columns, rows, mobile, id)` — sortable table |
+| `partials/filters.html.jinja` | `render_field(field, filters, options)` — one filter control |
+| `partials/totals.html.jinja` | Totals groups |
+| `partials/entity_fields.html.jinja` | Manifest-driven entity form fields |
+| `partials/invoice-sheet.html.jinja` | The printable invoice sheet |
+| `partials/topbar.html.jinja`, `partials/nav.html.jinja`, `partials/flash.html.jinja` | Shell fragments |
 
 ### Template Context from `renderRoute`
 
@@ -257,7 +257,7 @@ page definition**, so a page cannot be defined twice and drift.
 ```
 app/pages/my-report/
 ├── meta.json     # required
-└── page.html     # optional (defaults to the shared report template)
+└── page.html.jinja     # optional (defaults to the shared report template)
 ```
 
 ### Minimal Manifest
@@ -296,7 +296,7 @@ app/pages/my-report/
 | Field | Purpose |
 |-------|---------|
 | `title` | Page heading |
-| `template` | Template override (default `page.html`) |
+| `template` | Template override (default `page.html.jinja`) |
 | `view` | Server-rendered report template override |
 | `hub` | Tile in a hub index: `{ title, tone, icon, order, hub: "reports"|"ledgers", target }` |
 | `filters` | Declarative filter controls (`name`, `label`, `type`, `source`, `default`) |
@@ -335,13 +335,13 @@ All client JS is **progressive enhancement** — the page works without it.
 | Kind of behavior | Where |
 |------------------|-------|
 | Generic (print, confirm, table filter/sort) | `app.js` (`enhanceContent`) |
-| New web component | `app/public/js/components/<name>.js` + a `<script defer>` tag in `layout.html` |
-| Feature-specific | A module in `app/public/js/`, loaded via `layout.html` |
+| New web component | `app/public/js/components/<name>.js` + a `<script defer>` tag in `layout.html.jinja` |
+| Feature-specific | A module in `app/public/js/`, loaded via `layout.html.jinja` |
 | Per-declarative-page workflow | `handlers` in the page manifest |
 
 ### Adding a Web Component
 
-Web components upgrade markup that already works. Register in `layout.html` (with `defer`), and keep
+Web components upgrade markup that already works. Register in `layout.html.jinja` (with `defer`), and keep
 the fallback functional.
 
 ```javascript
@@ -364,11 +364,11 @@ the fallback functional.
 ```
 
 ```html
-<!-- in layout.html, among the other component scripts -->
+<!-- in layout.html.jinja, among the other component scripts -->
 <script src="/static/js/components/my-widget.js" defer></script>
 ```
 
-**Load-order rules** (from `layout.html`):
+**Load-order rules** (from `layout.html.jinja`):
 - `app.js` first (it listens for `htmx:afterSwap`).
 - Components that depend on `autocomplete.js` (e.g. `refdb-create.js`, `invoicedb.js`,
   `invoice-remote.js`) load **after** it.
@@ -415,7 +415,7 @@ accepts either header.
 
 ### Left Rail
 
-Edit `app/views/partials/nav.html` to add a rail link, and set matching `active` in your route's
+Edit `app/views/partials/nav.html.jinja` to add a rail link, and set matching `active` in your route's
 `renderRoute` options (`active: "my-section"`).
 
 ### Hub Tile (Reports / Ledgers)
@@ -430,7 +430,7 @@ Add a `hub` block to the page manifest; `hubIndex()` in `pages.js` collects them
 <a id="icons"></a>
 ### Icons
 
-Icons live in `app/views/partials/icons.html` as a `svg(name, size)` macro. Use an existing name or add
+Icons live in `app/views/partials/icons.html.jinja` as a `svg(name, size)` macro. Use an existing name or add
 one to that map. Tones map to CSS classes (`c-pink-4`, `c-orange-4`, `c-blue`, `c-gray-4`, …).
 
 ---
@@ -477,17 +477,17 @@ Append to `app/public/css/app.css`. Tokens live in `theme.css`.
 
     return routeKit.renderRoute(
       req,
-      { user, active: "inventory", title: "Low Stock", template: "low-stock.html" },
+      { user, active: "inventory", title: "Low Stock", template: "low-stock.html.jinja" },
       { rows: rows.map((r) => ({ name: r[0], qty: Number(r[1]) || 0 })), threshold }
     );
   };
 })();
 ```
 
-### 2. Template — `app/views/low-stock.html`
+### 2. Template — `app/views/low-stock.html.jinja`
 
 ```html
-{% extends 'layout.html' %}
+{% extends 'layout.html.jinja' %}
 {% block body %}
 <section class="card">
   <h1 class="page-title">Low Stock (below {{ threshold }})</h1>
@@ -510,7 +510,7 @@ Append to `app/public/css/app.css`. Tokens live in `theme.css`.
 {% endblock %}
 ```
 
-### 3. Nav — add a link in `app/views/partials/nav.html`
+### 3. Nav — add a link in `app/views/partials/nav.html.jinja`
 
 ```html
 <a class="nav-link" href="/low-stock" title="Low Stock">Low Stock</a>
@@ -526,7 +526,7 @@ No client JS is needed — table sort/filter and htmx boost come from `app.js` a
 - [ ] Route wrapped in **one IIFE**; only `globalThis.GET/POST/…` published.
 - [ ] `normalizePath` + `parsePairs` used (never trust the raw host shape).
 - [ ] Writes wrapped in `routeKit.write(...)` (invalidates the data fingerprint).
-- [ ] Template extends `layout.html`; content inside `{% block body %}`.
+- [ ] Template extends `layout.html.jinja`; content inside `{% block body %}`.
 - [ ] `active` matches the nav rail section.
 - [ ] Any new client JS re-runs on `htmx:afterSwap`; new component registered + `<script defer>` added.
 - [ ] CSS uses theme tokens; print chrome marked `no-print`; `paper` set if it prints.

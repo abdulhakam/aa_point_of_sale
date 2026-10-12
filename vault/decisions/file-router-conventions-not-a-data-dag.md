@@ -41,7 +41,7 @@ trailbase/runtime/ahscripts/routes/<segment>/[param]/
   route.json     path pattern, methods, params, query, auth
   loader.js      GET handler
   action.js      POST/PATCH/DELETE handler
-  page.html      minijinja template
+  page.html.jinja      minijinja template
 ```
 
 - **Not Next.js App Router.** `layout.tsx` / `loading.tsx` / `error.tsx` / `not-found.tsx` exist to

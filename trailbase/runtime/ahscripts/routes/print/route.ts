@@ -42,7 +42,7 @@
 
     return routeKit.renderRoute(
       req,
-      { user, active: "print", title: "Print Invoices", template: "print/index.html" },
+      { user, active: "print", title: "Print Invoices", template: "print/index.html.jinja" },
       {
         types,
         // A STRING, so the template's `selectedType == t.code` compares like with like — minijinja does

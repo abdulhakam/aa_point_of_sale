@@ -67,7 +67,7 @@ not a report defect. The earlier `2001` lower bound was chosen so the legacy arm
 The owner placed a printed copy of the same invoice from each system in
 `legacyforparity/zprintsforparity/` (`guestpurchaseinvoice.pdf`, `legacypurchaseinvoice.pdf` — purchase
 invoice 229). The guest paper did not match the legacy paper. Fixed in the guest sheet
-(`runtime/app/views/partials/invoice-sheet.html`, `runtime/app/lib/invoice-sheet.js`,
+(`runtime/app/views/partials/invoice-sheet.html.jinja`, `runtime/app/lib/invoice-sheet.js`,
 `runtime/app/lib/dates.js`, `runtime/app/public/css/app.css`):
 
 1. **Invoice Time was read from the wrong field in the wrong zone.** Legacy prints the invoice's

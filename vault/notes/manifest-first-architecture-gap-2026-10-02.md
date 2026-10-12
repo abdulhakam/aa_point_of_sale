@@ -36,7 +36,7 @@ in JavaScript**.
 `app/pages/reports/paymentsbycompany/meta.json`:
 
 ```json
-"template": "page.html",
+"template": "page.html.jinja",
 "needs":    { "views": ["paymentsInvoicesReport", "invoiceView", "refs"] },
 "compute":  { "report": "paymentsbycompany" }
 ```

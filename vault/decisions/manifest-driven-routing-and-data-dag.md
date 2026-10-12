@@ -43,7 +43,7 @@ routing.
 **Routes and pages are discovered by crawling the runtime file tree at startup and registered from
 per-route manifests.** The single dispatcher is retired.
 
-- The host crawls the runtime root and indexes `page.html` / `index.html`, `routes.ts` /
+- The host crawls the runtime root and indexes `page.html.jinja` / `index.html`, `routes.ts` /
   `routes.js`, and per-route `*.yaml` manifests with their `*.sql` and `*.ts` files.
 - A route's behaviour is a **JSON/YAML DAG validated against a JSON Schema**, not a hand-written
   handler. Schema covers: `url` patterns; `params` (name, type, default, coercion, validation) for

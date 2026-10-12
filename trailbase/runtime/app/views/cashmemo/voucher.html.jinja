@@ -1,0 +1,53 @@
+{% extends 'layout.html.jinja' %}
+{% block body %}
+{# A cash-memo voucher on paper. A5, one per sheet, like a till slip. This renders the payment
+   itself rather than a document: a voucher is money that moved with no invoice behind it, so there
+   is no invoice to render. #}
+<article class="invoice-doc" data-voucher>
+  <header class="doc-head">
+    <div>
+      {% if businessLogo %}<img class="doc-logo" src="{{ businessLogo }}" alt="">{% endif %}
+      <div class="doc-business">{{ businessName }}</div>
+      <div class="doc-address">{{ businessAddress }}</div>
+      <div class="doc-phone">{{ businessPhone }}</div>
+    </div>
+    <div class="doc-meta">
+      <div class="doc-type">{{ voucher.typeLabel }} voucher</div>
+      <div class="doc-no">#{{ voucher.invoiceNo if voucher.invoice else "—" }}</div>
+      <div class="doc-dated">{{ voucher.date }}</div>
+    </div>
+  </header>
+
+  <section class="doc-parties">
+    <div><span class="doc-label">Direction</span><span class="doc-value">{{ directionText }}</span></div>
+    <div><span class="doc-label">Party</span><span class="doc-value">{{ voucher.partyName or "—" }}</span></div>
+    <div><span class="doc-label">Paid to</span><span class="doc-value">{{ voucher.paidTo or "—" }}</span></div>
+  </section>
+
+  <table class="doc-lines">
+    <thead><tr><th>Description</th><th class="right">Amount</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>{{ voucher.description or "—" }}{% if voucher.invoice %} <span class="muted">(against invoice #{{ voucher.invoiceNo }})</span>{% endif %}</td>
+        <td class="right">{{ voucher.amountText }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <section class="doc-totals">
+    <table class="totals-table">
+      <tr class="doc-grand"><th>Total</th><td class="right">{{ voucher.amountText }}</td></tr>
+    </table>
+  </section>
+
+  <p class="muted">Issued by {{ user.name }}. Kept as a record of cash movement; the general
+     ledger is the authority for the balance.</p>
+</article>
+
+{% if not print %}
+<p class="pagebar no-print">
+  <a class="btn" href="/cashmemo/vouchers?type={{ selectedType }}">← Vouchers</a>
+  <a class="btn primary" href="/cashmemo/vouchers/{{ voucher.id }}?print=1" data-print>PRINT VOUCHER</a>
+</p>
+{% endif %}
+{% endblock %}

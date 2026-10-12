@@ -15,7 +15,7 @@
     const hub = await A.pages.hubIndex("/app/pages");
     return routeKit.renderRoute(
       req,
-      { user, active: "reports", title: "Ledgers", template: "reports/ledgers/index.html" },
+      { user, active: "reports", title: "Ledgers", template: "reports/ledgers/index.html.jinja" },
       { tiles: hub.ledgers }
     );
   };

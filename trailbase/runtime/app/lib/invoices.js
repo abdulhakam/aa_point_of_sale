@@ -394,7 +394,7 @@ export async function entryView(A, idB64, message) {
   const invoice = await readInvoice(db, routeKit.decode(idB64));
   if (!invoice) return null;
   return {
-    options: { active: "invoices", title: "Invoice #" + invoice.invoiceNo, template: "invoices/entry.html" },
+    options: { active: "invoices", title: "Invoice #" + invoice.invoiceNo, template: "invoices/entry.html.jinja" },
     data: {
       invoice,
       type: invoice.type,
@@ -436,7 +436,7 @@ export async function gridView(A, req, idB64, message, status) {
   const invoice = await readInvoice(db, routeKit.decode(idB64));
   if (!invoice) return null;
   return {
-    options: { active: "invoices", title: "Invoice #" + invoice.invoiceNo, template: "invoices/grid.html" },
+    options: { active: "invoices", title: "Invoice #" + invoice.invoiceNo, template: "invoices/grid.html.jinja" },
     data: {
       invoice: {
         ...invoice,
@@ -511,7 +511,7 @@ export async function consoleView(A, req, { type, invoiceId, message, status, ac
   }
 
   return {
-    options: { active: "invoices", title: invoice ? "Invoice #" + invoice.invoiceNo : "New invoice", template: "invoices/console.html" },
+    options: { active: "invoices", title: invoice ? "Invoice #" + invoice.invoiceNo : "New invoice", template: "invoices/console.html.jinja" },
     data: {
       type: pickerType,
       typeLabel: typeLabel(pickerType),

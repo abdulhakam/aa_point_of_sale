@@ -1,0 +1,12 @@
+{% extends 'layout.html.jinja' %}
+{% import 'partials/icons.html.jinja' as icons %}
+{% block body %}
+<section class="card hub" hx-boost="true" hx-target="#app-main" hx-swap="innerHTML">
+  <div class="hub-title upper">REPORTS</div>
+  <div class="tiles">
+  {% for t in tiles %}
+    <a class="tile" href="/reports/{{ t.target }}"><span class="c-{{ t.tone }}">{{ icons.svg(t.icon, 64) }}</span><span class="tile-label">{{ t.title }}</span></a>
+  {% endfor %}
+  </div>
+</section>
+{% endblock %}

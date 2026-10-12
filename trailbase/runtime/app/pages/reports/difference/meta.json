@@ -1,6 +1,6 @@
 {
   "title": "Difference Report",
-  "template": "page.html",
+  "template": "page.html.jinja",
   "hub": {
     "title": "Difference Report",
     "target": "difference",

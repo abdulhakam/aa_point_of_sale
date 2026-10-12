@@ -703,7 +703,7 @@ export async function renderPage(name, template, ctx, filters, limit, onTiming) 
  *
  * The payload's `result.rows` is the whole report, so the envelope and the key go to the host and
  * the finished JSON comes back as one string. `result.totals` is built here from the scalar totals
- * row, because the browser reads it by key (`data-total-key` in `partials/page_body.html`).
+ * row, because the browser reads it by key (`data-total-key` in `partials/page_body.html.jinja`).
  */
 export async function jsonPayload(name, filters, payload, totals, meta, onTiming) {
   const next = { ...payload, result: { totals: totals || {}, meta: meta || {} } };
