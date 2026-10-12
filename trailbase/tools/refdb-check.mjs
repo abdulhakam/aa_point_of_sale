@@ -27,6 +27,10 @@ const arg = (n, d) => { const i = process.argv.indexOf(n); return i > -1 ? proce
 const BASE = arg("--base", "http://127.0.0.1:4000");
 const EMAIL = arg("--email", "admin@localhost");
 const PASSWORD = arg("--password", "administrator-0ne");
+// Optional: an existing session cookie (`auth_token=…`) to use INSTEAD of the form login. Lets the
+// gate run against a depot whose admin password is not the scaffold default (the production depot),
+// where the form login cannot succeed. Trailing attributes after the first `;` are ignored.
+const COOKIE = arg("--cookie", "");
 const CHROME = arg("--chrome", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe");
 const PORT = Number(arg("--port", "9356"));
 
@@ -84,10 +88,20 @@ try {
   await cdp.send("Page.enable");
   await cdp.send("Runtime.enable");
 
-  await cdp.goto("/login");
-  for (let i = 0; i < 60; i++) { if (await cdp.ev("!!document.querySelector('form.login')").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
-  await cdp.ev(`(function(){var f=document.querySelector("form.login");f.querySelector('input[name="email"]').value=${JSON.stringify(EMAIL)};f.querySelector('input[type="password"]').value=${JSON.stringify(PASSWORD)};f.querySelector('button[type="submit"]').click();})()`);
-  for (let i = 0; i < 60; i++) { const at = await cdp.ev("location.pathname").catch(() => null); if (at && !at.includes("login")) break; await new Promise((r) => setTimeout(r, 150)); }
+  if (COOKIE) {
+    // Already authenticated: set the cookie and go straight to the app. `Network.enable` must precede
+    // `Network.setCookie`. The override survives navigation, so no form login is needed.
+    await cdp.send("Network.enable");
+    const eq = COOKIE.indexOf("=");
+    const name = eq > -1 ? COOKIE.slice(0, eq) : "auth_token";
+    const value = eq > -1 ? COOKIE.slice(eq + 1) : COOKIE;
+    await cdp.send("Network.setCookie", { name, value, url: BASE + "/", httpOnly: true });
+  } else {
+    await cdp.goto("/login");
+    for (let i = 0; i < 60; i++) { if (await cdp.ev("!!document.querySelector('form.login')").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
+    await cdp.ev(`(function(){var f=document.querySelector("form.login");f.querySelector('input[name="email"]').value=${JSON.stringify(EMAIL)};f.querySelector('input[type="password"]').value=${JSON.stringify(PASSWORD)};f.querySelector('button[type="submit"]').click();})()`);
+    for (let i = 0; i < 60; i++) { const at = await cdp.ev("location.pathname").catch(() => null); if (at && !at.includes("login")) break; await new Promise((r) => setTimeout(r, 150)); }
+  }
 
   // An existing invoice's screen has a party combobox, a booker combobox and item comboboxes — every
   // shape the store serves, including the item options whose data attributes app.js reads. (The

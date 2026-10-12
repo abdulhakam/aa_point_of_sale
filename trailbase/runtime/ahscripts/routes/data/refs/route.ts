@@ -65,6 +65,18 @@
       });
     }
 
+    // Parties carry the SAME composite label the server renders (`name - area - section`, see
+    // `A.invoices.partyLabel`), so a refdb rebuild after a version change does not collapse a party
+    // option to its bare name (tb-0040). The spec below points `label` at this computed column.
+    const areas = new Map((refs.areas ?? []).map((r: any) => [String(r.id), r]));
+    const sections = new Map((refs.sections ?? []).map((r: any) => [String(r.id), r]));
+    tables.parties = (refs.parties ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name ?? "",
+      type: p.type,
+      label: A.invoices.partyLabel(p, areas, sections),
+    }));
+
     // The alias map and the per-table option spec travel WITH the data, so `refdb.js` holds no second
     // copy of "which `data-ref` value means which list" or "which column fills `data-price`". One
     // source (here) instead of a client constant that drifts from the projection it consumes.
@@ -78,7 +90,9 @@
     for (const key of Object.keys(tables)) {
       spec[key] = key === "items"
         ? { label: "name", data: { price: "sale_price", cost: "cost_price", box: "box_size_qty" } }
-        : { label: "name" };
+        : key === "parties"
+          ? { label: "label" }
+          : { label: "name" };
     }
 
     return { body: JSON.stringify({ version, tables, alias: ALIAS, spec }), contentType, headers };

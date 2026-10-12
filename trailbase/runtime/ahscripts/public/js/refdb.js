@@ -37,7 +37,7 @@
   // the data version and compared on load, so a DEPLOY that changes the cache shape invalidates every
   // warm client even when the data fingerprint is unchanged. Without it a code change that adds/changes
   // an option `data-*` attribute would never reach a browser holding a warm cache.
-  var CACHE_REV = 2;
+  var CACHE_REV = 3;
 
   // The nine lists defined by app/sql/refs.sql. This is the IndexedDB store list, so it must be known
   // BEFORE the fetch (stores are created in `onupgradeneeded`). It is the ONE thing that stays a
@@ -147,6 +147,10 @@
     var option = document.createElement("option");
     option.value = String(row.id);
     var label = row[spec.label];
+    // A row that carries `name` but not the spec's label column (a partial row from a caller that did
+    // not run the server projection) shows the name rather than its id — parties label on a computed
+    // `label`, and a bare id is never the honest answer when a name is present.
+    if ((label === undefined || label === null || label === "") && row.name !== undefined) label = row.name;
     option.textContent = label === undefined || label === null || label === "" ? String(row.id) : String(label);
     if (spec.data) {
       for (var key in spec.data) {
@@ -304,7 +308,9 @@
     var key = refKey(table);
     var spec = TABLE_SPEC[key] || { label: "name" };
     return get(key).map(function (row) {
-      var out = { value: String(row.id), label: String(row[spec.label] === undefined || row[spec.label] === null ? row.id : row[spec.label]) };
+      var raw = row[spec.label];
+      if ((raw === undefined || raw === null || raw === "") && row.name !== undefined) raw = row.name;
+      var out = { value: String(row.id), label: String(raw === undefined || raw === null || raw === "" ? row.id : raw) };
       if (spec.data) {
         out.data = {};
         for (var k in spec.data) if (Object.prototype.hasOwnProperty.call(spec.data, k)) out.data[k] = row[spec.data[k]];

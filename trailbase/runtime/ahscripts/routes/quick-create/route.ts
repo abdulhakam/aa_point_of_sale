@@ -47,6 +47,24 @@
     // Built by `quickCreate.refRow` beside the writers, so the invoice→party translation and the item
     // columns are not re-derived here ([[guest-writes-via-sql]]).
     const row = A.quickCreate.refRow(kind, form, routeKit.hexToB64(hex), name);
+    // The composite party label (`name - area - section`) must match `/data/refs` and the rendered
+    // options, or a party created here would show the bare name while a rebuilt one shows the full
+    // label (tb-0040). One query joins the new party's area and that area's section.
+    if (kind === "party") {
+      const info = await db.all(
+        'SELECT a."name" AS areaName, s."name" AS sectionName FROM parties p ' +
+          'LEFT JOIN areas a ON a."id" = p."area" LEFT JOIN sections s ON s."id" = a."section" ' +
+          'WHERE p."id" = unhex(?)',
+        [hex]
+      );
+      const r = ((info && info[0]) || []) as any[];
+      row.label = [name, r[0], r[1]]
+        .map((x: any) => String(x ?? "").trim())
+        .filter(Boolean)
+        .join(" - ") || name;
+    } else {
+      row.label = row.name;
+    }
     return json({ ok: true, table: kind === "party" ? "parties" : "items", kind, id: row.id, row });
   };
 })();
