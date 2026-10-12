@@ -26,6 +26,9 @@ const arg = (n, d) => { const i = process.argv.indexOf(n); return i > -1 ? proce
 const BASE = arg("--base", "http://127.0.0.1:4000");
 const EMAIL = arg("--email", "admin@localhost");
 const PASSWORD = arg("--password", "administrator-0ne");
+// Optional existing session cookie (`auth_token=…`) to use instead of the form login, for a depot
+// whose admin password is not the scaffold default (mirrors refdb-check.mjs).
+const COOKIE = arg("--cookie", "");
 const CHROME = arg("--chrome", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe");
 const PORT = Number(arg("--port", "9333"));
 const PROFILE = mkdtempSync(join(tmpdir(), "hk-check-"));
@@ -218,20 +221,28 @@ try {
   // same evaluate tears down the execution context it is running in, and CDP answers that with
   // "Inspected target navigated or closed" — which looks like a crash and is not one.
 phase = "login";
-  await cdp.goto("/login");
-  // `form.login` specifically, never "any form". An authenticated visitor is redirected off /login, and
-  // the page that replaces it has a form of its own — the background-refresh button, whose action is
-  // /reports/refresh. Clicking "the first submit button on whatever page this is" then posts to that
-  // instead of signing in, and the harness reports a login failure with no error anywhere. Assert the
-  // page is the login form before touching it.
-  const onLoginForm = await cdp.waitFor("form.login input[name=\"email\"]", 4000);
-  if (onLoginForm) {
-    await cdp.evaluate(`(function () {
-      var form = document.querySelector("form.login");
-      form.querySelector('input[name="email"]').value = ${JSON.stringify(EMAIL)};
-      form.querySelector('input[type="password"]').value = ${JSON.stringify(PASSWORD)};
-      form.querySelector('button[type="submit"]').click();
-    })()`);
+  let onLoginForm = false;
+  if (COOKIE) {
+    // Already authenticated: install the cookie and land on the app; there is no login form to fill.
+    const eq = COOKIE.indexOf("=");
+    await cdp.send("Network.setCookie", { name: eq > -1 ? COOKIE.slice(0, eq) : "auth_token", value: eq > -1 ? COOKIE.slice(eq + 1) : COOKIE, url: BASE + "/", httpOnly: true });
+    await cdp.goto("/");
+  } else {
+    await cdp.goto("/login");
+    // `form.login` specifically, never "any form". An authenticated visitor is redirected off /login, and
+    // the page that replaces it has a form of its own — the background-refresh button, whose action is
+    // /reports/refresh. Clicking "the first submit button on whatever page this is" then posts to that
+    // instead of signing in, and the harness reports a login failure with no error anywhere. Assert the
+    // page is the login form before touching it.
+    onLoginForm = await cdp.waitFor("form.login input[name=\"email\"]", 4000);
+    if (onLoginForm) {
+      await cdp.evaluate(`(function () {
+        var form = document.querySelector("form.login");
+        form.querySelector('input[name="email"]').value = ${JSON.stringify(EMAIL)};
+        form.querySelector('input[type="password"]').value = ${JSON.stringify(PASSWORD)};
+        form.querySelector('button[type="submit"]').click();
+      })()`);
+    }
   }
   let lastSeen = "?";
   for (let i = 0; i < 40; i++) {
@@ -439,14 +450,24 @@ await cdp.key("e");
 
   await cdp.key("/", { code: "Slash", keyCode: 191 });
   check("`/` focuses the report's row filter", await cdp.evaluate("document.activeElement.type === 'search'"), await cdp.evaluate("document.activeElement.outerHTML.slice(0,60)"));
-  await cdp.evaluate("(function(){document.activeElement.value='8606';document.activeElement.dispatchEvent(new Event('input',{bubbles:true}));})()");
+  // Derive the needle from a row actually rendered: a hard-coded number (was `8606`) only narrows on a
+  // depot that happens to contain it, so on any other depot the check fails for a data reason, not a
+  // keyboard one. The first row's own number always matches exactly one-ish row.
+  const filterNeedle = await cdp.evaluate(`(function(){
+    var rows = [].slice.call(document.querySelectorAll("#report-table tbody tr"));
+    var seen = {};
+    rows.forEach(function (r) { (r.textContent.match(/\\b\\d{4,8}\\b/g) || []).forEach(function (t) { seen[t] = (seen[t] || 0) + 1; }); });
+    for (var k in seen) { if (seen[k] === 1) return k; }
+    return "";
+  })()`);
+  await cdp.evaluate(`(function(){document.activeElement.value=${JSON.stringify(filterNeedle)};document.activeElement.dispatchEvent(new Event('input',{bubbles:true}));})()`);
   await new Promise((r) => setTimeout(r, 200));
   const filtered = await cdp.evaluate(`(function () {
     var rows = [].slice.call(document.querySelectorAll("#report-table tbody tr"));
     return rows.filter(function (r) { return !r.hidden; }).length;
   })()`);
   const total = await cdp.evaluate("document.querySelectorAll('#report-table tbody tr').length");
-  check("typing in the report filter narrows the rendered rows", filtered > 0 && filtered < total, `${filtered} of ${total}`);
+  check("typing in the report filter narrows the rendered rows", filterNeedle !== "" && filtered > 0 && filtered < total, `${filtered} of ${total} (needle ${JSON.stringify(filterNeedle)})`);
   await cdp.key("Escape", { code: "Escape", keyCode: 27 });
   const unfiltered = await cdp.evaluate(`[].slice.call(document.querySelectorAll("#report-table tbody tr")).filter(function (r) { return !r.hidden; }).length`);
   check("Escape clears the report filter", unfiltered === total, `${unfiltered} of ${total}`);

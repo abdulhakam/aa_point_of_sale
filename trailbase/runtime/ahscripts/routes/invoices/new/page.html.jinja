@@ -32,7 +32,7 @@
 <form class="console-pick" method="get" action="/invoices/new" data-console-pick>
   <input type="hidden" name="type" value="{{ type }}">
   <label class="ih-field"><span>INVOICE #</span>
-    <select name="invoice" data-searchable data-force-combo data-ac-limit="200" data-console-picker data-invoice-remote="/data/invoices/search?type={{ type }}" aria-label="Invoice number">
+    <select name="invoice" data-searchable data-force-combo data-ac-limit="200" data-ac-no-focus-open data-console-picker data-invoice-remote="/data/invoices/search?type={{ type }}" aria-label="Invoice number">
       <option value=""{% if isNew %} selected{% endif %}>NEW</option>
       {% for p in picker %}
       <option value="{{ p.id }}"{% if invoice and invoice.id == p.id %} selected{% endif %}>{{ p.label }}</option>
@@ -53,7 +53,7 @@
   <label class="ih-field"><span>INVOICE DATE</span><aa-date-input><input type="date" name="dated" value="{{ today }}" disabled></aa-date-input></label>
   {% if type == 1 %}
   <label class="ih-field"><span>BOOKER</span>
-    <select name="booker" data-searchable data-ref="bookers" disabled>
+    <select name="booker" data-searchable data-ac-no-focus-open data-ref="bookers" disabled>
       <option value="">No booker</option>
       {% for b in bookers %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}
     </select>
@@ -62,7 +62,7 @@
   {% if type != 3 %}
   <label class="ih-field"><span>{{ 'SUPPLIER' if type == 0 else ('PARTY' if type == 2 else 'CUSTOMER') }}</span>
     <span class="ih-with-add">
-      <select name="party" data-searchable data-ref="parties" data-create="#qc-party" disabled>
+      <select name="party" data-searchable data-ac-no-focus-open data-ref="parties" data-create="#qc-party" disabled>
         <option value="">No party</option>
         {% for p in parties %}<option value="{{ p.id }}">{{ p.label }}</option>{% endfor %}
       </select>

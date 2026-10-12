@@ -69,6 +69,24 @@ The active workstream: replace the PocketBase backend ([[backend]]) and the Next
 
 ## Sequence
 
+**2026-10-12 — the console keyboard gate, and the composite party label through refdb.**
+
+Two of tb-0040's remainders, both verified in a real browser against the production depot.
+
+- **`tools/invoice-console-check.mjs`** drives the console with real `Input.dispatchKeyEvent`
+  keystrokes (read-only — it never submits): the picker→booker→party→date walk, the `0` exit, and
+  `000`/`999`/`up` on an open invoice. Its first run found and fixed **three real defects** —
+  Enter on `NEW` picked the newest invoice (the combobox opened on programmatic focus), `0` never
+  exited (it read the input's text, which shows `NEW`), and Enter would not advance past an enhanced
+  combobox (`_walkKey` read `e.target.name`, empty on the `.ac-input`) —
+  [[console-keyboard-defects-found-by-the-gate]]. Gate 13/13; `autocomplete-check` 39/39,
+  `hotkey-check` 62/62, `guest-smoke` 117/117, `route-snapshot` 50/0 after.
+- **The composite party label survives a refdb rebuild.** `/data/refs` projects parties with the
+  server's `partyLabel` (`name - area - section`) and `spec.parties = { label: "label" }`, `/quick-create`
+  returns the same label, and `refdb.js` falls back to `name` for a partial row. `refdb-check` 12/12.
+- `refdb-check`, `autocomplete-check` and `hotkey-check` gained an optional `--cookie`, so a browser
+  gate can run against a depot whose admin password is not the scaffold default.
+
 **2026-10-12 — tb-0044 verified; the guest-smoke logout check was stale.**
 
 The optional `_not-found` / `_error` / `_global-error` handlers ([[tb-0044-special-pages]]) are now

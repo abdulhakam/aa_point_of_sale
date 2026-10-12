@@ -26,6 +26,9 @@ const arg = (n, d) => { const i = process.argv.indexOf(n); return i > -1 ? proce
 const BASE = arg("--base", "http://127.0.0.1:4000");
 const EMAIL = arg("--email", "admin@localhost");
 const PASSWORD = arg("--password", "administrator-0ne");
+// Optional existing session cookie (`auth_token=…`) to use instead of the form login, for a depot
+// whose admin password is not the scaffold default (mirrors refdb-check.mjs).
+const COOKIE = arg("--cookie", "");
 const CHROME = arg("--chrome", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe");
 const PORT = Number(arg("--port", "9354"));
 
@@ -100,10 +103,16 @@ try {
   await cdp.send("Page.enable");
   await cdp.send("Runtime.enable");
 
-  await cdp.goto("/login");
-  for (let i = 0; i < 60; i++) { if (await cdp.ev("!!document.querySelector('form.login')").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
-  await cdp.ev(`(function(){var f=document.querySelector("form.login");f.querySelector('input[name="email"]').value=${JSON.stringify(EMAIL)};f.querySelector('input[type="password"]').value=${JSON.stringify(PASSWORD)};f.querySelector('button[type="submit"]').click();})()`);
-  for (let i = 0; i < 60; i++) { const at = await cdp.ev("location.pathname").catch(() => null); if (at && !at.includes("login")) break; await new Promise((r) => setTimeout(r, 150)); }
+  if (COOKIE) {
+    await cdp.send("Network.enable");
+    const eq = COOKIE.indexOf("=");
+    await cdp.send("Network.setCookie", { name: eq > -1 ? COOKIE.slice(0, eq) : "auth_token", value: eq > -1 ? COOKIE.slice(eq + 1) : COOKIE, url: BASE + "/", httpOnly: true });
+  } else {
+    await cdp.goto("/login");
+    for (let i = 0; i < 60; i++) { if (await cdp.ev("!!document.querySelector('form.login')").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
+    await cdp.ev(`(function(){var f=document.querySelector("form.login");f.querySelector('input[name="email"]').value=${JSON.stringify(EMAIL)};f.querySelector('input[type="password"]').value=${JSON.stringify(PASSWORD)};f.querySelector('button[type="submit"]').click();})()`);
+    for (let i = 0; i < 60; i++) { const at = await cdp.ev("location.pathname").catch(() => null); if (at && !at.includes("login")) break; await new Promise((r) => setTimeout(r, 150)); }
+  }
 
   /* ── a report screen: a long party filter, a long item filter, and a short booker filter ─────── */
   await cdp.goto("/reports/profit");
@@ -168,9 +177,11 @@ try {
   await cdp.key("Escape");
   await cdp.key("Escape");
   await new Promise((r) => setTimeout(r, 250));
-  const reverted = await cdp.ev(`(function(){var s=document.querySelector('select[name="party"]');return {value:s.value, text:s.closest(".ac").querySelector(".ac-input").value};})()`);
+  const reverted = await cdp.ev(`(function(){var s=document.querySelector('select[name="party"]');var o=s.options[s.selectedIndex];return {value:s.value, text:s.closest(".ac").querySelector(".ac-input").value, label:o?o.textContent:""};})()`);
   check("nonsense over a real choice keeps that choice", reverted.value === chosen && reverted.value !== "", `${chosen} -> ${reverted.value}`);
-  check("...and the visible text reverts to that choice's label", reverted.text.trim() === "G/M TRADERS", `text="${reverted.text}"`);
+  // The visible text is the OPTION's label, not a bare name: a party option is labelled
+  // `name - area - section` (the composite label reaching the picker), so compare against the option.
+  check("...and the visible text reverts to that choice's label", reverted.text.trim() === reverted.label.trim() && reverted.label.trim() !== "", `text="${reverted.text}" label="${reverted.label}"`);
   await cdp.goto("/reports/profit");
   for (let i = 0; i < 80; i++) { if (await cdp.ev("document.documentElement.getAttribute('data-hk-ready')==='1'").catch(() => false)) break; await new Promise((r) => setTimeout(r, 100)); }
 

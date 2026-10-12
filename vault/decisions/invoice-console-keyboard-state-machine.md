@@ -58,6 +58,7 @@ only when the event target is a `.cell` inside the surface, so the global cursor
 - A NEW create posts `surface=console` and 303s back to the console; every other caller keeps the
   long-standing `/invoices/<id>` landing (which the smoke suite relies on).
 - Tested by `tools/invoice-view-check.mjs` (console render, fragment create, line add, PATCH edit, live
-  sheet, composite party label, soft delete).
+  sheet, composite party label, soft delete) and, since 2026-10-12, `tools/invoice-console-check.mjs`,
+  which drives the real keyboard codes in headless Chrome ([[console-keyboard-defects-found-by-the-gate]]).
 
 See also: [[invoice-console-preview-is-live-not-materialised]], [[invoices-are-soft-deleted]].

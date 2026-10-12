@@ -420,7 +420,12 @@
       });
     }
 
-    input.addEventListener("focus", function () { input.select(); show(); });
+    // Focus opens the list — EXCEPT for a control that opts out with `data-ac-no-focus-open`. The
+    // console's keyboard walk focuses the picker and the booker/party fields PROGRAMMATICALLY, and an
+    // auto-opened list makes the next Enter choose the first option instead of advancing the walk
+    // (found by driving the real UI in tools/invoice-console-check.mjs). A click still opens the list,
+    // and typing or ArrowDown still opens it, so a mouse and a browsing keyboard are unaffected.
+    input.addEventListener("focus", function () { input.select(); if (!select.hasAttribute("data-ac-no-focus-open")) show(); });
     input.addEventListener("click", function () { show(); });
     input.addEventListener("input", show);
 

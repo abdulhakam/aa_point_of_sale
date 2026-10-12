@@ -30,9 +30,12 @@ Rebuild the guest invoice screen as one keyboard-first surface (the plan
 
 ## Remaining
 
-- [ ] Automated headless-Chrome keyboard gate (focus walk, real `up`/`Enter`/`000`/`999`). A manual
-      Chrome pass corrected 8 UI defects ([[invoice-console-build-2026-10-10]]); promoting that pass to
-      a repeatable gate is still outstanding.
+- [x] Automated headless-Chrome keyboard gate (focus walk, real `up`/`Enter`/`000`/`999`). Done
+      2026-10-12: `tools/invoice-console-check.mjs` drives the console with real keystrokes (read-only:
+      it never submits). It found three real defects — Enter on `NEW` picked the newest invoice, `0` did
+      not exit, and Enter would not advance past an enhanced combobox — all fixed;
+      [[console-keyboard-defects-found-by-the-gate]]. Gate 13/13, and `autocomplete-check` 39/39,
+      `hotkey-check` 62/62, `guest-smoke` 117/117, `route-snapshot` 50/0 after.
 - [ ] Retire `invoicing.js`'s line writers in favour of `invoice-lifecycle.js` (the two still coexist).
 - [x] Composite party `label` through `refdb.js`'s option spec so it survives a version-change
       rebuild. Done 2026-10-12: `/data/refs` projects parties with the server's

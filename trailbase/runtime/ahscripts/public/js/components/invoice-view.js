@@ -30,6 +30,19 @@
     return wrap ? wrap.querySelector("select") : null;
   }
 
+  /**
+   * The field NAME of whatever has focus. A searchable select is enhanced into a combobox, so the
+   * focused element is the visible `.ac-input`, which has NO `name` — reading `e.target.name` alone
+   * made every walk past an enhanced field a no-op (found by tools/invoice-console-check.mjs: Enter on
+   * the party combobox did not advance to the date). Fall back to the wrapped select's name.
+   */
+  function fieldName(el) {
+    if (!el) return "";
+    if (el.name) return el.name;
+    var sel = selectOf(el);
+    return sel && sel.name ? sel.name : "";
+  }
+
   var AAInvoiceView = class extends HTMLElement {
     connectedCallback() {
       if (this._ready) return;
@@ -194,12 +207,16 @@
           if (box) { e.preventDefault(); e.stopPropagation(); focusControl(box); return; }
         }
       }
-      // 0 in the picker: exit to the dashboard. Only from an empty-ish picker value, so searching for
-      // a real invoice numbered 0 remains possible (the option, not the keystroke, is chosen).
+      // 0 in the picker: exit to the dashboard. Only from an empty picker value, so searching for a
+      // real invoice numbered 0 remains possible (the option, not the keystroke, is chosen). The
+      // picker's VALUE is the test, not the visible text: the combobox input shows the blank option's
+      // label ("NEW"), so reading the input text made `0` type into the box instead of exiting (found
+      // by tools/invoice-console-check.mjs).
       if (e.key === "0" && this._state === "pick") {
         var p = this._picker();
         var pInput = target && target.closest && target.closest(".ac");
-        if (p && (target === p || pInput) && value.trim() === "") {
+        var pickValue = sel ? String(sel.value) : value;
+        if (p && (target === p || pInput) && pickValue.trim() === "") {
           e.preventDefault(); e.stopPropagation();
           window.location.assign("/dashboard");
           return;
@@ -273,7 +290,7 @@
       if (e.key !== "Enter" || e.isComposing) return;
       var order = ["item", "box_size_qty", "qty", "scheme", "price", "discount_1", "discount_2", "discount_rs"];
       var target = e.target;
-      var name = target && target.name;
+      var name = fieldName(target);
       var idx = order.indexOf(name);
       if (idx === -1) return;
       // The item field's own Enter is the combobox's (choose); once chosen, focus stays and the walk
@@ -343,7 +360,7 @@
     _discountWalkKey(e, header) {
       if (e.key !== "Enter" || e.isComposing) return;
       var order = ["discount_1", "discount_2", "discount_rs"];
-      var name = e.target && e.target.name;
+      var name = fieldName(e.target);
       var idx = order.indexOf(name);
       if (idx === -1) return;
       e.preventDefault();
@@ -378,7 +395,7 @@
       if (form.querySelector('select[name="booker"]')) order.push("booker");
       if (form.querySelector('select[name="party"]')) order.push("party");
       order.push("dated");
-      var name = e.target && e.target.name;
+      var name = fieldName(e.target);
       var idx = order.indexOf(name);
       if (idx === -1) return;
       e.preventDefault();
