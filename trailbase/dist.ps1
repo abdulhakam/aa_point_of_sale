@@ -10,6 +10,7 @@
 #   migrations\           the 14 .sql migrations
 #   runtime\              the application (ahscripts + app), served via --runtime-root-fs
 #   wasm\                 the built guest components (tb-ah-run-js / -render-jinja / -query-tbdb)
+#   docs\                 the developer and user documentation (Markdown), copied from <repo>\docs
 #   start.bat             seeds traildepot\ on first run, then launches the control panel
 #   README.txt            what this folder is and how to run it
 #
@@ -71,6 +72,11 @@ foreach ($d in @("migrations", "runtime")) {
   if (-not (Test-Path -LiteralPath (Join-Path $root $d))) { Fail "missing source directory: $d" }
 }
 
+# The documentation is authored at the repository root (<repo>\docs), one level above trailbase\.
+# It is copied into the distribution so every build ships the developer and user guides. It is
+# OPTIONAL to the server running, so a missing docs folder warns rather than failing the build.
+$docsSrc = Join-Path (Split-Path $root -Parent) "docs"
+
 # ── prepare output ─────────────────────────────────────────────────────────────────────────────
 $outPath = if ([System.IO.Path]::IsPathRooted($Out)) { $Out } else { Join-Path $root $Out }
 if ($Clean -and (Test-Path -LiteralPath $outPath)) { Remove-Item -LiteralPath $outPath -Recurse -Force }
@@ -93,6 +99,15 @@ if ($LASTEXITCODE -ge 8) { Fail "robocopy runtime failed ($LASTEXITCODE)" }
 # ── guest components ─────────────────────────────────────────────────────────────────────────────
 New-Item -ItemType Directory -Force -Path (Join-Path $outPath "wasm") | Out-Null
 $wasmFiles | Copy-Item -Destination (Join-Path $outPath "wasm") -Force
+
+# ── documentation ────────────────────────────────────────────────────────────────────────────────
+# Shipped with every build. Start at docs\README.md; the user guide is docs\user\getting-started.md.
+if (Test-Path -LiteralPath $docsSrc) {
+  robocopy $docsSrc (Join-Path $outPath "docs") /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
+  if ($LASTEXITCODE -ge 8) { Fail "robocopy docs failed ($LASTEXITCODE)" }
+} else {
+  Write-Host "  ! docs source not found at $docsSrc (skipped)" -ForegroundColor Yellow
+}
 
 # ── optional: v1 source data for the Import tab ──────────────────────────────────────────────────
 if ($IncludeLegacyData) {
@@ -144,6 +159,7 @@ Contents
   migrations\        Database migrations (applied on first start).
   runtime\           The application (server routes + templates + client JS).
   wasm\              The compiled guest components.
+  docs\              Developer and user guides (Markdown). Start at docs\README.md.
   start.bat          Launcher (see below).
   traildepot\        Created on first run: the database and runtime state. Back this up.
 
@@ -153,6 +169,14 @@ Run
   2. In the control panel's "TrailBase" tab, click Start. First run creates the depot and the admin
      user (admin@localhost / administrator-0ne), applies migrations, and starts the server.
   3. Open http://127.0.0.1:4000 and log in.
+
+Documentation
+-------------
+  docs\README.md              index of every guide.
+  docs\user\getting-started.md  install, first run, and setting your business name/address/phone and
+                              an optional print logo (app\config\business.json).
+  docs\user\                   day-to-day guides: invoices, reports/ledgers, settings.
+  docs\developer\              architecture, data model, API, reports, UI and print-layout guides.
 
 Import legacy data (optional)
 -----------------------------
