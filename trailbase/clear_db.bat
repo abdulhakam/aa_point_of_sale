@@ -27,9 +27,13 @@ echo Copying source files into "%DEPOT%" ...
 copy /y "config.textproto"   "%DEPOT%\config.textproto"   >nul
 copy /y "metadata.textproto" "%DEPOT%\metadata.textproto" >nul
 robocopy "migrations" "%DEPOT%\migrations" /MIR /NFL /NDL /NJH /NJS /NP >nul
+if errorlevel 8 (
+  echo ERROR: robocopy failed while syncing migrations.
+  exit /b 1
+)
 robocopy "runtime"   "%DEPOT%\runtime"   /MIR /NFL /NDL /NJH /NJS /NP >nul
 if errorlevel 8 (
-  echo ERROR: robocopy failed while syncing the source files.
+  echo ERROR: robocopy failed while syncing runtime.
   exit /b 1
 )
 

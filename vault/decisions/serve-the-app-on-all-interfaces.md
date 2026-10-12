@@ -1,15 +1,26 @@
 ---
 title: Serve the app on all interfaces so other devices on the LAN can use it
 type: decision
-status: accepted
+status: superseded
 decided_on: 2026-10-02
+superseded_on: 2026-10-12
 created: 2026-10-02
+updated: 2026-10-12
 tags: [deployment, networking, trailbase, run-bat, firewall, lan]
 belongs_to: "[[aa-point-of-sale]]"
-related_to: ["[[trailbase]]", "[[offline-local-deployment]]", "[[trailbase-ipv6-loopback-default-bind]]", "[[environment]]"]
+related_to: ["[[trailbase]]", "[[offline-local-deployment]]", "[[trailbase-ipv6-loopback-default-bind]]", "[[environment]]", "[[default-bind-is-loopback]]"]
 ---
 
 # Serve the app on all interfaces so other devices on the LAN can use it
+
+> **Superseded 2026-10-12 by [[default-bind-is-loopback]].** The default is
+> loopback again; serving the LAN is now an explicit per-start override
+> (`set "ADDRESS=0.0.0.0:4000" && RUN.BAT`). One correction to what follows:
+> commit `e379f4d` (2026-10-10) had already changed the *code* default to
+> `127.0.0.1`, but with an unconditional `set` that also broke the override and
+> left this document describing behaviour the file no longer had — see
+> [[build-batch-scripts-defects-2026-10-12]], defect 1. The measurements below
+> still hold whenever the override is used.
 
 ## Context
 

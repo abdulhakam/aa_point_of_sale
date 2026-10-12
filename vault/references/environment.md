@@ -4,7 +4,7 @@ type: reference
 status: active
 system: both
 created: 2026-09-26
-updated: 2026-10-03
+updated: 2026-10-12
 tags: [pos, environment, ports, env-vars, credentials, configuration]
 related_to: ["[[build-and-run]]", "[[cutover-is-guest-only]]", "[[route-snapshot-was-snapshotting-redirects]]"]
 ---
@@ -32,7 +32,7 @@ Ports, environment variables and credentials for the workspace, in one place.
 
 | Port | Bound by | Reachable at |
 |---|---|---|
-| `4000` | TrailBase **and** the guest app ([[trailbase]], [[runtime-js-guest-platform]]) | `http://127.0.0.1:4000` — API, admin UI at `/_/admin/`, and the whole app. Served on **all interfaces** (`0.0.0.0:4000`) since 2026-10-02 so LAN devices can reach it — [[serve-the-app-on-all-interfaces]] |
+| `4000` | TrailBase **and** the guest app ([[trailbase]], [[runtime-js-guest-platform]]) | `http://127.0.0.1:4000` — API, admin UI at `/_/admin/`, and the whole app. Loopback-only by default; `set "ADDRESS=0.0.0.0:4000" && RUN.BAT` serves every interface for LAN devices — [[default-bind-is-loopback]] |
 | `4100` | a throw-away verification depot (created by hand; **not** part of the source) | used by `route-snapshot.mjs --base` when the production depot's admin password is unavailable |
 | `8090` | PocketBase ([[backend]]) — ⚠️ **frozen**, startable by hand only | `http://127.0.0.1:8090` — API; admin UI at `/_/` |
 | `3000` | the compiled legacy Next.js bundle ([[frontend]]) — ⚠️ **no source, cannot rebuild** | `http://127.0.0.1:3000` if `legacyforparity/standalone/server.js` is started directly |
@@ -40,12 +40,12 @@ Ports, environment variables and credentials for the workspace, in one place.
 | `6006` | ⚠️ **unreachable** — Storybook needs `npm run storybook` in `frontend/` | dev-only, and that directory no longer exists |
 
 ⚠️ **TrailBase always needs an explicit bind address.** Its own default is `[::1]:4000` (IPv6 loopback
-only), which a client at `127.0.0.1` cannot reach. `trailbase/RUN.BAT` always passes one; since
-2026-10-02 the default is `ADDRESS=0.0.0.0:4000` so other devices on the LAN can use the app (it then
-needs an inbound Windows firewall rule for TCP 4000 — [[serve-the-app-on-all-interfaces]]). To keep it
-local, pass `ADDRESS=127.0.0.1:4000` or start it with `--address=127.0.0.1:4000`. If you start the
-server by hand, pass an address or point the client at `[::1]`. See
-[[trailbase-ipv6-loopback-default-bind]].
+only), which a client at `127.0.0.1` cannot reach. `trailbase/RUN.BAT` always passes one; the default is
+`ADDRESS=127.0.0.1:4000` — loopback only ([[default-bind-is-loopback]]; an earlier default of
+`0.0.0.0` since 2026-10-02 was reversed on 2026-10-12). To serve other devices on the LAN pass
+`ADDRESS=0.0.0.0:4000`, which then needs an inbound Windows firewall rule for TCP 4000
+([[serve-the-app-on-all-interfaces]] holds the LAN measurements). If you start the server by hand, pass
+an address or point the client at `[::1]`. See [[trailbase-ipv6-loopback-default-bind]].
 
 ## Guest-WASM platform
 

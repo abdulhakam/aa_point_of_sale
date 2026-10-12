@@ -110,14 +110,14 @@ Write-Host "Building $exe (payload version $stamp) ..."
 Push-Location $panel
 try {
   go mod tidy
+  if ($LASTEXITCODE -ne 0) { Fail "go mod tidy failed" }
   go build -ldflags="-H=windowsgui -s -w -X aa-pos/controlpanel/internal/sfx.Version=$stamp" -o $exe .
   if ($LASTEXITCODE -ne 0) { Fail "go build failed" }
 } finally {
+  # Runs even when Fail exits, so a failed build never leaves the large staged payload behind.
   Pop-Location
+  if (-not $KeepPayload) { Clear-Payload }
 }
-
-# ── tidy up ─────────────────────────────────────────────────────────────────────
-if (-not $KeepPayload) { Clear-Payload }
 
 $size = (Get-Item -LiteralPath $exe).Length
 Write-Host ""

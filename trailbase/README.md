@@ -117,12 +117,11 @@ yet) it creates the depot with `trail user change-password`, which applies this 
 (`admin@localhost` / `administrator-0ne`) in one step, before any server starts — so nothing races
 initialisation. It also always gives the bind address explicitly, because TrailBase's own default
 bind is `[::1]:4000` (IPv6 loopback only): a client at `127.0.0.1` cannot reach that. The default
-is `0.0.0.0:4000`, so the app is served on every interface and other devices on the LAN can open it;
-`set "ADDRESS=127.0.0.1:4000" && RUN.BAT` restricts it to this machine. LAN clients also need an
-inbound Windows Defender Firewall rule for TCP 4000. Later runs just start the
-server, so a
-password you change yourself is never overwritten; run `clear_db.bat` for a fresh scaffold
-(and the fixed password again).
+is `127.0.0.1:4000` (this machine only);
+`set "ADDRESS=0.0.0.0:4000" && RUN.BAT` serves every interface so other devices on the LAN can open
+it, and those clients then need an inbound Windows Defender Firewall rule for TCP 4000. Later runs
+just start the server, so a password you change yourself is never overwritten; run `clear_db.bat`
+for a fresh scaffold (and the fixed password again).
 
 **If you previously ran the earlier scaffold, delete `traildepot/data/` first.** The table set and
 the migration contents changed, and refinery silently *skips* a migration whose checksum no longer

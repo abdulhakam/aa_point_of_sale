@@ -4,8 +4,9 @@ type: issue
 status: fixed
 severity: medium
 created: 2026-09-26
+updated: 2026-10-12
 tags: [trailbase, networking, ipv6, run-bat, gotcha]
-related_to: ["[[trailbase]]", "[[environment]]"]
+related_to: ["[[trailbase]]", "[[environment]]", "[[default-bind-is-loopback]]", "[[serve-the-app-on-all-interfaces]]"]
 ---
 
 # TrailBase defaults to the IPv6 loopback and local clients cannot reach it
@@ -30,17 +31,24 @@ while every client gets a connection refused. Nothing in the message says "wrong
 > is reachable from other devices on the LAN — see [[serve-the-app-on-all-interfaces]]. The comment
 > this section quoted, and the `trailbase/README.md` sentence that repeats it, have both been
 > rewritten to match. The rest of this note still stands.
+>
+> **Corrected again 2026-10-12.** The default is **loopback only** again
+> (`ADDRESS=127.0.0.1:4000`); serving the LAN is now an explicit per-start override
+> (`set "ADDRESS=0.0.0.0:4000" && RUN.BAT`). See [[default-bind-is-loopback]]. Note the
+> 2026-10-02 sentence above described the *documented* state, not the code: commit `e379f4d`
+> (2026-10-10) had already set the code to `127.0.0.1`, but with an unconditional `set` that also
+> broke the override — [[build-batch-scripts-defects-2026-10-12]], defect 1.
 
 `trailbase/RUN.BAT` always passes `--address`, and says why in a comment:
 
 ```bat
 rem Always give the bind address: TrailBase defaults to [::1]:4000 (IPv6 loopback only),
 rem which neither a browser at 127.0.0.1 nor one at this machine's LAN address can reach.
-rem 0.0.0.0 serves every interface, so other devices on the LAN can open the app; set
-rem ADDRESS to go back to loopback only:
-rem     set "ADDRESS=127.0.0.1:4000" && RUN.BAT
+rem The default is loopback only. To serve other devices on the LAN a caller sets 0.0.0.0:4000
+rem before starting (set "ADDRESS=0.0.0.0:4000" && RUN.BAT). The guard matters: setting ADDRESS
+rem unconditionally would discard the caller's value instead of honouring it.
 rem Inbound TCP 4000 also has to be allowed in Windows Defender Firewall for LAN clients.
-if not defined ADDRESS set "ADDRESS=0.0.0.0:4000"
+if not defined ADDRESS set "ADDRESS=127.0.0.1:4000"
 ...
 start "" trail "--depot=%DEPOT%" run --address=%ADDRESS%
 ```
@@ -48,7 +56,8 @@ start "" trail "--depot=%DEPOT%" run --address=%ADDRESS%
 That comment's "frontend ... TRAILBASE_URL" phrasing predates the guest platform, where the app is
 served by TrailBase itself ([[guest-app-host-port]]); the bind it documents is unchanged.
 
-The address is overridable (`set "ADDRESS=127.0.0.1:4000" && RUN.BAT`), and it is also what the
+The address is overridable (`set "ADDRESS=0.0.0.0:4000" && RUN.BAT` to widen, or
+`set "ADDRESS=127.0.0.1:4001"` for a different loopback port), and it is also what the
 BAT file polls for readiness — it waits on
 `netstat -a -n -p tcp | findstr "%ADDRESS%" | findstr LISTENING` — so the override keeps the
 readiness check and the bind in agreement.

@@ -72,6 +72,12 @@ still *compiles* (go-sqlite3 ships a `!cgo` stub in `static_mock.go`) and
 produces a `controlpanel.exe` whose **Import tab fails at runtime** — see
 [[controlpanel-build-needs-cgo]] for the evidence.
 
+`build.bat` now `cd`s to its own directory first, so `aa panelbuild` works as
+well as a direct run or `controlpanel\run.bat`; before 2026-10-12 it inherited the
+caller's cwd, and `aa panelbuild` (which runs from the repository root, where
+there is no `go.mod`) failed — [[build-batch-scripts-defects-2026-10-12]],
+defect 3.
+
 Caveat of `-H=windowsgui`: the binary's `--cli`/`--screenshot` modes no longer
 attach to a console, so `--cli` prints nothing to a terminal. Use the exit code,
 or redirect output, or build a console-subsystem binary for CLI use.

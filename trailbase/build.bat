@@ -19,13 +19,19 @@ rem so it is not used here (see the vault note on the AOT startup cost).
 setlocal
 cd /d "%~dp0"
 
+rem Same depot the launcher uses. RUN.BAT may be started with a custom DEPOT (set "DEPOT=..." and
+rem RUN.BAT), and it invokes this script to rebuild missing components - so the destination must follow
+rem that DEPOT, not a hardcoded `traildepot`, or the build lands in the wrong depot and the caller still
+rem finds no wasm. The default matches RUN.BAT.
+if not defined DEPOT set "DEPOT=traildepot"
+
 where cargo >nul 2>nul
 if errorlevel 1 (
   echo ERROR: cargo not found on PATH. Install Rust and the wasm32-wasip2 target.
   exit /b 1
 )
 
-if not exist "traildepot\wasm" mkdir "traildepot\wasm"
+if not exist "%DEPOT%\wasm" mkdir "%DEPOT%\wasm"
 
 rem build <package> <wasm-file-name>
 call :build "tb_ah_run_js" "tb-ah-run-js.wasm"
@@ -50,10 +56,10 @@ if errorlevel 1 (
   echo   WARNING: cargo build failed for %~1
   exit /b 1
 )
-copy /y "target\wasm32-wasip2\release\%~1.wasm" "traildepot\wasm\%~2" >nul
+copy /y "target\wasm32-wasip2\release\%~1.wasm" "%DEPOT%\wasm\%~2" >nul
 if errorlevel 1 (
-  echo   ERROR: could not place traildepot\wasm\%~2
+  echo   ERROR: could not place %DEPOT%\wasm\%~2
   exit /b 1
 )
-echo   -^> traildepot\wasm\%~2
+echo   -^> %DEPOT%\wasm\%~2
 exit /b 0

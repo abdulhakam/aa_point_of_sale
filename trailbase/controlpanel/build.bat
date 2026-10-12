@@ -4,6 +4,9 @@ rem C compiler is required; w64devkit is the working recipe on this machine.
 rem Without CC+CGO_ENABLED the build still *compiles* but links go-sqlite3's
 rem !cgo stub, and the Import tab fails at runtime. So fail loudly instead.
 setlocal
+rem cd to this script's directory: it is invoked both directly and via aa.bat, which has already
+rem changed to the repo root, and `go build .` must run where go.mod lives.
+cd /d "%~dp0"
 
 set "W64=%USERPROFILE%\w64devkit\w64devkit\bin"
 if "%CC%"=="" set "CC=%W64%\gcc.exe"
@@ -20,10 +23,14 @@ set "GOSUMDB=off"
 
 echo [build] CGO_ENABLED=1 CC=%CC%
 go mod tidy
+if errorlevel 1 (
+  echo [build] go mod tidy failed
+  endlocal & exit /b 1
+)
 go build -ldflags="-H=windowsgui -s -w" -o controlpanel.exe .
 if errorlevel 1 (
   echo [build] failed
-  exit /b 1
+  endlocal & exit /b 1
 )
 echo [build] wrote controlpanel.exe
-endlocal
+endlocal & exit /b 0

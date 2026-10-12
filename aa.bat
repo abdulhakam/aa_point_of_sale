@@ -70,7 +70,7 @@ echo ============================================================
 echo.
 echo   [1] Build guest wasm components     [2] Start the server
 echo   [3] Run the control panel GUI       [4] Import v1 database (WIPES)
-echo   [5] Clear depot / reset database    [6] Dev reset + import
+echo   [5] Clear depot / reset database    [6] Dev reset + re-place wasm
 echo   [7] Build distributable (loose)     [8] Build the control panel
 echo   [9] Build single-file SFX (aa-pos)  [10] Open the app in a browser
 echo   [0] Exit

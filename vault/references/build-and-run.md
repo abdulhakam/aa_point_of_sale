@@ -4,7 +4,7 @@ type: reference
 status: active
 system: both
 created: 2026-09-26
-updated: 2026-10-05
+updated: 2026-10-12
 tags: [pos, build, run, windows, bat, scripts]
 related_to: ["[[environment]]", "[[backend]]", "[[cutover-is-guest-only]]", "[[route-snapshot-was-snapshotting-redirects]]"]
 ---
@@ -137,7 +137,13 @@ Environment overrides, each quoted so no trailing space is kept:
 ```bat
 set "DEPOT=C:\some\depot" && RUN.BAT
 set "ADDRESS=127.0.0.1:4001" && RUN.BAT
+set "ADDRESS=0.0.0.0:4000"   && RUN.BAT   rem widen to the LAN (needs a firewall rule)
 ```
+
+The default is loopback-only `127.0.0.1:4000` ([[default-bind-is-loopback]]). On
+2026-10-12 the address block was reduced to a single guarded `set` after an audit found commit
+`e379f4d`'s unconditional `set` discarded the caller's value and made this override a no-op — see
+[[build-batch-scripts-defects-2026-10-12]], defect 1.
 
 ⚠️ **Delete `traildepot\data\` before a re-scaffold** if you previously ran an older version of this
 scaffold. Refinery silently *skips* a migration whose checksum changed, so a stale depot keeps the

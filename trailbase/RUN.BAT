@@ -20,21 +20,31 @@ cd /d "%~dp0"
 if not defined DEPOT set "DEPOT=traildepot"
 rem Always give the bind address: TrailBase defaults to [::1]:4000 (IPv6 loopback only),
 rem which neither a browser at 127.0.0.1 nor one at this machine's LAN address can reach.
-rem 0.0.0.0 serves every interface, so other devices on the LAN can open the app; set
-rem ADDRESS to go back to loopback only:
-set "ADDRESS=127.0.0.1:4000"
+rem The default is loopback only. To serve other devices on the LAN a caller sets 0.0.0.0:4000
+rem before starting (set "ADDRESS=0.0.0.0:4000" && RUN.BAT). The guard matters: setting ADDRESS
+rem unconditionally would discard the caller's value instead of honouring it.
 rem Inbound TCP 4000 also has to be allowed in Windows Defender Firewall for LAN clients.
-if not defined ADDRESS set "ADDRESS=0.0.0.0:4000"
+if not defined ADDRESS set "ADDRESS=127.0.0.1:4000"
 set "ADMIN_USER=admin@localhost"
 set "ADMIN_PASSWORD=administrator-0ne"
 
-rem The depot is generated: if the source copies or the wasm component are missing, build them.
+rem The depot is generated. If its source copies are missing, reset and rebuild; if only the
+rem guest components are missing (the depot was wiped but its config survived), just rebuild
+rem them - a server started without tb-ah-run-js.wasm has no app to serve.
 if not exist "%DEPOT%\config.textproto" (
   echo Depot is not prepared yet - running clear_db.bat then build.bat ...
   call "%~dp0clear_db.bat"
   if errorlevel 1 (echo ERROR: clear_db.bat failed. & endlocal & goto :eof)
   call "%~dp0build.bat"
   if errorlevel 1 (echo ERROR: build.bat failed. & endlocal & goto :eof)
+) else if not exist "%DEPOT%\wasm\tb-ah-run-js.wasm" (
+  echo Guest wasm is missing from the depot - running build.bat ...
+  call "%~dp0build.bat"
+  if errorlevel 1 (echo ERROR: build.bat failed. & endlocal & goto :eof)
+  if not exist "%DEPOT%\wasm\tb-ah-run-js.wasm" (
+    echo ERROR: build.bat did not place "%DEPOT%\wasm\tb-ah-run-js.wasm" - aborting.
+    endlocal & goto :eof
+  )
 )
 
 rem Sync the app into the depot EVERY start, not only when the depot is created.
