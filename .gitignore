@@ -36,3 +36,35 @@ __pycache__/
 trailbase/tools/sweep-*.json
 vault/attachments/_parity-test/
 vault/attachments/report-parity-*/
+
+# ---------------------------------------------------------------------------
+# Heavy artefacts that must never enter history again.
+#
+# On 2026-10-12 the history was rewritten to drop ~370 MB of tracked databases and
+# compiled binaries (legacy backend\ and standalone\) plus ~900 MB of stale dangling
+# objects. These rules keep the same classes of file out from now on. Nothing that is
+# tracked today matches any of them.
+# ---------------------------------------------------------------------------
+
+# PocketBase / TrailBase data directories and any SQLite database, wherever it sits.
+pb_data/
+p_data/
+*.db
+*.sqlite
+*.sqlite3
+
+# Compiled binaries and native build output.
+*.exe
+*.dll
+*.node
+*.lib
+*.pdb
+*.rlib
+*.so
+*.dylib
+*.o
+*.obj
+*.a
+
+# Local route-fingerprint baseline written by the snapshot tool.
+/.kilo/route-snapshot-baseline.txt

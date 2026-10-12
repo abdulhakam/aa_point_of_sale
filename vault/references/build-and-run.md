@@ -76,6 +76,26 @@ The guest app has no separate process and **no separate port**: it is a componen
 TrailBase server, served from `:4000` ([[runtime-js-guest-platform]]). Port table:
 [[environment]].
 
+## One launcher: `aa.bat`
+
+Every step below is also reachable through a single menu at the repository root, so you do not
+have to remember which `.bat` holds which task:
+
+```bat
+aa            rem interactive menu
+aa run        rem trailbase\RUN.BAT
+aa build      rem trailbase\build.bat
+aa panel      rem trailbase\controlpanel\run.bat
+aa import     rem trailbase\import.bat (WIPES business tables)
+aa cleardb    rem trailbase\clear_db.bat
+aa devreset   rem trailbase\devreset.bat
+aa dist       rem trailbase\dist.bat
+```
+
+`aa.bat` only dispatches to the scripts documented below; they still call each other
+(`devreset.bat` → `clear_db.bat`, `RUN.BAT` → `clear_db.bat`/`build.bat`) and remain the source
+of truth for what each step does.
+
 ## TrailBase — the system that runs
 
 ### `trailbase\RUN.BAT`
